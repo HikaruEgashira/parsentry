@@ -1,4 +1,5 @@
 mod analyzer;
+mod evaluator;
 mod llm;
 mod parser;
 mod prompts;
@@ -18,6 +19,7 @@ use std::{
 };
 
 use analyzer::analyze_file;
+use evaluator::evaluate_python_vulnerable_app;
 use llm::initialize_llm;
 use prompts::{README_SUMMARY_PROMPT_TEMPLATE, SYS_PROMPT_TEMPLATE};
 use repo::RepoOps;
@@ -41,6 +43,10 @@ struct Args {
     /// Increase output verbosity
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbosity: u8,
+
+    /// Enable evaluation mode for example vulnerable apps
+    #[arg(short, long)]
+    evaluate: bool,
 }
 
 fn load_env_file() -> Result<()> {
@@ -117,6 +123,17 @@ async fn main() -> Result<()> {
         .await?;
 
         analysis_result.print_readable();
+
+        // If evaluation mode is enabled and we're analyzing an example vulnerable app
+        if args.evaluate {
+            if file_name.contains("python-vulnerable-app") {
+                println!("\n📊 Evaluating Analysis Report...\n");
+                println!("{}", "=".repeat(80));
+                
+                let eval_result = evaluate_python_vulnerable_app(&analysis_result)?;
+                eval_result.print_readable();
+            }
+        }
 
         println!("\nPress Enter to continue...");
         let mut input = String::new();
