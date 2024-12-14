@@ -10,6 +10,7 @@ pub enum VulnType {
     SQLI,
     XSS,
     IDOR,
+    Other(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

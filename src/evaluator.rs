@@ -1,5 +1,8 @@
 use crate::response::{Response, VulnType};
+use crate::llm::LLM;
+use crate::prompts::EVALUATOR_PROMPT_TEMPLATE;
 use anyhow::{Error, Result};
+use serde::Deserialize;
 
 #[derive(Debug)]
 pub struct EvaluationResult {
@@ -52,70 +55,62 @@ impl EvaluationResult {
     }
 }
 
-pub fn evaluate_python_vulnerable_app(response: &Response) -> Result<EvaluationResult, Error> {
-    // Known vulnerabilities in the Python example app
-    let known_vulns = vec![VulnType::SQLI, VulnType::XSS, VulnType::RCE];
+#[derive(Debug, Deserialize)]
+struct LLMEvaluation {
+    score: f32,
+    correct_vulns: Vec<String>,
+    missed_vulns: Vec<String>,
+    false_positives: Vec<String>,
+    feedback: String,
+}
+
+pub async fn evaluate_python_vulnerable_app(response: &Response, llm: &dyn LLM) -> Result<EvaluationResult, Error> {
+    // Format the report for evaluation
+    let report = format!(
+        "Identified Vulnerabilities: {:?}\n\nAnalysis:\n{}\n\nProof of Concept:\n{}",
+        response.vulnerability_types,
+        response.analysis,
+        response.poc
+    );
+
+    // Get LLM evaluation
+    let prompt = EVALUATOR_PROMPT_TEMPLATE.replace("{report}", &report);
+    let eval_response = llm.chat(&prompt).await?;
     
-    let mut correct_vulns = Vec::new();
-    let mut false_positives = Vec::new();
-    let mut feedback = String::new();
+    // Parse LLM response as JSON
+    let eval: LLMEvaluation = serde_json::from_str(&eval_response)?;
     
-    // Check found vulnerabilities
-    for vuln in &response.vulnerability_types {
-        if known_vulns.contains(vuln) {
-            correct_vulns.push(vuln.clone());
-        } else {
-            false_positives.push(vuln.clone());
-        }
-    }
+    // Convert string vulnerability types to VulnType enum
+    let correct_vulns = eval.correct_vulns.iter()
+        .map(|v| match v.as_str() {
+            "SQLI" => VulnType::SQLI,
+            "XSS" => VulnType::XSS,
+            "RCE" => VulnType::RCE,
+            _ => VulnType::Other(v.clone()),
+        })
+        .collect();
 
-    // Calculate missed vulnerabilities
-    let mut missed_vulns = Vec::new();
-    for vuln in &known_vulns {
-        if !correct_vulns.contains(vuln) {
-            missed_vulns.push(vuln.clone());
-        }
-    }
+    let missed_vulns = eval.missed_vulns.iter()
+        .map(|v| match v.as_str() {
+            "SQLI" => VulnType::SQLI,
+            "XSS" => VulnType::XSS,
+            "RCE" => VulnType::RCE,
+            _ => VulnType::Other(v.clone()),
+        })
+        .collect();
 
-    // Calculate base score based on correct findings vs total vulnerabilities
-    let base_score = (correct_vulns.len() as f32 / known_vulns.len() as f32) * 100.0;
-    
-    // Penalize for false positives
-    let false_positive_penalty = (false_positives.len() as f32 * 10.0);
-    let mut final_score = base_score - false_positive_penalty;
-    if final_score < 0.0 {
-        final_score = 0.0;
-    }
-
-    // Generate feedback
-    feedback.push_str(&format!(
-        "Found {} out of {} known vulnerabilities.\n",
-        correct_vulns.len(),
-        known_vulns.len()
-    ));
-
-    if !false_positives.is_empty() {
-        feedback.push_str(&format!(
-            "Reported {} false positive(s). Each false positive results in a 10% score penalty.\n",
-            false_positives.len()
-        ));
-    }
-
-    // Evaluate quality of analysis
-    if !response.analysis.is_empty() {
-        let analysis_quality = evaluate_analysis_quality(response);
-        feedback.push_str(&format!("\nAnalysis Quality:\n{}", analysis_quality));
-    }
-
-    // Evaluate PoC quality
-    if !response.poc.is_empty() {
-        let poc_quality = evaluate_poc_quality(response);
-        feedback.push_str(&format!("\nPoC Quality:\n{}", poc_quality));
-    }
+    let false_positives = eval.false_positives.iter()
+        .map(|v| match v.as_str() {
+            "SQLI" => VulnType::SQLI,
+            "XSS" => VulnType::XSS,
+            "RCE" => VulnType::RCE,
+            _ => VulnType::Other(v.clone()),
+        })
+        .collect();
 
     Ok(EvaluationResult {
-        score: final_score,
-        feedback,
+        score: eval.score,
+        feedback: eval.feedback,
         correct_vulns_found: correct_vulns,
         missed_vulns,
         false_positives,
@@ -175,9 +170,26 @@ fn evaluate_poc_quality(response: &Response) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+    use tokio;
 
-    #[test]
-    fn test_evaluation_perfect_report() {
+    struct MockLLM;
+
+    #[async_trait]
+    impl LLM for MockLLM {
+        async fn chat(&self, _prompt: &str) -> Result<String> {
+            Ok(r#"{
+                "score": 85.0,
+                "correct_vulns": ["SQLI", "XSS"],
+                "missed_vulns": ["RCE"],
+                "false_positives": ["SSRF"],
+                "feedback": "Good analysis but missed some vulnerabilities"
+            }"#.to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_evaluation_perfect_report() {
         let response = Response {
             scratchpad: String::from("Analysis notes..."),
             analysis: String::from(
@@ -191,43 +203,13 @@ mod tests {
             context_code: vec![],
         };
 
-        let result = evaluate_python_vulnerable_app(&response).unwrap();
-        assert_eq!(result.score, 100.0);
-        assert_eq!(result.correct_vulns_found.len(), 3);
-        assert_eq!(result.missed_vulns.len(), 0);
-        assert_eq!(result.false_positives.len(), 0);
-    }
-
-    #[test]
-    fn test_evaluation_missing_vulns() {
-        let response = Response {
-            scratchpad: String::new(),
-            analysis: String::from("Basic analysis"),
-            poc: String::new(),
-            confidence_score: 80,
-            vulnerability_types: vec![VulnType::SQLI],
-            context_code: vec![],
-        };
-
-        let result = evaluate_python_vulnerable_app(&response).unwrap();
-        assert_eq!(result.score, 33.333336); // Found 1 out of 3
-        assert_eq!(result.correct_vulns_found.len(), 1);
-        assert_eq!(result.missed_vulns.len(), 2);
-    }
-
-    #[test]
-    fn test_evaluation_false_positives() {
-        let response = Response {
-            scratchpad: String::new(),
-            analysis: String::from("Basic analysis"),
-            poc: String::new(),
-            confidence_score: 80,
-            vulnerability_types: vec![VulnType::SQLI, VulnType::SSRF],
-            context_code: vec![],
-        };
-
-        let result = evaluate_python_vulnerable_app(&response).unwrap();
-        assert!(result.score < 33.333336); // Base score for 1 correct - penalty for false positive
+        let llm = MockLLM;
+        let result = evaluate_python_vulnerable_app(&response, &llm).await.unwrap();
+        
+        assert_eq!(result.score, 85.0);
+        assert_eq!(result.correct_vulns_found.len(), 2);
+        assert_eq!(result.missed_vulns.len(), 1);
         assert_eq!(result.false_positives.len(), 1);
+        assert!(!result.feedback.is_empty());
     }
 }

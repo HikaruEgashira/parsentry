@@ -130,7 +130,7 @@ async fn main() -> Result<()> {
                 println!("\n📊 Evaluating Analysis Report...\n");
                 println!("{}", "=".repeat(80));
                 
-                let eval_result = evaluate_python_vulnerable_app(&analysis_result)?;
+                let eval_result = evaluate_python_vulnerable_app(&analysis_result, llm.as_ref()).await?;
                 eval_result.print_readable();
             }
         }
