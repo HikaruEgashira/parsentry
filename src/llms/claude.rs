@@ -25,7 +25,7 @@ impl Claude {
 
 #[async_trait]
 impl LLM for Claude {
-    async fn chat(&self, messages: &[ChatMessage]) -> Result<String> {
+    async fn chat(&self, messages: &[ChatMessage]) -> Result<ChatMessage> {
 #[derive(Serialize)]
         struct Request {
             model: String,
@@ -140,7 +140,11 @@ impl LLM for Claude {
                     log::error!("Empty response content: {}", response_text);
                     return Err(anyhow::anyhow!("Empty response content"));
                 }
-                Ok(response.content[0].text.clone())
+                Ok(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: response.content[0].text.clone(),
+                    function_call: None,
+                })
             }
             Err(parse_error) => {
                 log::error!(
@@ -185,13 +189,14 @@ mod tests {
         let messages = vec![ChatMessage {
             role: "user".to_string(),
             content: "What is 2+2?".to_string(),
+            function_call: None,
         }];
 
         let result = claude.chat(&messages).await;
         assert!(result.is_ok(), "Chat should succeed with valid API key");
 
         let response = result.unwrap();
-        assert!(!response.is_empty(), "Response should not be empty");
+        assert!(!response.content.is_empty(), "Response should not be empty");
     }
 
     #[tokio::test]
@@ -202,6 +207,7 @@ mod tests {
         let messages = vec![ChatMessage {
             role: "user".to_string(),
             content: "What is 2+2?".to_string(),
+            function_call: None,
         }];
 
         let result = claude.chat(&messages).await;
@@ -222,6 +228,7 @@ mod tests {
         let messages = vec![ChatMessage {
             role: "user".to_string(),
             content: "".to_string(),
+            function_call: None,
         }];
 
         let result = claude.chat(&messages).await;

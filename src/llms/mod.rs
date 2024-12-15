@@ -1,4 +1,5 @@
 mod claude;
+mod function_call;
 mod ollama;
 mod openai;
 
@@ -6,13 +7,28 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use self::{claude::Claude, ollama::Ollama, openai::OpenAI};
+use self::{
+    claude::Claude,
+    function_call::{Function, FunctionCall},
+    ollama::Ollama,
+    openai::OpenAI,
+};
 use dotenv::dotenv;
 use tokio;
 
 #[async_trait]
 pub trait LLM {
-    async fn chat(&self, messages: &[ChatMessage]) -> Result<String>;
+    async fn chat(&self, messages: &[ChatMessage]) -> Result<ChatMessage>;
+    
+    async fn chat_with_functions(
+        &self,
+        messages: &[ChatMessage],
+        functions: &[Function],
+        function_call: Option<String>,
+    ) -> Result<ChatMessage> {
+        // Default implementation just calls chat
+        self.chat(messages).await
+    }
 }
 
 // OpenAI Message type
@@ -20,6 +36,8 @@ pub trait LLM {
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_call: Option<FunctionCall>,
 }
 
 pub fn initialize_llm(llm_arg: &str, system_prompt: &str) -> Result<Box<dyn LLM>> {

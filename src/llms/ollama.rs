@@ -25,7 +25,7 @@ impl Ollama {
 
 #[async_trait]
 impl LLM for Ollama {
-    async fn chat(&self, messages: &[ChatMessage]) -> Result<String> {
+    async fn chat(&self, messages: &[ChatMessage]) -> Result<ChatMessage> {
         #[derive(Serialize)]
         struct Request {
             model: String,
