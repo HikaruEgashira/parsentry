@@ -7,8 +7,6 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use self::{claude::Claude, ollama::Ollama, openai::OpenAI};
-use dotenv::dotenv;
-use tokio;
 
 #[async_trait]
 pub trait LLM {
