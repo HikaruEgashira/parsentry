@@ -2,7 +2,7 @@
 
   <img width="250" src="./logo.png" alt="Vulnhuntrs Logo">
 
-A tool to identify remotely exploitable vulnerabilities using LLMs and static code analysis.
+A tool to identify remotely exploitable vulnerabilities using Large Language Models (LLMs) and static code analysis.
 
 **Autonomous AI-discovered 0day vulnerabilities**
 
