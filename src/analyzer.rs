@@ -1,6 +1,6 @@
 use anyhow::{Error, Result};
-use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
-use genai::{Client, ClientConfig};
+use rig::providers::openai::{self, Client};
+use rig::completion::{Agent, Prompt};
 use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
@@ -10,21 +10,22 @@ use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{response_json_schema, Response};
 
-fn create_api_client() -> Client {
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default()
-            .with_response_format(JsonSpec::new("schema", response_json_schema())),
-    );
-    Client::builder().with_config(client_config).build()
+fn create_api_client() -> (Client, Agent) {
+    let client = Client::from_env();
+    let agent = client
+        .agent("gpt-4")
+        .with_system_prompt("You are a security vulnerability analyzer. Reply in JSON format")
+        .with_response_format(serde_json::to_string(&response_json_schema()).unwrap())
+        .build();
+    (client, agent)
 }
 
 async fn execute_chat_request(
-    client: &Client,
-    model: &str,
-    chat_req: ChatRequest,
+    agent: &Agent,
+    prompt: &str,
 ) -> Result<String> {
-    let chat_res = client.exec_chat(model, chat_req, None).await?;
-    match chat_res.content_text_as_str() {
+    let response = agent.prompt(prompt).await?;
+    match response.content() {
         Some(content) => Ok(content.to_string()),
         None => {
             error!("Failed to get content text from chat response");
@@ -81,13 +82,8 @@ pub async fn analyze_file(
         prompts::GUIDELINES_TEMPLATE,
     );
 
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system("You are a security vulnerability analyzer. Reply in JSON format"),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let json_client = create_api_client();
-    let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
+    let (client, agent) = create_api_client();
+    let chat_content = execute_chat_request(&agent, &prompt).await?;
     let response: Response = parse_json_response(&chat_content)?;
 
     info!("Initial analysis complete");
@@ -128,15 +124,8 @@ pub async fn analyze_file(
                     previous_analysis,
                 );
 
-                let chat_req = ChatRequest::new(vec![
-                    ChatMessage::system(
-                        "You are a security vulnerability analyzer. Reply in JSON format",
-                    ),
-                    ChatMessage::user(&prompt),
-                ]);
-
-                let json_client = create_api_client();
-                let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
+                let (client, agent) = create_api_client();
+                let chat_content = execute_chat_request(&agent, &prompt).await?;
                 let vuln_response: Response = parse_json_response(&chat_content)?;
 
                 if verbosity > 0 {

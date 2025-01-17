@@ -28,7 +28,8 @@ anyhow = "1.0"
 async-trait = "0.1"
 quick-xml = { version = "0.31", features = ["serialize"] }
 dotenv = "0.15"
-genai = "0.1.15"
+rig-core = "0.6.1"
+# genai = "0.1.15"  # Temporarily commented out while migrating to rig
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }
