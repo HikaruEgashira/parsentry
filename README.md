@@ -71,37 +71,25 @@ URL: /cmdi?hostname=localhost;whoami
 
 ## 🐳 Docker での実行方法
 
-### 1. イメージのビルド
-
 ```bash
-docker build -t vulnhuntrs .
+docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
+
+docker run -v $(pwd):/app ghcr.io/hikaruegashira/vulnhuntrs analyze /app/path/to/target
+
+docker run ghcr.io/hikaruegashira/vulnhuntrs --help
 ```
 
-### 2. 脆弱性スキャンの実行
-
-プロジェクトディレクトリで以下のコマンドを実行:
+### multi architecture image build
 
 ```bash
-docker run --rm -v $(pwd):/work vulnhuntrs -r /work/
-```
-
-### 3. 例の実行
-
-リポジトリ内のサンプルをスキャンする場合:
-
-```bash
-docker run --rm -v $(pwd):/work vulnhuntrs -r /work/example/
-```
-
-### 4. ヘルプの表示
-
-```bash
-docker run --rm vulnhuntrs --help
+docker buildx create --use
+docker buildx build --platform linux/amd64 -t ghcr.io/hikaruegashira/vulnhuntrs:latest --push .
 ```
 
 ### オプション
 
 - `-r, --root <ROOT>`: スキャンするプロジェクトのルートディレクトリを指定
+- `--repo <REPO>`: GitHubリポジトリのURLを指定して解析
 - `-a, --analyze <ANALYZE>`: 特定のファイルやディレクトリを指定して解析
 - `-v`: 詳細なログを表示（複数指定でより詳細に）
 - `--min-confidence <MIN_CONFIDENCE>`: 表示する脆弱性の最小信頼度を指定（デフォルト: 0）
