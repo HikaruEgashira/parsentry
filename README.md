@@ -8,7 +8,10 @@ A tool to identify remotely exploitable vulnerabilities using LLMs and static co
 
 </div>
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/vulnhuntrs)
+
 Vulnhuntrs is a security analysis tool designed to detect vulnerabilities in applications. It provides static analysis capabilities to identify potential security issues in your codebase.
+
 
 ## Features
 
