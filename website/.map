@@ -1,0 +1,17 @@
+export const map = [
+  {
+    "file": "./content/docs/index.mdx",
+    "path": "/docs",
+    "type": "page"
+  },
+  {
+    "file": "./content/docs/installation.mdx",
+    "path": "/docs/installation",
+    "type": "page"
+  },
+  {
+    "file": "./content/docs/usage.mdx",
+    "path": "/docs/usage",
+    "type": "page"
+  }
+];

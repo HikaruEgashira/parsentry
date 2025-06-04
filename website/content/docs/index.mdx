@@ -1,0 +1,68 @@
+---
+title: Introduction
+description: Get started with Vulnhuntrs, an AI-powered security vulnerability scanner
+---
+
+# Vulnhuntrs
+
+Vulnhuntrs is an AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities.
+
+## Features
+
+- **Multi-language support**: Supports Rust, Python, JavaScript, TypeScript, Go, Java, and Ruby
+- **AI-powered analysis**: Uses large language models to identify complex security vulnerabilities
+- **Detailed reports**: Generates comprehensive vulnerability reports with proof-of-concept code
+- **Static code analysis**: Combines pattern matching with semantic analysis using tree-sitter
+
+## Quick Start
+
+### Installation
+
+```bash
+# Using Docker (recommended)
+docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
+
+# Or build from source
+git clone https://github.com/HikaruEgashira/vulnhuntrs
+cd vulnhuntrs
+cargo build --release
+```
+
+### Basic Usage
+
+```bash
+# Analyze a local directory
+vulnhuntrs -r /path/to/project
+
+# Analyze a GitHub repository
+vulnhuntrs --repo owner/repository
+
+# Generate summary report
+vulnhuntrs -r /path/to/project --summary
+```
+
+## Example Output
+
+```
+🔍 Vulnhuntrs - Security Analysis Tool
+📁 Found source files (1)
+  [1] example/python-vulnerable-app/app.py
+🔎 Found security pattern matches (1)
+  [P1] example/python-vulnerable-app/app.py
+📄 Analyzing: example/python-vulnerable-app/app.py (1 / 1)
+
+📝 Analysis Report
+================================================================================
+
+🔍 Analysis Results:
+This application contains 3 major vulnerabilities. First, the /sqli endpoint 
+directly embeds user-provided 'username' parameter into SQL queries without 
+sanitization, enabling SQL injection attacks...
+```
+
+## Next Steps
+
+- [Installation Guide](/docs/installation) - Detailed installation instructions
+- [Configuration](/docs/configuration) - Learn how to configure Vulnhuntrs
+- [Architecture](/docs/architecture) - Understanding how Vulnhuntrs works
+- [API Reference](/docs/api) - Complete API documentation

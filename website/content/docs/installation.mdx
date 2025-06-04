@@ -1,0 +1,104 @@
+---
+title: Installation
+description: How to install and set up Vulnhuntrs
+---
+
+# Installation
+
+There are several ways to install and run Vulnhuntrs depending on your preferences and environment.
+
+## Docker (Recommended)
+
+The easiest way to get started is using the pre-built Docker image:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
+
+# Run with basic options
+docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --help
+```
+
+### With API Key
+
+To use LLM analysis, you'll need to provide an API key:
+
+```bash
+docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -v $(pwd)/reports:/reports \
+  --user $(id -u):$(id -g) \
+  ghcr.io/hikaruegashira/vulnhuntrs:latest \
+  --repo PentesterLab/cr-go --output-dir /reports --summary
+```
+
+## Building from Source
+
+### Prerequisites
+
+- Rust 1.70+ with Cargo
+- Git
+
+### Build Steps
+
+```bash
+# Clone the repository
+git clone https://github.com/HikaruEgashira/vulnhuntrs.git
+cd vulnhuntrs
+
+# Build in release mode
+cargo build --release
+
+# The binary will be available at target/release/vulnhuntrs
+./target/release/vulnhuntrs --help
+```
+
+### Development Build
+
+For development with faster compilation:
+
+```bash
+cargo build
+./target/debug/vulnhuntrs --help
+```
+
+## Verification
+
+To verify your installation works correctly:
+
+```bash
+# Test with example vulnerable application
+vulnhuntrs -r example/python-vulnerable-app/
+
+# Run the test suite
+cargo test
+```
+
+## Environment Setup
+
+### API Keys
+
+Vulnhuntrs supports multiple LLM providers. Set the appropriate environment variable:
+
+```bash
+# OpenAI
+export OPENAI_API_KEY="your-api-key"
+
+# Other supported providers
+export ANTHROPIC_API_KEY="your-api-key"
+export GOOGLE_API_KEY="your-api-key"
+```
+
+### Model Configuration
+
+You can specify which model to use:
+
+```bash
+vulnhuntrs --model gpt-4-turbo -r /path/to/project
+vulnhuntrs --model claude-3-sonnet -r /path/to/project
+```
+
+## Next Steps
+
+- [Configuration](/docs/configuration) - Learn how to configure Vulnhuntrs
+- [Usage](/docs/usage) - Basic usage examples
+- [Architecture](/docs/architecture) - Understanding how it works

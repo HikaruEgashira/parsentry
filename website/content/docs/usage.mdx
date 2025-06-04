@@ -1,0 +1,198 @@
+---
+title: Usage
+description: How to use Vulnhuntrs for security analysis
+---
+
+# Usage
+
+This guide covers the basic and advanced usage patterns for Vulnhuntrs.
+
+## Command Line Options
+
+### Basic Analysis
+
+```bash
+# Analyze current directory
+vulnhuntrs -r .
+
+# Analyze specific directory
+vulnhuntrs -r /path/to/project
+
+# Analyze specific file
+vulnhuntrs -a src/main.rs
+```
+
+### GitHub Repository Analysis
+
+```bash
+# Analyze public GitHub repository
+vulnhuntrs --repo owner/repository
+
+# Examples
+vulnhuntrs --repo PentesterLab/cr-go
+vulnhuntrs --repo OWASP/WebGoat
+```
+
+### Output Options
+
+```bash
+# Generate detailed reports
+vulnhuntrs -r . --output-dir ./reports
+
+# Generate summary only
+vulnhuntrs -r . --summary
+
+# Verbose output
+vulnhuntrs -r . -v
+vulnhuntrs -r . -vv  # Even more verbose
+```
+
+### Filtering Options
+
+```bash
+# Filter by confidence level (0-10)
+vulnhuntrs -r . --min-confidence 7
+
+# Filter by vulnerability types
+vulnhuntrs -r . --vuln-types RCE,SQLI,XSS
+
+# Available types: RCE, SQLI, XSS, IDOR, LFI, RFI, XXE, SSRF, CSRF
+```
+
+### Model Configuration
+
+```bash
+# Specify LLM model
+vulnhuntrs -r . --model gpt-4-turbo
+vulnhuntrs -r . --model claude-3-sonnet
+vulnhuntrs -r . --model gemini-pro
+```
+
+## Example Workflows
+
+### Security Assessment
+
+```bash
+# Step 1: Quick scan for high-confidence issues
+vulnhuntrs -r . --min-confidence 8 --summary
+
+# Step 2: Detailed analysis with reports
+vulnhuntrs -r . --output-dir ./security-reports
+
+# Step 3: Focus on critical vulnerability types
+vulnhuntrs -r . --vuln-types RCE,SQLI --min-confidence 6
+```
+
+### CI/CD Integration
+
+```bash
+#!/bin/bash
+# security-scan.sh
+
+set -e
+
+echo "Running Vulnhuntrs security scan..."
+
+# Run scan and save results
+vulnhuntrs -r . --output-dir ./security-reports --min-confidence 7
+
+# Check if any high-severity vulnerabilities were found
+if [ -f "./security-reports/summary.md" ]; then
+    high_severity=$(grep -c "High" ./security-reports/summary.md || true)
+    if [ "$high_severity" -gt 0 ]; then
+        echo "❌ High severity vulnerabilities found!"
+        exit 1
+    fi
+fi
+
+echo "✅ Security scan completed successfully"
+```
+
+### Docker Workflow
+
+```bash
+# Create reports directory
+mkdir -p ./reports
+
+# Run analysis with Docker
+docker run \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -v $(pwd):/app \
+  -v $(pwd)/reports:/reports \
+  --user $(id -u):$(id -g) \
+  ghcr.io/hikaruegashira/vulnhuntrs:latest \
+  -r /app --output-dir /reports --summary
+
+# View results
+cat ./reports/summary.md
+```
+
+## Understanding Output
+
+### Report Structure
+
+```
+📄 Analysis Report
+================================================================================
+
+🔍 Analysis Results:
+[Detailed description of vulnerabilities found]
+
+🔨 PoC (Proof of Concept):
+[Example exploit code or URLs]
+
+📄 Related Code Context:
+[Specific functions and code snippets with issues]
+
+📓 Analysis Notes:
+[Additional context and recommendations]
+```
+
+### Confidence Levels
+
+- **9-10**: Very High - Almost certainly exploitable
+- **7-8**: High - Likely exploitable with minimal effort
+- **5-6**: Medium - Potentially exploitable with some conditions
+- **3-4**: Low - Requires specific conditions or has limited impact
+- **1-2**: Very Low - Likely false positive or minimal risk
+
+### Vulnerability Types
+
+- **RCE**: Remote Code Execution
+- **SQLI**: SQL Injection
+- **XSS**: Cross-Site Scripting
+- **IDOR**: Insecure Direct Object Reference
+- **LFI**: Local File Inclusion
+- **RFI**: Remote File Inclusion
+- **XXE**: XML External Entity
+- **SSRF**: Server-Side Request Forgery
+- **CSRF**: Cross-Site Request Forgery
+
+## Performance Tips
+
+### Large Codebases
+
+```bash
+# Use pattern filtering to reduce analysis scope
+vulnhuntrs -r . --exclude-dirs "node_modules,target,vendor"
+
+# Focus on high-risk files first
+vulnhuntrs -r . --include-patterns "*.py,*.js,*.go"
+
+# Parallel processing (if supported)
+vulnhuntrs -r . --threads 4
+```
+
+### Memory Usage
+
+For large projects, consider:
+
+- Analyzing specific directories separately
+- Using Docker with memory limits
+- Excluding generated code and dependencies
+
+## Next Steps
+
+- [Configuration](/docs/configuration) - Advanced configuration options
+- [Architecture](/docs/architecture) - Understanding the analysis process
+- [Contributing](/docs/contributing) - How to contribute to the project
