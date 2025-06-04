@@ -1,40 +1,202 @@
-# 新しい言語追加手順（SASTプロジェクト用）
+# Adding New Language Support
 
-## 1. tree-sitter-<lang>の導入
-- 対象言語のtree-sitterリポジトリを`tree-sitter-<lang>/`として追加（例: `git submodule add ...`）。
-- 必要に応じて`npm install`や`cargo build`等でセットアップ。
+This guide explains how to add support for a new programming language to Vulnhuntrs.
 
-## 2. custom_queries/<lang>/ ディレクトリ作成
-- `custom_queries/<lang>/`を新規作成。
-- `definitions.scm`と`references.scm`を用意し、tree-sitterノードに合わせて記述。
+## Prerequisites
 
-## 3. Rust側の対応
-- `Cargo.toml`にtree-sitter-<lang>依存を追加。
-- `src/security_patterns.rs`のLanguage enumとfrom_extensionに新言語を追加し、`security_patterns/patterns.yml`に対応パターンを記述。
-- `src/parser.rs`のget_languageやget_query_path等で新言語対応を追加。
+- Familiarity with the target language's syntax and common vulnerability patterns
+- Basic understanding of tree-sitter and its query language
+- Rust development environment set up
 
-## 4. テスト追加
-- `example/<lang>-vulnerable-app/`等に脆弱サンプルを用意（任意）。
-- `tests/analyzer_test.rs`に新言語用テスト関数を追加。
+## Steps to Add a New Language
 
-## 5. 動作確認
-- `cargo build`と`cargo test`でビルド・テスト。
-- CLIやDockerで新言語の解析動作を確認。
+### 1. Add Tree-sitter Grammar
 
----
+First, add the tree-sitter grammar for your target language:
 
-## 全体フロー（Mermaid）
+```bash
+# Add as a git submodule
+git submodule add https://github.com/tree-sitter/tree-sitter-<lang> tree-sitter-<lang>
 
-```mermaid
-flowchart TD
-    A[tree-sitter-<lang>追加] --> B[custom_queries/<lang>/作成]
-    B --> C[Cargo.toml依存追加]
-    C --> D[security_patterns.rs修正]
-    D --> E[parser.rs修正]
-    E --> F[テスト追加]
-    F --> G[ビルド・テスト・動作確認]
+# Navigate to the submodule and build
+cd tree-sitter-<lang>
+npm install  # or cargo build, depending on the grammar
 ```
 
----
+### 2. Create Custom Queries
 
-この手順は、既存のGo, Java, Python, Rust, JavaScript, TypeScriptの追加例・プロジェクト構成・命名規則・拡張ポイントを踏襲し、tree-sitterセットアップからテスト追加までを網羅したものです。
+Create query files for semantic analysis:
+
+```bash
+mkdir -p custom_queries/<lang>
+```
+
+Create two files:
+- `custom_queries/<lang>/definitions.scm` - For identifying function/method definitions
+- `custom_queries/<lang>/references.scm` - For tracking variable references and data flow
+
+Example for Python:
+```scheme
+; definitions.scm
+(function_definition
+  name: (identifier) @function.name
+  parameters: (parameters) @function.params
+  body: (block) @function.body)
+
+(class_definition
+  name: (identifier) @class.name
+  body: (block) @class.body)
+```
+
+### 3. Update Rust Code
+
+#### 3.1 Add Cargo Dependency
+
+In `Cargo.toml`, add the tree-sitter language:
+
+```toml
+[dependencies]
+tree-sitter-<lang> = { path = "./tree-sitter-<lang>" }
+```
+
+#### 3.2 Update Language Enum
+
+In `src/security_patterns.rs`, add your language to the enum:
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Language {
+    Rust,
+    Python,
+    JavaScript,
+    TypeScript,
+    Ruby,
+    Go,
+    Java,
+    YourNewLanguage, // Add this
+}
+```
+
+Update the `from_extension` method:
+
+```rust
+impl Language {
+    pub fn from_extension(ext: &str) -> Option<Self> {
+        match ext {
+            "rs" => Some(Language::Rust),
+            "py" => Some(Language::Python),
+            // ... other languages
+            "ext" => Some(Language::YourNewLanguage), // Add this
+            _ => None,
+        }
+    }
+}
+```
+
+#### 3.3 Update Parser Module
+
+In `src/parser.rs`, add language support:
+
+```rust
+fn get_language(language: Language) -> tree_sitter::Language {
+    match language {
+        Language::Rust => tree_sitter_rust::language(),
+        Language::Python => tree_sitter_python::language(),
+        // ... other languages
+        Language::YourNewLanguage => tree_sitter_your_language::language(),
+    }
+}
+
+fn get_query_path(language: Language, query_type: &str) -> PathBuf {
+    match language {
+        // ... other cases
+        Language::YourNewLanguage => {
+            PathBuf::from(format!("custom_queries/yourlang/{}.scm", query_type))
+        }
+    }
+}
+```
+
+### 4. Add Security Patterns
+
+Update `security_patterns/patterns.yml` with language-specific vulnerability patterns:
+
+```yaml
+languages:
+  yourlanguage:
+    file_patterns:
+      - pattern: "dangerous_function"
+        risk_score: 8
+        category: "code_execution"
+        description: "Potential code execution vulnerability"
+    # Add more patterns...
+```
+
+### 5. Add Tests
+
+Create test files and add test cases:
+
+```bash
+mkdir -p example/<lang>-vulnerable-app
+```
+
+Add a test in `tests/analyzer_test.rs`:
+
+```rust
+#[test]
+fn test_your_language_analysis() {
+    let content = r#"
+    // Your vulnerable code sample
+    "#;
+    
+    let result = analyze_code(content, Language::YourNewLanguage);
+    assert!(result.vulnerabilities.len() > 0);
+}
+```
+
+### 6. Build and Test
+
+```bash
+# Build the project
+cargo build
+
+# Run tests
+cargo test
+
+# Test with a sample file
+vulnhuntrs -r ./example/<lang>-vulnerable-app --model gpt-4o-mini
+```
+
+## Implementation Checklist
+
+- [ ] Tree-sitter grammar added as submodule
+- [ ] Custom queries created (definitions.scm, references.scm)
+- [ ] Cargo.toml updated with dependency
+- [ ] Language enum updated in security_patterns.rs
+- [ ] Parser module updated with language support
+- [ ] Security patterns added to patterns.yml
+- [ ] Example vulnerable code created
+- [ ] Tests added and passing
+- [ ] Documentation updated
+
+## Tips
+
+1. Study existing language implementations in the codebase
+2. Start with basic patterns and gradually add more complex ones
+3. Test with real-world vulnerable code samples
+4. Consider language-specific vulnerability types
+5. Ensure queries are efficient for large codebases
+
+## Common Pitfalls
+
+- Forgetting to update all switch/match statements for the new language
+- Not testing with various code styles and edge cases
+- Missing important vulnerability patterns specific to the language
+- Incorrect tree-sitter query syntax
+
+## Need Help?
+
+If you encounter issues:
+1. Check existing language implementations for reference
+2. Consult tree-sitter documentation for query syntax
+3. Open an issue on GitHub with details about your implementation

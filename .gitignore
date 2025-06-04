@@ -4,3 +4,4 @@ pkg
 *.sqlite
 reports
 repo
+.claude/settings.local.json

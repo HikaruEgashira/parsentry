@@ -99,6 +99,15 @@ docker buildx build --platform linux/amd64 -t ghcr.io/hikaruegashira/vulnhuntrs:
 - `--vuln-types <TYPES>`: 特定の脆弱性タイプでフィルタリング（カンマ区切り）
 - `--summary`: サマリーレポートを表示
 
+## Documentation Structure
+
+- [Concepts](docs/concepts/) - Details about the LLM integration and prompts
+  - [Analysis Flow](docs/concepts/analysis_flow.md) - How the analysis process works
+  - [Context Building](docs/concepts/context.md) - Code context generation
+  - [Prompts](docs/concepts/prompts.md) - LLM prompt templates
+  - [Response Schema](docs/concepts/response_schema.md) - Output format specification
+  - [Security Patterns](docs/concepts/security_patterns.md) - Pattern matching details
+
 ## Security
 
 This tool is intended for security research and educational purposes only. Do not use the example vulnerable applications in production environments.
