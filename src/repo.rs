@@ -20,7 +20,6 @@ pub struct RepoOps {
 }
 
 impl RepoOps {
-    /// RepoOpsインスタンスを生成する。
     pub fn new(repo_path: PathBuf) -> Self {
         let gitignore_patterns = Self::read_gitignore(&repo_path).unwrap_or_default();
 
@@ -51,16 +50,13 @@ impl RepoOps {
         }
     }
 
-    /// セキュリティパターン該当ファイルを起点にContextを構築する。
     pub fn collect_context_for_security_pattern(
         &mut self,
         file_path: &std::path::Path,
     ) -> anyhow::Result<crate::parser::Context> {
-        // TODO: parser.build_context_from_fileを利用してContextを構築
         self.code_parser.build_context_from_file(file_path)
     }
 
-    /// リポジトリの.gitignoreパターンを読み込む。
     fn read_gitignore(repo_path: &Path) -> IoResult<Vec<String>> {
         let gitignore_path = repo_path.join(".gitignore");
         if !gitignore_path.exists() {
@@ -82,7 +78,6 @@ impl RepoOps {
         Ok(patterns)
     }
 
-    /// ディレクトリを再帰的に走査し、各ファイルにコールバックを適用する。
     fn visit_dirs(&self, dir: &Path, cb: &mut dyn FnMut(&Path)) -> std::io::Result<()> {
         if dir.is_dir() {
             for entry in read_dir(dir)? {
@@ -98,7 +93,6 @@ impl RepoOps {
         Ok(())
     }
 
-    /// パターンに基づきパスを除外すべきか判定する。
     fn should_exclude_path(&self, path: &Path) -> bool {
         if let Ok(relative_path) = path.strip_prefix(&self.repo_path) {
             let relative_str = relative_path.to_string_lossy();
@@ -124,7 +118,6 @@ impl RepoOps {
         false
     }
 
-    /// パスが.gitignoreパターンに一致するか判定する。
     /// Determine if a path matches a .gitignore style pattern.
     ///
     /// The function is public so that integration tests can verify the
@@ -149,7 +142,6 @@ impl RepoOps {
         }
     }
 
-    /// リポジトリ内の関連ソースファイル一覧を返す。
     pub fn get_relevant_files(&self) -> Vec<PathBuf> {
         let mut files = Vec::new();
 
@@ -175,7 +167,6 @@ impl RepoOps {
         files
     }
 
-    /// ネットワーク関連パターンに該当するファイル一覧を返す。
     pub fn get_network_related_files(&self, files: &[PathBuf]) -> Vec<PathBuf> {
         let mut network_files = Vec::new();
         for file_path in files {
@@ -195,7 +186,6 @@ impl RepoOps {
         network_files
     }
 
-    /// 指定パスに基づき解析対象ファイル一覧を返す。
     pub fn get_files_to_analyze(&self, analyze_path: Option<PathBuf>) -> Result<Vec<PathBuf>> {
         let path_to_analyze = analyze_path.unwrap_or_else(|| self.repo_path.clone());
 
@@ -228,7 +218,6 @@ impl RepoOps {
         }
     }
 
-    /// コードパーサーにファイルを読み込む。
     pub fn parse_repo_files(&mut self, analyze_path: Option<PathBuf>) -> Result<()> {
         let files = self.get_files_to_analyze(analyze_path)?;
         for file in &files {
@@ -239,7 +228,6 @@ impl RepoOps {
         Ok(())
     }
 
-    /// リポジトリ内で定義を検索する。
     pub fn find_definition_in_repo(
         &mut self,
         name: &str,
@@ -252,7 +240,6 @@ impl RepoOps {
         self.code_parser.find_definition(name, source_file)
     }
 
-    /// リポジトリ内で参照を検索する。
     pub fn find_references_in_repo(
         &mut self,
         name: &str,
@@ -262,7 +249,6 @@ impl RepoOps {
         }
         self.code_parser.find_references(name)
     }
-    /// 指定ファイルをCodeParserに追加
     pub fn add_file_to_parser(&mut self, path: &std::path::Path) -> anyhow::Result<()> {
         self.code_parser.add_file(path)
     }

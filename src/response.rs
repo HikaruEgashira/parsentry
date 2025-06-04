@@ -33,7 +33,6 @@ pub struct Response {
     pub context_code: Vec<ContextCode>,
 }
 
-/// Response構造体のJSONスキーマを返す。
 pub fn response_json_schema() -> serde_json::Value {
     json!({
         "type": "object",
@@ -68,7 +67,14 @@ pub fn response_json_schema() -> serde_json::Value {
 }
 
 impl Response {
-    /// 人間が読みやすい解析レポートを出力する。
+    pub fn normalize_confidence_score(score: i32) -> i32 {
+        if score > 0 && score <= 10 {
+            score * 10
+        } else {
+            score
+        }
+    }
+
     pub fn print_readable(&self) {
         println!("\n📝 解析レポート");
         println!("{}", "=".repeat(80));
@@ -123,7 +129,6 @@ impl Response {
         println!();
     }
 
-    /// 解析レポートをMarkdown形式で返す
     pub fn to_markdown(&self) -> String {
         let mut md = String::new();
         md.push_str("# 解析レポート\n\n");

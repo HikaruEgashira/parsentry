@@ -35,7 +35,6 @@ pub struct SecurityRiskPatterns {
 }
 
 impl SecurityRiskPatterns {
-    /// 言語ごとのSecurityRiskPatternsインスタンスを生成する。
     pub fn new(language: Language) -> Self {
         let pattern_map = Self::pattern_map();
         let patterns = pattern_map
@@ -49,14 +48,12 @@ impl SecurityRiskPatterns {
         Self { patterns }
     }
 
-    /// 内容がいずれかのセキュリティリスクパターンに一致すればtrueを返す。
     pub fn matches(&self, content: &str) -> bool {
         self.patterns
             .iter()
             .any(|pattern| pattern.is_match(content))
     }
 
-    /// 言語ごとのパターン定義
     fn pattern_map() -> HashMap<Language, Vec<String>> {
         use Language::*;
 

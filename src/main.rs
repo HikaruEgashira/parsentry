@@ -66,16 +66,13 @@ struct Args {
 }
 
 #[tokio::main]
-/// コマンドライン引数をパースし、リポジトリ内の関連ファイルを解析してレポートを出力するエントリポイント。
 async fn main() -> Result<()> {
     env_logger::init();
     dotenv().ok();
 
     let args = Args::parse();
 
-    // rootディレクトリの決定
     let root_dir = if let Some(repo) = &args.repo {
-        // クローン先ディレクトリ名を決定（例: "repo"）
         let dest = PathBuf::from("repo");
         if dest.exists() {
             std::fs::remove_dir_all(&dest)
@@ -108,7 +105,6 @@ async fn main() -> Result<()> {
         println!("  [{}] {}", i + 1, f.display());
     }
 
-    // SecurityRiskPatternsで該当ファイルを特定
     let mut pattern_files = Vec::new();
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
@@ -153,7 +149,6 @@ async fn main() -> Result<()> {
             println!("📄 解析対象: {} ({} / {})", file_name, idx + 1, total);
             println!("{}", "=".repeat(80));
 
-            // 各タスクで独立したRepoOpsを生成
             let mut repo = RepoOps::new((*root_dir).clone());
             if let Err(e) = repo.add_file_to_parser(&file_path) {
                 println!("❌ ファイルのパース追加に失敗: {}: {}", file_path.display(), e);
@@ -167,7 +162,6 @@ async fn main() -> Result<()> {
                 }
             };
 
-            // analyze_fileで解析
             let analysis_result = match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
                 Ok(res) => res,
                 Err(e) => {
@@ -176,7 +170,6 @@ async fn main() -> Result<()> {
                 }
             };
 
-            // Markdownファイル出力
             if let Some(ref output_dir) = output_dir {
                 if let Err(e) = std::fs::create_dir_all(output_dir) {
                     println!("❌ 出力ディレクトリ作成に失敗: {}: {}", output_dir.display(), e);

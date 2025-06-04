@@ -38,7 +38,6 @@ pub struct CodeParser {
 }
 
 impl CodeParser {
-    /// CodeParserインスタンスを生成する。
     pub fn new() -> Result<Self> {
         Ok(Self {
             files: HashMap::new(),
@@ -46,7 +45,6 @@ impl CodeParser {
         })
     }
 
-    /// 指定ファイルの内容をパーサーに追加する。
     pub fn add_file(&mut self, path: &Path) -> Result<()> {
         let content = fs::read_to_string(path).map_err(|e| {
             anyhow!(
@@ -59,7 +57,6 @@ impl CodeParser {
         Ok(())
     }
 
-    /// 指定パスのファイル種別（言語）を取得する。
     fn get_language(&self, path: &Path) -> Option<Language> {
         let extension = path.extension().and_then(|ext| ext.to_str());
         match extension {
@@ -75,7 +72,6 @@ impl CodeParser {
         }
     }
 
-    /// 指定言語・クエリ名に対応するクエリファイルのパスを取得する。
     fn get_query_path(&self, language: &Language, query_name: &str) -> Result<PathBuf> {
         let lang_name = if language == &unsafe { tree_sitter_python() } {
             "python"
@@ -122,7 +118,6 @@ impl CodeParser {
         Ok(query_path)
     }
 
-    /// 指定名の定義をソースファイルから検索する。
     pub fn find_definition(
         &mut self,
         name: &str,
@@ -202,7 +197,6 @@ impl CodeParser {
         Ok(None)
     }
 
-    /// 読み込まれたファイル群から指定名の参照をすべて検索する。
     pub fn find_references(&mut self, name: &str) -> Result<Vec<(PathBuf, Definition)>> {
         let mut results = Vec::new();
 
@@ -291,15 +285,12 @@ impl CodeParser {
 
         Ok(results)
     }
-    /// 指定ファイルから関連定義を再帰的に収集しContextを構築する。
     pub fn build_context_from_file(&mut self, start_path: &Path) -> Result<Context> {
         use std::collections::HashSet;
 
-        // 収集済み定義名を管理
         let mut collected: HashSet<String> = HashSet::new();
         let mut definitions: Vec<Definition> = Vec::new();
 
-        // 起点ファイルの全定義を抽出
         let file_content = self
             .files
             .get(start_path)
@@ -315,7 +306,6 @@ impl CodeParser {
             .parse(file_content, None)
             .ok_or_else(|| anyhow::anyhow!("パース失敗: {}", start_path.display()))?;
 
-        // definitionsクエリで全定義を抽出
         let query_path = self.get_query_path(&language, "definitions")?;
         let query_str = std::fs::read_to_string(&query_path)?;
         let query = tree_sitter::Query::new(&language, &query_str)?;
@@ -323,7 +313,6 @@ impl CodeParser {
         let mut query_cursor = tree_sitter::QueryCursor::new();
         let mut matches = query_cursor.matches(&query, tree.root_node(), file_content.as_bytes());
 
-        // 定義名リスト
         let mut to_visit: Vec<(PathBuf, String)> = Vec::new();
 
         while let Some(mat) = matches.next() {
@@ -355,9 +344,7 @@ impl CodeParser {
             }
         }
 
-        // 再帰的に呼び出し先定義を収集
         while let Some((file_path, func_name)) = to_visit.pop() {
-            // 関数本体から呼び出し先関数名を抽出（referencesクエリを利用）
             if let Some((_, def)) = self.find_definition(&func_name, &file_path)? {
                 // referencesクエリで呼び出し先を抽出
                 let refs = self.find_references(&def.name)?;

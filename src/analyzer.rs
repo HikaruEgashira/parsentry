@@ -10,7 +10,6 @@ use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{response_json_schema, Response};
 
-/// チャットAPI用のClientを生成して返す。
 fn create_api_client() -> Client {
     let client_config = ClientConfig::default().with_chat_options(
         ChatOptions::default()
@@ -19,7 +18,6 @@ fn create_api_client() -> Client {
     Client::builder().with_config(client_config).build()
 }
 
-/// チャットリクエストを実行し、応答内容（文字列）を返す。
 async fn execute_chat_request(
     client: &Client,
     model: &str,
@@ -37,7 +35,6 @@ async fn execute_chat_request(
     }
 }
 
-/// JSON文字列をパースして型Tの構造体に変換する。
 fn parse_json_response<T: DeserializeOwned>(chat_content: &str) -> Result<T> {
     match serde_json::from_str(chat_content) {
         Ok(response) => Ok(response),
@@ -49,7 +46,6 @@ fn parse_json_response<T: DeserializeOwned>(chat_content: &str) -> Result<T> {
     }
 }
 
-/// LLMを用いてファイルの脆弱性解析を行い、Responseを返す。
 pub async fn analyze_file(
     file_path: &PathBuf,
     model: &str,
@@ -84,7 +80,6 @@ pub async fn analyze_file(
         });
     }
 
-    // コンテキスト情報をプロンプトに含める
     let mut context_text = String::new();
     if !context.definitions.is_empty() {
         context_text.push_str("\nContext Definitions:\n");
@@ -117,10 +112,7 @@ pub async fn analyze_file(
     debug!("[LLM Response]\n{}", chat_content);
     let mut response: Response = parse_json_response(&chat_content)?;
     
-    // 信頼度スコアが0~10の範囲の場合、10倍に変換する
-    if response.confidence_score > 0 && response.confidence_score <= 10 {
-        response.confidence_score *= 10;
-    }
+    response.confidence_score = crate::response::Response::normalize_confidence_score(response.confidence_score);
 
     info!("Initial analysis complete");
 
@@ -190,10 +182,7 @@ pub async fn analyze_file(
                 debug!("[LLM Response]\n{}", chat_content);
                 let mut vuln_response: Response = parse_json_response(&chat_content)?;
                 
-                // 信頼度スコアが0~10の範囲の場合、10倍に変換する
-                if vuln_response.confidence_score > 0 && vuln_response.confidence_score <= 10 {
-                    vuln_response.confidence_score *= 10;
-                }
+                vuln_response.confidence_score = crate::response::Response::normalize_confidence_score(vuln_response.confidence_score);
 
                 if verbosity > 0 {
                     debug!(
