@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
             };
 
             // analyze_fileで解析
-            let analysis_result = match analyze_file(&file_path, &model, &files, verbosity, &context).await {
+            let analysis_result = match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
                 Ok(res) => res,
                 Err(e) => {
                     println!("❌ 解析に失敗: {}: {}", file_path.display(), e);

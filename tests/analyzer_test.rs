@@ -16,6 +16,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
         &vulnhuntrs::parser::Context {
             definitions: vec![],
         },
+        0,
     )
     .await?;
 
@@ -51,6 +52,7 @@ fn main() {
         &vulnhuntrs::parser::Context {
             definitions: vec![],
         },
+        0,
     )
     .await?;
 
@@ -100,6 +102,7 @@ fn main() {
         &vulnhuntrs::parser::Context {
             definitions: vec![],
         },
+        0,
     )
     .await?;
 

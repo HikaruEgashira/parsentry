@@ -56,6 +56,7 @@ pub async fn analyze_file(
     files: &[PathBuf],
     verbosity: u8,
     context: &crate::parser::Context,
+    min_confidence: i32,
 ) -> Result<Response, Error> {
     info!("Performing initial analysis of {}", file_path.display());
 
@@ -123,7 +124,7 @@ pub async fn analyze_file(
 
     info!("Initial analysis complete");
 
-    if response.confidence_score > 0 && !response.vulnerability_types.is_empty() {
+    if response.confidence_score >= min_confidence && !response.vulnerability_types.is_empty() {
         let vuln_info_map = vuln_specific::get_vuln_specific_info();
 
         for vuln_type in response.vulnerability_types.clone() {
@@ -132,20 +133,16 @@ pub async fn analyze_file(
             let mut stored_code_definitions: Vec<(PathBuf, crate::parser::Definition)> = Vec::new();
             let mut previous_analysis = String::new();
 
-            for iter in 0..1 {
+            {
                 info!(
-                    "Performing vuln-specific analysis iteration for {:?} (iteration {}/{})",
-                    vuln_type,
-                    iter + 1,
-                    1
+                    "Performing vuln-specific analysis for {:?}",
+                    vuln_type
                 );
                 if verbosity > 0 {
                     println!(
-                        "🔎 [{}] 脆弱性タイプ: {:?} の詳細解析 (iteration {}/{})",
+                        "🔎 [{}] 脆弱性タイプ: {:?} の詳細解析",
                         file_path.display(),
-                        vuln_type,
-                        iter + 1,
-                        1
+                        vuln_type
                     );
                     if !stored_code_definitions.is_empty() {
                         println!("  解析コンテキスト関数:");
@@ -248,9 +245,6 @@ pub async fn analyze_file(
 
                 previous_analysis = vuln_response.analysis;
 
-                if vuln_response.confidence_score >= 90 {
-                    break;
-                }
             }
         }
     }
