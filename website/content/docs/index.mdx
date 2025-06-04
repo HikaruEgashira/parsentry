@@ -41,28 +41,16 @@ vulnhuntrs --repo owner/repository
 vulnhuntrs -r /path/to/project --summary
 ```
 
-## Example Output
+## Raw Documentation for LLMs
 
-```
-🔍 Vulnhuntrs - Security Analysis Tool
-📁 Found source files (1)
-  [1] example/python-vulnerable-app/app.py
-🔎 Found security pattern matches (1)
-  [P1] example/python-vulnerable-app/app.py
-📄 Analyzing: example/python-vulnerable-app/app.py (1 / 1)
+Complete documentation is also available in plain markdown format for LLM consumption:
 
-📝 Analysis Report
-================================================================================
-
-🔍 Analysis Results:
-This application contains 3 major vulnerabilities. First, the /sqli endpoint 
-directly embeds user-provided 'username' parameter into SQL queries without 
-sanitization, enabling SQL injection attacks...
-```
-
-## Next Steps
-
-- [Installation Guide](/docs/installation) - Detailed installation instructions
-- [Configuration](/docs/configuration) - Learn how to configure Vulnhuntrs
-- [Architecture](/docs/architecture) - Understanding how Vulnhuntrs works
-- [API Reference](/docs/api) - Complete API documentation
+- [Index](/docs/raw/index.md)
+- [Getting Started](/docs/raw/getting-started.md)
+- [Installation](/docs/raw/installation.md)
+- [Configuration](/docs/raw/configuration.md)
+- [Usage](/docs/raw/usage.md)
+- [Examples](/docs/raw/examples.md)
+- [Architecture](/docs/raw/architecture.md)
+- [API Reference](/docs/raw/api.md)
+- [Contributing](/docs/raw/contributing.md)

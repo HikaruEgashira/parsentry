@@ -42,70 +42,19 @@ vulnhuntrs --repo owner/repository
 vulnhuntrs -r /path/to/project --summary`}</code>
           </pre>
 
-          <h2>Docker Usage</h2>
-          <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
-            <code>{`docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \\
-  -v $(pwd)/reports:/reports \\
-  --user $(id -u):$(id -g) \\
-  ghcr.io/hikaruegashira/vulnhuntrs:latest \\
-  --repo PentesterLab/cr-go --output-dir /reports --summary`}</code>
-          </pre>
-
-          <h2>Configuration Options</h2>
+          <h2>Raw Documentation for LLMs</h2>
+          <p>Complete documentation is available in plain markdown format for LLM consumption:</p>
           <ul>
-            <li><code>-r, --root &lt;ROOT&gt;</code>: Specify the root directory of the project to scan</li>
-            <li><code>--repo &lt;REPO&gt;</code>: Specify GitHub repository URL for analysis</li>
-            <li><code>-a, --analyze &lt;ANALYZE&gt;</code>: Specify specific file or directory for analysis</li>
-            <li><code>-v</code>: Display verbose logs (use multiple times for more detail)</li>
-            <li><code>--min-confidence &lt;MIN_CONFIDENCE&gt;</code>: Specify minimum confidence level for vulnerabilities (default: 0)</li>
-            <li><code>--vuln-types &lt;TYPES&gt;</code>: Filter by specific vulnerability types (comma-separated)</li>
-            <li><code>--summary</code>: Display summary report</li>
+            <li><a href="/docs/raw/index.md" className="text-blue-600 hover:underline">Documentation Index</a></li>
+            <li><a href="/docs/raw/getting-started.md" className="text-blue-600 hover:underline">Getting Started</a></li>
+            <li><a href="/docs/raw/installation.md" className="text-blue-600 hover:underline">Installation Guide</a></li>
+            <li><a href="/docs/raw/configuration.md" className="text-blue-600 hover:underline">Configuration</a></li>
+            <li><a href="/docs/raw/usage.md" className="text-blue-600 hover:underline">Usage Examples</a></li>
+            <li><a href="/docs/raw/examples.md" className="text-blue-600 hover:underline">Real-world Examples</a></li>
+            <li><a href="/docs/raw/architecture.md" className="text-blue-600 hover:underline">Architecture</a></li>
+            <li><a href="/docs/raw/api.md" className="text-blue-600 hover:underline">API Reference</a></li>
+            <li><a href="/docs/raw/contributing.md" className="text-blue-600 hover:underline">Contributing Guide</a></li>
           </ul>
-
-          <h2>Example Output</h2>
-          <pre className="bg-gray-50 border p-4 rounded-lg overflow-x-auto text-sm">
-            <code>{`🔍 Vulnhuntrs - Security Analysis Tool
-📁 Found source files (1)
-  [1] example/python-vulnerable-app/app.py
-🔎 Found security pattern matches (1)
-  [P1] example/python-vulnerable-app/app.py
-📄 Analyzing: example/python-vulnerable-app/app.py (1 / 1)
-
-📝 Analysis Report
-================================================================================
-
-🔍 Analysis Results:
-This application contains 3 major vulnerabilities. First, the /sqli endpoint 
-directly embeds user-provided 'username' parameter into SQL queries without 
-sanitization, enabling SQL injection attacks...
-
-🔨 PoC (Proof of Concept):
-【SQLインジェクション】
-URL: /sqli?username=' OR '1'='1
-
-【XSS】
-URL: /xss?name=<script>alert(1)</script>
-
-【コマンドインジェクション(RCE)】
-URL: /cmdi?hostname=localhost;whoami`}</code>
-          </pre>
-
-          <h2>Architecture</h2>
-          <p>The codebase follows a pipeline architecture:</p>
-          <ol>
-            <li><strong>File Discovery</strong>: Identifies source files to analyze</li>
-            <li><strong>Pattern Matching</strong>: Filters files using regex patterns</li>
-            <li><strong>Code Parsing</strong>: Uses tree-sitter to parse code and extract semantic information</li>
-            <li><strong>Context Building</strong>: Collects function definitions and references for context</li>
-            <li><strong>LLM Analysis</strong>: Sends code + context to LLM for vulnerability detection</li>
-            <li><strong>Response Handling</strong>: Formats and validates LLM responses</li>
-          </ol>
-
-          <h2>Security</h2>
-          <p>This tool is intended for security research and educational purposes only. Do not use the example vulnerable applications in production environments.</p>
-
-          <h2>License</h2>
-          <p>AGPL 3.0</p>
 
           <h2>Links</h2>
           <ul>
