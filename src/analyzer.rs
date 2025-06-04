@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{response_json_schema, Response};
+use crate::security_patterns::{SecurityRiskPatterns, PatternType, Language};
 
 fn create_api_client() -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -209,24 +210,53 @@ pub async fn analyze_file(
                     break;
                 }
 
+                // Get language for pattern detection
+                let file_extension = file_path.extension()
+                    .and_then(|ext| ext.to_str())
+                    .unwrap_or("");
+                let language = Language::from_extension(file_extension);
+                let patterns = SecurityRiskPatterns::new(language);
+
                 for context in vuln_response.context_code {
                     let escaped_name = escape(&context.name);
                     if !stored_code_definitions
                         .iter()
                         .any(|(_, def)| def.name == escaped_name)
                     {
-                        match parser.find_definition(&escaped_name, file_path) {
-                            Ok(Some(def)) => {
-                                stored_code_definitions.push(def);
+                        // Determine pattern type to choose appropriate search method
+                        let pattern_type = patterns.get_pattern_type(&context.name);
+                        
+                        match pattern_type {
+                            Some(PatternType::Source) => {
+                                // For sources, use find_references to track data flow forward
+                                match parser.find_references(&escaped_name) {
+                                    Ok(refs) => {
+                                        stored_code_definitions.extend(refs);
+                                    }
+                                    Err(e) => {
+                                        warn!(
+                                            "Failed to find references for source context {}: {}",
+                                            escaped_name, e
+                                        );
+                                    }
+                                }
                             }
-                            Ok(None) => {
-                                debug!("No definition found for context: {}", escaped_name);
-                            }
-                            Err(e) => {
-                                warn!(
-                                    "Failed to find definition for context {}: {}",
-                                    escaped_name, e
-                                );
+                            Some(PatternType::Sink) | Some(PatternType::Validate) | None => {
+                                // For sinks, validate patterns, or unknown patterns, use find_definition
+                                match parser.find_definition(&escaped_name, file_path) {
+                                    Ok(Some(def)) => {
+                                        stored_code_definitions.push(def);
+                                    }
+                                    Ok(None) => {
+                                        debug!("No definition found for context: {}", escaped_name);
+                                    }
+                                    Err(e) => {
+                                        warn!(
+                                            "Failed to find definition for context {}: {}",
+                                            escaped_name, e
+                                        );
+                                    }
+                                }
                             }
                         }
                     }
