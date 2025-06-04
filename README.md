@@ -30,7 +30,7 @@ See actual vulnerability reports generated for each supported language:
 - [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app.md) - SQL injection and XSS vulnerabilities
 - [Rust Vulnerable App](docs/reports/rust-vulnerable-app.md) - SQL injection, command injection, and path traversal
 
-## 🐳 Docker での実行方法
+## 🐳 Docker Usage
 
 ```bash
 docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
@@ -43,16 +43,15 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 
+## Command Line Options
 
-### オプション
-
-- `-r, --root <ROOT>`: スキャンするプロジェクトのルートディレクトリを指定
-- `--repo <REPO>`: GitHubリポジトリのURLを指定して解析
-- `-a, --analyze <ANALYZE>`: 特定のファイルやディレクトリを指定して解析
-- `-v`: 詳細なログを表示（複数指定でより詳細に）
-- `--min-confidence <MIN_CONFIDENCE>`: 表示する脆弱性の最小信頼度を指定（デフォルト: 0）
-- `--vuln-types <TYPES>`: 特定の脆弱性タイプでフィルタリング（カンマ区切り）
-- `--summary`: サマリーレポートを表示
+- `-r, --root <ROOT>`: Specify the root directory of the project to scan
+- `--repo <REPO>`: Specify GitHub repository URL for analysis
+- `-a, --analyze <ANALYZE>`: Specify a specific file or directory to analyze
+- `-v`: Show verbose logs (specify multiple times for more detail)
+- `--min-confidence <MIN_CONFIDENCE>`: Specify minimum confidence level for displayed vulnerabilities (default: 0)
+- `--vuln-types <TYPES>`: Filter by specific vulnerability types (comma-separated)
+- `--summary`: Display summary report
 
 ## Documentation Structure
 
