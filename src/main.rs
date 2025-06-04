@@ -3,6 +3,7 @@ use clap::Parser;
 use dotenv::dotenv;
 use std::path::PathBuf;
 use vulnhuntrs::analyzer::analyze_file;
+use vulnhuntrs::pattern_generator::generate_custom_patterns;
 use vulnhuntrs::security_patterns::Language;
 use vulnhuntrs::security_patterns::SecurityRiskPatterns;
 
@@ -63,6 +64,10 @@ struct Args {
     /// サマリーレポートを生成する
     #[arg(long)]
     summary: bool,
+    
+    /// カスタムパターンを生成する（現在のディレクトリを解析してセキュリティパターンを自動検出）
+    #[arg(long)]
+    generate_patterns: bool,
 }
 
 #[tokio::main]
@@ -95,6 +100,12 @@ async fn main() -> Result<()> {
     let repo = RepoOps::new(root_dir.clone());
 
     println!("🔍 Vulnhuntrs - セキュリティ解析ツール");
+
+    // Handle pattern generation mode
+    if args.generate_patterns {
+        println!("🔧 カスタムパターン生成モードを開始します");
+        return generate_custom_patterns(&root_dir, &args.model).await;
+    }
 
     let files = repo.get_relevant_files();
     println!(
