@@ -76,16 +76,13 @@ URL: /cmdi?hostname=localhost;whoami
 
 ```bash
 docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
-
-docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --repo https://github.com/PentesterLab/cr-go
+docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --help
 
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   --user $(id -u):$(id -g) \
   ghcr.io/hikaruegashira/vulnhuntrs:latest \
-  --repo https://github.com/PentesterLab/cr-go --output-dir /reports --summary
-
-docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --help
+  --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 
 ### multi architecture image build

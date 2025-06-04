@@ -48,13 +48,11 @@ cargo run -- -r /path/to/project --min-confidence 7 --vuln-types RCE,SQLI
 docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/hikaruegashira/vulnhuntrs:latest --push .
 
 # Run with Docker
-docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --repo https://github.com/PentesterLab/cr-go
-
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   --user $(id -u):$(id -g) \
   ghcr.io/hikaruegashira/vulnhuntrs:latest \
-  --repo https://github.com/PentesterLab/cr-go --output-dir /reports --summary
+  --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 
 ## Architecture Overview
