@@ -20,7 +20,15 @@ Vulnhuntrs is a security analysis tool designed to detect vulnerabilities in app
   - Supports Rust, Python, JavaScript, TypeScript, Go, Java, and Ruby.
 - Detailed vulnerability reports
 - Example vulnerable applications for testing
-- [Example Reports](docs/reports/) - See actual vulnerability reports from the example applications
+
+## Examples
+
+See actual vulnerability reports generated for each supported language:
+
+- [Python Vulnerable App](docs/reports/python-vulnerable-app.md) - SQL injection, XSS, and command injection
+- [Go Vulnerable App](docs/reports/go-vulnerable-app.md) - SQL injection, XSS, command injection, and file traversal  
+- [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app.md) - SQL injection and XSS vulnerabilities
+- [Rust Vulnerable App](docs/reports/rust-vulnerable-app.md) - SQL injection, command injection, and path traversal
 
 ## 🐳 Docker での実行方法
 
