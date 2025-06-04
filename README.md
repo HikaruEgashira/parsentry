@@ -77,9 +77,16 @@ URL: /cmdi?hostname=localhost;whoami
 ```bash
 docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
 
-docker run -v $(pwd):/app ghcr.io/hikaruegashira/vulnhuntrs analyze /app/path/to/target
+docker run -v $(pwd):/app ghcr.io/hikaruegashira/vulnhuntrs:latest -r /app/path/to/target
 
-docker run ghcr.io/hikaruegashira/vulnhuntrs --help
+docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -v $(pwd):/app \
+  -v $(pwd)/reports:/reports \
+  --user $(id -u):$(id -g) \
+  ghcr.io/hikaruegashira/vulnhuntrs:latest \
+  -r /app/path/to/target --output-dir /reports --summary
+
+docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --help
 ```
 
 ### multi architecture image build

@@ -48,7 +48,14 @@ cargo run -- -r /path/to/project --min-confidence 7 --vuln-types RCE,SQLI
 docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/hikaruegashira/vulnhuntrs:latest --push .
 
 # Run with Docker
-docker run -v $(pwd):/app ghcr.io/hikaruegashira/vulnhuntrs analyze /app
+docker run -v $(pwd):/app ghcr.io/hikaruegashira/vulnhuntrs:latest -r /app
+
+docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -v $(pwd):/app \
+  -v $(pwd)/reports:/reports \
+  --user $(id -u):$(id -g) \
+  ghcr.io/hikaruegashira/vulnhuntrs:latest \
+  -r /app --output-dir /reports --summary
 ```
 
 ## Architecture Overview
