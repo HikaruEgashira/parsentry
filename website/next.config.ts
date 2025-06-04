@@ -5,8 +5,8 @@ const isProd = process.env.NODE_ENV === 'production';
 const config: NextConfig = {
   output: 'export',
   trailingSlash: true,
-  basePath: isProd ? '/vulnhuntrs' : '',
-  assetPrefix: isProd ? '/vulnhuntrs' : '',
+  basePath: '/vulnhuntrs',
+  assetPrefix: '/vulnhuntrs',
   images: {
     unoptimized: true,
   },
