@@ -36,8 +36,8 @@ struct Args {
     #[arg(short, long)]
     analyze: Option<PathBuf>,
 
-    /// LLM model to use (default: o3-mini)
-    #[arg(short, long, default_value = "o3-mini")]
+    /// LLM model to use (default: o4-mini)
+    #[arg(short, long, default_value = "o4-mini")]
     model: String,
 
     /// Increase output verbosity
