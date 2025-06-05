@@ -206,10 +206,8 @@ async fn main() -> Result<()> {
     });
 
     let results = join_all(tasks).await;
-    for result in results {
-        if let Ok(Some((file_path, response))) = result {
-            summary.add_result(file_path, response);
-        }
+    for (file_path, response) in results.into_iter().flatten().flatten() {
+        summary.add_result(file_path, response);
     }
     
     summary.sort_by_confidence();
@@ -223,15 +221,15 @@ async fn main() -> Result<()> {
     if let Some(types_str) = args.vuln_types {
         let vuln_types: Vec<VulnType> = types_str
             .split(',')
-            .filter_map(|s| match s.trim() {
-                "LFI" => Some(VulnType::LFI),
-                "RCE" => Some(VulnType::RCE),
-                "SSRF" => Some(VulnType::SSRF),
-                "AFO" => Some(VulnType::AFO),
-                "SQLI" => Some(VulnType::SQLI),
-                "XSS" => Some(VulnType::XSS),
-                "IDOR" => Some(VulnType::IDOR),
-                other => Some(VulnType::Other(other.to_string())),
+            .map(|s| match s.trim() {
+                "LFI" => VulnType::LFI,
+                "RCE" => VulnType::RCE,
+                "SSRF" => VulnType::SSRF,
+                "AFO" => VulnType::AFO,
+                "SQLI" => VulnType::SQLI,
+                "XSS" => VulnType::XSS,
+                "IDOR" => VulnType::IDOR,
+                other => VulnType::Other(other.to_string()),
             })
             .collect();
         

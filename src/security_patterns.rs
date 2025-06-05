@@ -129,7 +129,7 @@ impl SecurityRiskPatterns {
             .join("security_patterns")
             .join("patterns.yml");
         let content = fs::read_to_string(&yaml_path)
-            .expect(&format!("failed to read {}", yaml_path.display()));
+            .unwrap_or_else(|_| panic!("failed to read {}", yaml_path.display()));
         let raw_map: HashMap<String, LanguagePatterns> =
             serde_yaml::from_str(&content).expect("failed to parse patterns.yml");
 

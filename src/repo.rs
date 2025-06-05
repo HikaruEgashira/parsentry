@@ -78,6 +78,7 @@ impl RepoOps {
         Ok(patterns)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn visit_dirs(&self, dir: &Path, cb: &mut dyn FnMut(&Path)) -> std::io::Result<()> {
         if dir.is_dir() {
             for entry in read_dir(dir)? {
@@ -126,10 +127,10 @@ impl RepoOps {
         let pattern = pattern.trim_start_matches('/');
         let path = path.trim_start_matches('/');
 
-        if pattern.starts_with('*') {
-            path.ends_with(&pattern[1..])
-        } else if pattern.ends_with('*') {
-            path.starts_with(&pattern[..pattern.len() - 1])
+        if let Some(stripped) = pattern.strip_prefix('*') {
+            path.ends_with(stripped)
+        } else if let Some(stripped) = pattern.strip_suffix('*') {
+            path.starts_with(stripped)
         } else if !pattern.contains('/') {
             if path == pattern {
                 true

@@ -3,7 +3,8 @@ use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+#[allow(unused_imports)]
+use std::path::{Path, PathBuf};
 
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
@@ -22,10 +23,10 @@ struct PatternAnalysisResponse {
     patterns: Vec<PatternClassification>,
 }
 
-pub async fn generate_custom_patterns(root_dir: &PathBuf, model: &str) -> Result<()> {
+pub async fn generate_custom_patterns(root_dir: &Path, model: &str) -> Result<()> {
     println!("📂 ディレクトリを解析してdefinitionsを抽出中: {}", root_dir.display());
     
-    let repo = RepoOps::new(root_dir.clone());
+    let repo = RepoOps::new(root_dir.to_path_buf());
     let files = repo.get_files_to_analyze(None)?;
     
     println!("📁 検出されたファイル数: {}", files.len());
@@ -182,11 +183,11 @@ Only include functions that ARE security patterns (sources, sinks, or validate).
 }
 
 pub fn write_patterns_to_file(
-    root_dir: &PathBuf,
+    root_dir: &Path,
     language: Language,
     patterns: &[PatternClassification],
 ) -> Result<()> {
-    let mut vuln_patterns_path = root_dir.clone();
+    let mut vuln_patterns_path = root_dir.to_path_buf();
     vuln_patterns_path.push("vuln-patterns.yml");
     
     let lang_name = match language {

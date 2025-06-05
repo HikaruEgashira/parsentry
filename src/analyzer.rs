@@ -124,7 +124,6 @@ pub async fn analyze_file(
             let vuln_info = vuln_info_map.get(&vuln_type).unwrap();
 
             let mut stored_code_definitions: Vec<(PathBuf, crate::parser::Definition)> = Vec::new();
-            let mut previous_analysis = String::new();
 
             {
                 info!(
@@ -159,7 +158,7 @@ pub async fn analyze_file(
                 }
 
                 let prompt = format!(
-                    "File: {}\n\nContent:\n{}\n\nContext Code:\n{}\n\nVulnerability Type: {:?}\n\nBypasses to Consider:\n{}\n\n{}\n{}\n{}\nPrevious Analysis:\n{}",
+                    "File: {}\n\nContent:\n{}\n\nContext Code:\n{}\n\nVulnerability Type: {:?}\n\nBypasses to Consider:\n{}\n\n{}\n{}\n{}",
                     file_path.display(),
                     content,
                     context_code,
@@ -168,7 +167,6 @@ pub async fn analyze_file(
                     vuln_info.prompt,
                     prompts::ANALYSIS_APPROACH_TEMPLATE,
                     prompts::GUIDELINES_TEMPLATE,
-                    previous_analysis,
                 );
 
                 let chat_req = ChatRequest::new(vec![
@@ -261,9 +259,6 @@ pub async fn analyze_file(
                         }
                     }
                 }
-
-                previous_analysis = vuln_response.analysis;
-
             }
         }
     }

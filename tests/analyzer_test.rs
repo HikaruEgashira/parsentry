@@ -1,6 +1,10 @@
+#[allow(unused_imports)]
 use std::path::PathBuf;
+#[allow(unused_imports)]
 use tempfile::NamedTempFile;
+#[allow(unused_imports)]
 use vulnhuntrs::analyzer::analyze_file;
+#[allow(unused_imports)]
 use vulnhuntrs::response::{ContextCode, VulnType};
 
 #[cfg(feature = "snapshot-test")]
@@ -10,7 +14,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
 
     let result = analyze_file(
         &PathBuf::from(temp_file.path()),
-        "gpt-4o-mini",
+        "gpt-4.1-nano",
         &[PathBuf::from(temp_file.path())],
         0,
         &vulnhuntrs::parser::Context {
@@ -46,7 +50,7 @@ fn main() {
 
     let result = analyze_file(
         &PathBuf::from(temp_file.path()),
-        "gpt-4o-mini",
+        "gpt-4.1-nano",
         &[PathBuf::from(temp_file.path())],
         0,
         &vulnhuntrs::parser::Context {
@@ -96,7 +100,7 @@ fn main() {
 
     let result = analyze_file(
         &PathBuf::from(temp_file.path()),
-        "gpt-4o-mini",
+        "gpt-4.1-nano",
         &[PathBuf::from(temp_file.path())],
         0,
         &vulnhuntrs::parser::Context {
