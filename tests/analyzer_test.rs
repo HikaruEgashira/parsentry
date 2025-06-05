@@ -1,7 +1,11 @@
+#[allow(unused_imports)]
 use std::path::PathBuf;
+#[allow(unused_imports)]
 use tempfile::NamedTempFile;
+#[allow(unused_imports)]
 use vulnhuntrs::analyzer::analyze_file;
-use vulnhuntrs::response::{ContextCode, VulnType};
+#[allow(unused_imports)]
+use vulnhuntrs::response::ContextCode;
 
 #[cfg(feature = "snapshot-test")]
 #[tokio::test]

@@ -1,0 +1,199 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diff_analysis:
+    name: Analyze PR Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run Clippy on changed files
+        run: |
+          # Get list of changed Rust files
+          git diff --name-only origin/main...HEAD | grep '\.rs$' || echo "No Rust files changed"
+          
+          # Run clippy on all targets to catch any issues
+          cargo clippy --all-targets --all-features --message-format=json > clippy-report.json || true
+
+      - name: Check test coverage on changes
+        run: |
+          # Install cargo-tarpaulin for coverage analysis
+          cargo install cargo-tarpaulin
+          
+          # Run coverage on the current state
+          cargo tarpaulin --out json --output-dir coverage/ || echo "Coverage analysis failed"
+
+      - name: Analyze code complexity
+        run: |
+          # Install cargo-complexity or similar tools if available
+          # For now, just count lines changed
+          echo "Lines added/removed in this PR:"
+          git diff --stat origin/main...HEAD
+
+      - name: Check documentation
+        run: |
+          # Check if public APIs have documentation
+          cargo doc --no-deps --document-private-items 2>&1 | tee doc-warnings.txt
+          
+          # Count documentation warnings
+          if grep -q "warning:" doc-warnings.txt; then
+            echo "Documentation warnings found:"
+            grep "warning:" doc-warnings.txt
+          else
+            echo "No documentation warnings found"
+          fi
+
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run Semgrep Security Analysis
+        uses: returntocorp/semgrep-action@v1
+        with:
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          publishDeployment: ${{ secrets.SEMGREP_DEPLOYMENT_ID }}
+        env:
+          SEMGREP_RULES: >-
+            p/security-audit
+            p/rust
+            p/owasp-top-ten
+        continue-on-error: true
+
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+        continue-on-error: true
+
+  size_analysis:
+    name: Binary Size Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Analyze binary size
+        run: |
+          echo "Release binary size:"
+          ls -lh target/release/vulnhuntrs
+          
+          # Get size in bytes for comparison
+          stat --format="%s bytes" target/release/vulnhuntrs
+
+      - name: Install cargo-bloat for dependency analysis
+        run: cargo install cargo-bloat
+
+      - name: Analyze what contributes to binary size
+        run: |
+          echo "Top contributors to binary size:"
+          cargo bloat --release --crates
+          
+          echo -e "\nFunction-level analysis:"
+          cargo bloat --release -n 20
+
+  dependency_check:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Check for known vulnerabilities
+        run: cargo audit
+
+      - name: Install cargo-outdated
+        run: cargo install cargo-outdated
+
+      - name: Check for outdated dependencies
+        run: cargo outdated
+
+      - name: Analyze dependency tree
+        run: |
+          echo "Dependency tree depth analysis:"
+          cargo tree --depth 3
+          
+          echo -e "\nDuplicate dependencies:"
+          cargo tree --duplicates

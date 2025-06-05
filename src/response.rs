@@ -150,7 +150,7 @@ impl Response {
             for vuln_type in &self.vulnerability_types {
                 md.push_str(&format!("- `{:?}`\n", vuln_type));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
 
         md.push_str("## 解析結果\n\n");
@@ -192,16 +192,14 @@ pub struct FileAnalysisResult {
     pub response: Response,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AnalysisSummary {
     pub results: Vec<FileAnalysisResult>,
 }
 
 impl AnalysisSummary {
     pub fn new() -> Self {
-        Self {
-            results: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn add_result(&mut self, file_path: PathBuf, response: Response) {

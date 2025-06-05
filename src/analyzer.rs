@@ -8,8 +8,8 @@ use std::path::PathBuf;
 
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
-use crate::response::{response_json_schema, Response};
-use crate::security_patterns::{SecurityRiskPatterns, PatternType, Language};
+use crate::response::{Response, response_json_schema};
+use crate::security_patterns::{Language, PatternType, SecurityRiskPatterns};
 
 fn create_api_client() -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -104,7 +104,9 @@ pub async fn analyze_file(
     debug!("[PROMPT]\n{}", prompt);
 
     let chat_req = ChatRequest::new(vec![
-        ChatMessage::system("You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { \"scratchpad\": string, \"analysis\": string, \"poc\": string, \"confidence_score\": integer, \"vulnerability_types\": array of strings, \"context_code\": array of objects with { \"name\": string, \"reason\": string, \"code_line\": string } }. Do not include any explanatory text outside the JSON object."),
+        ChatMessage::system(
+            "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { \"scratchpad\": string, \"analysis\": string, \"poc\": string, \"confidence_score\": integer, \"vulnerability_types\": array of strings, \"context_code\": array of objects with { \"name\": string, \"reason\": string, \"code_line\": string } }. Do not include any explanatory text outside the JSON object.",
+        ),
         ChatMessage::user(&prompt),
     ]);
 
@@ -112,8 +114,9 @@ pub async fn analyze_file(
     let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
     debug!("[LLM Response]\n{}", chat_content);
     let mut response: Response = parse_json_response(&chat_content)?;
-    
-    response.confidence_score = crate::response::Response::normalize_confidence_score(response.confidence_score);
+
+    response.confidence_score =
+        crate::response::Response::normalize_confidence_score(response.confidence_score);
 
     info!("Initial analysis complete");
 
@@ -124,13 +127,9 @@ pub async fn analyze_file(
             let vuln_info = vuln_info_map.get(&vuln_type).unwrap();
 
             let mut stored_code_definitions: Vec<(PathBuf, crate::parser::Definition)> = Vec::new();
-            let mut previous_analysis = String::new();
 
             {
-                info!(
-                    "Performing vuln-specific analysis for {:?}",
-                    vuln_type
-                );
+                info!("Performing vuln-specific analysis for {:?}", vuln_type);
                 if verbosity > 0 {
                     println!(
                         "🔎 [{}] 脆弱性タイプ: {:?} の詳細解析",
@@ -159,7 +158,7 @@ pub async fn analyze_file(
                 }
 
                 let prompt = format!(
-                    "File: {}\n\nContent:\n{}\n\nContext Code:\n{}\n\nVulnerability Type: {:?}\n\nBypasses to Consider:\n{}\n\n{}\n{}\n{}\nPrevious Analysis:\n{}",
+                    "File: {}\n\nContent:\n{}\n\nContext Code:\n{}\n\nVulnerability Type: {:?}\n\nBypasses to Consider:\n{}\n\n{}\n{}\n{}",
                     file_path.display(),
                     content,
                     context_code,
@@ -168,7 +167,6 @@ pub async fn analyze_file(
                     vuln_info.prompt,
                     prompts::ANALYSIS_APPROACH_TEMPLATE,
                     prompts::GUIDELINES_TEMPLATE,
-                    previous_analysis,
                 );
 
                 let chat_req = ChatRequest::new(vec![
@@ -182,8 +180,11 @@ pub async fn analyze_file(
                 let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
                 debug!("[LLM Response]\n{}", chat_content);
                 let mut vuln_response: Response = parse_json_response(&chat_content)?;
-                
-                vuln_response.confidence_score = crate::response::Response::normalize_confidence_score(vuln_response.confidence_score);
+
+                vuln_response.confidence_score =
+                    crate::response::Response::normalize_confidence_score(
+                        vuln_response.confidence_score,
+                    );
 
                 if verbosity > 0 {
                     debug!(
@@ -211,7 +212,8 @@ pub async fn analyze_file(
                 }
 
                 // Get language for pattern detection
-                let file_extension = file_path.extension()
+                let file_extension = file_path
+                    .extension()
                     .and_then(|ext| ext.to_str())
                     .unwrap_or("");
                 let language = Language::from_extension(file_extension);
@@ -225,7 +227,7 @@ pub async fn analyze_file(
                     {
                         // Determine pattern type to choose appropriate search method
                         let pattern_type = patterns.get_pattern_type(&context.name);
-                        
+
                         match pattern_type {
                             Some(PatternType::Source) => {
                                 // For sources, use find_references to track data flow forward
@@ -261,8 +263,6 @@ pub async fn analyze_file(
                         }
                     }
                 }
-
-                previous_analysis = vuln_response.analysis;
 
             }
         }

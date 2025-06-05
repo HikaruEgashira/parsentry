@@ -1,7 +1,7 @@
-use anyhow::Result;
 use crate::security_patterns::SecurityRiskPatterns;
+use anyhow::Result;
 use std::{
-    fs::{read_dir, read_to_string, File},
+    fs::{File, read_dir, read_to_string},
     io::{BufRead, BufReader, Result as IoResult},
     path::{Path, PathBuf},
 };
@@ -78,6 +78,7 @@ impl RepoOps {
         Ok(patterns)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn visit_dirs(&self, dir: &Path, cb: &mut dyn FnMut(&Path)) -> std::io::Result<()> {
         if dir.is_dir() {
             for entry in read_dir(dir)? {
@@ -126,16 +127,15 @@ impl RepoOps {
         let pattern = pattern.trim_start_matches('/');
         let path = path.trim_start_matches('/');
 
-        if pattern.starts_with('*') {
-            path.ends_with(&pattern[1..])
-        } else if pattern.ends_with('*') {
-            path.starts_with(&pattern[..pattern.len() - 1])
+        if let Some(stripped) = pattern.strip_prefix('*') {
+            path.ends_with(stripped)
+        } else if let Some(stripped) = pattern.strip_suffix('*') {
+            path.starts_with(stripped)
         } else if !pattern.contains('/') {
             if path == pattern {
                 true
             } else {
-                path.split('/')
-                    .any(|segment| segment == pattern)
+                path.split('/').any(|segment| segment == pattern)
             }
         } else {
             path == pattern || path.starts_with(&format!("{}/", pattern))
@@ -171,10 +171,7 @@ impl RepoOps {
         let mut network_files = Vec::new();
         for file_path in files {
             if let Ok(content) = read_to_string(file_path) {
-                let ext = file_path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("");
+                let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
                 let lang = crate::security_patterns::Language::from_extension(ext);
                 let patterns = SecurityRiskPatterns::new(lang);
                 if patterns.matches(&content) {
