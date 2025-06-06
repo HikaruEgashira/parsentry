@@ -152,11 +152,11 @@ impl SecurityRiskPatterns {
         use Language::*;
 
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let yaml_path = manifest_dir.join("patterns.yml");
+        let yaml_path = manifest_dir.join("src/patterns.yml");
         let content = fs::read_to_string(&yaml_path)
             .unwrap_or_else(|_| panic!("failed to read {}", yaml_path.display()));
         let raw_map: HashMap<String, LanguagePatterns> =
-            serde_yaml::from_str(&content).expect("failed to parse patterns.yml");
+            serde_yaml::from_str(&content).expect("failed to parse src/patterns.yml");
 
         let mut map = HashMap::new();
         for (lang, patterns) in raw_map {

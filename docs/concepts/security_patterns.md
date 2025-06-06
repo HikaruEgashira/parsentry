@@ -66,7 +66,7 @@ Vulnhuntrsが使用するパターンベースの脆弱性検出システムの�
 
 ## 設定とカスタマイゼーション
 
-パターンは`security_patterns/patterns.yml`で管理され、言語別に以下の構造で定義されます：
+パターンは`src/patterns.yml`で管理され、言語別に以下の構造で定義されます：
 
 ```yaml
 <language>:

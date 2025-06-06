@@ -135,7 +135,7 @@ fn test_security_risk_patterns_new() {
     assert!(true); // Just test that it doesn't panic
 }
 
-// Note: SecurityRiskPatterns tests are skipped because they depend on patterns.yml file
+// Note: SecurityRiskPatterns tests are skipped because they depend on src/patterns.yml file
 // which may not be available in the test environment. We focus on testing the basic types.
 
 // Note: PatternConfig and LanguagePatterns only derive Deserialize, not Serialize

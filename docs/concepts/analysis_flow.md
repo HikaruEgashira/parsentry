@@ -13,7 +13,7 @@
 - リポジトリがソースファイルをスキャン
 - ファイルは以下の基準でフィルタリング：
   - 言語サポート（Rust、Python、JavaScript/TypeScript、Ruby、Go、Java）
-  - `security_patterns/patterns.yml`で定義されたセキュリティリスクパターン
+  - `src/patterns.yml`で定義されたセキュリティリスクパターン
   - ファイルサイズと複雑度の閾値
 
 ### 2. パターンベースリスク評価

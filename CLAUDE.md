@@ -54,7 +54,7 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 The codebase follows a pipeline architecture:
 
 1. **File Discovery** (`repo.rs`): Identifies source files to analyze
-2. **Pattern Matching** (`security_patterns.rs`): Filters files using regex patterns from `security_patterns/patterns.yml`
+2. **Pattern Matching** (`security_patterns.rs`): Filters files using regex patterns from `security_patterns/src/patterns.yml`
 3. **Code Parsing** (`parser.rs`): Uses tree-sitter to parse code and extract semantic information
 4. **Context Building** (`parser.rs`): Collects function definitions and references for context
 5. **LLM Analysis** (`analyzer.rs`): Sends code + context to LLM for vulnerability detection

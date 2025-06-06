@@ -119,7 +119,7 @@ fn get_query_path(language: Language, query_type: &str) -> PathBuf {
 
 ### 4. Add Security Patterns
 
-Update `security_patterns/patterns.yml` with language-specific vulnerability patterns:
+Update `security_patterns/src/patterns.yml` with language-specific vulnerability patterns:
 
 ```yaml
 languages:
@@ -174,7 +174,7 @@ vulnhuntrs -r ./example/<lang>-vulnerable-app --model gpt-4o-mini
 - [ ] Cargo.toml updated with dependency
 - [ ] Language enum updated in security_patterns.rs
 - [ ] Parser module updated with language support
-- [ ] Security patterns added to patterns.yml
+- [ ] Security patterns added to src/patterns.yml
 - [ ] Example vulnerable code created
 - [ ] Tests added and passing
 - [ ] Documentation updated
