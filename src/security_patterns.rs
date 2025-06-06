@@ -13,6 +13,8 @@ pub enum Language {
     Java,
     Go,
     Ruby,
+    C,
+    Cpp,
     Other,
 }
 
@@ -26,6 +28,8 @@ impl Language {
             "java" => Language::Java,
             "go" => Language::Go,
             "rb" => Language::Ruby,
+            "c" | "h" => Language::C,
+            "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Language::Cpp,
             _ => Language::Other,
         }
     }
@@ -149,6 +153,8 @@ impl SecurityRiskPatterns {
                 "Java" => Java,
                 "Go" => Go,
                 "Ruby" => Ruby,
+                "C" => C,
+                "Cpp" => Cpp,
                 "Other" => Other,
                 _ => continue,
             };

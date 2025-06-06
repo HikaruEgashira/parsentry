@@ -38,6 +38,13 @@ impl RepoOps {
             "go".to_string(),
             "java".to_string(),
             "rb".to_string(),
+            "c".to_string(),
+            "h".to_string(),
+            "cpp".to_string(),
+            "cxx".to_string(),
+            "cc".to_string(),
+            "hpp".to_string(),
+            "hxx".to_string(),
         ];
 
         Self {
