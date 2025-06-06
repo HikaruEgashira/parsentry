@@ -1,0 +1,97 @@
+Terraform:
+  sources:
+    - pattern: "variable\\s+\"[^\"]*\"\\s*\\{"
+      description: "Variable declarations that may accept external input"
+    - pattern: "data\\s+\"[^\"]*\"\\s+\"[^\"]*\"\\s*\\{"
+      description: "Data sources that fetch external information"
+    - pattern: "locals\\s*\\{"
+      description: "Local value definitions"
+    - pattern: "module\\s+\"[^\"]*\"\\s*\\{"
+      description: "Module declarations with external dependencies"
+    - pattern: "provider\\s+\"[^\"]*\"\\s*\\{"
+      description: "Provider configurations"
+  
+  validate:
+    - pattern: "validation\\s*\\{"
+      description: "Input validation blocks"
+    - pattern: "condition\\s*="
+      description: "Validation conditions"
+    - pattern: "error_message\\s*="
+      description: "Validation error messages"
+    - pattern: "sensitive\\s*=\\s*true"
+      description: "Sensitive variable marking"
+    - pattern: "type\\s*=\\s*(string|number|bool|list|map|set|object|tuple)"
+      description: "Type constraints for variables"
+  
+  sinks:
+    # Secret Management Issues
+    - pattern: "(password|secret|key|token)\\s*=\\s*\"[^\"]+\""
+      description: "Hardcoded secrets in configuration"
+    - pattern: "access_key\\s*=\\s*\"[^\"]+\""
+      description: "Hardcoded AWS access keys"
+    - pattern: "secret_key\\s*=\\s*\"[^\"]+\""
+      description: "Hardcoded AWS secret keys"
+    
+    # Network Security Issues
+    - pattern: "cidr_blocks\\s*=\\s*\\[\\s*\"0\\.0\\.0\\.0/0\"\\s*\\]"
+      description: "Overly permissive CIDR blocks (open to internet)"
+    - pattern: "from_port\\s*=\\s*0"
+      description: "Security group allowing all ports"
+    - pattern: "to_port\\s*=\\s*65535"
+      description: "Security group allowing all ports"
+    - pattern: "protocol\\s*=\\s*\"-1\""
+      description: "Security group allowing all protocols"
+    
+    # Storage Security Issues
+    - pattern: "public_read_access_prevention\\s*=\\s*false"
+      description: "S3 bucket allowing public read access"
+    - pattern: "public_write_access_prevention\\s*=\\s*false"
+      description: "S3 bucket allowing public write access"
+    - pattern: "encrypted\\s*=\\s*false"
+      description: "Unencrypted storage resources"
+    - pattern: "kms_key_id\\s*=\\s*\"\""
+      description: "Missing KMS encryption key"
+    
+    # IAM Security Issues
+    - pattern: "\\*"
+      description: "Wildcard permissions in IAM policies"
+    - pattern: "Effect\"\\s*:\\s*\"Allow\""
+      description: "IAM Allow statements requiring review"
+    - pattern: "Principal\"\\s*:\\s*\"\\*\""
+      description: "IAM policies with wildcard principals"
+    - pattern: "Action\"\\s*:\\s*\"\\*\""
+      description: "IAM policies with wildcard actions"
+    
+    # Database Security Issues
+    - pattern: "publicly_accessible\\s*=\\s*true"
+      description: "Database instances accessible from internet"
+    - pattern: "skip_final_snapshot\\s*=\\s*true"
+      description: "Database without final snapshot backup"
+    - pattern: "deletion_protection\\s*=\\s*false"
+      description: "Database without deletion protection"
+    - pattern: "backup_retention_period\\s*=\\s*0"
+      description: "Database without backup retention"
+    
+    # Logging and Monitoring Issues
+    - pattern: "enable_logging\\s*=\\s*false"
+      description: "Disabled logging on resources"
+    - pattern: "cloudtrail.*enable_logging\\s*=\\s*false"
+      description: "Disabled CloudTrail logging"
+    - pattern: "versioning\\s*\\{[^}]*enabled\\s*=\\s*false"
+      description: "S3 bucket without versioning"
+    
+    # Function and Code Execution
+    - pattern: "runtime\\s*=\\s*\".*python.*\""
+      description: "Lambda functions with potentially vulnerable runtimes"
+    - pattern: "source_code_hash"
+      description: "Dynamic code deployment patterns"
+    - pattern: "filename\\s*=\\s*var\\."
+      description: "Dynamic file references in Lambda"
+    
+    # Resource Access and Permissions
+    - pattern: "force_destroy\\s*=\\s*true"
+      description: "Resources configured for force destruction"
+    - pattern: "apply_immediately\\s*=\\s*true"
+      description: "Immediate application of potentially destructive changes"
+    - pattern: "auto_minor_version_upgrade\\s*=\\s*false"
+      description: "Disabled automatic security updates"
