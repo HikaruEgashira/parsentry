@@ -1,8 +1,8 @@
 use std::io::Write;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
-use vulnhuntrs::parser::{Context, Definition};
-use vulnhuntrs::response::Response;
+use parsentry::parser::{Context, Definition};
+use parsentry::response::Response;
 
 // Mock functions for testing
 #[tokio::test]

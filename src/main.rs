@@ -2,15 +2,15 @@ use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
 use std::path::PathBuf;
-use vulnhuntrs::analyzer::analyze_file;
-use vulnhuntrs::parser;
-use vulnhuntrs::pattern_generator::generate_custom_patterns;
-use vulnhuntrs::security_patterns::Language;
-use vulnhuntrs::security_patterns::SecurityRiskPatterns;
+use parsentry::analyzer::analyze_file;
+use parsentry::parser;
+use parsentry::pattern_generator::generate_custom_patterns;
+use parsentry::security_patterns::Language;
+use parsentry::security_patterns::SecurityRiskPatterns;
 
-use vulnhuntrs::repo::RepoOps;
-use vulnhuntrs::repo_clone::clone_github_repo;
-use vulnhuntrs::response::{AnalysisSummary, VulnType};
+use parsentry::repo::RepoOps;
+use parsentry::repo_clone::clone_github_repo;
+use parsentry::response::{AnalysisSummary, VulnType};
 
 use futures::future::join_all;
 use std::sync::Arc;
@@ -100,7 +100,7 @@ async fn main() -> Result<()> {
 
     let repo = RepoOps::new(root_dir.clone());
 
-    println!("🔍 Vulnhuntrs - セキュリティ解析ツール");
+    println!("🔍 Parsentry - PAR-based security scanner");
 
     // Handle pattern generation mode
     if args.generate_patterns {

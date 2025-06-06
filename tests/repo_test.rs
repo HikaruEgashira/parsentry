@@ -1,5 +1,5 @@
 use tempfile::tempdir;
-use vulnhuntrs::repo::RepoOps;
+use parsentry::repo::RepoOps;
 
 #[test]
 fn test_ruby_files_are_recognized() -> anyhow::Result<()> {

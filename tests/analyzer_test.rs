@@ -3,9 +3,9 @@ use std::path::PathBuf;
 #[allow(unused_imports)]
 use tempfile::NamedTempFile;
 #[allow(unused_imports)]
-use vulnhuntrs::analyzer::analyze_file;
+use parsentry::analyzer::analyze_file;
 #[allow(unused_imports)]
-use vulnhuntrs::response::{ContextCode, VulnType};
+use parsentry::response::{ContextCode, VulnType};
 
 #[cfg(feature = "snapshot-test")]
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
         "gpt-4.1-nano",
         &[PathBuf::from(temp_file.path())],
         0,
-        &vulnhuntrs::parser::Context {
+        &parsentry::parser::Context {
             definitions: vec![],
         },
         0,
@@ -53,7 +53,7 @@ fn main() {
         "gpt-4.1-nano",
         &[PathBuf::from(temp_file.path())],
         0,
-        &vulnhuntrs::parser::Context {
+        &parsentry::parser::Context {
             definitions: vec![],
         },
         0,
@@ -103,7 +103,7 @@ fn main() {
         "gpt-4.1-nano",
         &[PathBuf::from(temp_file.path())],
         0,
-        &vulnhuntrs::parser::Context {
+        &parsentry::parser::Context {
             definitions: vec![],
         },
         0,

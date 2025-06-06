@@ -1,4 +1,4 @@
-use vulnhuntrs::security_patterns::{
+use parsentry::security_patterns::{
     Language, LanguagePatterns, PatternConfig, PatternType, SecurityRiskPatterns,
 };
 

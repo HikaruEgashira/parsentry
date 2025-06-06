@@ -1,6 +1,6 @@
 use std::path::PathBuf;
-use vulnhuntrs::response::FileAnalysisResult;
-use vulnhuntrs::response::{AnalysisSummary, Response, VulnType};
+use parsentry::response::FileAnalysisResult;
+use parsentry::response::{AnalysisSummary, Response, VulnType};
 
 #[test]
 fn test_vuln_type_parsing() {

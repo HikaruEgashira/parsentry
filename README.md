@@ -1,16 +1,16 @@
 <div align="center">
 
-  <img width="250" src="./logo.png" alt="Vulnhuntrs Logo">
+  <img width="250" src="./logo.png" alt="Parsentry Logo">
 
-A tool to identify remotely exploitable vulnerabilities using LLMs and static code analysis.
+A PAR (Principal-Action-Resource) based security scanner using LLMs and static code analysis.
 
-**Autonomous AI-discovered 0day vulnerabilities**
+**Next-generation multi-language security analysis**
 
 </div>
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/vulnhuntrs)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/parsentry)
 
-Vulnhuntrs is a security analysis tool designed to detect vulnerabilities in applications. It provides static analysis capabilities to identify potential security issues in your codebase.
+Parsentry is a PAR (Principal-Action-Resource) based security scanner designed to detect vulnerabilities across multiple languages including IaC. It provides comprehensive static analysis capabilities to identify potential security issues in your codebase.
 
 
 ## Features
@@ -33,13 +33,13 @@ See actual vulnerability reports generated for each supported language:
 ## 🐳 Docker Usage
 
 ```bash
-docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
-docker run ghcr.io/hikaruegashira/vulnhuntrs:latest --help
+docker pull ghcr.io/hikaruegashira/parsentry:latest
+docker run ghcr.io/hikaruegashira/parsentry:latest --help
 
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   --user $(id -u):$(id -g) \
-  ghcr.io/hikaruegashira/vulnhuntrs:latest \
+  ghcr.io/hikaruegashira/parsentry:latest \
   --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 

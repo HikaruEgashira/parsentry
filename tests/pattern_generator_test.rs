@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use vulnhuntrs::pattern_generator::{PatternClassification, write_patterns_to_file};
-use vulnhuntrs::security_patterns::Language;
+use parsentry::pattern_generator::{PatternClassification, write_patterns_to_file};
+use parsentry::security_patterns::Language;
 
 fn create_test_python_file(dir: &TempDir) -> PathBuf {
     let file_path = dir.path().join("test.py");
@@ -141,7 +141,7 @@ fn test_file_discovery() {
     create_test_python_file(&temp_dir);
     create_test_rust_file(&temp_dir);
 
-    let repo = vulnhuntrs::repo::RepoOps::new(temp_dir.path().to_path_buf());
+    let repo = parsentry::repo::RepoOps::new(temp_dir.path().to_path_buf());
     let files = repo.get_files_to_analyze(None).unwrap();
 
     assert_eq!(files.len(), 2);
@@ -155,7 +155,7 @@ fn test_definition_extraction() {
     create_test_python_file(&temp_dir);
 
     let file_path = temp_dir.path().join("test.py");
-    let mut parser = vulnhuntrs::parser::CodeParser::new().unwrap();
+    let mut parser = parsentry::parser::CodeParser::new().unwrap();
     parser.add_file(&file_path).unwrap();
 
     let context = parser.build_context_from_file(&file_path).unwrap();

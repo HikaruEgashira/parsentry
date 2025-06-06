@@ -1,6 +1,6 @@
 ## Project Overview
 
-Vulnhuntrs is an AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities. It supports many languages.
+Parsentry is a PAR (Principal-Action-Resource) based security scanner that combines static code analysis with LLMs to detect vulnerabilities across multiple languages including IaC. It provides comprehensive multi-language security analysis.
 
 ### Building and Testing
 ```bash
@@ -39,13 +39,13 @@ cargo run -- -r /path/to/project --min-confidence 7 --vuln-types RCE,SQLI
 ### Docker Operations
 ```bash
 # Build multi-arch image
-docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/hikaruegashira/vulnhuntrs:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/hikaruegashira/parsentry:latest --push .
 
 # Run with Docker
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   --user $(id -u):$(id -g) \
-  ghcr.io/hikaruegashira/vulnhuntrs:latest \
+  ghcr.io/hikaruegashira/parsentry:latest \
   --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 

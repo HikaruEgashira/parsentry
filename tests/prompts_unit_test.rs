@@ -1,8 +1,8 @@
-use vulnhuntrs::prompts::{
+use parsentry::prompts::{
     ANALYSIS_APPROACH_TEMPLATE, GUIDELINES_TEMPLATE, INITIAL_ANALYSIS_PROMPT_TEMPLATE,
     SYS_PROMPT_TEMPLATE, vuln_specific,
 };
-use vulnhuntrs::response::VulnType;
+use parsentry::response::VulnType;
 
 #[test]
 fn test_sys_prompt_template() {
@@ -225,7 +225,7 @@ fn test_prompt_templates_formatting() {
 
 #[test]
 fn test_evaluator_prompt_template() {
-    use vulnhuntrs::prompts::EVALUATOR_PROMPT_TEMPLATE;
+    use parsentry::prompts::EVALUATOR_PROMPT_TEMPLATE;
 
     assert!(!EVALUATOR_PROMPT_TEMPLATE.is_empty());
     // The evaluator prompt should be for evaluation purposes

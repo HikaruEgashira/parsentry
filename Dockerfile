@@ -32,11 +32,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /work
 
-COPY --from=builder /app/target/release/vulnhuntrs /usr/local/bin/vulnhuntrs
+COPY --from=builder /app/target/release/parsentry /usr/local/bin/parsentry
 
 RUN useradd -m appuser && \
     chown -R appuser:appuser /work
 
 USER appuser
 
-ENTRYPOINT ["vulnhuntrs"]
+ENTRYPOINT ["parsentry"]

@@ -1,5 +1,5 @@
 use serde_json::json;
-use vulnhuntrs::response::{
+use parsentry::response::{
     AnalysisSummary, ContextCode, Response, VulnType, response_json_schema,
 };
 
