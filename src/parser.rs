@@ -111,7 +111,7 @@ impl CodeParser {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let query_file_name = format!("{}.scm", query_name);
         let query_path = manifest_dir
-            .join("custom_queries")
+            .join("src/queries")
             .join(lang_name)
             .join(&query_file_name);
 

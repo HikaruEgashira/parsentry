@@ -51,7 +51,7 @@ src/
 security_patterns/
 └── patterns.yml
 
-custom_queries/
+src/queries/
 ├── python/
 │   ├── definitions.scm
 │   └── references.scm
@@ -257,7 +257,7 @@ fn main() {
 }
 ```
 
-2. **Custom Queries** (`custom_queries/<language>/`):
+2. **Custom Queries** (`src/queries/<language>/`):
 ```scheme
 ; definitions.scm - Extract function definitions
 (function_definition

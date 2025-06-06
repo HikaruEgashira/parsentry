@@ -238,7 +238,7 @@ cc::Build::new()
 
 ### Step 2: Create Custom Queries
 
-Create `custom_queries/newlang/definitions.scm`:
+Create `src/queries/newlang/definitions.scm`:
 ```scheme
 ; Extract function definitions
 (function_declaration
@@ -246,7 +246,7 @@ Create `custom_queries/newlang/definitions.scm`:
   body: (block) @function.body)
 ```
 
-Create `custom_queries/newlang/references.scm`:
+Create `src/queries/newlang/references.scm`:
 ```scheme
 ; Find function calls
 (call_expression

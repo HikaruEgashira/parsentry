@@ -28,12 +28,12 @@ npm install  # or cargo build, depending on the grammar
 Create query files for semantic analysis:
 
 ```bash
-mkdir -p custom_queries/<lang>
+mkdir -p src/queries/<lang>
 ```
 
 Create two files:
-- `custom_queries/<lang>/definitions.scm` - For identifying function/method definitions
-- `custom_queries/<lang>/references.scm` - For tracking variable references and data flow
+- `src/queries/<lang>/definitions.scm` - For identifying function/method definitions
+- `src/queries/<lang>/references.scm` - For tracking variable references and data flow
 
 Example for Python:
 ```scheme
@@ -111,7 +111,7 @@ fn get_query_path(language: Language, query_type: &str) -> PathBuf {
     match language {
         // ... other cases
         Language::YourNewLanguage => {
-            PathBuf::from(format!("custom_queries/yourlang/{}.scm", query_type))
+            PathBuf::from(format!("src/queries/yourlang/{}.scm", query_type))
         }
     }
 }
