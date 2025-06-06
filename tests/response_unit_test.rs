@@ -1,5 +1,4 @@
-use serde_json::{Value, json};
-use std::path::PathBuf;
+use serde_json::json;
 use vulnhuntrs::response::{
     AnalysisSummary, ContextCode, Response, VulnType, response_json_schema,
 };

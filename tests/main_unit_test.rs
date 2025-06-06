@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use vulnhuntrs::response::FileAnalysisResult;
 use vulnhuntrs::response::{AnalysisSummary, Response, VulnType};
 
 #[test]

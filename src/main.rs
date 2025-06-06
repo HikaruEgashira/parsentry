@@ -260,19 +260,17 @@ async fn main() -> Result<()> {
                     output_dir.display(),
                     e
                 );
-            } else {
-                if !filtered_summary.results.is_empty() {
-                    let mut summary_path = output_dir.clone();
-                    summary_path.push("summary.md");
-                    if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
-                        println!(
-                            "❌ サマリーレポート出力に失敗: {}: {}",
-                            summary_path.display(),
-                            e
-                        );
-                    } else {
-                        println!("📊 サマリーレポートを出力: {}", summary_path.display());
-                    }
+            } else if !filtered_summary.results.is_empty() {
+                let mut summary_path = output_dir.clone();
+                summary_path.push("summary.md");
+                if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
+                    println!(
+                        "❌ サマリーレポート出力に失敗: {}: {}",
+                        summary_path.display(),
+                        e
+                    );
+                } else {
+                    println!("📊 サマリーレポートを出力: {}", summary_path.display());
                 }
             }
         } else {
