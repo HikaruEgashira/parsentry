@@ -95,3 +95,35 @@ To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
 - Example vulnerable apps in `example/` directory serve as integration tests
 - Snapshot tests using `insta` crate for response consistency
 - Unit tests for individual components in `tests/` directory
+
+## Development Workflow
+
+### Autonomous Development Process
+When working autonomously on vulnhuntrs improvements:
+
+1. **Create PRs with Auto-merge**: Use `gh pr create --auto-merge` for all feature branches
+2. **Monitor PR Status**: Use `sleep 30` and check comments/CI status until merge
+3. **Update Main Branch**: After merge, `git checkout main && git pull origin main`
+4. **Continue to Next Task**: Immediately start next priority task from todo list
+
+### PR Management Commands
+```bash
+# Create PR with auto-merge enabled
+gh pr create --title "feat: description" --body "detailed description" --auto-merge
+
+# Check PR status and comments
+gh pr view --comments
+
+# Monitor CI status
+gh pr checks
+
+# After merge, update local main
+git checkout main && git pull origin main && git branch -d <feature-branch>
+```
+
+### Continuous Improvement Philosophy
+- Always maintain active task from TodoWrite
+- Complete task → immediately identify next priority
+- Use GitHub Projects for long-term roadmap
+- Be proactive, not reactive - don't wait for external triggers
+- Use `sleep 30` for waiting periods, not idle time
