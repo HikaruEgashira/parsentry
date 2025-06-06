@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use genai::chat::{ChatMessage, ChatRequest};
 use genai::Client;
-use log::{debug, info, warn};
+use log::info;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -37,7 +37,7 @@ impl IaCAnalyzer {
         file_path: &PathBuf,
         model: &str,
         context_files: &[PathBuf],
-        min_confidence: i32,
+        _min_confidence: i32,
     ) -> Result<IaCAnalysisResult, Error> {
         info!("Analyzing IaC file: {}", file_path.display());
         

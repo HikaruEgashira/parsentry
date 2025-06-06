@@ -229,22 +229,22 @@ pub async fn analyze_file(
                         let pattern_type = patterns.get_pattern_type(&context.name);
 
                         match pattern_type {
-                            Some(PatternType::Source) => {
-                                // For sources, use find_references to track data flow forward
+                            Some(PatternType::Principal) => {
+                                // For principals, use find_references to track data flow forward
                                 match parser.find_references(&escaped_name) {
                                     Ok(refs) => {
                                         stored_code_definitions.extend(refs);
                                     }
                                     Err(e) => {
                                         warn!(
-                                            "Failed to find references for source context {}: {}",
+                                            "Failed to find references for principal context {}: {}",
                                             escaped_name, e
                                         );
                                     }
                                 }
                             }
-                            Some(PatternType::Sink) | Some(PatternType::Validate) | None => {
-                                // For sinks, validate patterns, or unknown patterns, use find_definition
+                            Some(PatternType::Resource) | Some(PatternType::Action) | None => {
+                                // For resources, actions, or unknown patterns, use find_definition
                                 match parser.find_definition(&escaped_name, file_path) {
                                     Ok(Some(def)) => {
                                         stored_code_definitions.push(def);

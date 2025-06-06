@@ -12,11 +12,20 @@ pub struct PARTriplet {
     pub conditions: Vec<Condition>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Principal {
     pub principal_type: PrincipalType,
     pub identifier: String,
+    #[serde(default)]
     pub attributes: HashMap<String, String>, // tags, groups, etc.
+}
+
+impl std::hash::Hash for Principal {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.principal_type.hash(state);
+        self.identifier.hash(state);
+        // Skip attributes HashMap for hash implementation
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -377,9 +386,10 @@ impl PARAnalyzer {
         }
         
         for (principal, triplets) in principal_permissions {
+            let empty_vec = Vec::new();
             let required = self.baseline_policies.minimum_required
                 .get(&principal.identifier)
-                .unwrap_or(&Vec::new());
+                .unwrap_or(&empty_vec);
             
             let excessive = self.find_excessive_permissions(triplets, required);
             if !excessive.is_empty() {
@@ -394,11 +404,11 @@ impl PARAnalyzer {
         violations
     }
     
-    fn find_excessive_permissions(
+    fn find_excessive_permissions<'a>(
         &self,
-        granted: Vec<&PARTriplet>,
+        granted: Vec<&'a PARTriplet>,
         required: &[PARTriplet],
-    ) -> Vec<&PARTriplet> {
+    ) -> Vec<&'a PARTriplet> {
         granted.into_iter()
             .filter(|g| !required.iter().any(|r| self.is_permission_subset(g, r)))
             .collect()

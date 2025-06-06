@@ -2,7 +2,7 @@ use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize)]
 pub enum IaCLanguage {
     Terraform,
     CloudFormation,
@@ -30,7 +30,7 @@ impl IaCLanguage {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IaCVulnerabilityType {
     // Security Configuration Issues
     WeakAccessControl,      // Overly permissive IAM policies, security groups
@@ -191,7 +191,7 @@ impl IaCSecurityPatterns {
             for pattern in patterns {
                 for mat in pattern.regex.find_iter(content) {
                     let finding = IaCSecurityFinding {
-                        vulnerability_type: *vuln_type,
+                        vulnerability_type: vuln_type.clone(),
                         pattern: pattern.config.pattern.clone(),
                         description: pattern.config.description.clone(),
                         severity: pattern.config.severity.clone(),

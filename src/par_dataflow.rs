@@ -10,13 +10,23 @@ pub trait PARDataFlow {
     fn get_flow_type(&self) -> FlowType;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataFlowNode {
     pub node_id: String,
     pub node_type: DataFlowNodeType,
     pub sensitivity_level: SensitivityLevel,
     pub trust_boundary: TrustBoundary,
     pub attributes: HashMap<String, String>,
+}
+
+impl std::hash::Hash for DataFlowNode {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+        self.node_type.hash(state);
+        self.sensitivity_level.hash(state);
+        self.trust_boundary.hash(state);
+        // Skip attributes HashMap for hash implementation
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -482,7 +492,7 @@ impl UnifiedDataFlowAnalyzer {
         // BFS to find path from source to sink
         let mut queue = VecDeque::new();
         let mut visited = HashSet::new();
-        let mut parent = HashMap::new();
+        let mut parent: HashMap<String, String> = HashMap::new();
         
         queue.push_back(from.to_string());
         visited.insert(from.to_string());

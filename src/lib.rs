@@ -1,4 +1,9 @@
 pub mod analyzer;
+pub mod analyzer_factory;
+pub mod iac_analyzer;
+pub mod iac_patterns;
+pub mod par_analyzer;
+pub mod par_dataflow;
 pub mod parser;
 pub mod pattern_generator;
 pub mod prompts;
@@ -6,3 +11,4 @@ pub mod repo;
 pub mod repo_clone;
 pub mod response;
 pub mod security_patterns;
+pub mod unified_patterns;

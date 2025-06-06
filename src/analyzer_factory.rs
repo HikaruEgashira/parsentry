@@ -84,7 +84,7 @@ impl AnalyzerFactory {
         let file_type = Self::detect_file_type(file_path);
         
         match file_type {
-            FileType::Programming(lang) => {
+            FileType::Programming(_lang) => {
                 let response = analyzer::analyze_file(
                     file_path,
                     model,
@@ -96,7 +96,7 @@ impl AnalyzerFactory {
                 Ok(AnalysisResult::Programming(response))
             }
             
-            FileType::Infrastructure(iac_lang) => {
+            FileType::Infrastructure(_iac_lang) => {
                 let result = self.iac_analyzer.analyze_iac_file(
                     file_path,
                     model,
