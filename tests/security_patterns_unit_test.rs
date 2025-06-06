@@ -12,8 +12,6 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("java"), Language::Java);
     assert_eq!(Language::from_extension("go"), Language::Go);
     assert_eq!(Language::from_extension("rb"), Language::Ruby);
-
-    // Test C/C++ extensions
     assert_eq!(Language::from_extension("c"), Language::C);
     assert_eq!(Language::from_extension("h"), Language::C);
     assert_eq!(Language::from_extension("cpp"), Language::Cpp);

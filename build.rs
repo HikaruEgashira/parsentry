@@ -96,7 +96,6 @@ fn main() {
         .file(dir.join("tree-sitter-cpp/src/scanner.c"))
         .flag("-Wno-unused-parameter")
         .compile("tree-sitter-cpp");
-
     // Add library search path
     println!("cargo:rustc-link-search=native={}", out_dir.display());
 }
