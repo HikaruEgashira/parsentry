@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use vulnhuntrs::security_patterns::{
     Language, LanguagePatterns, PatternConfig, PatternType, SecurityRiskPatterns,
 };
@@ -13,10 +12,16 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("java"), Language::Java);
     assert_eq!(Language::from_extension("go"), Language::Go);
     assert_eq!(Language::from_extension("rb"), Language::Ruby);
+    assert_eq!(Language::from_extension("c"), Language::C);
+    assert_eq!(Language::from_extension("h"), Language::C);
+    assert_eq!(Language::from_extension("cpp"), Language::Cpp);
+    assert_eq!(Language::from_extension("cxx"), Language::Cpp);
+    assert_eq!(Language::from_extension("cc"), Language::Cpp);
+    assert_eq!(Language::from_extension("hpp"), Language::Cpp);
+    assert_eq!(Language::from_extension("hxx"), Language::Cpp);
 
     // Test unknown extensions
     assert_eq!(Language::from_extension("txt"), Language::Other);
-    assert_eq!(Language::from_extension("cpp"), Language::Other);
     assert_eq!(Language::from_extension(""), Language::Other);
     assert_eq!(Language::from_extension("unknown"), Language::Other);
 }
@@ -116,7 +121,7 @@ fn test_language_patterns_partial() {
 
 #[test]
 fn test_security_risk_patterns_new() {
-    let patterns = SecurityRiskPatterns::new(Language::Python);
+    let _patterns = SecurityRiskPatterns::new(Language::Python);
     // The constructor doesn't return Result, it creates an instance directly
     assert!(true); // Just test that it doesn't panic
 }
