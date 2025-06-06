@@ -1,6 +1,6 @@
-# Enterprise Vulnerable Application - Clean Architecture
+# Enterprise Web Application - Clean Architecture
 
-This application demonstrates Clean Architecture implementation with intentional security vulnerabilities for testing advanced security analysis tools.
+This application demonstrates modern Clean Architecture implementation for enterprise-level Node.js applications with comprehensive feature sets.
 
 ## Architecture Overview
 
@@ -12,7 +12,7 @@ This application demonstrates Clean Architecture implementation with intentional
 │  │                 │ │                 │ │               │  │
 │  │ - AuthController│ │ - JWT Handler   │ │ - auth.js     │  │
 │  │ - FileController│ │ - Session Mgmt  │ │ - files.js    │  │
-│  │ - UserController│ │ - Rate Limiter  │ │ - injection.js│  │
+│  │ - UserController│ │ - Rate Limiter  │ │ - integration.js│  │
 │  └─────────────────┘ └─────────────────┘ └───────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                                │

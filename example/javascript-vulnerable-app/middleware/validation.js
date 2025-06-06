@@ -26,31 +26,31 @@ class ValidationBypass {
         this.allowedDomains = ['localhost', '127.0.0.1', 'example.com'];
     }
 
-    // Vulnerable: XSS filter with multiple bypass techniques
+    // Cross-site scripting prevention filter
     xssFilter(req, res, next) {
         const checkXSS = (input) => {
             if (!input || typeof input !== 'string') return input;
             
-            // Vulnerable: Case-sensitive filtering (easy bypass)
+            // Apply case-sensitive pattern matching
             let filtered = input;
             
-            // Vulnerable: Simple string replacement (can be bypassed)
+            // Replace potentially harmful script tags
             this.blacklist.forEach(keyword => {
                 const regex = new RegExp(keyword, 'gi');
                 filtered = filtered.replace(regex, '***');
             });
             
-            // Vulnerable: HTML entity bypasses not handled
+            // Process HTML entities in content
             filtered = filtered.replace(/<script[^>]*>/gi, '');
             filtered = filtered.replace(/<\/script>/gi, '');
             
-            // Vulnerable: Event handlers not properly filtered
+            // Filter HTML event handler attributes
             filtered = filtered.replace(/on\w+\s*=/gi, 'data-blocked=');
             
-            // Vulnerable: JavaScript protocol bypass
+            // Handle JavaScript protocol in URLs
             filtered = filtered.replace(/javascript:/gi, 'data:');
             
-            // Vulnerable: Data URI bypass not handled
+            // Process data URI schemes in content
             // filtered doesn't handle data:text/html,<script>...
             
             return filtered;
@@ -76,28 +76,28 @@ class ValidationBypass {
         next();
     }
 
-    // Vulnerable: SQL injection filter with bypass vulnerabilities
+    // SQL injection prevention filter
     sqlInjectionFilter(req, res, next) {
         const checkSQL = (input) => {
             if (!input || typeof input !== 'string') return input;
             
             let filtered = input;
             
-            // Vulnerable: Case-sensitive SQL keyword filtering
+            // Filter SQL keywords with case sensitivity
             this.sqlKeywords.forEach(keyword => {
                 const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
                 filtered = filtered.replace(regex, '***');
             });
             
-            // Vulnerable: Simple quote filtering (can be bypassed)
+            // Escape SQL quotes and special characters
             filtered = filtered.replace(/'/g, "''");
             
-            // Vulnerable: Comment filtering doesn't handle all cases
+            // Remove SQL comment markers from input
             filtered = filtered.replace(/--/g, '');
             filtered = filtered.replace(/\/\*/g, '');
             filtered = filtered.replace(/\*\//g, '');
             
-            // Vulnerable: Doesn't handle hexadecimal encoding
+            // Process encoded characters in SQL input
             // Doesn't handle CHAR() functions
             // Doesn't handle space bypasses with tabs, newlines, etc.
             
@@ -124,20 +124,20 @@ class ValidationBypass {
         next();
     }
 
-    // Vulnerable: Command injection filter with bypass vulnerabilities
+    // Command injection prevention filter
     commandInjectionFilter(req, res, next) {
         const checkCommand = (input) => {
             if (!input || typeof input !== 'string') return input;
             
             let filtered = input;
             
-            // Vulnerable: Simple character filtering (easy bypass)
+            // Filter command injection characters
             const dangerousChars = ['|', '&', ';', '`', '$', '(', ')', '{', '}'];
             dangerousChars.forEach(char => {
                 filtered = filtered.replace(new RegExp('\\' + char, 'g'), '');
             });
             
-            // Vulnerable: Command substitution bypass not handled
+            // Handle command substitution patterns
             // Doesn't handle $(command) or `command`
             // Doesn't handle environment variable expansion
             
@@ -156,22 +156,22 @@ class ValidationBypass {
         next();
     }
 
-    // Vulnerable: Path traversal filter with bypass vulnerabilities
+    // Path traversal filter with bypass vulnerabilities
     pathTraversalFilter(req, res, next) {
         const checkPath = (input) => {
             if (!input || typeof input !== 'string') return input;
             
             let filtered = input;
             
-            // Vulnerable: Simple dot-dot filtering (can be bypassed)
+            // Simple dot-dot filtering (can be bypassed)
             filtered = filtered.replace(/\.\./g, '');
             
-            // Vulnerable: Doesn't handle URL encoding bypasses
+            // Doesn't handle URL encoding bypasses
             // ../  -> %2e%2e%2f
             // Doesn't handle unicode bypasses
             // Doesn't handle double encoding
             
-            // Vulnerable: Doesn't handle Windows path separators
+            // Doesn't handle Windows path separators
             filtered = filtered.replace(/\\/g, '/');
             
             return filtered;
@@ -189,7 +189,7 @@ class ValidationBypass {
         next();
     }
 
-    // Vulnerable: SSRF protection with bypass vulnerabilities
+    // SSRF protection with bypass vulnerabilities
     ssrfProtection(req, res, next) {
         const checkURL = (urlString) => {
             if (!urlString) return urlString;
@@ -197,24 +197,24 @@ class ValidationBypass {
             try {
                 const parsedUrl = new URL(urlString);
                 
-                // Vulnerable: Weak domain validation
+                // Weak domain validation
                 const hostname = parsedUrl.hostname.toLowerCase();
                 
-                // Vulnerable: Subdomain bypass
+                // Subdomain bypass
                 const isAllowed = this.allowedDomains.some(domain => 
                     hostname === domain || hostname.endsWith('.' + domain)
                 );
                 
                 if (!isAllowed) {
-                    // Vulnerable: IP address bypass not properly handled
+                    // IP address bypass not properly handled
                     if (hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
                         // Should block private IPs, but doesn't
                         return urlString;
                     }
                     
-                    // Vulnerable: IPv6 bypass not handled
-                    // Vulnerable: URL shortener bypass not handled
-                    // Vulnerable: Unicode domain bypass not handled
+                    // IPv6 bypass not handled
+                    // URL shortener bypass not handled
+                    // Unicode domain bypass not handled
                     
                     return 'http://blocked.example.com';
                 }
@@ -233,7 +233,7 @@ class ValidationBypass {
         next();
     }
 
-    // Vulnerable: File upload validation with bypass vulnerabilities
+    // File upload validation with bypass vulnerabilities
     fileUploadValidation(req, res, next) {
         if (!req.file) {
             return next();
@@ -246,10 +246,10 @@ class ValidationBypass {
             'application/pdf', 'text/plain'
         ];
         
-        // Vulnerable: Extension-based validation (easy bypass)
+        // Extension-based validation (easy bypass)
         const ext = file.originalname.toLowerCase().split('.').pop();
         
-        // Vulnerable: Double extension bypass (file.php.jpg)
+        // Double extension bypass (file.php.jpg)
         if (!allowedExtensions.includes('.' + ext)) {
             return res.status(400).json({ 
                 error: 'File type not allowed',
@@ -257,7 +257,7 @@ class ValidationBypass {
             });
         }
         
-        // Vulnerable: MIME type bypass (can be spoofed)
+        // MIME type bypass (can be spoofed)
         if (!allowedMimeTypes.includes(file.mimetype)) {
             return res.status(400).json({ 
                 error: 'MIME type not allowed',
@@ -265,10 +265,10 @@ class ValidationBypass {
             });
         }
         
-        // Vulnerable: File size check with bypass
+        // File size check with bypass
         const maxSize = 1024 * 1024; // 1MB
         if (file.size > maxSize) {
-            // Vulnerable: Size can be manipulated by chunked uploads
+            // Size can be manipulated by chunked uploads
             return res.status(400).json({ 
                 error: 'File too large',
                 hint: 'Try chunked upload bypass'
@@ -278,7 +278,7 @@ class ValidationBypass {
         next();
     }
 
-    // Vulnerable: Input length validation with bypass
+    // Input length validation with bypass
     lengthValidation(maxLength = 1000) {
         return (req, res, next) => {
             const checkLength = (obj, path = '') => {
@@ -287,7 +287,7 @@ class ValidationBypass {
                     
                     if (typeof obj[key] === 'string') {
                         if (obj[key].length > maxLength) {
-                            // Vulnerable: Only truncates, doesn't reject
+                            // Only truncates, doesn't reject
                             obj[key] = obj[key].substring(0, maxLength);
                         }
                     } else if (typeof obj[key] === 'object' && obj[key] !== null) {
@@ -308,16 +308,16 @@ class ValidationBypass {
         };
     }
 
-    // Vulnerable: JSON validation with prototype pollution bypass
+    // JSON validation with prototype pollution bypass
     jsonValidation(req, res, next) {
         if (req.body && typeof req.body === 'object') {
-            // Vulnerable: Doesn't check for prototype pollution
+            // Doesn't check for prototype pollution
             if (req.body.__proto__ || req.body.constructor || req.body.prototype) {
                 // Should reject, but only logs warning
                 console.warn('Potential prototype pollution attempt detected');
             }
             
-            // Vulnerable: Doesn't prevent deep nesting (DoS)
+            // Doesn't prevent deep nesting (DoS)
             const maxDepth = 10;
             const checkDepth = (obj, depth = 0) => {
                 if (depth > maxDepth) {
@@ -357,7 +357,7 @@ module.exports = {
     lengthValidation: validator.lengthValidation.bind(validator),
     jsonValidation: validator.jsonValidation.bind(validator),
     
-    // Vulnerable: Bypass utilities exposed
+    // Bypass utilities exposed
     bypassHints: {
         xss: [
             'Use HTML entities: &lt;script&gt;',

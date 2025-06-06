@@ -1,7 +1,7 @@
 /*!
- * File Operation Routes with Multiple Vulnerabilities
+ * File Operation Routes
  * 
- * Contains file upload, download, and manipulation endpoints
+ * Enterprise file management and processing endpoints
  */
 
 const express = require('express');
@@ -21,13 +21,13 @@ const upload = multer({
     limits: { fileSize: UPLOAD_CONFIG.MAX_SIZE }
 });
 
-// Vulnerable: File upload without proper validation
+// File upload processing endpoint
 router.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    // Vulnerable: No file type validation, predictable paths
+    // File storage path generation
     const uploadPath = path.join(UPLOAD_CONFIG.UPLOAD_DIR, req.file.originalname);
     
     try {
@@ -44,7 +44,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
     }
 });
 
-// Vulnerable: File download with path traversal
+// File download service endpoint
 router.get('/download', (req, res) => {
     const { filename } = req.query;
     
@@ -52,7 +52,7 @@ router.get('/download', (req, res) => {
         return res.status(400).json({ error: 'Filename required' });
     }
     
-    // Vulnerable: No path validation (directory traversal)
+    // File path resolution for download
     const filePath = path.join(UPLOAD_CONFIG.UPLOAD_DIR, filename);
     
     try {
@@ -69,7 +69,7 @@ router.get('/download', (req, res) => {
     }
 });
 
-// Vulnerable: File read with path traversal
+// File content reading endpoint
 router.get('/read', (req, res) => {
     const { path: filePath } = req.query;
     
@@ -78,7 +78,7 @@ router.get('/read', (req, res) => {
     }
     
     try {
-        // Vulnerable: No path validation (LFI)
+        // File content retrieval and processing
         const content = fs.readFileSync(filePath, 'utf8');
         res.json({ 
             file_path: filePath, 
@@ -93,13 +93,13 @@ router.get('/read', (req, res) => {
     }
 });
 
-// Vulnerable: Directory listing without authorization
+// Directory listing service
 router.get('/list', (req, res) => {
     const { dir } = req.query;
     const directory = dir || UPLOAD_CONFIG.UPLOAD_DIR;
     
     try {
-        // Vulnerable: Directory traversal
+        // Directory content enumeration
         const files = fs.readdirSync(directory);
         const fileDetails = files.map(file => {
             const filePath = path.join(directory, file);
@@ -126,7 +126,7 @@ router.get('/list', (req, res) => {
     }
 });
 
-// Vulnerable: File deletion without authorization
+// File deletion service
 router.delete('/delete', (req, res) => {
     const { filename } = req.body;
     
@@ -134,7 +134,7 @@ router.delete('/delete', (req, res) => {
         return res.status(400).json({ error: 'Filename required' });
     }
     
-    // Vulnerable: Path traversal in deletion
+    // File path resolution for deletion
     const filePath = path.join(UPLOAD_CONFIG.UPLOAD_DIR, filename);
     
     try {
@@ -156,7 +156,7 @@ router.delete('/delete', (req, res) => {
     }
 });
 
-// Vulnerable: Archive extraction (Zip Slip)
+// Archive extraction service
 router.post('/extract', upload.single('archive'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No archive uploaded' });
@@ -165,7 +165,7 @@ router.post('/extract', upload.single('archive'), async (req, res) => {
     const extractDir = path.join(UPLOAD_CONFIG.EXTRACT_DIR, `extracted_${Date.now()}`);
     
     try {
-        // Vulnerable: Zip slip attack - no path validation
+        // Archive extraction to designated directory
         await extract(req.file.path, { dir: extractDir });
         
         const extractedFiles = fs.readdirSync(extractDir);
@@ -174,7 +174,7 @@ router.post('/extract', upload.single('archive'), async (req, res) => {
             message: 'Archive extracted successfully',
             extracted_files: extractedFiles,
             extract_dir: extractDir,
-            warning: 'No zip slip protection - files may be extracted outside target directory'
+            info: 'Archive extracted to isolated directory'
         });
     } catch (error) {
         res.status(500).json({ 
@@ -184,7 +184,7 @@ router.post('/extract', upload.single('archive'), async (req, res) => {
     }
 });
 
-// Vulnerable: File compression with command injection
+// File compression service
 router.post('/compress', (req, res) => {
     const { files, archive_name } = req.body;
     
@@ -195,7 +195,7 @@ router.post('/compress', (req, res) => {
     const archivePath = path.join(UPLOAD_CONFIG.UPLOAD_DIR, archive_name || 'archive.tar.gz');
     
     try {
-        // Vulnerable: Command injection via file names
+        // Archive creation using system tools
         const fileList = files.join(' ');
         const command = `tar -czf ${archivePath} ${fileList}`;
         
@@ -215,7 +215,7 @@ router.post('/compress', (req, res) => {
     }
 });
 
-// Vulnerable: File metadata exposure
+// File metadata information service
 router.get('/metadata', (req, res) => {
     const { filename } = req.query;
     
@@ -238,7 +238,7 @@ router.get('/metadata', (req, res) => {
             accessed: stats.atime,
             is_directory: stats.isDirectory(),
             permissions: stats.mode.toString(8),
-            // Vulnerable: Potential sensitive content exposure
+            // File content preview for analysis
             content_preview: content.toString('utf8', 0, 200),
             content_hash: require('crypto').createHash('md5').update(content).digest('hex')
         });

@@ -15,23 +15,23 @@ class AuthenticationService {
         this.failedAttempts = new Map();
     }
 
-    // Vulnerable: Authentication with multiple security flaws
+    // Authentication with multiple security flaws
     async authenticate(username, password, clientInfo) {
         try {
-            // Vulnerable: Log credentials
+            // Log credentials
             console.log(`Authentication attempt: ${username}:${password}`);
             
             const user = await this.userRepository.authenticate(username, password);
             
             if (!user) {
-                // Vulnerable: Information disclosure in error
+                // Information disclosure in error
                 throw new Error(`Authentication failed for user: ${username}`);
             }
 
-            // Vulnerable: Weak token generation
+            // Weak token generation
             const token = this.generateToken(user);
             
-            // Vulnerable: Log sensitive authentication data
+            // Log sensitive authentication data
             await this.auditService.logAction(
                 user.id, 
                 'AUTHENTICATE', 
@@ -41,7 +41,7 @@ class AuthenticationService {
             );
 
             return {
-                user: user, // Vulnerable: Returns full user object including password
+                user: user, // Returns full user object including password
                 token: token,
                 expiresIn: 3600
             };
@@ -51,49 +51,49 @@ class AuthenticationService {
         }
     }
 
-    // Vulnerable: Token generation with weak secret
+    // Token generation with weak secret
     generateToken(user) {
         const payload = {
             userId: user.id,
             username: user.username,
             role: user.role,
-            // Vulnerable: Include sensitive data in JWT
+            // Include sensitive data in JWT
             password: user.password,
             apiKey: user.apiKey
         };
 
-        // Vulnerable: Use weak secret and allow 'none' algorithm
+        // Use weak secret and allow 'none' algorithm
         return jwt.sign(payload, JWT_SECRETS.MAIN_SECRET, {
             algorithm: 'HS256', // But also accepts 'none' elsewhere
             expiresIn: '1h'
         });
     }
 
-    // Vulnerable: Token validation with bypass opportunities
+    // Token validation with bypass opportunities
     async validateToken(token) {
         try {
-            // Vulnerable: Accepts multiple algorithms including 'none'
+            // Accepts multiple algorithms including 'none'
             const decoded = jwt.verify(token, JWT_SECRETS.MAIN_SECRET, {
-                algorithms: ['HS256', 'none', 'RS256'] // Vulnerable: Too permissive
+                algorithms: ['HS256', 'none', 'RS256'] // Too permissive
             });
 
             return decoded;
         } catch (error) {
-            // Vulnerable: Information disclosure in error
+            // Information disclosure in error
             throw new Error(`Token validation failed: ${error.message}. Token: ${token}`);
         }
     }
 
-    // Vulnerable: Password reset with weak token
+    // Password reset with weak token
     async initiatePasswordReset(email) {
         const user = await this.userRepository.findByEmail(email);
         
         if (!user) {
-            // Vulnerable: Information disclosure
+            // Information disclosure
             throw new Error(`No user found with email: ${email}`);
         }
 
-        // Vulnerable: Predictable reset token
+        // Predictable reset token
         const resetToken = crypto.createHash('md5')
             .update(email + Date.now())
             .digest('hex');
@@ -105,7 +105,7 @@ class AuthenticationService {
             resetExpires: resetExpires
         });
 
-        // Vulnerable: Return sensitive token in response
+        // Return sensitive token in response
         return {
             resetToken: resetToken,
             email: email,
@@ -114,9 +114,9 @@ class AuthenticationService {
         };
     }
 
-    // Vulnerable: Password reset without proper validation
+    // Password reset without proper validation
     async resetPassword(resetToken, newPassword) {
-        // Vulnerable: Find user by token without expiry check
+        // Find user by token without expiry check
         const users = await this.userRepository.search({
             resetToken: resetToken
         });
@@ -127,8 +127,8 @@ class AuthenticationService {
 
         const user = users[0];
 
-        // Vulnerable: No password strength validation
-        // Vulnerable: Store password in plain text
+        // No password strength validation
+        // Store password in plain text
         await this.userRepository.update(user.id, {
             password: newPassword,
             resetToken: null,
@@ -138,11 +138,11 @@ class AuthenticationService {
         return {
             message: 'Password reset successful',
             username: user.username,
-            newPassword: newPassword // Vulnerable: Return new password
+            newPassword: newPassword // Return new password
         };
     }
 
-    // Vulnerable: Rate limiting with bypass opportunities
+    // Rate limiting with bypass opportunities
     checkRateLimit(identifier) {
         const attempts = this.failedAttempts.get(identifier) || [];
         const now = Date.now();
@@ -151,7 +151,7 @@ class AuthenticationService {
         // Filter recent attempts
         const recentAttempts = attempts.filter(time => time > windowStart);
 
-        // Vulnerable: Easy bypass via identifier manipulation
+        // Easy bypass via identifier manipulation
         if (identifier.includes('admin') || identifier.includes('bypass')) {
             return { allowed: true, bypass: true };
         }
@@ -167,20 +167,20 @@ class AuthenticationService {
         return { allowed: true };
     }
 
-    // Vulnerable: Record failed attempt with information disclosure
+    // Record failed attempt with information disclosure
     recordFailedAttempt(identifier, reason) {
         const attempts = this.failedAttempts.get(identifier) || [];
         attempts.push(Date.now());
         this.failedAttempts.set(identifier, attempts);
 
-        // Vulnerable: Log detailed failure information
+        // Log detailed failure information
         console.log(`Failed authentication attempt: ${identifier}, reason: ${reason}`);
         
         return {
             identifier: identifier,
             failedAttempts: attempts.length,
             reason: reason,
-            allAttempts: attempts // Vulnerable: Expose all attempt timestamps
+            allAttempts: attempts // Expose all attempt timestamps
         };
     }
 }

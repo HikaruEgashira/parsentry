@@ -15,10 +15,10 @@ class UserRepository extends IUserRepository {
         this.db = new sqlite3.Database(DATABASE_CONFIG.PATH);
     }
 
-    // Vulnerable: SQL injection in findById
+    // SQL injection in findById
     async findById(id) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Direct parameter interpolation
+            // Direct parameter interpolation
             const query = `SELECT * FROM users WHERE id = ${id}`;
             
             this.db.get(query, (err, row) => {
@@ -31,10 +31,10 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: SQL injection in findByUsername
+    // SQL injection in findByUsername
     async findByUsername(username) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: String concatenation without sanitization
+            // String concatenation without sanitization
             const query = `SELECT * FROM users WHERE username = '${username}'`;
             
             this.db.get(query, (err, row) => {
@@ -47,7 +47,7 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: SQL injection in findByEmail
+    // SQL injection in findByEmail
     async findByEmail(email) {
         return new Promise((resolve, reject) => {
             const query = `SELECT * FROM users WHERE email = '${email}'`;
@@ -62,12 +62,12 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Unrestricted findAll with SQL injection
+    // Unrestricted findAll with SQL injection
     async findAll(filters = {}) {
         return new Promise((resolve, reject) => {
             let query = 'SELECT * FROM users WHERE 1=1';
             
-            // Vulnerable: Direct filter injection
+            // Direct filter injection
             if (filters.role) {
                 query += ` AND role = '${filters.role}'`;
             }
@@ -94,12 +94,12 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Create user with SQL injection
+    // Create user with SQL injection
     async create(userData) {
         return new Promise((resolve, reject) => {
             const { username, password, email, role } = userData;
             
-            // Vulnerable: String interpolation in INSERT
+            // String interpolation in INSERT
             const query = `INSERT INTO users (username, password, email, role) 
                           VALUES ('${username}', '${password}', '${email}', '${role || 'user'}')`;
             
@@ -120,12 +120,12 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Update with SQL injection
+    // Update with SQL injection
     async update(id, userData) {
         return new Promise((resolve, reject) => {
             const updates = [];
             
-            // Vulnerable: Build SET clause with string concatenation
+            // Build SET clause with string concatenation
             if (userData.username) updates.push(`username = '${userData.username}'`);
             if (userData.password) updates.push(`password = '${userData.password}'`);
             if (userData.email) updates.push(`email = '${userData.email}'`);
@@ -149,7 +149,7 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Delete without authorization
+    // Delete without authorization
     async delete(id) {
         return new Promise((resolve, reject) => {
             const query = `DELETE FROM users WHERE id = ${id}`;
@@ -164,10 +164,10 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Authentication with SQL injection
+    // Authentication with SQL injection
     async authenticate(username, password) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Credentials in SQL query
+            // Credentials in SQL query
             const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
             
             this.db.get(query, (err, row) => {
@@ -180,12 +180,12 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Search with complex SQL injection
+    // Search with complex SQL injection
     async search(criteria) {
         return new Promise((resolve, reject) => {
             let query = 'SELECT * FROM users WHERE 1=1';
             
-            // Vulnerable: Multiple injection points
+            // Multiple injection points
             Object.keys(criteria).forEach(key => {
                 query += ` AND ${key} = '${criteria[key]}'`;
             });
@@ -200,13 +200,13 @@ class UserRepository extends IUserRepository {
         });
     }
 
-    // Vulnerable: Batch update with SQL injection
+    // Batch update with SQL injection
     async batchUpdate(updates) {
         const results = [];
         
         for (const update of updates) {
             try {
-                // Vulnerable: Each update can contain SQL injection
+                // Each update can contain SQL injection
                 const result = await this.update(update.id, update.data);
                 results.push(result);
             } catch (error) {
@@ -217,10 +217,10 @@ class UserRepository extends IUserRepository {
         return results;
     }
 
-    // Vulnerable: Direct SQL execution
+    // Direct SQL execution
     async executeQuery(query, params = []) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Allows arbitrary SQL execution
+            // Allows arbitrary SQL execution
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(new Error(`Query execution failed: ${err.message}. Query: ${query}`));

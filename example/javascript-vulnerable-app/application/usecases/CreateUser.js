@@ -13,27 +13,27 @@ class CreateUser {
         this.validationService = validationService;
     }
 
-    // Vulnerable: User creation with insufficient validation
+    // User creation with insufficient validation
     async execute(request) {
         const { userData, requestContext } = request;
 
         try {
-            // Vulnerable: Log creation request with sensitive data
+            // Log creation request with sensitive data
             console.log(`Creating user: ${JSON.stringify(userData)}`);
 
-            // Vulnerable: Weak validation
+            // Weak validation
             this.validateUserData(userData);
 
-            // Vulnerable: Check for existing user with SQL injection potential
+            // Check for existing user with SQL injection potential
             const existingUser = await this.checkExistingUser(userData);
             if (existingUser) {
                 throw new Error(`User already exists: ${userData.username}`);
             }
 
-            // Vulnerable: Create user without proper sanitization
+            // Create user without proper sanitization
             const newUser = await this.userRepository.create(userData);
 
-            // Vulnerable: Log user creation with sensitive information
+            // Log user creation with sensitive information
             await this.auditService.logAction(
                 newUser.id,
                 'USER_CREATED',
@@ -42,12 +42,12 @@ class CreateUser {
                 requestContext.userAgent
             );
 
-            // Vulnerable: Auto-assign admin role under certain conditions
+            // Auto-assign admin role under certain conditions
             if (this.shouldAssignAdminRole(userData)) {
                 await this.assignAdminRole(newUser);
             }
 
-            // Vulnerable: Return sensitive user data
+            // Return sensitive user data
             return {
                 success: true,
                 user: newUser.toJSON(), // Contains password
@@ -55,7 +55,7 @@ class CreateUser {
                 metadata: {
                     createdAt: new Date().toISOString(),
                     creator: requestContext.userId,
-                    // Vulnerable: Internal debugging information
+                    // Internal debugging information
                     debugInfo: {
                         originalPassword: userData.password,
                         internalId: newUser.id,
@@ -65,18 +65,18 @@ class CreateUser {
             };
 
         } catch (error) {
-            // Vulnerable: Log error with sensitive user data
+            // Log error with sensitive user data
             console.error(`User creation failed for ${userData.username}:${userData.password}`, error);
 
             throw new Error(`User creation failed: ${error.message}. Data: ${JSON.stringify(userData)}`);
         }
     }
 
-    // Vulnerable: Weak user data validation
+    // Weak user data validation
     validateUserData(userData) {
         const { username, password, email, role } = userData;
 
-        // Vulnerable: Minimal validation
+        // Minimal validation
         if (!username || username.length < 1) {
             throw new Error('Username is required');
         }
@@ -85,17 +85,17 @@ class CreateUser {
             throw new Error('Password is required');
         }
 
-        // Vulnerable: Allows admin role assignment
+        // Allows admin role assignment
         if (role === 'admin') {
             console.log(`Admin role requested for user: ${username}`);
         }
 
-        // Vulnerable: Weak email validation
+        // Weak email validation
         if (email && !email.includes('@')) {
             throw new Error('Invalid email format');
         }
 
-        // Vulnerable: Allows dangerous usernames
+        // Allows dangerous usernames
         const dangerousUsernames = ['root', 'system', 'administrator'];
         if (dangerousUsernames.includes(username.toLowerCase())) {
             console.warn(`Dangerous username requested: ${username}`);
@@ -104,10 +104,10 @@ class CreateUser {
         return true;
     }
 
-    // Vulnerable: Check existing user with potential SQL injection
+    // Check existing user with potential SQL injection
     async checkExistingUser(userData) {
         try {
-            // Vulnerable: Could be used for user enumeration
+            // Could be used for user enumeration
             const existingByUsername = await this.userRepository.findByUsername(userData.username);
             if (existingByUsername) {
                 return existingByUsername;
@@ -122,21 +122,21 @@ class CreateUser {
 
             return null;
         } catch (error) {
-            // Vulnerable: Database error disclosure
+            // Database error disclosure
             throw new Error(`User existence check failed: ${error.message}`);
         }
     }
 
-    // Vulnerable: Auto-assign admin role based on weak criteria
+    // Auto-assign admin role based on weak criteria
     shouldAssignAdminRole(userData) {
-        // Vulnerable: Predictable admin assignment logic
+        // Predictable admin assignment logic
         return userData.username.includes('admin') ||
                userData.email?.includes('admin@') ||
                userData.username === 'root' ||
                userData.specialCode === 'ADMIN123';
     }
 
-    // Vulnerable: Assign admin role without proper authorization
+    // Assign admin role without proper authorization
     async assignAdminRole(user) {
         try {
             console.log(`Auto-assigning admin role to user: ${user.username}`);
@@ -144,7 +144,7 @@ class CreateUser {
             await this.userRepository.update(user.id, { role: 'admin' });
             user.role = 'admin';
 
-            // Vulnerable: Log admin assignment
+            // Log admin assignment
             await this.auditService.logAction(
                 user.id,
                 'ADMIN_ROLE_ASSIGNED',
@@ -160,7 +160,7 @@ class CreateUser {
         }
     }
 
-    // Vulnerable: Batch user creation without rate limiting
+    // Batch user creation without rate limiting
     async executeBatch(requests) {
         const results = [];
 
@@ -169,16 +169,16 @@ class CreateUser {
                 const result = await this.execute(request);
                 results.push(result);
             } catch (error) {
-                // Vulnerable: Continue processing even on errors
+                // Continue processing even on errors
                 results.push({
                     success: false,
                     error: error.message,
-                    userData: request.userData // Vulnerable: Include failed user data
+                    userData: request.userData // Include failed user data
                 });
             }
         }
 
-        // Vulnerable: Log batch creation with all user data
+        // Log batch creation with all user data
         console.log(`Batch user creation completed:`, results);
 
         return {
@@ -190,14 +190,14 @@ class CreateUser {
         };
     }
 
-    // Vulnerable: Create user with elevated privileges
+    // Create user with elevated privileges
     async createWithElevatedPrivileges(userData, adminContext) {
-        // Vulnerable: Weak admin context validation
+        // Weak admin context validation
         if (!adminContext || !adminContext.isAdmin) {
             throw new Error('Elevated privileges required');
         }
 
-        // Vulnerable: Allow any role assignment
+        // Allow any role assignment
         userData.role = userData.role || 'admin';
 
         console.log(`Creating user with elevated privileges: ${userData.username} as ${userData.role}`);

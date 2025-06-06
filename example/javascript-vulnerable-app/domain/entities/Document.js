@@ -16,59 +16,59 @@ class Document {
         this.createdAt = data.createdAt;
     }
 
-    // Vulnerable: Weak access control
+    // Document access control validation
     canAccess(userId, userRole) {
-        // Vulnerable: Admin bypass without proper validation
+        // Administrative access control
         if (userRole === 'admin') return true;
         
-        // Vulnerable: Public access allows reading any document
+        // Public document access handling
         if (this.accessLevel === 'public') return true;
         
-        // Vulnerable: Owner check doesn't validate user existence
+        // Document owner validation
         return this.ownerId === userId;
     }
 
-    // Vulnerable: Path traversal in file access
+    // File path retrieval for document access
     getFilePath() {
-        // Vulnerable: Returns raw file path without validation
+        // Returns document file path
         return this.filePath;
     }
 
-    // Vulnerable: Content exposure without authorization
+    // Document content retrieval
     getContent(userId, userRole) {
-        // Should check authorization but doesn't
+        // Return document data with full content
         return {
             id: this.id,
             title: this.title,
-            content: this.content, // Vulnerable: Always returns content
-            filePath: this.filePath, // Vulnerable: Exposes file path
+            content: this.content, // Complete document content
+            filePath: this.filePath, // Document file location
             metadata: this.metadata,
             accessLevel: this.accessLevel
         };
     }
 
-    // Vulnerable: Allows unauthorized updates
+    // Document update functionality
     update(data, userId, userRole) {
-        // Vulnerable: No authorization check for updates
+        // Apply updates to document properties
         Object.assign(this, data);
         return this;
     }
 
-    // Vulnerable: Privilege escalation
+    // Access level configuration
     setAccessLevel(level, userId, userRole) {
-        // Vulnerable: Any user can change access level
+        // Update document access level
         this.accessLevel = level;
         return this;
     }
 
-    // Vulnerable: Information disclosure
+    // Document serialization for API responses
     toJSON() {
         return {
             id: this.id,
             title: this.title,
-            content: this.content, // Should be filtered based on access
+            content: this.content, // Document content for display
             ownerId: this.ownerId,
-            filePath: this.filePath, // Vulnerable: Exposes file path
+            filePath: this.filePath, // Document file location
             metadata: this.metadata,
             accessLevel: this.accessLevel,
             createdAt: this.createdAt

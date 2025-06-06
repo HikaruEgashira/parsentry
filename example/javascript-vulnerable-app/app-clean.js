@@ -36,16 +36,16 @@ const rateLimiter = require('./middleware/ratelimit');
 // Routes
 const authRoutes = require('./routes/auth');
 const fileRoutes = require('./routes/files');
-const injectionRoutes = require('./routes/injection');
+const integrationRoutes = require('./routes/integration');
 
 // Utils
-const validators = require('./utils/validators');
+const sanitizers = require('./utils/sanitizers');
 const encryption = require('./utils/encryption');
 
 // Configuration
-const { SESSION_CONFIG, RATE_LIMIT_CONFIG } = require('./config/constants');
+const { SESSION_OPTIONS, THROTTLE_CONFIG } = require('./config/constants');
 
-class VulnerableApplication {
+class EnterpriseApplication {
     constructor() {
         this.app = express();
         this.port = process.env.PORT || 3000;
@@ -80,24 +80,24 @@ class VulnerableApplication {
         this.createUserUseCase = new CreateUser(
             this.userRepository,
             this.auditService,
-            validators
+            sanitizers
         );
 
         // Controllers
         this.authController = new AuthController(
             this.authenticateUserUseCase,
             this.createUserUseCase,
-            validators
+            sanitizers
         );
 
         console.log('Dependencies initialized with vulnerabilities intact');
     }
 
-    // Vulnerable middleware configuration
+    // Middleware configuration
     setupMiddleware() {
         console.log('Configuring middleware...');
 
-        // Vulnerable: CORS allows all origins
+        // CORS allows all origins
         this.app.use(cors({
             origin: true,
             credentials: true,
@@ -105,30 +105,29 @@ class VulnerableApplication {
             allowedHeaders: ['*']
         }));
 
-        // Vulnerable: Large payload limits
+        // Large payload limits
         this.app.use(bodyParser.json({ limit: '50mb' }));
         this.app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
         this.app.use(cookieParser());
 
-        // Vulnerable: Session configuration
+        // Session configuration
         this.app.use(session({
-            secret: SESSION_CONFIG.SECRET,
+            secret: SESSION_OPTIONS.SECRET,
             resave: false,
             saveUninitialized: true,
             cookie: {
-                secure: SESSION_CONFIG.SECURE,
-                httpOnly: SESSION_CONFIG.HTTP_ONLY,
-                maxAge: SESSION_CONFIG.MAX_AGE
+                secure: SESSION_OPTIONS.SECURE,
+                httpOnly: SESSION_OPTIONS.HTTP_ONLY,
+                maxAge: SESSION_OPTIONS.MAX_AGE
             }
         }));
 
-        // Vulnerable: Rate limiting middleware
         this.app.use(rateLimiter.rateLimitMiddleware(
-            RATE_LIMIT_CONFIG.DEFAULT_LIMIT,
-            RATE_LIMIT_CONFIG.WINDOW_MS
+            THROTTLE_CONFIG.DEFAULT_LIMIT,
+            THROTTLE_CONFIG.WINDOW_MS
         ));
 
-        // Vulnerable: Request logging with sensitive data
+        // Request logging with sensitive data
         this.app.use((req, res, next) => {
             console.log(`${req.method} ${req.path}`, {
                 body: req.body,
@@ -151,7 +150,7 @@ class VulnerableApplication {
             res.json({
                 status: 'healthy',
                 timestamp: new Date().toISOString(),
-                // Vulnerable: Expose system information
+                // Expose system information
                 system: {
                     memory: process.memoryUsage(),
                     uptime: process.uptime(),
@@ -180,9 +179,9 @@ class VulnerableApplication {
         // Legacy routes (maintaining backward compatibility)
         this.app.use('/api/auth', authRoutes);
         this.app.use('/api/files', fileRoutes);
-        this.app.use('/api/injection', injectionRoutes);
+        this.app.use('/api/integration', integrationRoutes);
 
-        // Vulnerable: Direct service access endpoints
+        // Direct service access endpoints
         this.app.get('/api/v1/services/encryption/demo', (req, res) => {
             const { action, data } = req.query;
             
@@ -204,32 +203,32 @@ class VulnerableApplication {
             }
         });
 
-        // Vulnerable: Validation service exposure
-        this.app.post('/api/v1/services/validation/test', (req, res) => {
+        // Content validation service
+        this.app.post('/api/v1/services/content/validate', (req, res) => {
             const { type, input } = req.body;
             
             let result;
             switch (type) {
-                case 'xss':
-                    result = validators.validateXSS(input);
+                case 'content':
+                    result = sanitizers.sanitizeContent(input);
                     break;
-                case 'sql':
-                    result = validators.validateSQL(input);
+                case 'query':
+                    result = sanitizers.sanitizeQuery(input);
                     break;
                 case 'email':
-                    result = validators.validateEmail(input);
+                    result = sanitizers.validateEmail(input);
                     break;
                 case 'password':
-                    result = validators.validatePassword(input);
+                    result = sanitizers.validatePassword(input);
                     break;
                 default:
-                    result = { error: 'Invalid validation type' };
+                    result = { error: 'Invalid content type' };
             }
             
             res.json(result);
         });
 
-        // Vulnerable: Direct database access
+        // Direct database access
         this.app.post('/api/v1/db/query', async (req, res) => {
             const { query, params } = req.body;
             
@@ -251,9 +250,9 @@ class VulnerableApplication {
         // Main application route
         this.app.get('/', (req, res) => {
             res.send(`
-                <h1>🏢 Enterprise Vulnerable Application</h1>
+                <h1>🏢 Enterprise Web Application</h1>
                 <h2>Clean Architecture Implementation</h2>
-                <p>This application demonstrates Clean Architecture with intentional security vulnerabilities.</p>
+                <p>Modern Node.js application demonstrating enterprise-level patterns and Clean Architecture principles.</p>
                 
                 <h3>Architecture Layers:</h3>
                 <ul>
@@ -267,22 +266,22 @@ class VulnerableApplication {
                 <ul>
                     <li>POST /api/v1/auth/login - User authentication</li>
                     <li>POST /api/v1/auth/register - User registration</li>
-                    <li>GET /api/v1/debug - Debug information</li>
-                    <li>POST /api/v1/db/query - Direct database access</li>
+                    <li>GET /api/v1/debug - System information</li>
+                    <li>POST /api/v1/db/query - Database operations</li>
                     <li>GET /health - System health check</li>
                 </ul>
                 
-                <h3>⚠️ Security Warning:</h3>
-                <p style="color: red;">This application contains intentional security vulnerabilities for testing purposes only.</p>
+                <h3>🚀 Features:</h3>
+                <p>Comprehensive enterprise application with user management, file handling, and system integration capabilities.</p>
             `);
         });
 
         console.log('Routes configured with Clean Architecture pattern');
     }
 
-    // Vulnerable error handling
+    // Error handling
     setupErrorHandling() {
-        // Vulnerable: Detailed error disclosure
+        // Detailed error disclosure
         this.app.use((error, req, res, next) => {
             console.error('Application error:', error);
 
@@ -299,7 +298,7 @@ class VulnerableApplication {
             });
         });
 
-        // Vulnerable: 404 handler with request disclosure
+        // 404 handler with request disclosure
         this.app.use((req, res) => {
             res.status(404).json({
                 error: 'Not Found',
@@ -325,15 +324,15 @@ class VulnerableApplication {
             await this.dbInitializer.initializeTables();
             await this.dbInitializer.insertDefaultData();
 
-            console.log('Database initialized with vulnerable default data');
+            console.log('Database initialized with sample data for testing');
 
             // Start server
             this.server = this.app.listen(this.port, () => {
-                console.log(`🏢 Enterprise Vulnerable Application (Clean Architecture)`);
-                console.log(`⚠️  Contains intentional security vulnerabilities for testing!`);
+                console.log(`🏢 Enterprise Web Application (Clean Architecture)`);
+                console.log(`🚀 Production-ready Node.js application with modern patterns`);
                 console.log(`🌐 Server running at http://localhost:${this.port}`);
                 console.log(`🔗 Health check: http://localhost:${this.port}/health`);
-                console.log(`🔍 Debug endpoint: http://localhost:${this.port}/api/v1/debug`);
+                console.log(`🔧 Debug endpoint: http://localhost:${this.port}/api/v1/debug`);
                 console.log(`📊 Architecture: Domain → Application → Infrastructure → Presentation`);
             });
 
@@ -354,11 +353,11 @@ class VulnerableApplication {
 }
 
 // Export for testing
-module.exports = VulnerableApplication;
+module.exports = EnterpriseApplication;
 
 // Start application if run directly
 if (require.main === module) {
-    const app = new VulnerableApplication();
+    const app = new EnterpriseApplication();
     
     // Handle shutdown signals
     process.on('SIGTERM', () => app.shutdown());

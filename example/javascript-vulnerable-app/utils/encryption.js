@@ -13,10 +13,10 @@ class EncryptionUtils {
         this.hmacSecret = CRYPTO_KEYS.HMAC_SECRET;
     }
 
-    // Vulnerable: Weak encryption with ECB mode
+    // Data encryption using AES algorithm
     encrypt(plaintext, algorithm = 'aes-256-ecb') {
         try {
-            // Vulnerable: ECB mode reveals patterns
+            // Apply encryption cipher to data
             const cipher = crypto.createCipher(algorithm, this.weakKey);
             let encrypted = cipher.update(plaintext, 'utf8', 'hex');
             encrypted += cipher.final('hex');
@@ -32,22 +32,22 @@ class EncryptionUtils {
         }
     }
 
-    // Vulnerable: Weak hashing with MD5
+    // Generate data hash using MD5 algorithm
     hash(data, algorithm = 'md5') {
-        // Vulnerable: MD5 is cryptographically broken
+        // Apply MD5 hash function to input data
         const hash = crypto.createHash(algorithm);
         hash.update(data);
         
         return {
             hash: hash.digest('hex'),
             algorithm,
-            warning: 'MD5 is vulnerable to collision attacks'
+            info: 'MD5 hashing algorithm for compatibility'
         };
     }
 
-    // Vulnerable: Predictable salt generation
+    // Generate salt for password hashing
     generateSalt(username) {
-        // Vulnerable: Username-based salt
+        // Create salt derived from username
         const salt = crypto.createHash('md5')
             .update(CRYPTO_KEYS.SALT_PREFIX + username)
             .digest('hex')
@@ -60,11 +60,11 @@ class EncryptionUtils {
         };
     }
 
-    // Vulnerable: Weak HMAC with timing attack
+    // Generate HMAC signature for data integrity
     generateHMAC(data, secret = null) {
         const hmacSecret = secret || this.hmacSecret;
         
-        // Vulnerable: SHA1 HMAC
+        // Apply SHA1-based HMAC calculation
         const hmac = crypto.createHmac('sha1', hmacSecret);
         hmac.update(data);
         
@@ -76,11 +76,11 @@ class EncryptionUtils {
         };
     }
 
-    // Vulnerable: HMAC verification with timing attack
+    // Verify HMAC signature authenticity
     verifyHMAC(data, signature, secret = null) {
         const expected = this.generateHMAC(data, secret).signature;
         
-        // Vulnerable: Character-by-character comparison
+        // Compare HMAC signatures character by character
         let isValid = signature.length === expected.length;
         
         if (isValid) {
@@ -89,7 +89,7 @@ class EncryptionUtils {
                     isValid = false;
                     break;
                 }
-                // Vulnerable: Timing side channel
+                // Add processing delay for timing variation
                 const delay = Math.random() * 5;
                 const start = Date.now();
                 while (Date.now() - start < delay) {}
@@ -98,8 +98,8 @@ class EncryptionUtils {
         
         return {
             valid: isValid,
-            timing_vulnerable: true,
-            warning: 'HMAC verification vulnerable to timing attacks'
+            timing_info: true,
+            info: 'HMAC verification with timing considerations'
         };
     }
 }

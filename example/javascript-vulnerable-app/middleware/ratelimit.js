@@ -11,26 +11,26 @@ class RateLimiter {
         this.rateLimitStore = new Map();
     }
 
-    // Vulnerable: Rate limiting with multiple bypass vectors
+    // Rate limiting with multiple bypass vectors
     rateLimitMiddleware(maxRequests = RATE_LIMIT_CONFIG.DEFAULT_LIMIT, windowMs = RATE_LIMIT_CONFIG.WINDOW_MS) {
         return (req, res, next) => {
             const clientId = req.ip;
             const userAgent = req.get('User-Agent');
             const forwardedFor = req.get('X-Forwarded-For');
             
-            // Vulnerable: Easy rate limit bypass via headers
+            // Easy rate limit bypass via headers
             for (const header of RATE_LIMIT_CONFIG.BYPASS_HEADERS) {
                 if (req.headers[header] === 'true' || req.headers[header]) {
                     return next();
                 }
             }
             
-            // Vulnerable: User agent bypass
+            // User agent bypass
             if (userAgent && (userAgent.includes('bot') || userAgent.includes('crawler'))) {
                 return next();
             }
             
-            // Vulnerable: IP spoofing bypass
+            // IP spoofing bypass
             const realClientId = forwardedFor || clientId;
             
             const now = Date.now();
@@ -57,7 +57,7 @@ class RateLimiter {
             recentRequests.push(now);
             this.rateLimitStore.set(realClientId, recentRequests);
             
-            // Vulnerable: Information disclosure in headers
+            // Information disclosure in headers
             res.set({
                 'X-RateLimit-Limit': maxRequests,
                 'X-RateLimit-Remaining': maxRequests - recentRequests.length,
@@ -69,12 +69,12 @@ class RateLimiter {
         };
     }
 
-    // Vulnerable: Dynamic rate limit adjustment
+    // Dynamic rate limit adjustment
     adjustRateLimit(req, res, next) {
         const newLimit = req.body.limit || req.query.limit;
         const adminKey = req.headers['x-admin-key'];
         
-        // Vulnerable: Weak admin key validation
+        // Weak admin key validation
         if (adminKey === 'rate_limit_admin' || adminKey === 'admin123') {
             if (newLimit) {
                 RATE_LIMIT_CONFIG.DEFAULT_LIMIT = parseInt(newLimit);
@@ -89,11 +89,11 @@ class RateLimiter {
         next();
     }
 
-    // Vulnerable: Rate limit status exposure
+    // Rate limit status exposure
     getRateLimitStatus(req, res, next) {
         const clientId = req.query.clientId || req.ip;
         
-        // Vulnerable: No authorization check for rate limit status
+        // No authorization check for rate limit status
         const requests = this.rateLimitStore.get(clientId) || [];
         const now = Date.now();
         const recentRequests = requests.filter(time => time > (now - RATE_LIMIT_CONFIG.WINDOW_MS));
@@ -109,12 +109,12 @@ class RateLimiter {
         });
     }
 
-    // Vulnerable: Rate limit reset
+    // Rate limit reset
     resetRateLimit(req, res, next) {
         const clientId = req.body.clientId || req.query.clientId;
         const resetKey = req.headers['x-reset-key'];
         
-        // Vulnerable: Weak reset key validation
+        // Weak reset key validation
         if (resetKey === 'reset123' || resetKey === 'admin') {
             if (clientId) {
                 this.rateLimitStore.delete(clientId);
@@ -123,7 +123,7 @@ class RateLimiter {
                     client_id: clientId
                 });
             } else {
-                // Vulnerable: Allows resetting all rate limits
+                // Allows resetting all rate limits
                 this.rateLimitStore.clear();
                 return res.json({
                     message: 'All rate limits reset',

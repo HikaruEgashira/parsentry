@@ -106,7 +106,7 @@ class ValidationBypassTechniques {
 
 const bypassDemo = new ValidationBypassTechniques();
 
-// Vulnerable: XSS filter bypass demonstration
+// XSS filter bypass demonstration
 router.get('/xss/filter-test', (req, res) => {
     const { input } = req.query;
     
@@ -117,7 +117,7 @@ router.get('/xss/filter-test', (req, res) => {
         });
     }
     
-    // Vulnerable: Weak XSS filtering
+    // Weak XSS filtering
     let filtered = input;
     
     // Simple blacklist approach (easily bypassed)
@@ -138,7 +138,7 @@ router.get('/xss/filter-test', (req, res) => {
                 <p>Filtered: ${filtered}</p>
                 <p>Rendered: <div>${input}</div></p>
                 <script>
-                    // Vulnerable: Original input in JavaScript context
+                    // Original input in JavaScript context
                     const userInput = '${input.replace(/'/g, "\\'")}';
                     console.log('User input:', userInput);
                 </script>
@@ -147,7 +147,7 @@ router.get('/xss/filter-test', (req, res) => {
     `);
 });
 
-// Vulnerable: SQL injection filter bypass demonstration
+// SQL injection filter bypass demonstration
 router.post('/sql/filter-test', (req, res) => {
     const { username, password } = req.body;
     
@@ -158,7 +158,7 @@ router.post('/sql/filter-test', (req, res) => {
         });
     }
     
-    // Vulnerable: Weak SQL injection filtering
+    // Weak SQL injection filtering
     let filteredUsername = username;
     let filteredPassword = password;
     
@@ -173,7 +173,7 @@ router.post('/sql/filter-test', (req, res) => {
         filteredPassword = filteredPassword.replace(new RegExp(keyword, 'g'), '');
     });
     
-    // Vulnerable: Still injectable query
+    // Still injectable query
     const query = `SELECT * FROM users WHERE username = '${filteredUsername}' AND password = '${filteredPassword}'`;
     
     res.json({
@@ -184,7 +184,7 @@ router.post('/sql/filter-test', (req, res) => {
     });
 });
 
-// Vulnerable: Command injection bypass techniques
+// Command injection bypass techniques
 router.post('/command/bypass-test', (req, res) => {
     const { command, args } = req.body;
     
@@ -195,7 +195,7 @@ router.post('/command/bypass-test', (req, res) => {
         });
     }
     
-    // Vulnerable: Weak command filtering
+    // Weak command filtering
     let filtered = command;
     
     // Remove dangerous characters (incomplete)
@@ -210,7 +210,7 @@ router.post('/command/bypass-test', (req, res) => {
     const fullCommand = args ? `${filtered} ${args.join(' ')}` : filtered;
     
     try {
-        // Vulnerable: Still allows command injection
+        // Still allows command injection
         const output = execSync(fullCommand, { 
             encoding: 'utf8', 
             timeout: 3000,
@@ -236,7 +236,7 @@ router.post('/command/bypass-test', (req, res) => {
     }
 });
 
-// Vulnerable: Path traversal bypass demonstration
+// Path traversal bypass demonstration
 router.get('/path/traversal-test', (req, res) => {
     const { path: filePath } = req.query;
     
@@ -247,7 +247,7 @@ router.get('/path/traversal-test', (req, res) => {
         });
     }
     
-    // Vulnerable: Weak path filtering
+    // Weak path filtering
     let filtered = filePath;
     
     // Simple dot-dot filtering (bypassable)
@@ -260,7 +260,7 @@ router.get('/path/traversal-test', (req, res) => {
     const fullPath = path.join('/safe/uploads/', filtered);
     
     try {
-        // Vulnerable: Still allows path traversal
+        // Still allows path traversal
         if (fs.existsSync(fullPath)) {
             const content = fs.readFileSync(fullPath, 'utf8');
             res.json({
@@ -291,7 +291,7 @@ router.get('/path/traversal-test', (req, res) => {
     }
 });
 
-// Vulnerable: URL validation bypass
+// URL validation bypass
 router.post('/url/validation-bypass', async (req, res) => {
     const { url: targetUrl } = req.body;
     
@@ -313,7 +313,7 @@ router.post('/url/validation-bypass', async (req, res) => {
     try {
         const parsed = new URL(targetUrl);
         
-        // Vulnerable: Weak URL validation
+        // Weak URL validation
         const validations = {
             protocol_check: ['http:', 'https:'].includes(parsed.protocol),
             hostname_length: parsed.hostname.length < 100,
@@ -321,7 +321,7 @@ router.post('/url/validation-bypass', async (req, res) => {
             no_auth: !parsed.username && !parsed.password
         };
         
-        // Vulnerable: Doesn't check for private IPs, localhost, etc.
+        // Doesn't check for private IPs, localhost, etc.
         const dangerousPatterns = [
             /localhost/i,
             /127\.0\.0\.1/,
@@ -363,7 +363,7 @@ router.post('/url/validation-bypass', async (req, res) => {
     }
 });
 
-// Vulnerable: File type validation bypass
+// File type validation bypass
 router.post('/file/type-bypass', (req, res) => {
     const { filename, content, mimeType } = req.body;
     
@@ -381,18 +381,18 @@ router.post('/file/type-bypass', (req, res) => {
         });
     }
     
-    // Vulnerable: Weak file extension validation
+    // Weak file extension validation
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.txt', '.pdf'];
     const fileExt = path.extname(filename).toLowerCase();
     
-    // Vulnerable: Only checks last extension
+    // Only checks last extension
     const isAllowedExt = allowedExtensions.includes(fileExt);
     
-    // Vulnerable: Weak MIME type validation
+    // Weak MIME type validation
     const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'text/plain', 'application/pdf'];
     const isAllowedMime = !mimeType || allowedMimes.includes(mimeType);
     
-    // Vulnerable: Content-based detection bypassed
+    // Content-based detection bypassed
     const suspiciousContent = content && (
         content.includes('<?php') ||
         content.includes('<%') ||
@@ -425,13 +425,13 @@ router.post('/file/type-bypass', (req, res) => {
     });
 });
 
-// Vulnerable: Authentication bypass techniques
+// Authentication bypass techniques
 router.post('/auth/bypass-demo', (req, res) => {
     const { username, password, token, adminKey, debugMode } = req.body;
     
     const bypassAttempts = [];
     
-    // Vulnerable: Multiple bypass vectors
+    // Multiple bypass vectors
     if (debugMode === 'true' || debugMode === '1') {
         bypassAttempts.push({
             method: 'Debug mode bypass',

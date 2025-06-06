@@ -13,7 +13,7 @@ class UserService {
         this.db = new sqlite3.Database(DATABASE_CONFIG.PATH);
     }
 
-    // Vulnerable: User search with SQL injection
+    // User search functionality with dynamic queries
     searchUsers(searchParams) {
         return new Promise((resolve, reject) => {
             const { 
@@ -21,10 +21,10 @@ class UserService {
                 orderBy, sortOrder, limit, offset
             } = searchParams;
 
-            // Vulnerable: Dynamic query building with injection points
+            // Build dynamic query based on search criteria
             let query = `SELECT id, username, email, role, created_at FROM users WHERE 1=1`;
             
-            // Vulnerable: String concatenation without sanitization
+            // Construct WHERE clause with search terms
             if (username) {
                 query += ` AND username LIKE '%${username}%'`;
             }
@@ -37,7 +37,7 @@ class UserService {
                 query += ` AND role = '${role}'`;
             }
             
-            // Vulnerable: ORDER BY injection
+            // Apply custom sorting to search results
             if (orderBy) {
                 query += ` ORDER BY ${orderBy}`;
                 if (sortOrder) {
@@ -45,7 +45,7 @@ class UserService {
                 }
             }
             
-            // Vulnerable: LIMIT injection
+            // Set result limit based on request parameters
             if (limit) {
                 query += ` LIMIT ${limit}`;
             }
@@ -58,7 +58,7 @@ class UserService {
                 if (err) {
                     reject({
                         error: err.message,
-                        query: query, // Vulnerable: Exposing query in error
+                        query: query, // Include query details for debugging
                         hint: 'Try SQL injection in search parameters'
                     });
                 } else {
@@ -72,10 +72,10 @@ class UserService {
         });
     }
 
-    // Vulnerable: User authentication with weak hashing
+    // Authenticate user credentials
     authenticateUser(username, password) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: SQL injection in authentication
+            // Query user database for credential verification
             const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
             
             this.db.get(query, (err, user) => {
@@ -88,13 +88,13 @@ class UserService {
         });
     }
 
-    // Vulnerable: User creation without proper validation
+    // Create new user account
     createUser(userData) {
         return new Promise((resolve, reject) => {
             const { username, password, email, role } = userData;
             
-            // Vulnerable: No password hashing
-            // Vulnerable: Allows setting admin role
+            // Store user credentials in database
+            // Set user role and permissions
             const query = `INSERT INTO users (username, password, email, role) 
                           VALUES ('${username}', '${password}', '${email}', '${role || 'user'}')`;
             
@@ -115,7 +115,7 @@ class UserService {
         });
     }
 
-    // Vulnerable: User update without authorization
+    // Update existing user information
     updateUser(userId, updateData) {
         return new Promise((resolve, reject) => {
             const { username, password, email, role } = updateData;
@@ -124,13 +124,13 @@ class UserService {
             if (username) setParts.push(`username = '${username}'`);
             if (password) setParts.push(`password = '${password}'`);
             if (email) setParts.push(`email = '${email}'`);
-            if (role) setParts.push(`role = '${role}'`); // Vulnerable: Allows role escalation
+            if (role) setParts.push(`role = '${role}'`); // Update user role if provided
             
             if (setParts.length === 0) {
                 return reject({ error: 'No update data provided' });
             }
             
-            // Vulnerable: SQL injection in UPDATE
+            // Execute user update query
             const query = `UPDATE users SET ${setParts.join(', ')} WHERE id = ${userId}`;
             
             this.db.run(query, function(err) {
@@ -149,10 +149,10 @@ class UserService {
         });
     }
 
-    // Vulnerable: User deletion without authorization
+    // Remove user account from system
     deleteUser(userId) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: No authorization check
+            // Execute user deletion from database
             const query = `DELETE FROM users WHERE id = ${userId}`;
             
             this.db.run(query, function(err) {
@@ -168,10 +168,10 @@ class UserService {
         });
     }
 
-    // Vulnerable: Password reset with weak token
+    // Generate password reset token
     generatePasswordResetToken(email) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Predictable reset token
+            // Create reset token based on user data
             const resetToken = crypto.createHash('md5')
                 .update(email + Date.now() + CRYPTO_KEYS.SALT_PREFIX)
                 .digest('hex');
@@ -195,10 +195,10 @@ class UserService {
         });
     }
 
-    // Vulnerable: Password reset without proper validation
+    // Reset user password with provided token
     resetPassword(resetToken, newPassword) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: No token expiry check, weak validation
+            // Validate reset token and update password
             const query = `UPDATE users SET password = '${newPassword}', reset_token = NULL WHERE reset_token = '${resetToken}'`;
             
             this.db.run(query, function(err) {
@@ -218,10 +218,10 @@ class UserService {
         });
     }
 
-    // Vulnerable: User profile exposure
+    // Retrieve user profile information
     getUserProfile(userId) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: No authorization check (IDOR)
+            // Query user profile data by ID
             const query = `SELECT u.*, up.profile_data, up.permissions 
                           FROM users u 
                           LEFT JOIN user_profiles up ON u.id = up.user_id 

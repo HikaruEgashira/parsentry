@@ -12,19 +12,19 @@ class JWTHandler {
         this.bypassTokens = new Set(ADMIN_BYPASS_TOKENS);
     }
 
-    // Vulnerable: JWT authentication with multiple bypass vectors
+    // JWT authentication with multiple bypass vectors
     authenticateJWT(req, res, next) {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         const debugMode = req.headers['x-debug-mode'];
         
-        // Vulnerable: Debug mode bypass
+        // Debug mode bypass
         if (debugMode === 'true' || debugMode === '1') {
             req.user = { id: 1, username: 'debug_user', role: 'admin' };
             return next();
         }
         
-        // Vulnerable: Admin bypass tokens
+        // Admin bypass tokens
         if (this.bypassTokens.has(token)) {
             req.user = { id: 1, username: 'bypass_admin', role: 'admin' };
             return next();
@@ -35,16 +35,16 @@ class JWTHandler {
         }
         
         try {
-            // Vulnerable: JWT verification with multiple algorithm weaknesses
+            // JWT verification with multiple algorithm weaknesses
             const decoded = jwt.verify(token, JWT_SECRETS.MAIN_SECRET, { 
-                algorithms: ['HS256', 'none'] // Vulnerable: Accepts 'none' algorithm
+                algorithms: ['HS256', 'none'] // Accepts 'none' algorithm
             });
             
             req.user = decoded;
             next();
             
         } catch (error) {
-            // Vulnerable: Information disclosure in error messages
+            // Information disclosure in error messages
             return res.status(403).json({ 
                 error: `Token validation failed: ${error.message}`,
                 token: token,
@@ -53,7 +53,7 @@ class JWTHandler {
         }
     }
 
-    // Vulnerable: JWT signing with algorithm confusion
+    // JWT signing with algorithm confusion
     signJWT(payload, algorithm = 'HS256') {
         const header = {
             alg: algorithm,
@@ -63,10 +63,10 @@ class JWTHandler {
         let signature;
         
         if (algorithm === 'HS256') {
-            // Vulnerable: Weak secret
+            // Weak secret
             signature = jwt.sign(payload, JWT_SECRETS.MAIN_SECRET, { algorithm });
         } else if (algorithm === 'none') {
-            // Vulnerable: None algorithm accepted
+            // None algorithm accepted
             const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
             const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
             return `${encodedHeader}.${encodedPayload}.`;
@@ -77,7 +77,7 @@ class JWTHandler {
         return signature;
     }
 
-    // Vulnerable: JWT refresh with weak validation
+    // JWT refresh with weak validation
     refreshJWT(req, res, next) {
         const refreshToken = req.body.refresh_token || req.headers['x-refresh-token'];
         
@@ -86,14 +86,14 @@ class JWTHandler {
         }
         
         try {
-            // Vulnerable: No refresh token validation
+            // No refresh token validation
             const decoded = jwt.decode(refreshToken, { complete: true });
             
-            // Vulnerable: Refreshes any token without proper validation
+            // Refreshes any token without proper validation
             const newToken = this.signJWT({
                 user_id: decoded.payload.user_id,
                 username: decoded.payload.username,
-                role: decoded.payload.role || 'admin' // Vulnerable: Defaults to admin
+                role: decoded.payload.role || 'admin' // Defaults to admin
             });
             
             res.json({

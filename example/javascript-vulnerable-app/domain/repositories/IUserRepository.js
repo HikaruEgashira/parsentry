@@ -5,7 +5,7 @@
  */
 
 class IUserRepository {
-    // Vulnerable: Interface doesn't enforce security constraints
+    // Interface doesn't enforce security constraints
     async findById(id) {
         throw new Error('Method must be implemented');
     }
@@ -18,7 +18,7 @@ class IUserRepository {
         throw new Error('Method must be implemented');
     }
 
-    // Vulnerable: No authorization parameter required
+    // No authorization parameter required
     async findAll(filters) {
         throw new Error('Method must be implemented');
     }
@@ -27,7 +27,7 @@ class IUserRepository {
         throw new Error('Method must be implemented');
     }
 
-    // Vulnerable: Update method doesn't require authorization context
+    // Update method doesn't require authorization context
     async update(id, userData) {
         throw new Error('Method must be implemented');
     }
@@ -36,22 +36,22 @@ class IUserRepository {
         throw new Error('Method must be implemented');
     }
 
-    // Vulnerable: Authentication method exposes credentials
+    // Authentication method exposes credentials
     async authenticate(username, password) {
         throw new Error('Method must be implemented');
     }
 
-    // Vulnerable: Search method allows unrestricted queries
+    // Search method allows unrestricted queries
     async search(criteria) {
         throw new Error('Method must be implemented');
     }
 
-    // Vulnerable: Batch operations without validation
+    // Batch operations without validation
     async batchUpdate(updates) {
         throw new Error('Method must be implemented');
     }
 
-    // Vulnerable: Direct SQL execution method
+    // Direct SQL execution method
     async executeQuery(query, params) {
         throw new Error('Method must be implemented');
     }

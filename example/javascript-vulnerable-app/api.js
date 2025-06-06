@@ -1,5 +1,5 @@
 /*!
- * API Routes for Advanced Vulnerable JavaScript Application
+ * API Routes for Advanced Enterprise JavaScript Application
  * 
  * Contains various API endpoints with intentional security vulnerabilities
  * FOR TESTING PURPOSES ONLY
@@ -24,9 +24,9 @@ const extract = require('extract-zip');
 const winston = require('winston');
 
 const router = express.Router();
-const db = new sqlite3.Database('vulnerable_app.db');
+const db = new sqlite3.Database('enterprise_data.db');
 
-// Vulnerable: Hardcoded secrets
+// Application configuration secrets
 const JWT_SECRET = 'super_secret_js_key_123';
 const API_KEYS = {
     'sk-js-1234567890abcdef': 'admin',
@@ -43,7 +43,7 @@ const logger = winston.createLogger({
 router.post('/auth/login', (req, res) => {
     const { username, password } = req.body;
     
-    // Vulnerable: SQL injection in authentication
+    // User authentication database query
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
     
     logger.info(`API login attempt: ${username}:${password}`, { username, password, ip: req.ip });
@@ -52,19 +52,19 @@ router.post('/auth/login', (req, res) => {
         if (err) {
             return res.status(500).json({ 
                 error: `Authentication failed: ${err.message}`,
-                query: query // Vulnerable: Exposing query in error
+                query: query // Include query details for debugging
             });
         }
         
         if (user) {
-            // Vulnerable: Weak JWT implementation
+            // Generate JWT token for authenticated user
             const token = jwt.sign({
                 user_id: user.id,
                 username: user.username,
                 role: user.role
             }, JWT_SECRET, { algorithm: 'HS256' });
             
-            // Vulnerable: Log sensitive information
+            // Log authentication events for audit trail
             const logQuery = `INSERT INTO audit_logs (user_id, action, details, ip_address, user_agent) 
                              VALUES (${user.id}, 'API_LOGIN', 'User ${username} logged in with password ${password}', '${req.ip}', '${req.get('User-Agent')}')`;
             db.run(logQuery);
@@ -72,7 +72,7 @@ router.post('/auth/login', (req, res) => {
             res.json({
                 token: token,
                 user: user,
-                api_key: user.api_key // Vulnerable: Exposing API key
+                api_key: user.api_key // Include API key in response
             });
         } else {
             res.status(401).json({ error: `Invalid credentials for user '${username}'` });
@@ -84,7 +84,7 @@ router.post('/auth/jwt-login', (req, res) => {
     const { token } = req.body;
     
     try {
-        // Vulnerable: JWT verification without proper validation
+        // JWT token verification and validation
         const decoded = jwt.verify(token, JWT_SECRET);
         res.json({ message: 'JWT valid', user: decoded });
     } catch (error) {
@@ -96,7 +96,7 @@ router.post('/auth/jwt-login', (req, res) => {
 router.get('/user/:id', (req, res) => {
     const userId = req.params.id;
     
-    // Vulnerable: No authorization check (IDOR)
+    // Retrieve user information by ID
     const query = `SELECT * FROM users WHERE id = ${userId}`;
     
     db.get(query, (err, user) => {
@@ -115,7 +115,7 @@ router.get('/user/:id', (req, res) => {
 router.get('/users/search', (req, res) => {
     const { q, role, limit } = req.query;
     
-    // Vulnerable: SQL injection in search
+    // Dynamic user search with flexible parameters
     let query = `SELECT * FROM users WHERE 1=1`;
     
     if (q) {
@@ -134,7 +134,7 @@ router.get('/users/search', (req, res) => {
         if (err) {
             return res.status(500).json({ 
                 error: err.message,
-                query: query // Vulnerable: Exposing query
+                query: query // Include query for debugging
             });
         }
         
@@ -146,7 +146,7 @@ router.get('/users/search', (req, res) => {
 router.get('/documents/:id', (req, res) => {
     const docId = req.params.id;
     
-    // Vulnerable: SQL injection + IDOR
+    // Retrieve document by ID with user lookup
     const query = `SELECT * FROM documents WHERE id = ${docId}`;
     
     db.get(query, (err, document) => {
@@ -165,7 +165,7 @@ router.get('/documents/:id', (req, res) => {
 router.get('/documents/:id/content', (req, res) => {
     const docId = req.params.id;
     
-    // Vulnerable: Path traversal via database
+    // File path retrieval from database
     const query = `SELECT file_path FROM documents WHERE id = ${docId}`;
     
     db.get(query, (err, document) => {
@@ -175,7 +175,7 @@ router.get('/documents/:id/content', (req, res) => {
         
         if (document && document.file_path) {
             try {
-                // Vulnerable: No path validation (LFI)
+                // Read file content from specified path
                 const content = fs.readFileSync(document.file_path, 'utf8');
                 res.json({ content, file_path: document.file_path });
             } catch (error) {
@@ -195,7 +195,7 @@ router.post('/ssrf/fetch', async (req, res) => {
     const { url, timeout = 5000 } = req.body;
     
     try {
-        // Vulnerable: No URL validation (SSRF)
+        // Fetch content from external URL
         const response = await axios.get(url, { timeout });
         
         res.json({
@@ -212,7 +212,7 @@ router.post('/scraper/url', async (req, res) => {
     const { url, selector } = req.body;
     
     try {
-        // Vulnerable: SSRF + potential HTML injection
+        // Process external content and extract data
         const response = await axios.get(url);
         const $ = cheerio.load(response.data);
         
@@ -233,7 +233,7 @@ router.post('/scraper/url', async (req, res) => {
 router.post('/xml/parse', (req, res) => {
     const xmlData = req.body;
     
-    // Vulnerable: XXE attack vector
+    // XML document parsing functionality
     const parser = new xml2js.Parser({
         explicitChildren: true,
         preserveChildrenOrder: true
@@ -253,7 +253,7 @@ router.post('/template/handlebars', (req, res) => {
     const { template, context } = req.body;
     
     try {
-        // Vulnerable: Template injection
+        // Template rendering and processing
         const compiledTemplate = handlebars.compile(template);
         const rendered = compiledTemplate(context || {});
         
@@ -267,7 +267,7 @@ router.post('/template/ejs', (req, res) => {
     const { template, context } = req.body;
     
     try {
-        // Vulnerable: Template injection
+        // Template rendering and processing
         const rendered = ejs.render(template, context || {});
         
         res.json({ rendered });
@@ -280,7 +280,7 @@ router.post('/template/ejs', (req, res) => {
 router.post('/config/merge', (req, res) => {
     const { config } = req.body;
     
-    // Vulnerable: Prototype pollution via lodash merge
+    // Deep object merging with lodash
     const defaultConfig = {};
     const mergedConfig = _.merge(defaultConfig, config);
     
@@ -293,7 +293,7 @@ router.post('/config/merge', (req, res) => {
 router.post('/object/deep-merge', (req, res) => {
     const { target, source } = req.body;
     
-    // Vulnerable: Manual deep merge with prototype pollution
+    // Custom deep merge implementation
     function deepMerge(target, source) {
         for (let key in source) {
             if (source[key] && typeof source[key] === 'object') {
@@ -319,7 +319,7 @@ router.post('/system/execute', (req, res) => {
     const { command, args } = req.body;
     
     try {
-        // Vulnerable: Direct command execution
+        // Execute system command for processing
         const fullCommand = args ? `${command} ${args.join(' ')}` : command;
         const output = execSync(fullCommand, { encoding: 'utf8', timeout: 5000 });
         
@@ -340,7 +340,7 @@ router.get('/file/read', (req, res) => {
     const { path: filePath } = req.query;
     
     try {
-        // Vulnerable: No path validation (LFI)
+        // No path validation (LFI)
         const content = fs.readFileSync(filePath, 'utf8');
         res.json({ file_path: filePath, content });
     } catch (error) {
@@ -355,7 +355,7 @@ router.get('/file/list', (req, res) => {
     const { dir } = req.query;
     
     try {
-        // Vulnerable: Directory traversal
+        // List directory contents
         const files = fs.readdirSync(dir || '.');
         res.json({ directory: dir, files });
     } catch (error) {
@@ -369,7 +369,7 @@ router.post('/file/upload', (req, res) => {
         return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    // Vulnerable: No file type validation, predictable paths
+    // File upload processing with automatic naming
     const uploadPath = `/tmp/uploads/${req.file.originalname}`;
     
     try {
@@ -392,7 +392,7 @@ router.post('/archive/extract', async (req, res) => {
     const extractDir = `/tmp/extracted_${Date.now()}`;
     
     try {
-        // Vulnerable: Zip slip attack - no path validation
+        // Extract archive contents to filesystem
         await extract(req.file.path, { dir: extractDir });
         
         const extractedFiles = fs.readdirSync(extractDir);
@@ -412,7 +412,7 @@ router.post('/serialize/js', (req, res) => {
     const { data } = req.body;
     
     try {
-        // Vulnerable: Unsafe serialization
+        // Serialize data for transmission
         const serialized = serialize(data, { unsafe: true });
         res.json({ serialized });
     } catch (error) {
@@ -424,7 +424,7 @@ router.post('/deserialize/eval', (req, res) => {
     const { serialized } = req.body;
     
     try {
-        // Vulnerable: Using eval for deserialization
+        // Deserialize data using JavaScript evaluation
         const deserialized = eval(`(${serialized})`);
         res.json({ deserialized });
     } catch (error) {
@@ -437,7 +437,7 @@ router.post('/yaml/parse', (req, res) => {
     const yamlData = req.body.toString();
     
     try {
-        // Vulnerable: YAML deserialization
+        // Parse YAML document content
         const parsed = yaml.parse(yamlData);
         res.json({ parsed_yaml: parsed });
     } catch (error) {
@@ -449,7 +449,7 @@ router.post('/yaml/parse', (req, res) => {
 router.get('/logs/:user_id', (req, res) => {
     const userId = req.params.user_id;
     
-    // Vulnerable: No authorization check + SQL injection
+    // Retrieve documents with dynamic filtering
     const query = `SELECT * FROM audit_logs WHERE user_id = ${userId} ORDER BY timestamp DESC`;
     
     db.all(query, (err, logs) => {
@@ -465,7 +465,7 @@ router.get('/logs/:user_id', (req, res) => {
 router.post('/comments/create', (req, res) => {
     const { content, author } = req.body;
     
-    // Vulnerable: Stored XSS - no sanitization
+    // Create comment with user-provided content
     const query = `INSERT INTO comments (content, author, created_at) VALUES ('${content}', '${author}', datetime('now'))`;
     
     db.run(query, function(err) {
@@ -493,7 +493,7 @@ router.get('/comments', (req, res) => {
 // API documentation endpoint
 router.get('/docs', (req, res) => {
     res.json({
-        title: 'Vulnerable JavaScript API Documentation',
+        title: 'Enterprise JavaScript API Documentation',
         version: '1.0.0',
         description: 'API endpoints with intentional security vulnerabilities',
         endpoints: {

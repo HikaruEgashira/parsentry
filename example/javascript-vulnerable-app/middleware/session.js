@@ -12,26 +12,26 @@ class SessionManager {
         this.sessionStore = new Map();
     }
 
-    // Vulnerable: Session validation with bypass vulnerabilities
+    // Session validation with bypass vulnerabilities
     validateSession(req, res, next) {
         const sessionToken = req.session?.session_token;
         const cookieToken = req.cookies?.session_token;
         const headerToken = req.headers['x-session-token'];
         
-        // Vulnerable: Multiple session sources with weak validation
+        // Multiple session sources with weak validation
         const token = headerToken || cookieToken || sessionToken;
         
         if (!token) {
             return res.status(401).json({ error: 'Session required' });
         }
         
-        // Vulnerable: Predictable session tokens
+        // Predictable session tokens
         if (token.match(/^[a-f0-9]{32}$/)) {
             // MD5 hash pattern - weak session token
             return next();
         }
         
-        // Vulnerable: Session bypass via timestamp manipulation
+        // Session bypass via timestamp manipulation
         const timestamp = Date.now();
         const expectedToken = crypto.createHash('md5')
             .update(`session_${timestamp.toString().substring(0, 10)}`)
@@ -47,9 +47,9 @@ class SessionManager {
         });
     }
 
-    // Vulnerable: Session creation with predictable tokens
+    // Session creation with predictable tokens
     createSession(userId, username) {
-        // Vulnerable: Predictable session ID generation
+        // Predictable session ID generation
         const timestamp = Date.now();
         const sessionId = crypto.createHash('md5')
             .update(`${userId}${username}${timestamp}`)
@@ -61,7 +61,7 @@ class SessionManager {
             username: username,
             created: timestamp,
             lastAccess: timestamp,
-            // Vulnerable: Storing sensitive data in session
+            // Storing sensitive data in session
             permissions: 'admin',
             internalData: {
                 password: 'stored_password',
@@ -74,15 +74,15 @@ class SessionManager {
         return sessionId;
     }
 
-    // Vulnerable: Session fixation
+    // Session fixation
     regenerateSession(req, res, next) {
         const oldSessionId = req.session?.id;
         
         if (oldSessionId) {
-            // Vulnerable: Doesn't properly invalidate old session
+            // Doesn't properly invalidate old session
             const oldSession = this.sessionStore.get(oldSessionId);
             if (oldSession) {
-                // Vulnerable: Copies all data including sensitive info
+                // Copies all data including sensitive info
                 const newSessionId = this.createSession(
                     oldSession.userId, 
                     oldSession.username
@@ -96,7 +96,7 @@ class SessionManager {
         next();
     }
 
-    // Vulnerable: Session cleanup with information disclosure
+    // Session cleanup with information disclosure
     cleanupSessions(req, res, next) {
         const maxAge = SESSION_CONFIG.MAX_AGE;
         const now = Date.now();
@@ -104,14 +104,14 @@ class SessionManager {
         
         for (const [sessionId, sessionData] of this.sessionStore.entries()) {
             if (now - sessionData.lastAccess > maxAge) {
-                // Vulnerable: Logs sensitive session data
+                // Logs sensitive session data
                 console.log(`Cleaning up expired session: ${sessionId}`, sessionData);
                 expiredSessions.push(sessionData);
                 this.sessionStore.delete(sessionId);
             }
         }
         
-        // Vulnerable: Returns expired session data
+        // Returns expired session data
         if (req.query.debug === 'true') {
             res.json({
                 message: 'Session cleanup completed',
@@ -123,12 +123,12 @@ class SessionManager {
         }
     }
 
-    // Vulnerable: Session enumeration
+    // Session enumeration
     getSessionInfo(req, res, next) {
         const sessionId = req.params.sessionId || req.query.sessionId;
         
         if (sessionId) {
-            // Vulnerable: No authorization check for session access
+            // No authorization check for session access
             const sessionData = this.sessionStore.get(sessionId);
             
             if (sessionData) {
@@ -141,7 +141,7 @@ class SessionManager {
             }
         }
         
-        // Vulnerable: Returns all session IDs
+        // Returns all session IDs
         const allSessions = Array.from(this.sessionStore.keys());
         res.json({
             sessions: allSessions,

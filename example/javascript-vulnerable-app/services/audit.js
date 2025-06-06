@@ -12,10 +12,10 @@ class AuditService {
         this.db = new sqlite3.Database(DATABASE_CONFIG.PATH);
     }
 
-    // Vulnerable: Log sensitive information
+    // Record user actions for audit trail
     logAction(userId, action, details, ipAddress, userAgent) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Logs sensitive data including passwords
+            // Insert audit log entry with action details
             const query = `INSERT INTO audit_logs (user_id, action, details, ip_address, user_agent, timestamp) 
                           VALUES (${userId}, '${action}', '${details}', '${ipAddress}', '${userAgent}', datetime('now'))`;
             
@@ -33,10 +33,10 @@ class AuditService {
         });
     }
 
-    // Vulnerable: Audit log access without authorization (IDOR)
+    // Retrieve audit logs for specific user
     getUserLogs(userId, limit = 50) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: No authorization check - can access any user's logs
+            // Query audit logs filtered by user ID
             const query = `SELECT * FROM audit_logs WHERE user_id = ${userId} ORDER BY timestamp DESC LIMIT ${limit}`;
             
             this.db.all(query, (err, logs) => {
@@ -49,12 +49,12 @@ class AuditService {
         });
     }
 
-    // Vulnerable: Expose all audit logs
+    // Retrieve all audit log entries
     getAllLogs(filters = {}) {
         return new Promise((resolve, reject) => {
             let query = 'SELECT * FROM audit_logs WHERE 1=1';
             
-            // Vulnerable: SQL injection in filters
+            // Apply filters and sorting to audit query
             if (filters.action) {
                 query += ` AND action = '${filters.action}'`;
             }
@@ -95,12 +95,12 @@ class AuditService {
         });
     }
 
-    // Vulnerable: Delete audit logs without proper authorization
+    // Remove audit log entries
     deleteLogs(criteria) {
         return new Promise((resolve, reject) => {
             let query = 'DELETE FROM audit_logs WHERE 1=1';
             
-            // Vulnerable: SQL injection in deletion criteria
+            // Delete audit logs based on specified criteria
             if (criteria.userId) {
                 query += ` AND user_id = ${criteria.userId}`;
             }
@@ -130,7 +130,7 @@ class AuditService {
         });
     }
 
-    // Vulnerable: Export audit logs with sensitive data
+    // Export audit logs in various formats
     exportLogs(format = 'json', filters = {}) {
         return new Promise((resolve, reject) => {
             this.getAllLogs(filters)
@@ -138,7 +138,7 @@ class AuditService {
                     const logs = result.logs;
                     
                     if (format === 'csv') {
-                        // Vulnerable: CSV injection possible
+                        // Format data for CSV export
                         const csvHeader = 'ID,User ID,Action,Details,IP Address,User Agent,Timestamp\n';
                         const csvData = logs.map(log => 
                             `${log.id},"${log.user_id}","${log.action}","${log.details}","${log.ip_address}","${log.user_agent}","${log.timestamp}"`
@@ -162,7 +162,7 @@ class AuditService {
         });
     }
 
-    // Vulnerable: Audit statistics with information disclosure
+    // Generate audit statistics and metrics
     getAuditStatistics() {
         return new Promise((resolve, reject) => {
             const queries = [
@@ -197,10 +197,10 @@ class AuditService {
         });
     }
 
-    // Vulnerable: Search logs with injection vulnerabilities
+    // Search audit logs with flexible criteria
     searchLogs(searchTerm) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: SQL injection in search
+            // Execute search query with user-provided terms
             const query = `SELECT * FROM audit_logs 
                           WHERE details LIKE '%${searchTerm}%' 
                           OR action LIKE '%${searchTerm}%' 

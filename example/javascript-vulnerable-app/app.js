@@ -1,11 +1,11 @@
 /*!
- * Advanced Vulnerable JavaScript/Node.js Application
+ * Advanced Enterprise JavaScript/Node.js Application
  * 
- * A sophisticated, intentionally vulnerable Node.js web application designed for testing
- * advanced security analysis tools. Features enterprise-level complexity with
- * multi-layered architecture and complex vulnerability patterns.
+ * A sophisticated Node.js web application designed for comprehensive
+ * security testing and analysis. Features enterprise-level complexity with
+ * multi-layered architecture and advanced functionality patterns.
  * 
- * ⚠️ FOR TESTING PURPOSES ONLY - Contains severe security vulnerabilities
+ * 🏢 Enterprise-grade application for security assessment
  */
 
 const express = require('express');
@@ -38,9 +38,9 @@ const extract = require('extract-zip');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Vulnerable: Hardcoded secrets and configuration
+// Application configuration constants
 const JWT_SECRET = 'super_secret_js_key_123';
-const SESSION_SECRET = 'vulnerable_session_secret';
+const SESSION_SECRET = 'enterprise_session_secret';
 const API_KEYS = {
     'sk-js-1234567890abcdef': 'admin',
     'pk-js-0987654321fedcba': 'guest'
@@ -59,35 +59,35 @@ const logger = winston.createLogger({
     ]
 });
 
-// Vulnerable middleware configuration
-app.use(bodyParser.json({ limit: '50mb' })); // Vulnerable: Large payload limit
+// Express middleware configuration
+app.use(bodyParser.json({ limit: '50mb' })); // Configure JSON payload parser
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(session({
-    secret: SESSION_SECRET, // Vulnerable: Weak session secret
+    secret: SESSION_SECRET, // Session configuration secret
     resave: false,
     saveUninitialized: true,
     cookie: { 
-        secure: false, // Vulnerable: No HTTPS requirement
-        httpOnly: false, // Vulnerable: Accessible via JavaScript
+        secure: false, // HTTPS requirement setting
+        httpOnly: false, // JavaScript accessibility setting
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 
 // Configure file upload with vulnerabilities
 const upload = multer({ 
-    dest: '/tmp/uploads/', // Vulnerable: Predictable upload directory
+    dest: '/tmp/uploads/', // File upload destination directory
     limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
     fileFilter: (req, file, cb) => {
-        // Vulnerable: No file type validation
+        // File upload filter configuration
         cb(null, true);
     }
 });
 
-// Initialize SQLite database with vulnerable schema
-const db = new sqlite3.Database('vulnerable_app.db');
+// Initialize SQLite database with application schema
+const db = new sqlite3.Database('enterprise_data.db');
 
-// Vulnerable database initialization
+// Database table creation and setup
 db.serialize(() => {
     // Users table with plain text passwords
     db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -125,14 +125,14 @@ db.serialize(() => {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Insert vulnerable default data
+    // Insert default application data
     db.run(`INSERT OR IGNORE INTO users (username, password, email, role, api_key) 
             VALUES ('admin', 'admin123', 'admin@example.com', 'admin', 'sk-js-1234567890abcdef')`);
     
     db.run(`INSERT OR IGNORE INTO users (username, password, email, role, api_key) 
             VALUES ('guest', 'guest', 'guest@example.com', 'user', 'pk-js-0987654321fedcba')`);
 
-    // Sample documents with vulnerable file paths
+    // Sample documents with example file paths
     db.run(`INSERT OR IGNORE INTO documents (title, content, owner_id, file_path) 
             VALUES ('Secret Config', 'database_password=super_secret_123', 1, '/etc/passwd')`);
     
@@ -148,7 +148,7 @@ app.get('/', (req, res) => {
     <!DOCTYPE html>
     <html>
     <head>
-        <title>🔓 Advanced Vulnerable JavaScript Application</title>
+        <title>🏢 Advanced Enterprise JavaScript Application</title>
         <style>
             body { 
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -292,7 +292,7 @@ app.get('/', (req, res) => {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🔓 Advanced Vulnerable JavaScript Application</h1>
+                <h1>🏢 Advanced Enterprise JavaScript Application</h1>
                 <p>Enterprise-level Node.js security testing platform with complex vulnerability patterns</p>
                 ${user ? `<p style="color: #28a745;">Welcome, ${user.username}! | <a href="/logout">Logout</a></p>` : 
                           '<p><a href="/login">Login</a> to access more features</p>'}
@@ -479,11 +479,11 @@ app.get('/', (req, res) => {
         </div>
         
         <script>
-            // Vulnerable: XSS in JavaScript context
+            // Client-side user data integration
             const userName = '${user ? user.username : 'anonymous'}';
             console.log('Current user: ' + userName);
             
-            // Vulnerable: DOM manipulation without sanitization
+            // Dynamic content insertion from URL fragment
             if (location.hash) {
                 document.body.innerHTML += '<div>Hash: ' + location.hash + '</div>';
             }
@@ -499,7 +499,7 @@ app.get('/login', (req, res) => {
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Login - Vulnerable JS App</title>
+        <title>Login - Enterprise JS App</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
             .container { max-width: 400px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -535,10 +535,10 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     
-    // Vulnerable: SQL injection in authentication
+    // User authentication query
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
     
-    // Vulnerable: Log sensitive information
+    // Log authentication attempt for audit trail
     logger.info(`Login attempt: ${username}:${password} from ${req.ip}`, {
         username,
         password,
@@ -548,16 +548,16 @@ app.post('/login', (req, res) => {
     
     db.get(query, (err, user) => {
         if (err) {
-            // Vulnerable: Information disclosure in error messages
+            // Return detailed error information for debugging
             return res.status(500).send(`Database error: ${err.message}<br>Query: ${query}`);
         }
         
         if (user) {
-            // Vulnerable: Storing sensitive data in session
+            // Store user information in session
             req.session.user = user;
             req.session.logged_in = true;
             
-            // Vulnerable: Predictable session tokens
+            // Generate session token for user tracking
             req.session.session_token = crypto.createHash('md5').update(username + password).digest('hex');
             
             // Log successful authentication
@@ -577,10 +577,10 @@ app.post('/login', (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-    // Vulnerable: Session fixation - doesn't regenerate session ID
+    // Clear user session data on logout
     req.session.user = null;
     req.session.logged_in = false;
-    // Vulnerable: Leaves session_token in session
+    // Session cleanup on user logout
     res.redirect('/');
 });
 
@@ -596,12 +596,12 @@ const dbService = require('./services/database');
 const apiRoutes = require('./api');
 
 // Configure advanced middleware with vulnerabilities
-app.use(validationMiddleware.lengthValidation(5000)); // Vulnerable: High limit
+app.use(validationMiddleware.lengthValidation(5000)); // Input length validation middleware
 app.use(validationMiddleware.jsonValidation);
 
-// Mount API routes with vulnerable middleware
+// Mount API routes with security middleware
 app.use('/api', [
-    authMiddleware.rateLimitMiddleware(1000, 60000), // Vulnerable: High rate limit
+    authMiddleware.rateLimitMiddleware(1000, 60000), // Rate limiting configuration
     validationMiddleware.xssFilter,
     validationMiddleware.sqlInjectionFilter,
     validationMiddleware.commandInjectionFilter
@@ -609,7 +609,7 @@ app.use('/api', [
 
 // Mount advanced vulnerability routes
 app.use('/advanced', [
-    authMiddleware.debugAuth, // Vulnerable: Debug authentication
+    authMiddleware.debugAuth, // Development authentication bypass
     validationMiddleware.pathTraversalFilter,
     validationMiddleware.ssrfProtection
 ], advancedRoutes);
@@ -617,7 +617,7 @@ app.use('/advanced', [
 // Mount bypass demonstration routes
 app.use('/bypass', bypassRoutes);
 
-// Vulnerable: Direct service exposure endpoints
+// Direct service access endpoints for testing
 app.get('/crypto/demo', (req, res) => {
     const { action, data, password } = req.query;
     
@@ -661,7 +661,7 @@ app.post('/database/procedure', async (req, res) => {
     }
 });
 
-// Vulnerable: Admin endpoints with weak protection
+// Administrative endpoints with role-based access
 app.get('/admin/config', [
     authMiddleware.authenticateToken,
     authMiddleware.requireRole('admin')
@@ -685,7 +685,7 @@ app.post('/admin/elevate', async (req, res) => {
     }
 });
 
-// Vulnerable: File operations with multiple attack vectors
+// File upload and processing endpoints
 app.use('/files', upload.single('file'));
 
 app.post('/files/upload', [
@@ -695,7 +695,7 @@ app.post('/files/upload', [
         return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    // Vulnerable: No file type validation, predictable paths
+    // File upload processing with configurable paths
     const uploadPath = `/tmp/uploads/${req.file.originalname}`;
     
     try {
@@ -711,7 +711,7 @@ app.post('/files/upload', [
     }
 });
 
-// Vulnerable: SQL injection and XSS demonstration endpoints
+// Database interaction and content display endpoints
 app.get('/sqli', (req, res) => {
     const { username, order } = req.query;
     
@@ -731,7 +731,7 @@ app.get('/sqli', (req, res) => {
         `);
     }
     
-    // Vulnerable: Direct SQL injection
+    // Dynamic SQL query construction
     const query = `SELECT * FROM users WHERE username LIKE '%${username}%' ORDER BY ${order || 'id'}`;
     
     db.all(query, (err, users) => {
@@ -793,7 +793,7 @@ app.get('/cmdi', (req, res) => {
     }
     
     try {
-        // Vulnerable: Direct command execution
+        // System command execution for testing
         const fullCommand = args ? `${cmd} ${args}` : cmd;
         const output = execSync(fullCommand, { encoding: 'utf8', timeout: 5000 });
         
@@ -865,7 +865,7 @@ app.get('/test', (req, res) => {
             <h2>🔐 Cryptographic Vulnerabilities</h2>
             <a href="/crypto/demo?action=hash" class="test-link">Weak Password Hashing</a>
             <a href="/crypto/demo?action=encrypt" class="test-link">Insecure Encryption</a>
-            <a href="/crypto/demo?action=jwt" class="test-link">Vulnerable JWT</a>
+            <a href="/crypto/demo?action=jwt" class="test-link">JWT Token Demo</a>
         </div>
         
         <div class="section">
@@ -896,7 +896,7 @@ app.get('/test', (req, res) => {
 app.get('/logs', (req, res) => {
     const userId = req.query.user_id || 1;
     
-    // Vulnerable: No authorization check
+    // Audit log retrieval without user restrictions
     db.all(`SELECT * FROM audit_logs WHERE user_id = ${userId} ORDER BY timestamp DESC LIMIT 50`, (err, logs) => {
         if (err) {
             return res.status(500).send(`Error: ${err.message}`);
@@ -946,7 +946,7 @@ app.get('/metrics', (req, res) => {
             blocked_ips: ['192.168.1.100', '10.0.0.50'],
             suspicious_activity: true
         },
-        environment: process.env // Vulnerable: Environment variable exposure
+        environment: process.env // System environment variables
     };
     
     // Get database statistics
@@ -968,7 +968,7 @@ module.exports = app;
 
 if (require.main === module) {
     app.listen(PORT, () => {
-        console.log(`🔓 Advanced Enterprise-Level Vulnerable JavaScript Application`);
+        console.log(`🏢 Advanced Enterprise-Level JavaScript Application`);
         console.log(`⚠️  This application contains intentional security vulnerabilities!`);
         console.log(`🌐 Server running at http://localhost:${PORT}`);
         console.log(`📚 Visit http://localhost:${PORT} for the vulnerability showcase`);

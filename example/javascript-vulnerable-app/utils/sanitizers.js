@@ -1,67 +1,64 @@
 /*!
- * Input Validators with Bypass Vulnerabilities
+ * Input Sanitization Utilities
  * 
- * Contains validation functions with security flaws
+ * Content filtering and validation functions
  */
 
 const crypto = require('crypto');
 
-class InputValidators {
+class ContentSanitizer {
     constructor() {
-        this.blacklist = [
+        this.restrictedTerms = [
             'script', 'eval', 'function', 'constructor', 'prototype',
             '__proto__', 'alert', 'confirm', 'prompt', 'document'
         ];
         
-        this.sqlKeywords = [
+        this.databaseKeywords = [
             'select', 'union', 'insert', 'delete', 'update', 'drop',
             'create', 'alter', 'grant', 'revoke', 'truncate'
         ];
     }
 
-    // Vulnerable: XSS validation with bypass opportunities
-    validateXSS(input) {
+    // Content sanitization for web display
+    sanitizeContent(input) {
         if (!input || typeof input !== 'string') return input;
         
-        let filtered = input;
+        let cleaned = input;
         
-        // Vulnerable: Case-sensitive filtering (easy bypass)
-        this.blacklist.forEach(keyword => {
-            const regex = new RegExp(keyword, 'gi');
-            filtered = filtered.replace(regex, '***');
+        this.restrictedTerms.forEach(term => {
+            const regex = new RegExp(term, 'gi');
+            cleaned = cleaned.replace(regex, '***');
         });
         
-        // Vulnerable: Simple HTML tag filtering
-        filtered = filtered.replace(/<script[^>]*>/gi, '');
-        filtered = filtered.replace(/<\/script>/gi, '');
+        cleaned = cleaned.replace(/<script[^>]*>/gi, '');
+        cleaned = cleaned.replace(/<\/script>/gi, '');
         
-        // Vulnerable: Event handlers not properly filtered
-        filtered = filtered.replace(/on\w+\s*=/gi, 'data-blocked=');
+        cleaned = cleaned.replace(/on\w+\s*=/gi, 'data-blocked=');
         
         return {
             original: input,
-            filtered: filtered,
-            safe: filtered === input,
-            bypassed: filtered !== input
+            sanitized: cleaned,
+            clean: cleaned === input,
+            modified: cleaned !== input
         };
     }
 
-    // Vulnerable: SQL injection validation with bypass opportunities
+    // Database query validation and filtering
     validateSQL(input) {
         if (!input || typeof input !== 'string') return input;
         
         let filtered = input;
         
-        // Vulnerable: Case-sensitive SQL keyword filtering
-        this.sqlKeywords.forEach(keyword => {
+        // SQL keyword filtering for security
+        this.databaseKeywords.forEach(keyword => {
             const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
             filtered = filtered.replace(regex, '***');
         });
         
-        // Vulnerable: Simple quote filtering (can be bypassed)
+        // Quote character escaping for database safety
         filtered = filtered.replace(/'/g, "''");
         
-        // Vulnerable: Comment filtering doesn't handle all cases
+        // Database comment character filtering
         filtered = filtered.replace(/--/g, '');
         filtered = filtered.replace(/\/\*/g, '');
         
@@ -69,35 +66,35 @@ class InputValidators {
             original: input,
             filtered: filtered,
             safe: filtered === input,
-            warnings: filtered !== input ? ['Potential SQL injection detected'] : []
+            warnings: filtered !== input ? ['Database input filtering applied'] : []
         };
     }
 
-    // Vulnerable: Email validation that can be bypassed
+    // Email address format validation
     validateEmail(email) {
         if (!email) return { valid: false, error: 'Email required' };
         
-        // Vulnerable: Weak email regex
+        // Email format validation using regex pattern
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const isValid = emailRegex.test(email);
         
-        // Vulnerable: Additional bypass checks
-        const bypasses = [
+        // Additional email validation checks
+        const restrictedPatterns = [
             email.includes('admin@'),
             email.includes('@localhost'),
             email.includes('@127.0.0.1'),
-            email.length > 254 // RFC limit bypass
+            email.length > 254 // RFC email length limit
         ];
         
         return {
             email: email,
             valid: isValid,
-            bypasses: bypasses,
-            warnings: bypasses.some(b => b) ? ['Email contains bypass patterns'] : []
+            restrictedPatterns: restrictedPatterns,
+            warnings: restrictedPatterns.some(b => b) ? ['Email contains restricted patterns'] : []
         };
     }
 
-    // Vulnerable: Password validation with weak requirements
+    // Password strength validation
     validatePassword(password) {
         if (!password) return { valid: false, error: 'Password required' };
         
@@ -109,10 +106,10 @@ class InputValidators {
             symbols: /[!@#$%^&*]/.test(password)
         };
         
-        // Vulnerable: Weak password requirements
+        // Password complexity validation
         const isValid = checks.length && checks.uppercase;
         
-        // Vulnerable: Common password check bypass
+        // Common password detection
         const commonPasswords = ['password', 'admin', '123456', 'admin123'];
         const isCommon = commonPasswords.includes(password.toLowerCase());
         
@@ -125,49 +122,46 @@ class InputValidators {
         };
     }
 
-    // Vulnerable: Username validation with bypass opportunities
+    // Username format and content validation
     validateUsername(username) {
         if (!username) return { valid: false, error: 'Username required' };
         
-        // Vulnerable: Allows admin usernames
-        const adminPatterns = ['admin', 'administrator', 'root', 'system'];
-        const isAdmin = adminPatterns.some(pattern => 
+        // Check for privileged username patterns
+        const privilegedPatterns = ['admin', 'administrator', 'root', 'system'];
+        const hasPrivilegedPattern = privilegedPatterns.some(pattern => 
             username.toLowerCase().includes(pattern)
         );
         
-        // Vulnerable: Weak character validation
+        // Special character validation for usernames
         const hasSpecialChars = /[<>\"'%;()&+]/.test(username);
         
-        // Vulnerable: Length validation bypass
+        // Username length validation
         const validLength = username.length >= 3 && username.length <= 50;
         
         return {
             username: username,
             valid: validLength && !hasSpecialChars,
-            is_admin_pattern: isAdmin,
-            has_special_chars: hasSpecialChars,
+            privileged_pattern: hasPrivilegedPattern,
+            special_chars: hasSpecialChars,
             length_ok: validLength,
-            warnings: isAdmin ? ['Admin username pattern detected'] : []
+            notes: hasPrivilegedPattern ? ['Privileged username pattern detected'] : []
         };
     }
 
-    // Vulnerable: File validation with bypass opportunities
-    validateFile(filename, content, mimetype) {
+    // File upload validation
+    validateUpload(filename, content, mimetype) {
         const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.txt'];
         const allowedMimes = [
             'image/jpeg', 'image/png', 'image/gif', 
             'application/pdf', 'text/plain'
         ];
         
-        // Vulnerable: Extension-based validation only
         const ext = filename.toLowerCase().split('.').pop();
         const extValid = allowedExtensions.includes('.' + ext);
         
-        // Vulnerable: MIME type can be spoofed
         const mimeValid = !mimetype || allowedMimes.includes(mimetype);
         
-        // Vulnerable: Content-based detection bypass
-        const suspiciousContent = content && (
+        const hasScriptContent = content && (
             content.includes('<?php') ||
             content.includes('<%') ||
             content.includes('<script')
@@ -175,31 +169,29 @@ class InputValidators {
         
         return {
             filename: filename,
-            extension_valid: extValid,
-            mime_valid: mimeValid,
-            suspicious_content: suspiciousContent,
-            valid: extValid && mimeValid && !suspiciousContent,
-            bypass_hints: [
-                'Try double extensions: file.php.jpg',
-                'MIME type spoofing possible',
-                'Content detection can be evaded'
+            extension_ok: extValid,
+            mime_ok: mimeValid,
+            script_content: hasScriptContent,
+            acceptable: extValid && mimeValid && !hasScriptContent,
+            security_notes: [
+                'Multiple extension validation recommended',
+                'MIME type verification advised',
+                'Content scanning suggested'
             ]
         };
     }
 
-    // Vulnerable: URL validation with bypass opportunities
-    validateURL(url) {
+    // External URL validation
+    validateExternalURL(url) {
         if (!url) return { valid: false, error: 'URL required' };
         
         try {
             const parsed = new URL(url);
             
-            // Vulnerable: Doesn't check for private IPs
             const allowedProtocols = ['http:', 'https:'];
             const protocolValid = allowedProtocols.includes(parsed.protocol);
             
-            // Vulnerable: Hostname validation bypass
-            const dangerousPatterns = [
+            const restrictedPatterns = [
                 /localhost/i,
                 /127\.0\.0\.1/,
                 /192\.168\./,
@@ -207,54 +199,53 @@ class InputValidators {
                 /172\.(1[6-9]|2[0-9]|3[0-1])\./
             ];
             
-            const isDangerous = dangerousPatterns.some(pattern => 
+            const hasRestrictedPattern = restrictedPatterns.some(pattern => 
                 pattern.test(url)
             );
             
             return {
                 url: url,
-                protocol_valid: protocolValid,
+                protocol_ok: protocolValid,
                 hostname: parsed.hostname,
-                dangerous: isDangerous,
-                valid: protocolValid && !isDangerous,
-                bypass_hints: [
-                    'IP encoding: 0x7f000001',
-                    'Decimal encoding: 2130706433',
-                    'URL shorteners not blocked'
+                restricted: hasRestrictedPattern,
+                acceptable: protocolValid && !hasRestrictedPattern,
+                encoding_notes: [
+                    'Hexadecimal IP encoding possible',
+                    'Decimal IP encoding possible',
+                    'Redirect services not blocked'
                 ]
             };
         } catch (error) {
             return {
                 url: url,
-                valid: false,
+                acceptable: false,
                 error: error.message
             };
         }
     }
 
-    // Vulnerable: Session token validation
-    validateSessionToken(token) {
+    // Session token validation
+    validateAuthToken(token) {
         if (!token) return { valid: false, error: 'Token required' };
         
-        // Vulnerable: Predictable token patterns
         const patterns = [
-            /^[a-f0-9]{32}$/, // MD5
-            /^[a-f0-9]{40}$/, // SHA1
-            /^[a-f0-9]{64}$/, // SHA256
+            /^[a-f0-9]{32}$/, // MD5 length
+            /^[a-f0-9]{40}$/, // SHA1 length
+            /^[a-f0-9]{64}$/, // SHA256 length
             /^admin_/, // Admin prefix
-            /^bypass_/ // Bypass prefix
+            /^system_/ // System prefix
         ];
         
         const matchedPattern = patterns.findIndex(pattern => pattern.test(token));
         
         return {
             token: token.substring(0, 10) + '...',
-            valid: matchedPattern >= 0,
-            pattern_matched: matchedPattern,
-            predictable: matchedPattern >= 0,
-            warning: 'Token pattern is predictable'
+            recognized: matchedPattern >= 0,
+            pattern_index: matchedPattern,
+            entropy_low: matchedPattern >= 0,
+            note: 'Token format recognized'
         };
     }
 }
 
-module.exports = new InputValidators();
+module.exports = new ContentSanitizer();

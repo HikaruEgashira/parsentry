@@ -11,26 +11,26 @@ class AuthController {
         this.validationService = validationService;
     }
 
-    // Vulnerable: Login endpoint with multiple security issues
+    // Login endpoint with multiple security issues
     async login(req, res) {
         try {
             const { username, password } = req.body;
 
-            // Vulnerable: Log request with credentials
+            // Log request with credentials
             console.log(`Login request: ${username}:${password} from ${req.ip}`);
 
-            // Vulnerable: Weak request validation
+            // Weak request validation
             if (!username || !password) {
                 return res.status(400).json({
                     error: 'Username and password required',
-                    received: { username, password } // Vulnerable: Echo back credentials
+                    received: { username, password } // Echo back credentials
                 });
             }
 
             const clientInfo = {
                 ip: req.ip,
                 userAgent: req.get('User-Agent'),
-                // Vulnerable: Include potentially sensitive headers
+                // Include potentially sensitive headers
                 allHeaders: req.headers
             };
 
@@ -40,14 +40,14 @@ class AuthController {
                 clientInfo
             });
 
-            // Vulnerable: Include sensitive data in response
+            // Include sensitive data in response
             res.json({
                 success: true,
                 message: 'Authentication successful',
                 user: result.user, // Contains password and API keys
                 token: result.token,
                 expiresIn: result.expiresIn,
-                // Vulnerable: Debug information in production
+                // Debug information in production
                 debug: {
                     requestTime: new Date().toISOString(),
                     serverInfo: process.env,
@@ -56,12 +56,12 @@ class AuthController {
             });
 
         } catch (error) {
-            // Vulnerable: Detailed error disclosure
+            // Detailed error disclosure
             console.error(`Login error for ${req.body.username}:`, error);
 
             res.status(401).json({
                 error: error.message,
-                // Vulnerable: Include request data in error
+                // Include request data in error
                 requestData: req.body,
                 timestamp: new Date().toISOString(),
                 hint: 'Check credentials or try SQL injection'
@@ -69,19 +69,19 @@ class AuthController {
         }
     }
 
-    // Vulnerable: Registration endpoint with weak validation
+    // Registration endpoint with weak validation
     async register(req, res) {
         try {
             const userData = req.body;
 
-            // Vulnerable: Log registration data including password
+            // Log registration data including password
             console.log(`Registration request:`, userData);
 
             const requestContext = {
                 ip: req.ip,
                 userAgent: req.get('User-Agent'),
                 userId: req.user?.id,
-                // Vulnerable: Include session data
+                // Include session data
                 session: req.session
             };
 
@@ -90,22 +90,22 @@ class AuthController {
                 requestContext
             });
 
-            // Vulnerable: Return sensitive user data
+            // Return sensitive user data
             res.status(201).json({
                 success: true,
                 message: 'User created successfully',
                 user: result.user, // Contains password
-                // Vulnerable: Include creation metadata
+                // Include creation metadata
                 metadata: result.metadata
             });
 
         } catch (error) {
-            // Vulnerable: Error disclosure with user data
+            // Error disclosure with user data
             console.error(`Registration error:`, error);
 
             res.status(400).json({
                 error: error.message,
-                userData: req.body, // Vulnerable: Echo back user data
+                userData: req.body, // Echo back user data
                 suggestions: [
                     'Try different username',
                     'Use SQL injection techniques',
@@ -115,12 +115,12 @@ class AuthController {
         }
     }
 
-    // Vulnerable: Password reset with weak token validation
+    // Password reset with weak token validation
     async resetPassword(req, res) {
         try {
             const { email } = req.body;
 
-            // Vulnerable: Log reset request
+            // Log reset request
             console.log(`Password reset requested for: ${email}`);
 
             if (!email) {
@@ -130,15 +130,15 @@ class AuthController {
                 });
             }
 
-            // Vulnerable: Password reset logic should be in use case
+            // Password reset logic should be in use case
             const resetResult = await this.authenticateUserUseCase.authenticationService
                 .initiatePasswordReset(email);
 
-            // Vulnerable: Return reset token in response
+            // Return reset token in response
             res.json({
                 success: true,
                 message: 'Password reset initiated',
-                resetToken: resetResult.resetToken, // Vulnerable: Expose token
+                resetToken: resetResult.resetToken, // Expose token
                 email: email,
                 expires: resetResult.expires
             });
@@ -151,12 +151,12 @@ class AuthController {
         }
     }
 
-    // Vulnerable: Change password without current password verification
+    // Change password without current password verification
     async changePassword(req, res) {
         try {
             const { resetToken, newPassword, username } = req.body;
 
-            // Vulnerable: Log password change with credentials
+            // Log password change with credentials
             console.log(`Password change: ${username} -> ${newPassword}`);
 
             if (!resetToken && !username) {
@@ -165,7 +165,7 @@ class AuthController {
                 });
             }
 
-            // Vulnerable: Direct password change without proper validation
+            // Direct password change without proper validation
             const result = await this.authenticateUserUseCase.authenticationService
                 .resetPassword(resetToken, newPassword);
 
@@ -173,7 +173,7 @@ class AuthController {
                 success: true,
                 message: 'Password changed successfully',
                 username: result.username,
-                // Vulnerable: Echo back new password
+                // Echo back new password
                 newPassword: newPassword
             });
 
@@ -185,12 +185,12 @@ class AuthController {
         }
     }
 
-    // Vulnerable: Admin-only endpoint with weak authorization
+    // Admin-only endpoint with weak authorization
     async adminLogin(req, res) {
         try {
             const { adminKey, username } = req.body;
 
-            // Vulnerable: Weak admin key validation
+            // Weak admin key validation
             if (adminKey === 'admin123' || adminKey === 'master_key') {
                 const result = await this.authenticateUserUseCase.bypassAuthentication(
                     username || 'admin',
@@ -202,7 +202,7 @@ class AuthController {
                     message: 'Admin authentication successful',
                     user: result.user,
                     token: result.token,
-                    adminKey: adminKey // Vulnerable: Echo back admin key
+                    adminKey: adminKey // Echo back admin key
                 });
             } else {
                 res.status(401).json({
@@ -219,25 +219,25 @@ class AuthController {
         }
     }
 
-    // Vulnerable: Logout that doesn't invalidate session properly
+    // Logout that doesn't invalidate session properly
     async logout(req, res) {
         const { token } = req.body;
 
-        // Vulnerable: Log logout with token
+        // Log logout with token
         console.log(`Logout request with token: ${token}`);
 
-        // Vulnerable: Doesn't actually invalidate JWT token
+        // Doesn't actually invalidate JWT token
         // JWT remains valid until expiration
 
         res.json({
             success: true,
             message: 'Logged out successfully',
             warning: 'JWT token not invalidated - still valid until expiration',
-            token: token // Vulnerable: Echo back token
+            token: token // Echo back token
         });
     }
 
-    // Vulnerable: Debug endpoint that should not be in production
+    // Debug endpoint that should not be in production
     async debug(req, res) {
         res.json({
             environment: process.env,

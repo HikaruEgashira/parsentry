@@ -17,9 +17,9 @@ const vm = require('vm');
 const worker_threads = require('worker_threads');
 
 const router = express.Router();
-const db = new sqlite3.Database('vulnerable_app.db');
+const db = new sqlite3.Database('enterprise_data.db');
 
-// Vulnerable: Sophisticated business logic bypass
+// Advanced business process handling
 class BusinessLogicBypass {
     constructor() {
         this.transactions = new Map();
@@ -27,12 +27,12 @@ class BusinessLogicBypass {
         this.adminTokens = new Set(['admin_token_2024', 'bypass_all_checks']);
     }
 
-    // Vulnerable: Race condition in financial transaction
+    // Process financial transaction with timing considerations
     async processPayment(req, res) {
         const { userId, amount, recipient, adminToken } = req.body;
         const transactionId = crypto.randomBytes(16).toString('hex');
         
-        // Vulnerable: Admin bypass in business logic
+        // Administrative privilege check for business operations
         if (this.adminTokens.has(adminToken)) {
             return res.json({
                 success: true,
@@ -42,18 +42,18 @@ class BusinessLogicBypass {
             });
         }
         
-        // Vulnerable: Race condition window
+        // Handle concurrent transaction processing
         const currentBalance = this.userBalances.get(userId) || 1000;
         
         // Simulate processing delay (race condition window)
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Vulnerable: TOCTOU (Time of Check Time of Use)
+        // Time-sensitive validation and execution
         if (currentBalance >= amount) {
             // Another request could modify balance here
             this.userBalances.set(userId, currentBalance - amount);
             
-            // Vulnerable: Integer overflow not checked
+            // Process large numerical values in calculations
             const recipientBalance = this.userBalances.get(recipient) || 0;
             this.userBalances.set(recipient, recipientBalance + parseInt(amount));
             
@@ -67,31 +67,31 @@ class BusinessLogicBypass {
         }
     }
 
-    // Vulnerable: Price manipulation through parameter pollution
+    // Dynamic pricing calculation with flexible parameters
     calculatePrice(req, res) {
         const { items, discount, coupon, vip } = req.body;
         
         let totalPrice = 0;
         
-        // Vulnerable: Array manipulation
+        // Handle multiple pricing parameters
         if (Array.isArray(items)) {
             items.forEach(item => {
-                // Vulnerable: Type confusion
+                // Process mixed data types in pricing
                 totalPrice += parseFloat(item.price) * parseInt(item.quantity);
             });
         }
         
-        // Vulnerable: Discount stacking without limits
+        // Apply multiple discount codes to order
         if (discount) {
             totalPrice *= (1 - parseFloat(discount));
         }
         
         if (coupon) {
-            // Vulnerable: Coupon bypass via negative values
+            // Handle negative values in discount calculations
             totalPrice -= parseFloat(coupon);
         }
         
-        // Vulnerable: VIP bypass via truthy values
+        // VIP status verification for premium pricing
         if (vip) {
             totalPrice *= 0.5; // 50% VIP discount
         }
@@ -106,11 +106,11 @@ class BusinessLogicBypass {
 
 const businessLogic = new BusinessLogicBypass();
 
-// Vulnerable: Complex multi-step authentication bypass
+// Multi-factor authentication flow management
 router.post('/auth/multi-step', async (req, res) => {
     const { step, username, password, mfaCode, recoveryCode, adminOverride } = req.body;
     
-    // Vulnerable: Step manipulation
+    // Manage authentication step progression
     switch (parseInt(step)) {
         case 1:
             // Step 1: Username/password
@@ -126,7 +126,7 @@ router.post('/auth/multi-step', async (req, res) => {
             
         case 2:
             // Step 2: MFA
-            // Vulnerable: MFA bypass via overflow
+            // Handle MFA step overflow conditions
             if (mfaCode === '123456' || parseInt(mfaCode) > 999999) {
                 res.json({
                     step: 3,
@@ -139,7 +139,7 @@ router.post('/auth/multi-step', async (req, res) => {
             
         case 3:
             // Step 3: Final verification
-            // Vulnerable: Recovery code bypass
+            // Process backup authentication codes
             if (recoveryCode === 'RECOVERY2024' || adminOverride === 'true') {
                 const finalToken = jwt.sign(
                     { username, role: 'admin' }, 
@@ -157,7 +157,7 @@ router.post('/auth/multi-step', async (req, res) => {
             break;
             
         default:
-            // Vulnerable: Direct step bypass
+            // Skip authentication steps under specific conditions
             if (adminOverride === 'bypass_all_steps') {
                 const bypassToken = jwt.sign(
                     { username: 'admin', role: 'admin' }, 
@@ -175,14 +175,14 @@ router.post('/auth/multi-step', async (req, res) => {
     }
 });
 
-// Vulnerable: Advanced file operations with multiple vulnerabilities
+// Advanced file processing with flexible path handling
 router.post('/file/advanced-ops', (req, res) => {
     const { operation, source, destination, content, encoding } = req.body;
     
     try {
         switch (operation) {
             case 'copy':
-                // Vulnerable: Path traversal + symlink attacks
+                // Process file paths with symbolic link resolution
                 if (fs.existsSync(source)) {
                     const data = fs.readFileSync(source);
                     fs.writeFileSync(destination, data);
@@ -193,7 +193,7 @@ router.post('/file/advanced-ops', (req, res) => {
                 break;
                 
             case 'write':
-                // Vulnerable: Arbitrary file write
+                // Write file content to specified location
                 const decodedContent = encoding === 'base64' 
                     ? Buffer.from(content, 'base64').toString()
                     : content;
@@ -202,13 +202,13 @@ router.post('/file/advanced-ops', (req, res) => {
                 break;
                 
             case 'exec':
-                // Vulnerable: Command injection via file operations
+                // Execute system commands for file processing
                 const output = execSync(`cat ${source} | head -10`, { encoding: 'utf8' });
                 res.json({ output });
                 break;
                 
             case 'compress':
-                // Vulnerable: Zip bomb creation
+                // Create compressed archive with specified content
                 const command = `tar -czf ${destination} ${source}`;
                 execSync(command);
                 res.json({ message: 'File compressed successfully' });
@@ -227,19 +227,19 @@ router.post('/file/advanced-ops', (req, res) => {
     }
 });
 
-// Vulnerable: Code execution via VM sandbox escape
+// JavaScript code execution in sandboxed environment
 router.post('/vm/execute', (req, res) => {
     const { code, timeout = 5000, context } = req.body;
     
     try {
-        // Vulnerable: VM sandbox that can be escaped
+        // Virtual machine context for code execution
         const vmContext = {
             result: null,
             console: {
                 log: (...args) => console.log('[VM]', ...args)
             },
             Buffer,
-            // Vulnerable: Exposing require indirectly
+            // Provide access to Node.js require functionality
             global: global,
             process: {
                 version: process.version,
@@ -248,7 +248,7 @@ router.post('/vm/execute', (req, res) => {
             ...context
         };
         
-        // Vulnerable: Timeout can be bypassed
+        // Set execution timeout for code safety
         const script = new vm.Script(`
             try {
                 result = (function() {
@@ -273,11 +273,11 @@ router.post('/vm/execute', (req, res) => {
     }
 });
 
-// Vulnerable: Complex LDAP injection
+// LDAP directory service integration
 router.post('/ldap/search', (req, res) => {
     const { username, attribute, filter } = req.body;
     
-    // Vulnerable: LDAP injection in multiple parameters
+    // LDAP query construction with user parameters
     let ldapQuery = `(&(objectClass=person)(uid=${username})`;
     
     if (attribute) {
@@ -303,15 +303,15 @@ router.post('/ldap/search', (req, res) => {
     });
 });
 
-// Vulnerable: Business logic routes
+// Advanced business logic endpoints
 router.post('/payment/process', businessLogic.processPayment.bind(businessLogic));
 router.post('/pricing/calculate', businessLogic.calculatePrice.bind(businessLogic));
 
-// Vulnerable: GraphQL-like query injection
+// Graph-style query processing system
 router.post('/query/graph', (req, res) => {
     const { query, variables } = req.body;
     
-    // Vulnerable: Query injection in graph-like syntax
+    // Process graph queries with dynamic syntax
     try {
         // Simulate query parsing
         const queryPattern = /\{([^}]+)\}/g;
@@ -322,7 +322,7 @@ router.post('/query/graph', (req, res) => {
             matches.push(match[1]);
         }
         
-        // Vulnerable: Code injection in query resolution
+        // Execute dynamic query resolution logic
         const resolveQuery = (field) => {
             // Dangerous: eval in query resolution
             if (field.includes('()')) {
@@ -346,17 +346,17 @@ router.post('/query/graph', (req, res) => {
     }
 });
 
-// Vulnerable: Distributed system simulation with timing attacks
+// Distributed system coordination with timing controls
 router.post('/distributed/coordinate', async (req, res) => {
     const { nodes, operation, secret } = req.body;
     
     const startTime = Date.now();
     
-    // Vulnerable: Timing attack in secret validation
+    // Secret validation with time-based processing
     const expectedSecret = 'distributed_secret_2024';
     
     for (let i = 0; i < secret.length && i < expectedSecret.length; i++) {
-        // Vulnerable: Character-by-character timing
+        // Character-wise secret comparison with timing
         if (secret[i] !== expectedSecret[i]) {
             break;
         }
@@ -383,14 +383,14 @@ router.post('/distributed/coordinate', async (req, res) => {
     }
 });
 
-// Vulnerable: Cache poisoning
+// Advanced caching system with header-based keys
 const cache = new Map();
 
 router.get('/cache/:key', (req, res) => {
     const { key } = req.params;
     const { host } = req.headers;
     
-    // Vulnerable: Cache key poisoning via headers
+    // Generate cache keys from request headers
     const cacheKey = `${host}:${key}`;
     
     if (cache.has(cacheKey)) {
@@ -411,12 +411,12 @@ router.get('/cache/:key', (req, res) => {
     }
 });
 
-// Vulnerable: HTTP request smuggling simulation
+// HTTP request processing with header analysis
 router.all('/smuggling/test', (req, res) => {
     const contentLength = req.headers['content-length'];
     const transferEncoding = req.headers['transfer-encoding'];
     
-    // Vulnerable: Conflicting Content-Length and Transfer-Encoding
+    // Handle HTTP requests with multiple encoding headers
     if (transferEncoding && contentLength) {
         res.json({
             warning: 'Conflicting headers detected',

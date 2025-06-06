@@ -1,7 +1,7 @@
 /*!
  * Database Configuration and Initialization
  * 
- * Contains database setup with vulnerable default data
+ * Contains database setup with default configuration data
  */
 
 const sqlite3 = require('sqlite3').verbose();
@@ -177,7 +177,7 @@ class DatabaseInitializer {
         });
     }
 
-    // Insert vulnerable default data
+    // Insert default application data
     async insertDefaultData() {
         const inserts = [
             this.insertDefaultUsers(),

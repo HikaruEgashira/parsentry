@@ -1,16 +1,16 @@
 /*!
- * Database Service with Advanced SQL Injection Vulnerabilities
+ * Database Service with Advanced Features
  * 
- * Contains sophisticated database interaction patterns
- * with multiple injection and privilege escalation vectors
+ * Enterprise database interaction patterns
+ * with comprehensive data management capabilities
  */
 
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('crypto');
 
-class VulnerableDatabaseService {
+class DatabaseService {
     constructor() {
-        this.db = new sqlite3.Database('vulnerable_app.db');
+        this.db = new sqlite3.Database('enterprise_data.db');
         this.connectionPool = new Map();
         this.queryCache = new Map();
         this.initializeAdvancedTables();
@@ -73,7 +73,7 @@ class VulnerableDatabaseService {
             });
         });
 
-        // Insert vulnerable default data
+        // Insert sample data for application
         this.initializeDefaultData();
     }
 
@@ -86,7 +86,7 @@ class VulnerableDatabaseService {
              VALUES ('api_secret_key', 'sk-api-2024-secret-key', 'API authentication secret', 1)`,
             
             `INSERT OR IGNORE INTO system_config (key, value, description, is_sensitive) 
-             VALUES ('admin_email', 'admin@vulnerable-app.com', 'Administrator email', 0)`,
+             VALUES ('admin_email', 'admin@enterprise-app.com', 'Administrator email', 0)`,
             
             `INSERT OR IGNORE INTO file_metadata (filename, file_path, owner_id, access_level, mime_type) 
              VALUES ('secret.txt', '/etc/passwd', 1, 'restricted', 'text/plain')`,
@@ -106,7 +106,7 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Complex SQL injection with multiple vectors
+    // Advanced user search with complex query building
     searchUsers(searchParams) {
         return new Promise((resolve, reject) => {
             const { 
@@ -115,7 +115,7 @@ class VulnerableDatabaseService {
                 includeDeleted, adminOverride 
             } = searchParams;
 
-            // Vulnerable: Dynamic query building with injection points
+            // Build dynamic search query with user parameters
             let query = `
                 SELECT u.*, up.profile_data, up.permissions 
                 FROM users u 
@@ -123,7 +123,7 @@ class VulnerableDatabaseService {
                 WHERE 1=1
             `;
             
-            // Vulnerable: String concatenation without sanitization
+            // Construct WHERE clause with search criteria
             if (username) {
                 query += ` AND u.username LIKE '%${username}%'`;
             }
@@ -140,14 +140,14 @@ class VulnerableDatabaseService {
                 query += ` AND u.status = '${status}'`;
             }
             
-            // Vulnerable: Injection in UNION queries
+            // Add additional data sources with UNION operations
             if (adminOverride) {
                 query += ` UNION SELECT id, username, password, email, role, api_key, 
                           session_token, metadata, created_at, NULL, NULL 
                           FROM users WHERE role = 'admin'`;
             }
             
-            // Vulnerable: ORDER BY injection
+            // Apply custom sorting to results
             if (orderBy) {
                 query += ` ORDER BY ${orderBy}`;
                 if (sortOrder) {
@@ -155,7 +155,7 @@ class VulnerableDatabaseService {
                 }
             }
             
-            // Vulnerable: LIMIT injection
+            // Set pagination limits based on request
             if (limit) {
                 query += ` LIMIT ${limit}`;
             }
@@ -168,8 +168,8 @@ class VulnerableDatabaseService {
                 if (err) {
                     reject({
                         error: err.message,
-                        query: query, // Vulnerable: Exposing query in error
-                        hint: 'Try SQL injection in search parameters'
+                        query: query, // Include query details for debugging
+                        info: 'Search parameter processing failed'
                     });
                 } else {
                     resolve({
@@ -182,15 +182,15 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Stored procedure simulation with injection
+    // Execute database stored procedures
     executeStoredProcedure(procedureName, parameters) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Dynamic procedure execution
+            // Process stored procedure with parameters
             let query;
             
             switch (procedureName) {
                 case 'getUserStats':
-                    // Vulnerable: Parameter injection in subqueries
+                    // Execute user search with parameter substitution
                     query = `
                         SELECT 
                             (SELECT COUNT(*) FROM users WHERE role = '${parameters.role}') as user_count,
@@ -200,7 +200,7 @@ class VulnerableDatabaseService {
                     break;
                     
                 case 'updateUserPermissions':
-                    // Vulnerable: Injection in UPDATE statements
+                    // Update user information based on parameters
                     query = `
                         UPDATE users 
                         SET role = '${parameters.newRole}', 
@@ -210,7 +210,7 @@ class VulnerableDatabaseService {
                     break;
                     
                 case 'generateReport':
-                    // Vulnerable: Complex query with multiple injection points
+                    // Execute complex analytics query with filters
                     query = `
                         SELECT ${parameters.selectFields} 
                         FROM ${parameters.tableName} 
@@ -221,7 +221,7 @@ class VulnerableDatabaseService {
                     break;
                     
                 default:
-                    // Vulnerable: Direct query execution
+                    // Execute custom SQL query with parameters
                     query = parameters.customQuery;
             }
 
@@ -244,7 +244,7 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Batch operations with injection vulnerabilities
+    // Process multiple database operations in batch
     batchOperation(operations) {
         return new Promise((resolve, reject) => {
             const results = [];
@@ -253,7 +253,7 @@ class VulnerableDatabaseService {
             operations.forEach((op, index) => {
                 let query;
                 
-                // Vulnerable: Dynamic query generation for batch operations
+                // Generate query for batch processing operation
                 switch (op.type) {
                     case 'insert':
                         query = `INSERT INTO ${op.table} (${op.columns.join(',')}) VALUES (${op.values.map(v => `'${v}'`).join(',')})`;
@@ -305,10 +305,10 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Privilege escalation through database functions
+    // Elevate user privileges in system
     elevatePrivileges(userId, targetRole, justification) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: No proper authorization check
+            // Process privilege elevation request
             const auditQuery = `
                 INSERT INTO audit_trail (table_name, operation, old_values, new_values, user_id) 
                 VALUES ('users', 'privilege_escalation', 
@@ -352,10 +352,10 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Database metadata exposure
+    // Retrieve database schema and metadata information
     getTableMetadata(tableName) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: No access control on metadata
+            // Query database information schema
             const queries = [
                 `PRAGMA table_info(${tableName})`,
                 `SELECT sql FROM sqlite_master WHERE name = '${tableName}'`,
@@ -380,7 +380,7 @@ class VulnerableDatabaseService {
                         resolve({
                             table: tableName,
                             metadata: results,
-                            warning: 'Database metadata exposed without authorization'
+                            info: 'Database metadata available for debugging'
                         });
                     }
                 });
@@ -388,10 +388,10 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Query caching with cache poisoning
+    // Implement query result caching mechanism
     cachedQuery(query, cacheKey) {
         return new Promise((resolve, reject) => {
-            // Vulnerable: Cache key manipulation
+            // Generate cache key based on query parameters
             const actualCacheKey = cacheKey || crypto.createHash('md5').update(query).digest('hex');
             
             if (this.queryCache.has(actualCacheKey)) {
@@ -411,7 +411,7 @@ class VulnerableDatabaseService {
                         cacheKey: actualCacheKey
                     });
                 } else {
-                    // Vulnerable: Cache poisoning possible
+                    // Store query results in cache for performance
                     this.queryCache.set(actualCacheKey, rows);
                     
                     resolve({
@@ -425,9 +425,9 @@ class VulnerableDatabaseService {
         });
     }
 
-    // Vulnerable: Connection pooling with session fixation
+    // Manage database connection pooling
     getConnection(userId) {
-        // Vulnerable: Predictable connection IDs
+        // Generate connection identifiers for pool management
         const connectionId = `conn_${userId}_${Date.now()}`;
         
         if (!this.connectionPool.has(connectionId)) {
@@ -458,12 +458,12 @@ class VulnerableDatabaseService {
         };
     }
 
-    // Vulnerable: Database backup with sensitive data exposure
+    // Create database backup for disaster recovery
     createBackup(includeTable) {
         return new Promise((resolve, reject) => {
             const backupData = {};
             
-            // Vulnerable: No access control on backup
+            // Generate backup file with current database state
             const tables = includeTable ? [includeTable] : 
                 ['users', 'documents', 'system_config', 'api_tokens', 'user_profiles'];
             
@@ -483,7 +483,7 @@ class VulnerableDatabaseService {
                         resolve({
                             backup: backupData,
                             timestamp: new Date().toISOString(),
-                            warning: 'Backup contains sensitive data including passwords and tokens'
+                            info: 'Backup includes complete database state for recovery'
                         });
                     }
                 });
@@ -492,4 +492,4 @@ class VulnerableDatabaseService {
     }
 }
 
-module.exports = new VulnerableDatabaseService();
+module.exports = new DatabaseService();

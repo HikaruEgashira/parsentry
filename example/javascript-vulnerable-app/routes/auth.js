@@ -1,7 +1,7 @@
 /*!
- * Authentication Routes with Multiple Vulnerabilities
+ * Authentication Routes
  * 
- * Contains login, logout, and authentication-related endpoints
+ * Enterprise authentication endpoints for user management
  */
 
 const express = require('express');
@@ -13,41 +13,41 @@ const { JWT_SECRETS, DATABASE_CONFIG } = require('../config/constants');
 const router = express.Router();
 const db = new sqlite3.Database(DATABASE_CONFIG.PATH);
 
-// Vulnerable: Login with SQL injection and credential exposure
+// User authentication and login processing
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
     
-    // Vulnerable: SQL injection in authentication
+    // Database query for user authentication
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
     
-    // Vulnerable: Log sensitive information
-    console.log(`Login attempt: ${username}:${password} from ${req.ip}`);
+    // Authentication attempt logging
+    console.log(`Login attempt: ${username} from ${req.ip}`);
     
     db.get(query, (err, user) => {
         if (err) {
             return res.status(500).json({ 
                 error: `Authentication failed: ${err.message}`,
-                query: query // Vulnerable: Exposing query in error
+                query: query // Query details for debugging
             });
         }
         
         if (user) {
-            // Vulnerable: Weak JWT implementation
+            // JWT token generation for session management
             const token = jwt.sign({
                 user_id: user.id,
                 username: user.username,
                 role: user.role
             }, JWT_SECRETS.MAIN_SECRET, { algorithm: 'HS256' });
             
-            // Vulnerable: Log sensitive information in audit
+            // Audit logging for authentication events
             const logQuery = `INSERT INTO audit_logs (user_id, action, details, ip_address, user_agent) 
-                             VALUES (${user.id}, 'API_LOGIN', 'User ${username} logged in with password ${password}', '${req.ip}', '${req.get('User-Agent')}')`;
+                             VALUES (${user.id}, 'API_LOGIN', 'User ${username} logged in successfully', '${req.ip}', '${req.get('User-Agent')}')`;
             db.run(logQuery);
             
             res.json({
                 token: token,
                 user: user,
-                api_key: user.api_key // Vulnerable: Exposing API key
+                api_key: user.api_key // User API key for service access
             });
         } else {
             res.status(401).json({ error: `Invalid credentials for user '${username}'` });
@@ -55,12 +55,12 @@ router.post('/login', (req, res) => {
     });
 });
 
-// Vulnerable: JWT verification bypass
+// JWT token verification endpoint
 router.post('/verify', (req, res) => {
     const { token } = req.body;
     
     try {
-        // Vulnerable: JWT verification without proper validation
+        // JWT token validation and decoding
         const decoded = jwt.verify(token, JWT_SECRETS.MAIN_SECRET);
         res.json({ message: 'JWT valid', user: decoded });
     } catch (error) {
@@ -68,14 +68,14 @@ router.post('/verify', (req, res) => {
     }
 });
 
-// Vulnerable: Password reset with weak token generation
+// Password reset request handling
 router.post('/reset-password', (req, res) => {
     const { email } = req.body;
     
-    // Vulnerable: Predictable reset token
+    // Password reset token generation
     const resetToken = crypto.createHash('md5').update(email + Date.now()).digest('hex');
     
-    // Vulnerable: No rate limiting on password reset
+    // Database update for password reset token
     const query = `UPDATE users SET reset_token = '${resetToken}' WHERE email = '${email}'`;
     
     db.run(query, function(err) {
@@ -83,25 +83,25 @@ router.post('/reset-password', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         
-        // Vulnerable: Returns reset token in response
+        // Password reset response with token
         res.json({
             message: 'Password reset initiated',
             reset_token: resetToken,
             email: email,
-            hint: 'Reset token is predictable MD5 hash'
+            info: 'Password reset token for verification'
         });
     });
 });
 
-// Vulnerable: Password change without current password verification
+// Password change functionality
 router.post('/change-password', (req, res) => {
     const { username, newPassword, resetToken } = req.body;
     
-    // Vulnerable: No verification of current password
+    // Password update in database
     const query = `UPDATE users SET password = '${newPassword}' WHERE username = '${username}'`;
     
     if (resetToken) {
-        // Vulnerable: Weak reset token validation
+        // Reset token validation logging
         console.log(`Password change with reset token: ${resetToken} for user: ${username}`);
     }
     
@@ -113,20 +113,20 @@ router.post('/change-password', (req, res) => {
         res.json({
             message: 'Password changed successfully',
             username: username,
-            warning: 'Password changed without current password verification'
+            info: 'Password updated successfully'
         });
     });
 });
 
-// Vulnerable: User registration with weak validation
+// User registration endpoint
 router.post('/register', (req, res) => {
     const { username, password, email, role } = req.body;
     
-    // Vulnerable: Allows setting admin role during registration
+    // User role assignment during registration
     const userRole = role || 'user';
     
-    // Vulnerable: No password strength validation
-    const query = `INSERT INTO users (username, password, email, role) VALUES ('${username}', '${password}', '${email}', '${userRole}')`;
+    // User account creation in database
+    const query = `INSERT INTO users (username, password, email, role) VALUES ('${username}', '${password}', '${email}', '${userRole}')`;  
     
     db.run(query, function(err) {
         if (err) {
@@ -136,7 +136,7 @@ router.post('/register', (req, res) => {
             });
         }
         
-        // Vulnerable: Auto-login after registration
+        // Automatic authentication after registration
         const token = jwt.sign({
             user_id: this.lastID,
             username: username,
@@ -152,16 +152,16 @@ router.post('/register', (req, res) => {
     });
 });
 
-// Vulnerable: Logout that doesn't invalidate tokens
+// User logout processing
 router.post('/logout', (req, res) => {
     const { token } = req.body;
     
-    // Vulnerable: Doesn't actually invalidate the JWT token
-    // JWT tokens remain valid until expiration
+    // JWT token logout processing
+    // Tokens remain valid until natural expiration
     
     res.json({
         message: 'Logged out successfully',
-        warning: 'JWT token not invalidated - still valid until expiration',
+        info: 'Logout successful - token expires automatically',
         token_hint: token ? token.substring(0, 20) + '...' : 'none'
     });
 });
