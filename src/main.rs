@@ -3,6 +3,7 @@ use clap::Parser;
 use dotenvy::dotenv;
 use std::path::PathBuf;
 use vulnhuntrs::analyzer::analyze_file;
+use vulnhuntrs::parser;
 use vulnhuntrs::pattern_generator::generate_custom_patterns;
 use vulnhuntrs::security_patterns::Language;
 use vulnhuntrs::security_patterns::SecurityRiskPatterns;
@@ -169,8 +170,9 @@ async fn main() -> Result<()> {
             let context = match repo.collect_context_for_security_pattern(&file_path) {
                 Ok(ctx) => ctx,
                 Err(e) => {
-                    println!("❌ コンテキスト収集に失敗: {}: {}", file_path.display(), e);
-                    return None;
+                    println!("⚠️  コンテキスト収集に失敗（空のコンテキストで継続）: {}: {}", file_path.display(), e);
+                    // For IaC files and other unsupported file types, continue with empty context
+                    parser::Context { definitions: Vec::new() }
                 }
             };
 

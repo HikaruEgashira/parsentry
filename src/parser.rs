@@ -302,9 +302,16 @@ impl CodeParser {
             .files
             .get(start_path)
             .ok_or_else(|| anyhow::anyhow!("ファイルが見つかりません: {}", start_path.display()))?;
-        let language = self
-            .get_language(start_path)
-            .ok_or_else(|| anyhow::anyhow!("言語が特定できません: {}", start_path.display()))?;
+        
+        // If the language is not supported by tree-sitter (e.g., Terraform, YAML, JSON),
+        // return an empty context instead of failing
+        let language = match self.get_language(start_path) {
+            Some(lang) => lang,
+            None => {
+                // For IaC files and other unsupported file types, return empty context
+                return Ok(Context { definitions: Vec::new() });
+            }
+        };
         self.parser
             .set_language(&language)
             .map_err(|e| anyhow::anyhow!("言語の設定に失敗: {}", e))?;

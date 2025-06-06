@@ -12,7 +12,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
     let file_path = temp_file.path().to_path_buf();
 
     // Create empty context
-    let context = Context {
+    let _context = Context {
         definitions: vec![],
     };
 
@@ -38,7 +38,7 @@ async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
     let file_path = temp_file.path().to_path_buf();
 
     // Create context with a mock definition
-    let context = Context {
+    let _context = Context {
         definitions: vec![Definition {
             name: "test_function".to_string(),
             source: "def test_function(): pass".to_string(),

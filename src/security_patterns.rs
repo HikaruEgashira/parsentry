@@ -79,7 +79,11 @@ impl SecurityRiskPatterns {
         let lang_patterns = pattern_map
             .get(&language)
             .or_else(|| pattern_map.get(&Language::Other))
-            .unwrap();
+            .unwrap_or(&LanguagePatterns {
+                principals: None,
+                actions: None,
+                resources: None,
+            });
 
         let mut principal_patterns = Vec::new();
         let mut action_patterns = Vec::new();
@@ -148,7 +152,7 @@ impl SecurityRiskPatterns {
         use Language::*;
 
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let yaml_path = manifest_dir.join("security_patterns").join("par_patterns.yml");
+        let yaml_path = manifest_dir.join("patterns.yml");
         let content = fs::read_to_string(&yaml_path)
             .unwrap_or_else(|_| panic!("failed to read {}", yaml_path.display()));
         let raw_map: HashMap<String, LanguagePatterns> =

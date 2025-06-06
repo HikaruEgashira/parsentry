@@ -19,6 +19,13 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("cc"), Language::Cpp);
     assert_eq!(Language::from_extension("hpp"), Language::Cpp);
     assert_eq!(Language::from_extension("hxx"), Language::Cpp);
+    
+    // Test IaC extensions
+    assert_eq!(Language::from_extension("tf"), Language::Terraform);
+    assert_eq!(Language::from_extension("hcl"), Language::Terraform);
+    assert_eq!(Language::from_extension("yaml"), Language::Kubernetes);
+    assert_eq!(Language::from_extension("yml"), Language::Kubernetes);
+    assert_eq!(Language::from_extension("json"), Language::CloudFormation);
 
     // Test unknown extensions
     assert_eq!(Language::from_extension("txt"), Language::Other);
@@ -42,13 +49,13 @@ fn test_language_debug() {
 
 #[test]
 fn test_pattern_type_equality() {
-    assert_eq!(PatternType::Source, PatternType::Source);
-    assert_eq!(PatternType::Sink, PatternType::Sink);
-    assert_eq!(PatternType::Validate, PatternType::Validate);
+    assert_eq!(PatternType::Principal, PatternType::Principal);
+    assert_eq!(PatternType::Action, PatternType::Action);
+    assert_eq!(PatternType::Resource, PatternType::Resource);
 
-    assert_ne!(PatternType::Source, PatternType::Sink);
-    assert_ne!(PatternType::Sink, PatternType::Validate);
-    assert_ne!(PatternType::Source, PatternType::Validate);
+    assert_ne!(PatternType::Principal, PatternType::Action);
+    assert_ne!(PatternType::Action, PatternType::Resource);
+    assert_ne!(PatternType::Principal, PatternType::Resource);
 }
 
 #[test]
@@ -64,7 +71,7 @@ fn test_pattern_config_creation() {
 
 #[test]
 fn test_language_patterns_creation() {
-    let sources = vec![
+    let principals = vec![
         PatternConfig {
             pattern: "input\\(".to_string(),
             description: "User input".to_string(),
@@ -75,48 +82,50 @@ fn test_language_patterns_creation() {
         },
     ];
 
-    let sinks = vec![PatternConfig {
+    let resources = vec![PatternConfig {
         pattern: "eval\\(".to_string(),
         description: "Code execution".to_string(),
     }];
 
     let patterns = LanguagePatterns {
-        sources: Some(sources.clone()),
-        sinks: Some(sinks.clone()),
-        validate: None,
+        principals: Some(principals.clone()),
+        actions: None,
+        resources: Some(resources.clone()),
     };
 
-    assert!(patterns.sources.is_some());
-    assert!(patterns.sinks.is_some());
-    assert_eq!(patterns.sources.unwrap().len(), 2);
-    assert_eq!(patterns.sinks.unwrap().len(), 1);
+    assert!(patterns.principals.is_some());
+    assert!(patterns.resources.is_some());
+    assert_eq!(patterns.principals.unwrap().len(), 2);
+    assert_eq!(patterns.resources.unwrap().len(), 1);
 }
 
 #[test]
 fn test_language_patterns_empty() {
     let patterns = LanguagePatterns {
-        sources: None,
-        sinks: None,
-        validate: None,
+        principals: None,
+        actions: None,
+        resources: None,
     };
 
-    assert!(patterns.sources.is_none());
-    assert!(patterns.sinks.is_none());
+    assert!(patterns.principals.is_none());
+    assert!(patterns.actions.is_none());
+    assert!(patterns.resources.is_none());
 }
 
 #[test]
 fn test_language_patterns_partial() {
     let patterns = LanguagePatterns {
-        sources: Some(vec![PatternConfig {
+        principals: Some(vec![PatternConfig {
             pattern: "test".to_string(),
             description: "test description".to_string(),
         }]),
-        sinks: None,
-        validate: None,
+        actions: None,
+        resources: None,
     };
 
-    assert!(patterns.sources.is_some());
-    assert!(patterns.sinks.is_none());
+    assert!(patterns.principals.is_some());
+    assert!(patterns.actions.is_none());
+    assert!(patterns.resources.is_none());
 }
 
 #[test]
@@ -149,7 +158,7 @@ fn test_language_hash_and_equality() {
 
 #[test]
 fn test_pattern_type_clone() {
-    let original = PatternType::Source;
+    let original = PatternType::Principal;
     let cloned = original.clone();
     assert_eq!(original, cloned);
 }
@@ -179,16 +188,16 @@ fn test_language_patterns_deserialization() {
     use serde_json;
 
     let json_data = r#"{
-        "sources": [{"pattern": "input", "description": "User input"}],
-        "sinks": [{"pattern": "eval", "description": "Code execution"}],
-        "validate": null
+        "principals": [{"pattern": "input", "description": "User input"}],
+        "actions": [{"pattern": "validate", "description": "Input validation"}],
+        "resources": [{"pattern": "eval", "description": "Code execution"}]
     }"#;
 
     let patterns: Result<LanguagePatterns, _> = serde_json::from_str(json_data);
     assert!(patterns.is_ok());
 
     let patterns = patterns.unwrap();
-    assert!(patterns.sources.is_some());
-    assert!(patterns.sinks.is_some());
-    assert!(patterns.validate.is_none());
+    assert!(patterns.principals.is_some());
+    assert!(patterns.actions.is_some());
+    assert!(patterns.resources.is_some());
 }

@@ -45,6 +45,12 @@ impl RepoOps {
             "cc".to_string(),
             "hpp".to_string(),
             "hxx".to_string(),
+            // IaC extensions
+            "tf".to_string(),
+            "hcl".to_string(),
+            "yaml".to_string(),
+            "yml".to_string(),
+            "json".to_string(),
         ];
 
         Self {
