@@ -232,6 +232,8 @@ pub fn write_patterns_to_file(
         Language::Java => "Java",
         Language::Go => "Go",
         Language::Ruby => "Ruby",
+        Language::C => "C",
+        Language::Cpp => "Cpp",
         Language::Other => return Ok(()),
     };
 

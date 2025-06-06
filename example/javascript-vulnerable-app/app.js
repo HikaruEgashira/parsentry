@@ -589,6 +589,7 @@ const authMiddleware = require('./middleware/auth');
 const validationMiddleware = require('./middleware/validation');
 const advancedRoutes = require('./routes/advanced');
 const bypassRoutes = require('./routes/bypass');
+const modernAttacksRoutes = require('./routes/modern-attacks');
 const cryptoService = require('./services/crypto');
 const dbService = require('./services/database');
 
@@ -616,6 +617,12 @@ app.use('/advanced', [
 
 // Mount bypass demonstration routes
 app.use('/bypass', bypassRoutes);
+
+// Mount modern attack vectors routes
+app.use('/modern', [
+    authMiddleware.debugAuth, // Development authentication bypass
+    validationMiddleware.pathTraversalFilter
+], modernAttacksRoutes);
 
 // Direct service access endpoints for testing
 app.get('/crypto/demo', (req, res) => {
