@@ -10,7 +10,7 @@ cc = "1.0"
 snapshot-test = []
 
 [dependencies]
-tree-sitter = "0.24.6"
+tree-sitter = "0.25.6"
 git2 = "0.18"
 streaming-iterator = "0.1"
 tree-sitter-typescript = { version = "0.20" }
@@ -25,7 +25,7 @@ env_logger = "0.11"
 anyhow = "1.0"
 async-trait = "0.1"
 quick-xml = { version = "0.31", features = ["serialize"] }
-dotenv = "0.15"
+dotenvy = "0.15"
 genai = "0.3.5"
 futures = { version = "0.3", features = ["thread-pool"] }
 tree-sitter-ruby = "0.20"
