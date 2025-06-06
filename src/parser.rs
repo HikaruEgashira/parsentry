@@ -9,6 +9,8 @@ unsafe extern "C" {
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
 
 unsafe extern "C" {
+    fn tree_sitter_c() -> Language;
+    fn tree_sitter_cpp() -> Language;
     fn tree_sitter_python() -> Language;
     fn tree_sitter_javascript() -> Language;
     fn tree_sitter_typescript() -> Language;
@@ -60,6 +62,8 @@ impl CodeParser {
     fn get_language(&self, path: &Path) -> Option<Language> {
         let extension = path.extension().and_then(|ext| ext.to_str());
         match extension {
+            Some("c") | Some("h") => Some(unsafe { tree_sitter_c() }),
+            Some("cpp") | Some("cxx") | Some("cc") | Some("hpp") | Some("hxx") => Some(unsafe { tree_sitter_cpp() }),
             Some("py") => Some(unsafe { tree_sitter_python() }),
             Some("js") => Some(unsafe { tree_sitter_javascript() }),
             Some("ts") => Some(unsafe { tree_sitter_typescript() }),
@@ -73,7 +77,11 @@ impl CodeParser {
     }
 
     fn get_query_path(&self, language: &Language, query_name: &str) -> Result<PathBuf> {
-        let lang_name = if language == &unsafe { tree_sitter_python() } {
+        let lang_name = if language == &unsafe { tree_sitter_c() } {
+            "c"
+        } else if language == &unsafe { tree_sitter_cpp() } {
+            "cpp"
+        } else if language == &unsafe { tree_sitter_python() } {
             "python"
         } else if language == &unsafe { tree_sitter_javascript() } {
             "javascript"

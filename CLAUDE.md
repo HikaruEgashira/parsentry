@@ -1,12 +1,6 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
-Vulnhuntrs is an AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities. It supports Rust, Python, JavaScript, TypeScript, Go, Java, and Ruby.
-
-## Key Commands
+Vulnhuntrs is an AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities. It supports many languages.
 
 ### Building and Testing
 ```bash
@@ -55,7 +49,7 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 
-## Architecture Overview
+### Architecture Overview
 
 The codebase follows a pipeline architecture:
 
@@ -77,11 +71,6 @@ The codebase follows a pipeline architecture:
 ### Adding Language Support
 
 To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
-1. Add tree-sitter parser as dependency
-2. Update `build.rs` to compile the parser
-3. Add language to `SupportedLanguage` enum
-4. Create custom queries in `custom_queries/<language>/`
-5. Update pattern matching in `security_patterns/patterns.yml`
 
 ### LLM Configuration
 
@@ -95,3 +84,9 @@ To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
 - Example vulnerable apps in `example/` directory serve as integration tests
 - Snapshot tests using `insta` crate for response consistency
 - Unit tests for individual components in `tests/` directory
+
+### Development Workflow
+
+- create branch pr with auto-merge
+- after sleep, check ci / comment and fix
+- after merge, rebase main branch and run one-ope-mcp/complete_task

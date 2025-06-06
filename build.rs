@@ -18,6 +18,21 @@ fn main() {
     cc::Build::new()
         .include(&dir)
         .include(&tree_sitter_dir)
+        .file(dir.join("tree-sitter-c/src/parser.c"))
+        .flag("-Wno-unused-parameter")
+        .compile("tree-sitter-c");
+
+    cc::Build::new()
+        .include(&dir)
+        .include(&tree_sitter_dir)
+        .file(dir.join("tree-sitter-cpp/src/parser.c"))
+        .file(dir.join("tree-sitter-cpp/src/scanner.c"))
+        .flag("-Wno-unused-parameter")
+        .compile("tree-sitter-cpp");
+
+    cc::Build::new()
+        .include(&dir)
+        .include(&tree_sitter_dir)
         .file(dir.join("tree-sitter-go/src/parser.c"))
         .flag("-Wno-unused-parameter")
         .compile("tree-sitter-go");
