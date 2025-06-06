@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use vulnhuntrs::pattern_generator::{write_patterns_to_file, PatternClassification};
+use vulnhuntrs::pattern_generator::{PatternClassification, write_patterns_to_file};
 use vulnhuntrs::security_patterns::Language;
 
 fn create_test_python_file(dir: &TempDir) -> PathBuf {
@@ -68,12 +68,12 @@ fn sanitize_input(input: &str) -> String {
 
 // Note: LLM integration tests are commented out as they require real API keys
 // These would be integration tests that need actual LLM responses
-// 
+//
 // #[tokio::test]
 // async fn test_pattern_generation_python() {
 //     let temp_dir = TempDir::new().unwrap();
 //     create_test_python_file(&temp_dir);
-//     
+//
 //     let result = generate_custom_patterns(&temp_dir.path().to_path_buf(), "test-model").await;
 //     assert!(result.is_ok());
 //     assert!(temp_dir.path().join("vuln-patterns.yml").exists());
@@ -83,7 +83,7 @@ fn sanitize_input(input: &str) -> String {
 // async fn test_pattern_generation_rust() {
 //     let temp_dir = TempDir::new().unwrap();
 //     create_test_rust_file(&temp_dir);
-//     
+//
 //     let result = generate_custom_patterns(&temp_dir.path().to_path_buf(), "test-model").await;
 //     assert!(result.is_ok());
 //     assert!(temp_dir.path().join("vuln-patterns.yml").exists());
@@ -92,7 +92,7 @@ fn sanitize_input(input: &str) -> String {
 #[test]
 fn test_yaml_pattern_format() {
     let temp_dir = TempDir::new().unwrap();
-    
+
     let patterns = vec![
         PatternClassification {
             function_name: "test_sink".to_string(),
@@ -116,13 +116,14 @@ fn test_yaml_pattern_format() {
             reasoning: "Test reasoning for validation".to_string(),
         },
     ];
-    
-    let result = write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
+
+    let result =
+        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
     assert!(result.is_ok());
-    
+
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
     assert!(yaml_path.exists());
-    
+
     let content = fs::read_to_string(&yaml_path).unwrap();
     assert!(content.contains("Python:"));
     assert!(content.contains("sources:"));
@@ -139,10 +140,10 @@ fn test_file_discovery() {
     let temp_dir = TempDir::new().unwrap();
     create_test_python_file(&temp_dir);
     create_test_rust_file(&temp_dir);
-    
+
     let repo = vulnhuntrs::repo::RepoOps::new(temp_dir.path().to_path_buf());
     let files = repo.get_files_to_analyze(None).unwrap();
-    
+
     assert_eq!(files.len(), 2);
     assert!(files.iter().any(|f| f.file_name().unwrap() == "test.py"));
     assert!(files.iter().any(|f| f.file_name().unwrap() == "test.rs"));
@@ -152,21 +153,23 @@ fn test_file_discovery() {
 fn test_definition_extraction() {
     let temp_dir = TempDir::new().unwrap();
     create_test_python_file(&temp_dir);
-    
+
     let file_path = temp_dir.path().join("test.py");
     let mut parser = vulnhuntrs::parser::CodeParser::new().unwrap();
     parser.add_file(&file_path).unwrap();
-    
+
     let context = parser.build_context_from_file(&file_path).unwrap();
-    
+
     // Should extract function definitions
     assert!(!context.definitions.is_empty());
-    
+
     // Check if expected functions are found
-    let function_names: Vec<&str> = context.definitions.iter()
+    let function_names: Vec<&str> = context
+        .definitions
+        .iter()
         .map(|def| def.name.as_str())
         .collect();
-    
+
     assert!(function_names.contains(&"get_user_input"));
     assert!(function_names.contains(&"execute_command"));
     assert!(function_names.contains(&"write_to_file"));
@@ -178,23 +181,22 @@ fn test_definition_extraction() {
 fn test_yaml_append_functionality() {
     let temp_dir = TempDir::new().unwrap();
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-    
+
     // Write initial content
     fs::write(&yaml_path, "Go:\n  sinks:\n    - pattern: \"existing_pattern\"\n      description: \"Existing pattern\"\n").unwrap();
-    
-    let patterns = vec![
-        PatternClassification {
-            function_name: "new_function".to_string(),
-            pattern_type: Some("sinks".to_string()),
-            pattern: "\\\\bnew_function\\\\s*\\\\(".to_string(),
-            description: "New function pattern".to_string(),
-            reasoning: "Test reasoning".to_string(),
-        },
-    ];
-    
-    let result = write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
+
+    let patterns = vec![PatternClassification {
+        function_name: "new_function".to_string(),
+        pattern_type: Some("sinks".to_string()),
+        pattern: "\\\\bnew_function\\\\s*\\\\(".to_string(),
+        description: "New function pattern".to_string(),
+        reasoning: "Test reasoning".to_string(),
+    }];
+
+    let result =
+        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
     assert!(result.is_ok());
-    
+
     let content = fs::read_to_string(&yaml_path).unwrap();
     assert!(content.contains("Go:"));
     assert!(content.contains("existing_pattern"));
@@ -205,23 +207,22 @@ fn test_yaml_append_functionality() {
 #[test]
 fn test_empty_patterns_handling() {
     let temp_dir = TempDir::new().unwrap();
-    
-    let patterns = vec![
-        PatternClassification {
-            function_name: "non_security_function".to_string(),
-            pattern_type: None,
-            pattern: "".to_string(),
-            description: "".to_string(),
-            reasoning: "Not a security pattern".to_string(),
-        },
-    ];
-    
-    let result = write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
+
+    let patterns = vec![PatternClassification {
+        function_name: "non_security_function".to_string(),
+        pattern_type: None,
+        pattern: "".to_string(),
+        description: "".to_string(),
+        reasoning: "Not a security pattern".to_string(),
+    }];
+
+    let result =
+        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
     assert!(result.is_ok());
-    
+
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
     let content = fs::read_to_string(&yaml_path).unwrap();
-    
+
     // Should only contain the language header since no valid patterns were provided
     assert_eq!(content.trim(), "Python:");
 }
@@ -229,21 +230,19 @@ fn test_empty_patterns_handling() {
 #[test]
 fn test_language_filtering() {
     let temp_dir = TempDir::new().unwrap();
-    
-    let patterns = vec![
-        PatternClassification {
-            function_name: "test_function".to_string(),
-            pattern_type: Some("sinks".to_string()),
-            pattern: "test_pattern".to_string(),
-            description: "Test description".to_string(),
-            reasoning: "Test reasoning".to_string(),
-        },
-    ];
-    
+
+    let patterns = vec![PatternClassification {
+        function_name: "test_function".to_string(),
+        pattern_type: Some("sinks".to_string()),
+        pattern: "test_pattern".to_string(),
+        description: "Test description".to_string(),
+        reasoning: "Test reasoning".to_string(),
+    }];
+
     // Test that Other language is skipped
     let result = write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Other, &patterns);
     assert!(result.is_ok());
-    
+
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
     assert!(!yaml_path.exists());
 }

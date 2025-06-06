@@ -1,7 +1,7 @@
-use anyhow::Result;
 use crate::security_patterns::SecurityRiskPatterns;
+use anyhow::Result;
 use std::{
-    fs::{read_dir, read_to_string, File},
+    fs::{File, read_dir, read_to_string},
     io::{BufRead, BufReader, Result as IoResult},
     path::{Path, PathBuf},
 };
@@ -135,8 +135,7 @@ impl RepoOps {
             if path == pattern {
                 true
             } else {
-                path.split('/')
-                    .any(|segment| segment == pattern)
+                path.split('/').any(|segment| segment == pattern)
             }
         } else {
             path == pattern || path.starts_with(&format!("{}/", pattern))
@@ -172,10 +171,7 @@ impl RepoOps {
         let mut network_files = Vec::new();
         for file_path in files {
             if let Ok(content) = read_to_string(file_path) {
-                let ext = file_path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("");
+                let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
                 let lang = crate::security_patterns::Language::from_extension(ext);
                 let patterns = SecurityRiskPatterns::new(lang);
                 if patterns.matches(&content) {

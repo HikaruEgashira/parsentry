@@ -52,19 +52,19 @@ struct Args {
     /// Output directory for markdown reports
     #[arg(long)]
     output_dir: Option<PathBuf>,
-    
+
     /// 最小信頼度スコア（これ以上のスコアを持つ脆弱性のみ表示）
     #[arg(long, default_value = "0")]
     min_confidence: i32,
-    
+
     /// 特定の脆弱性タイプでフィルタリング（カンマ区切りで複数指定可）
     #[arg(long)]
     vuln_types: Option<String>,
-    
+
     /// サマリーレポートを生成する
     #[arg(long)]
     summary: bool,
-    
+
     /// カスタムパターンを生成する（現在のディレクトリを解析してセキュリティパターンを自動検出）
     #[arg(long)]
     generate_patterns: bool,
@@ -119,10 +119,7 @@ async fn main() -> Result<()> {
     let mut pattern_files = Vec::new();
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
-            let ext = file_path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("");
+            let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
             let lang = Language::from_extension(ext);
             let patterns = SecurityRiskPatterns::new(lang);
             if patterns.matches(&content) {
@@ -162,7 +159,11 @@ async fn main() -> Result<()> {
 
             let mut repo = RepoOps::new((*root_dir).clone());
             if let Err(e) = repo.add_file_to_parser(&file_path) {
-                println!("❌ ファイルのパース追加に失敗: {}: {}", file_path.display(), e);
+                println!(
+                    "❌ ファイルのパース追加に失敗: {}: {}",
+                    file_path.display(),
+                    e
+                );
                 return None;
             }
             let context = match repo.collect_context_for_security_pattern(&file_path) {
@@ -173,21 +174,28 @@ async fn main() -> Result<()> {
                 }
             };
 
-            let analysis_result = match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
-                Ok(res) => res,
-                Err(e) => {
-                    println!("❌ 解析に失敗: {}: {}", file_path.display(), e);
-                    return None;
-                }
-            };
+            let analysis_result =
+                match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
+                    Ok(res) => res,
+                    Err(e) => {
+                        println!("❌ 解析に失敗: {}: {}", file_path.display(), e);
+                        return None;
+                    }
+                };
 
-            if analysis_result.vulnerability_types.is_empty() || analysis_result.confidence_score < 1 {
+            if analysis_result.vulnerability_types.is_empty()
+                || analysis_result.confidence_score < 1
+            {
                 return None;
             }
 
             if let Some(ref output_dir) = output_dir {
                 if let Err(e) = std::fs::create_dir_all(output_dir) {
-                    println!("❌ 出力ディレクトリ作成に失敗: {}: {}", output_dir.display(), e);
+                    println!(
+                        "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                        output_dir.display(),
+                        e
+                    );
                     return None;
                 }
                 let fname = file_path
@@ -197,14 +205,18 @@ async fn main() -> Result<()> {
                 let mut out_path = output_dir.clone();
                 out_path.push(fname);
                 if let Err(e) = std::fs::write(&out_path, analysis_result.to_markdown()) {
-                    println!("❌ Markdownレポート出力に失敗: {}: {}", out_path.display(), e);
+                    println!(
+                        "❌ Markdownレポート出力に失敗: {}: {}",
+                        out_path.display(),
+                        e
+                    );
                     return None;
                 }
                 println!("📝 Markdownレポートを出力: {}", out_path.display());
             }
 
             analysis_result.print_readable();
-            
+
             Some((file_path, analysis_result))
         })
     });
@@ -213,15 +225,15 @@ async fn main() -> Result<()> {
     for (file_path, response) in results.into_iter().flatten().flatten() {
         summary.add_result(file_path, response);
     }
-    
+
     summary.sort_by_confidence();
-    
+
     let mut filtered_summary = if args.min_confidence > 0 {
         summary.filter_by_min_confidence(args.min_confidence)
     } else {
         summary
     };
-    
+
     if let Some(types_str) = args.vuln_types {
         let vuln_types: Vec<VulnType> = types_str
             .split(',')
@@ -236,20 +248,28 @@ async fn main() -> Result<()> {
                 other => VulnType::Other(other.to_string()),
             })
             .collect();
-        
+
         filtered_summary = filtered_summary.filter_by_vuln_types(&vuln_types);
     }
-    
+
     if args.summary {
         if let Some(ref output_dir) = args.output_dir {
             if let Err(e) = std::fs::create_dir_all(output_dir) {
-                println!("❌ 出力ディレクトリ作成に失敗: {}: {}", output_dir.display(), e);
+                println!(
+                    "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                    output_dir.display(),
+                    e
+                );
             } else {
                 if !filtered_summary.results.is_empty() {
                     let mut summary_path = output_dir.clone();
                     summary_path.push("summary.md");
                     if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
-                        println!("❌ サマリーレポート出力に失敗: {}: {}", summary_path.display(), e);
+                        println!(
+                            "❌ サマリーレポート出力に失敗: {}: {}",
+                            summary_path.display(),
+                            e
+                        );
                     } else {
                         println!("📊 サマリーレポートを出力: {}", summary_path.display());
                     }

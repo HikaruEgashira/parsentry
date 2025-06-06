@@ -67,7 +67,7 @@ impl SecurityRiskPatterns {
             .unwrap();
 
         let mut source_patterns = Vec::new();
-        let mut sink_patterns = Vec::new(); 
+        let mut sink_patterns = Vec::new();
         let mut validate_patterns = Vec::new();
         let mut pattern_type_map = HashMap::new();
 
@@ -95,18 +95,26 @@ impl SecurityRiskPatterns {
             }
         }
 
-        Self { 
+        Self {
             source_patterns,
-            sink_patterns, 
+            sink_patterns,
             validate_patterns,
             pattern_type_map,
         }
     }
 
     pub fn matches(&self, content: &str) -> bool {
-        self.source_patterns.iter().any(|pattern| pattern.is_match(content))
-            || self.sink_patterns.iter().any(|pattern| pattern.is_match(content))
-            || self.validate_patterns.iter().any(|pattern| pattern.is_match(content))
+        self.source_patterns
+            .iter()
+            .any(|pattern| pattern.is_match(content))
+            || self
+                .sink_patterns
+                .iter()
+                .any(|pattern| pattern.is_match(content))
+            || self
+                .validate_patterns
+                .iter()
+                .any(|pattern| pattern.is_match(content))
     }
 
     /// パターンの種類を取得する。
@@ -125,9 +133,7 @@ impl SecurityRiskPatterns {
         use Language::*;
 
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let yaml_path = manifest_dir
-            .join("security_patterns")
-            .join("patterns.yml");
+        let yaml_path = manifest_dir.join("security_patterns").join("patterns.yml");
         let content = fs::read_to_string(&yaml_path)
             .unwrap_or_else(|_| panic!("failed to read {}", yaml_path.display()));
         let raw_map: HashMap<String, LanguagePatterns> =

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -83,8 +83,7 @@ impl CodeParser {
             "typescript"
         } else if language == &unsafe { tree_sitter_java() } {
             "java"
-        }
-        else if language == &unsafe { tree_sitter_go() } {
+        } else if language == &unsafe { tree_sitter_go() } {
             "go"
         } else if language == &unsafe { tree_sitter_rust() } {
             "rust"

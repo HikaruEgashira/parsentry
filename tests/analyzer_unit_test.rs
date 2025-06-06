@@ -1,8 +1,8 @@
+use std::io::Write;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
 use vulnhuntrs::parser::{Context, Definition};
 use vulnhuntrs::response::Response;
-use std::io::Write;
 
 // Mock functions for testing
 #[tokio::test]
@@ -10,23 +10,23 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
     // Create empty temporary file
     let temp_file = NamedTempFile::new()?;
     let file_path = temp_file.path().to_path_buf();
-    
+
     // Create empty context
     let context = Context {
         definitions: vec![],
     };
-    
+
     // Test with mock model (this would require actual API key in real scenario)
     // For unit test, we'll test the empty file handling specifically
     let result = analyze_empty_file_logic(&file_path).await?;
-    
+
     assert_eq!(result.scratchpad, "");
     assert_eq!(result.analysis, "");
     assert_eq!(result.poc, "");
     assert_eq!(result.confidence_score, 0);
     assert_eq!(result.vulnerability_types.len(), 0);
     assert_eq!(result.context_code.len(), 0);
-    
+
     Ok(())
 }
 
@@ -36,7 +36,7 @@ async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
     let mut temp_file = NamedTempFile::new()?;
     writeln!(temp_file, "print('Hello, World!')")?;
     let file_path = temp_file.path().to_path_buf();
-    
+
     // Create context with a mock definition
     let context = Context {
         definitions: vec![Definition {
@@ -46,12 +46,12 @@ async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
             end_byte: 25,
         }],
     };
-    
+
     // Test basic file processing logic (without actual LLM call)
     let content = std::fs::read_to_string(&file_path)?;
     assert!(!content.is_empty());
     assert!(content.contains("Hello, World!"));
-    
+
     Ok(())
 }
 
@@ -61,7 +61,8 @@ fn test_context_text_generation() {
         definitions: vec![
             Definition {
                 name: "vulnerable_function".to_string(),
-                source: "def vulnerable_function(user_input):\n    os.system(user_input)".to_string(),
+                source: "def vulnerable_function(user_input):\n    os.system(user_input)"
+                    .to_string(),
                 start_byte: 0,
                 end_byte: 50,
             },
@@ -73,7 +74,7 @@ fn test_context_text_generation() {
             },
         ],
     };
-    
+
     let mut context_text = String::new();
     if !context.definitions.is_empty() {
         context_text.push_str("\nContext Definitions:\n");
@@ -84,7 +85,7 @@ fn test_context_text_generation() {
             ));
         }
     }
-    
+
     assert!(context_text.contains("vulnerable_function"));
     assert!(context_text.contains("safe_function"));
     assert!(context_text.contains("os.system"));
@@ -104,7 +105,7 @@ async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Respons
             context_code: vec![],
         });
     }
-    
+
     // For non-empty files, return a mock response
     Ok(Response {
         scratchpad: "File processed".to_string(),
@@ -126,10 +127,10 @@ fn test_parse_json_response_valid() {
         "vulnerability_types": [],
         "context_code": []
     }"#;
-    
+
     let result: Result<Response, _> = serde_json::from_str(json_content);
     assert!(result.is_ok());
-    
+
     let response = result.unwrap();
     assert_eq!(response.scratchpad, "Test scratchpad");
     assert_eq!(response.analysis, "Test analysis");
@@ -139,7 +140,7 @@ fn test_parse_json_response_valid() {
 #[test]
 fn test_parse_json_response_invalid() {
     let invalid_json = r#"{ invalid json content"#;
-    
+
     let result: Result<Response, _> = serde_json::from_str(invalid_json);
     assert!(result.is_err());
 }
