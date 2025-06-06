@@ -57,7 +57,7 @@ async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
 
 #[test]
 fn test_context_text_generation() {
-    let _context = Context {
+    let context = Context {
         definitions: vec![
             Definition {
                 name: "vulnerable_function".to_string(),
