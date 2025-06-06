@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use std::path::PathBuf;
 use vulnhuntrs::analyzer::analyze_file;
 use vulnhuntrs::pattern_generator::generate_custom_patterns;
