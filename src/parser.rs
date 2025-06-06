@@ -71,7 +71,9 @@ impl CodeParser {
             Some("rb") => Some(unsafe { tree_sitter_ruby() }),
             Some("c") => Some(unsafe { tree_sitter_c() }),
             Some("h") => Some(unsafe { tree_sitter_c() }),
-            Some("cpp") | Some("cxx") | Some("cc") | Some("hpp") | Some("hxx") => Some(unsafe { tree_sitter_cpp() }),
+            Some("cpp") | Some("cxx") | Some("cc") | Some("hpp") | Some("hxx") => {
+                Some(unsafe { tree_sitter_cpp() })
+            }
             _ => None,
         }
     }
