@@ -4,7 +4,7 @@
 
 A PAR (Principal-Action-Resource) based security scanner using LLMs and static code analysis.
 
-**Next-generation multi-language security analysis**
+**Next-generation security analysis for all languages**
 
 </div>
 
@@ -12,25 +12,13 @@ A PAR (Principal-Action-Resource) based security scanner using LLMs and static c
 
 Parsentry is a PAR (Principal-Action-Resource) based security scanner designed to detect vulnerabilities across multiple languages including IaC. It provides comprehensive static analysis capabilities to identify potential security issues in your codebase.
 
-
 ## Features
 
 - Static code analysis for security vulnerabilities
-- Multi-language support
-  - Supports Rust, Python, JavaScript, TypeScript, Go, Java, and Ruby.
+- Multi-language support (9 programming languages + 3 IaC languages)
 - Detailed vulnerability reports
-- Example vulnerable applications for testing
 
-## Examples
-
-See actual vulnerability reports generated for each supported language:
-
-- [Python Vulnerable App](docs/reports/python-vulnerable-app.md) - SQL injection, XSS, and command injection
-- [Go Vulnerable App](docs/reports/go-vulnerable-app.md) - SQL injection, XSS, command injection, and file traversal  
-- [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app.md) - SQL injection and XSS vulnerabilities
-- [Rust Vulnerable App](docs/reports/rust-vulnerable-app.md) - SQL injection, command injection, and path traversal
-
-## 🐳 Docker Usage
+## Usage
 
 ```bash
 docker pull ghcr.io/hikaruegashira/parsentry:latest
@@ -43,15 +31,15 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 
-## Command Line Options
+## Examples
 
-- `-r, --root <ROOT>`: Specify the root directory of the project to scan
-- `--repo <REPO>`: Specify GitHub repository URL for analysis
-- `-a, --analyze <ANALYZE>`: Specify a specific file or directory to analyze
-- `-v`: Show verbose logs (specify multiple times for more detail)
-- `--min-confidence <MIN_CONFIDENCE>`: Specify minimum confidence level for displayed vulnerabilities (default: 0)
-- `--vuln-types <TYPES>`: Filter by specific vulnerability types (comma-separated)
-- `--summary`: Display summary report
+See actual vulnerability reports generated for each supported language:
+
+- [Python Vulnerable App](docs/reports/python-vulnerable-app.md)
+- [Go Vulnerable App](docs/reports/go-vulnerable-app.md)
+- [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app.md)
+- [Rust Vulnerable App](docs/reports/rust-vulnerable-app.md)
+- [Terraform Vulnerable App](docs/reports/terraform-vulnerable-app.md)
 
 ## Documentation Structure
 
