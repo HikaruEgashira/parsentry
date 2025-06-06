@@ -1,5 +1,7 @@
-use vulnhuntrs::security_patterns::{Language, PatternType, PatternConfig, LanguagePatterns, SecurityRiskPatterns};
 use std::collections::HashMap;
+use vulnhuntrs::security_patterns::{
+    Language, LanguagePatterns, PatternConfig, PatternType, SecurityRiskPatterns,
+};
 
 #[test]
 fn test_language_from_extension() {
@@ -11,7 +13,7 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("java"), Language::Java);
     assert_eq!(Language::from_extension("go"), Language::Go);
     assert_eq!(Language::from_extension("rb"), Language::Ruby);
-    
+
     // Test unknown extensions
     assert_eq!(Language::from_extension("txt"), Language::Other);
     assert_eq!(Language::from_extension("cpp"), Language::Other);
@@ -38,7 +40,7 @@ fn test_pattern_type_equality() {
     assert_eq!(PatternType::Source, PatternType::Source);
     assert_eq!(PatternType::Sink, PatternType::Sink);
     assert_eq!(PatternType::Validate, PatternType::Validate);
-    
+
     assert_ne!(PatternType::Source, PatternType::Sink);
     assert_ne!(PatternType::Sink, PatternType::Validate);
     assert_ne!(PatternType::Source, PatternType::Validate);
@@ -50,7 +52,7 @@ fn test_pattern_config_creation() {
         pattern: "eval\\(".to_string(),
         description: "Dynamic code execution".to_string(),
     };
-    
+
     assert_eq!(config.pattern, "eval\\(");
     assert_eq!(config.description, "Dynamic code execution");
 }
@@ -67,20 +69,18 @@ fn test_language_patterns_creation() {
             description: "HTTP request parameter".to_string(),
         },
     ];
-    
-    let sinks = vec![
-        PatternConfig {
-            pattern: "eval\\(".to_string(),
-            description: "Code execution".to_string(),
-        },
-    ];
-    
+
+    let sinks = vec![PatternConfig {
+        pattern: "eval\\(".to_string(),
+        description: "Code execution".to_string(),
+    }];
+
     let patterns = LanguagePatterns {
         sources: Some(sources.clone()),
         sinks: Some(sinks.clone()),
         validate: None,
     };
-    
+
     assert!(patterns.sources.is_some());
     assert!(patterns.sinks.is_some());
     assert_eq!(patterns.sources.unwrap().len(), 2);
@@ -94,7 +94,7 @@ fn test_language_patterns_empty() {
         sinks: None,
         validate: None,
     };
-    
+
     assert!(patterns.sources.is_none());
     assert!(patterns.sinks.is_none());
 }
@@ -109,7 +109,7 @@ fn test_language_patterns_partial() {
         sinks: None,
         validate: None,
     };
-    
+
     assert!(patterns.sources.is_some());
     assert!(patterns.sinks.is_none());
 }
@@ -130,12 +130,12 @@ fn test_security_risk_patterns_new() {
 #[test]
 fn test_language_hash_and_equality() {
     use std::collections::HashSet;
-    
+
     let mut set = HashSet::new();
     set.insert(Language::Python);
     set.insert(Language::JavaScript);
     set.insert(Language::Python); // Duplicate
-    
+
     assert_eq!(set.len(), 2); // Should only contain 2 unique languages
     assert!(set.contains(&Language::Python));
     assert!(set.contains(&Language::JavaScript));
@@ -159,10 +159,10 @@ fn test_language_clone() {
 #[test]
 fn test_pattern_config_deserialization() {
     use serde_json;
-    
+
     let json_data = r#"{"pattern": "test_pattern", "description": "test description"}"#;
     let config: Result<PatternConfig, _> = serde_json::from_str(json_data);
-    
+
     assert!(config.is_ok());
     let config = config.unwrap();
     assert_eq!(config.pattern, "test_pattern");
@@ -172,16 +172,16 @@ fn test_pattern_config_deserialization() {
 #[test]
 fn test_language_patterns_deserialization() {
     use serde_json;
-    
+
     let json_data = r#"{
         "sources": [{"pattern": "input", "description": "User input"}],
         "sinks": [{"pattern": "eval", "description": "Code execution"}],
         "validate": null
     }"#;
-    
+
     let patterns: Result<LanguagePatterns, _> = serde_json::from_str(json_data);
     assert!(patterns.is_ok());
-    
+
     let patterns = patterns.unwrap();
     assert!(patterns.sources.is_some());
     assert!(patterns.sinks.is_some());

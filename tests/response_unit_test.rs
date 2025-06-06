@@ -1,6 +1,8 @@
+use serde_json::{Value, json};
 use std::path::PathBuf;
-use vulnhuntrs::response::{Response, VulnType, ContextCode, AnalysisSummary, response_json_schema};
-use serde_json::{json, Value};
+use vulnhuntrs::response::{
+    AnalysisSummary, ContextCode, Response, VulnType, response_json_schema,
+};
 
 #[test]
 fn test_vuln_type_serialization() {
@@ -14,19 +16,25 @@ fn test_vuln_type_serialization() {
         VulnType::IDOR,
         VulnType::Other("Custom".to_string()),
     ];
-    
+
     let serialized = serde_json::to_string(&vuln_types).unwrap();
     let deserialized: Vec<VulnType> = serde_json::from_str(&serialized).unwrap();
-    
+
     assert_eq!(vuln_types, deserialized);
 }
 
 #[test]
 fn test_vuln_type_equality() {
     assert_eq!(VulnType::LFI, VulnType::LFI);
-    assert_eq!(VulnType::Other("test".to_string()), VulnType::Other("test".to_string()));
+    assert_eq!(
+        VulnType::Other("test".to_string()),
+        VulnType::Other("test".to_string())
+    );
     assert_ne!(VulnType::LFI, VulnType::RCE);
-    assert_ne!(VulnType::Other("test1".to_string()), VulnType::Other("test2".to_string()));
+    assert_ne!(
+        VulnType::Other("test1".to_string()),
+        VulnType::Other("test2".to_string())
+    );
 }
 
 #[test]
@@ -37,7 +45,7 @@ fn test_context_code_creation() {
         code_line: "eval(user_input)".to_string(),
         path: "/src/vulnerable.py".to_string(),
     };
-    
+
     assert_eq!(context.name, "vulnerable_function");
     assert_eq!(context.reason, "Uses unsafe eval() function");
     assert_eq!(context.code_line, "eval(user_input)");
@@ -59,7 +67,7 @@ fn test_response_creation() {
             path: "/src/handlers.py".to_string(),
         }],
     };
-    
+
     assert_eq!(response.confidence_score, 9);
     assert_eq!(response.vulnerability_types.len(), 1);
     assert_eq!(response.context_code.len(), 1);
@@ -76,32 +84,45 @@ fn test_response_serialization() {
         vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
         context_code: vec![],
     };
-    
+
     let serialized = serde_json::to_string(&response).unwrap();
     let deserialized: Response = serde_json::from_str(&serialized).unwrap();
-    
+
     assert_eq!(response.confidence_score, deserialized.confidence_score);
-    assert_eq!(response.vulnerability_types, deserialized.vulnerability_types);
+    assert_eq!(
+        response.vulnerability_types,
+        deserialized.vulnerability_types
+    );
 }
 
 #[test]
 fn test_response_json_schema() {
     let schema = response_json_schema();
-    
+
     // Verify schema structure
     assert_eq!(schema["type"], "object");
-    
+
     let properties = &schema["properties"];
     assert!(properties["scratchpad"]["type"] == "string");
     assert!(properties["analysis"]["type"] == "string");
     assert!(properties["poc"]["type"] == "string");
     assert!(properties["confidence_score"]["type"] == "integer");
-    
+
     // Check vulnerability types array schema
     let vuln_types = &properties["vulnerability_types"];
     assert_eq!(vuln_types["type"], "array");
-    assert!(vuln_types["items"]["enum"].as_array().unwrap().contains(&json!("RCE")));
-    assert!(vuln_types["items"]["enum"].as_array().unwrap().contains(&json!("SQLI")));
+    assert!(
+        vuln_types["items"]["enum"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("RCE"))
+    );
+    assert!(
+        vuln_types["items"]["enum"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("SQLI"))
+    );
 }
 
 #[test]
@@ -131,9 +152,9 @@ fn test_markdown_generation() {
             path: "/test/path.py".to_string(),
         }],
     };
-    
+
     let markdown = response.to_markdown();
-    
+
     // Verify markdown contains expected sections
     assert!(markdown.contains("# 解析レポート"));
     assert!(markdown.contains("信頼度スコア: 8"));
@@ -151,7 +172,7 @@ fn test_markdown_generation() {
 fn test_confidence_score_validation() {
     // Test various confidence scores
     let scores = [0, 1, 5, 10, -1, 15];
-    
+
     for score in scores {
         let response = Response {
             scratchpad: String::new(),
@@ -161,7 +182,7 @@ fn test_confidence_score_validation() {
             vulnerability_types: vec![],
             context_code: vec![],
         };
-        
+
         // Confidence score should be stored as-is (validation is handled elsewhere)
         assert_eq!(response.confidence_score, score);
     }
@@ -177,7 +198,7 @@ fn test_empty_response() {
         vulnerability_types: vec![],
         context_code: vec![],
     };
-    
+
     assert!(response.scratchpad.is_empty());
     assert!(response.analysis.is_empty());
     assert!(response.poc.is_empty());
@@ -194,10 +215,10 @@ fn test_context_code_serialization() {
         code_line: "print('test')".to_string(),
         path: "/path/to/file.py".to_string(),
     };
-    
+
     let serialized = serde_json::to_string(&context).unwrap();
     let deserialized: ContextCode = serde_json::from_str(&serialized).unwrap();
-    
+
     assert_eq!(context.name, deserialized.name);
     assert_eq!(context.reason, deserialized.reason);
     assert_eq!(context.code_line, deserialized.code_line);
@@ -227,7 +248,7 @@ fn test_response_with_multiple_context_codes() {
             },
         ],
     };
-    
+
     assert_eq!(response.context_code.len(), 2);
     assert_eq!(response.context_code[0].name, "func1");
     assert_eq!(response.context_code[1].name, "func2");

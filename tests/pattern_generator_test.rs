@@ -117,8 +117,7 @@ fn test_yaml_pattern_format() {
         },
     ];
 
-    let result =
-        write_patterns_to_file(temp_dir.path(), Language::Python, &patterns);
+    let result = write_patterns_to_file(temp_dir.path(), Language::Python, &patterns);
     assert!(result.is_ok());
 
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
@@ -193,8 +192,7 @@ fn test_yaml_append_functionality() {
         reasoning: "Test reasoning".to_string(),
     }];
 
-    let result =
-        write_patterns_to_file(temp_dir.path(), Language::Python, &patterns);
+    let result = write_patterns_to_file(temp_dir.path(), Language::Python, &patterns);
     assert!(result.is_ok());
 
     let content = fs::read_to_string(&yaml_path).unwrap();
@@ -216,8 +214,7 @@ fn test_empty_patterns_handling() {
         reasoning: "Not a security pattern".to_string(),
     }];
 
-    let result =
-        write_patterns_to_file(temp_dir.path(), Language::Python, &patterns);
+    let result = write_patterns_to_file(temp_dir.path(), Language::Python, &patterns);
     assert!(result.is_ok());
 
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");

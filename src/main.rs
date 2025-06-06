@@ -183,7 +183,9 @@ async fn main() -> Result<()> {
                     }
                 };
 
-            if analysis_result.vulnerability_types.is_empty() || analysis_result.confidence_score < 1 {
+            if analysis_result.vulnerability_types.is_empty()
+                || analysis_result.confidence_score < 1
+            {
                 return None;
             }
 
@@ -263,7 +265,11 @@ async fn main() -> Result<()> {
                     let mut summary_path = output_dir.clone();
                     summary_path.push("summary.md");
                     if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
-                        println!("❌ サマリーレポート出力に失敗: {}: {}", summary_path.display(), e);
+                        println!(
+                            "❌ サマリーレポート出力に失敗: {}: {}",
+                            summary_path.display(),
+                            e
+                        );
                     } else {
                         println!("📊 サマリーレポートを出力: {}", summary_path.display());
                     }
