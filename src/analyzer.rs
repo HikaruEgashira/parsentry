@@ -263,7 +263,6 @@ pub async fn analyze_file(
                         }
                     }
                 }
-
             }
         }
     }

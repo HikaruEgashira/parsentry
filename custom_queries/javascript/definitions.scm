@@ -12,12 +12,12 @@
 
 (variable_declarator
   name: (identifier) @name
-  value: [(function) (arrow_function)]
+  value: [(function_expression) (arrow_function)]
 ) @definition
 
 (lexical_declaration
   (variable_declarator
     name: (identifier) @name
-    value: [(function) (arrow_function)]
+    value: [(function_expression) (arrow_function)]
   ) @definition
 )

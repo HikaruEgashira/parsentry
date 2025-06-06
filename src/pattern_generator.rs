@@ -3,7 +3,8 @@ use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
+#[allow(unused_imports)]
+use std::path::{Path, PathBuf};
 
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
@@ -23,11 +24,8 @@ struct PatternAnalysisResponse {
 }
 
 pub async fn generate_custom_patterns(root_dir: &Path, model: &str) -> Result<()> {
-    println!(
-        "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
-        root_dir.display()
-    );
-
+    println!("📂 ディレクトリを解析してdefinitionsを抽出中: {}", root_dir.display());
+    
     let repo = RepoOps::new(root_dir.to_path_buf());
     let files = repo.get_files_to_analyze(None)?;
 
