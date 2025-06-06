@@ -3,7 +3,7 @@ name: Deploy Documentation
 on:
   push:
     branches: [ main ]
-    paths: [ 'website/**' ]
+    paths: [ 'docs/website/**' ]
   workflow_dispatch:
 
 jobs:
@@ -20,15 +20,15 @@ jobs:
         bun-version: latest
 
     - name: Install dependencies
-      working-directory: website
+      working-directory: docs/website
       run: bun install
 
     - name: Build
-      working-directory: website
+      working-directory: docs/website
       run: bun run build
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: website/out
+        publish_dir: docs/website/out
