@@ -15,6 +15,21 @@ pub enum VulnType {
     Other(String),
 }
 
+impl std::fmt::Display for VulnType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VulnType::LFI => write!(f, "LFI"),
+            VulnType::RCE => write!(f, "RCE"),
+            VulnType::SSRF => write!(f, "SSRF"),
+            VulnType::AFO => write!(f, "AFO"),
+            VulnType::SQLI => write!(f, "SQLI"),
+            VulnType::XSS => write!(f, "XSS"),
+            VulnType::IDOR => write!(f, "IDOR"),
+            VulnType::Other(name) => write!(f, "{}", name),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextCode {
     pub name: String,

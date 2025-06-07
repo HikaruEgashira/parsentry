@@ -24,13 +24,13 @@ cargo test -- --nocapture
 ### Running the Tool
 ```bash
 # Analyze local directory
-cargo run -- -r /path/to/project
+cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript
 
 # Analyze with specific model
-cargo run -- -r /path/to/project --model gpt-4.1-nano
+cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript --model gpt-4.1-nano
 
 # Generate markdown reports
-cargo run -- -r /path/to/project --output-dir ./reports --summary
+cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript --output-dir ./reports --summary
 ```
 
 ### Architecture Overview

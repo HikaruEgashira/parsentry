@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use parsentry::analyzer::analyze_file;
 use parsentry::parser;
 use parsentry::pattern_generator::generate_custom_patterns;
+use parsentry::sarif::SarifReport;
 use parsentry::security_patterns::Language;
 use parsentry::security_patterns::SecurityRiskPatterns;
 
@@ -69,6 +70,10 @@ struct Args {
     /// カスタムパターンを生成する（現在のディレクトリを解析してセキュリティパターンを自動検出）
     #[arg(long)]
     generate_patterns: bool,
+
+    /// SARIF形式で出力する
+    #[arg(long)]
+    sarif: bool,
 }
 
 #[tokio::main]
@@ -279,6 +284,39 @@ async fn main() -> Result<()> {
             }
         } else {
             println!("⚠ サマリーレポートを出力するには --output-dir オプションが必要です");
+        }
+    }
+
+    // Generate SARIF report if requested
+    if args.sarif {
+        let sarif_report = SarifReport::from_analysis_summary(&filtered_summary);
+        
+        if let Some(ref output_dir) = args.output_dir {
+            if let Err(e) = std::fs::create_dir_all(output_dir) {
+                println!(
+                    "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                    output_dir.display(),
+                    e
+                );
+            } else {
+                let mut sarif_path = output_dir.clone();
+                sarif_path.push("parsentry-results.sarif");
+                if let Err(e) = sarif_report.save_to_file(&sarif_path) {
+                    println!(
+                        "❌ SARIFレポート出力に失敗: {}: {}",
+                        sarif_path.display(),
+                        e
+                    );
+                } else {
+                    println!("📋 SARIFレポートを出力: {}", sarif_path.display());
+                }
+            }
+        } else {
+            // Output SARIF to stdout if no output directory specified
+            match sarif_report.to_json() {
+                Ok(json) => println!("{}", json),
+                Err(e) => println!("❌ SARIF出力に失敗: {}", e),
+            }
         }
     }
 
