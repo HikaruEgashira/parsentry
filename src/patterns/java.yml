@@ -1,0 +1,90 @@
+principals:
+  - pattern: "HttpURLConnection"
+    description: "HTTP URL connections"
+    attack_vector:
+      - "T1071"
+      - "T1190"
+  - pattern: "\\bDriverManager\\.getConnection"
+    description: "Database connections"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "Scanner\\s*\\("
+    description: "User input scanning"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "System\\.getProperty"
+    description: "System properties"
+    attack_vector:
+      - "T1083"
+      - "T1552"
+  - pattern: "ResultSet\\.get(String|Int|Long|Double|Boolean)\\s*\\("
+    description: "Database result set values"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\.(findAll|findById|findBy.*?)\\s*\\("
+    description: "JPA repository queries"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "jdbcTemplate\\.(query|queryFor.*?)\\s*\\("
+    description: "JDBC template queries"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "@Query\\(.*?\\).*?List<.*?>"
+    description: "JPA custom query results"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+
+actions:
+  - pattern: "\\bPattern\\."
+    description: "Regex validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bValidator\\."
+    description: "Bean validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bOWASP\\."
+    description: "OWASP security"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bMessageDigest\\."
+    description: "Hash functions"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+  - pattern: "\\bPaths\\.get\\s*\\("
+    description: "Path validation"
+    attack_vector:
+      - "T1083"
+      - "T1564"
+  - pattern: "\\bStringEscapeUtils\\."
+    description: "String escaping"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+
+resources:
+  - pattern: "Runtime\\.exec"
+    description: "Process execution"
+    attack_vector:
+      - "T1059"
+      - "T1055"
+  - pattern: "\\bStatement\\.execute"
+    description: "SQL execution"
+    attack_vector:
+      - "T1190"
+      - "T1213"
+  - pattern: "\\bProcessBuilder"
+    description: "Process building"
+    attack_vector:
+      - "T1059"
+      - "T1055"

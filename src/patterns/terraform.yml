@@ -1,0 +1,115 @@
+principals:
+  - pattern: "variable\\s+\"[^\"]*\"\\s*\\{"
+    description: "Variable declarations"
+    attack_vector:
+      - "T1190"
+      - "T1021"
+  - pattern: "data\\s+\"[^\"]*\"\\s+\"[^\"]*\"\\s*\\{"
+    description: "Data sources"
+    attack_vector:
+      - "T1083"
+      - "T1005"
+  - pattern: "module\\s+\"[^\"]*\"\\s*\\{"
+    description: "Module declarations"
+    attack_vector:
+      - "T1105"
+      - "T1027"
+  - pattern: "provider\\s+\"[^\"]*\"\\s*\\{"
+    description: "Provider configurations"
+    attack_vector:
+      - "T1078"
+      - "T1550"
+  - pattern: "locals\\s*\\{"
+    description: "Local value definitions"
+    attack_vector:
+      - "T1083"
+      - "T1082"
+  - pattern: "arn:aws:iam::[0-9]*:root"
+    description: "AWS root account"
+    attack_vector:
+      - "T1078"
+      - "T1484"
+  - pattern: "arn:aws:iam::[0-9]*:"
+    description: "Cross-account access"
+    attack_vector:
+      - "T1078"
+      - "T1484"
+
+actions:
+  - pattern: "validation\\s*\\{"
+    description: "Input validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "condition\\s*="
+    description: "Validation conditions"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "error_message\\s*="
+    description: "Validation error messages"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "sensitive\\s*=\\s*true"
+    description: "Sensitive variable marking"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+  - pattern: "type\\s*=\\s*(string|number|bool|list|map|set|object|tuple)"
+    description: "Type constraints"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "encrypted\\s*=\\s*true"
+    description: "Encryption enablement"
+    attack_vector:
+      - "T1027"
+      - "T1486"
+  - pattern: "versioning.*enabled\\s*=\\s*true"
+    description: "Versioning enablement"
+    attack_vector:
+      - "T1005"
+      - "T1083"
+
+resources:
+  - pattern: "(password|secret|key|token)\\s*=\\s*\"[^\"]+\""
+    description: "Hardcoded secrets"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+  - pattern: "access_key\\s*=\\s*\"[^\"]+\""
+    description: "Hardcoded AWS access keys"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+  - pattern: "cidr_blocks\\s*=\\s*\\[\\s*\"0\\.0\\.0\\.0/0\"\\s*\\]"
+    description: "Overly permissive network access"
+    attack_vector:
+      - "T1190"
+      - "T1021"
+  - pattern: "publicly_accessible\\s*=\\s*true"
+    description: "Public database"
+    attack_vector:
+      - "T1190"
+      - "T1213"
+  - pattern: "encrypted\\s*=\\s*false"
+    description: "Unencrypted storage"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "enable_logging\\s*=\\s*false"
+    description: "Disabled logging"
+    attack_vector:
+      - "T1562"
+      - "T1070"
+  - pattern: "backup_retention_period\\s*=\\s*0"
+    description: "No backup retention"
+    attack_vector:
+      - "T1485"
+      - "T1490"
+  - pattern: "deletion_protection\\s*=\\s*false"
+    description: "No deletion protection"
+    attack_vector:
+      - "T1485"
+      - "T1490"

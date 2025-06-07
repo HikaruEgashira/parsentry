@@ -1,0 +1,134 @@
+principals:
+  - pattern: "async\\sdef\\s\\w+\\(.*?request"
+    description: "HTTP request handlers"
+    attack_vector:
+      - "T1190"
+      - "T1071"
+  - pattern: "@app\\.route\\(.*?\\)"
+    description: "Flask route decorators"
+    attack_vector:
+      - "T1190"
+  - pattern: "\\brequests\\."
+    description: "HTTP requests library"
+    attack_vector:
+      - "T1071"
+      - "T1090"
+  - pattern: "\\bsocket\\."
+    description: "Network socket operations"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+  - pattern: "urllib\\."
+    description: "URL handling modules"
+    attack_vector:
+      - "T1071"
+      - "T1105"
+  - pattern: "input\\s*\\("
+    description: "User input function"
+    attack_vector:
+      - "T1059"
+  - pattern: "sys\\.argv"
+    description: "Command line arguments"
+    attack_vector:
+      - "T1059"
+  - pattern: "\\.fetchall\\s*\\(\\)"
+    description: "Database result fetching"
+    attack_vector:
+      - "T1005"
+  - pattern: "\\.fetchone\\s*\\(\\)"
+    description: "Database single result"
+    attack_vector:
+      - "T1005"
+  - pattern: "\\.fetchmany\\s*\\("
+    description: "Database multiple results"
+    attack_vector:
+      - "T1005"
+  - pattern: "cursor\\.(execute|executemany)\\s*\\(.*?\\)\\.fetchall\\(\\)"
+    description: "Database query results"
+    attack_vector:
+      - "T1005"
+  - pattern: "\\bselect\\(.*?\\)\\.all\\(\\)"
+    description: "SQLAlchemy query results"
+    attack_vector:
+      - "T1005"
+  - pattern: "\\bquery\\(.*?\\)\\.all\\(\\)"
+    description: "ORM query results"
+    attack_vector:
+      - "T1005"
+  - pattern: "Model\\.objects\\.get\\("
+    description: "Django ORM single object"
+    attack_vector:
+      - "T1005"
+  - pattern: "Model\\.objects\\.filter\\("
+    description: "Django ORM filtered results"
+    attack_vector:
+      - "T1005"
+
+actions:
+  - pattern: "\\bhtml\\.escape\\s*\\("
+    description: "HTML escaping action"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\bre\\.(match|search)\\s*\\("
+    description: "Regex validation action"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bbleach\\."
+    description: "HTML sanitization action"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\bpydantic\\."
+    description: "Data validation action"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bwerkzeug\\.security\\."
+    description: "Security utilities action"
+    attack_vector:
+      - "T1550"
+      - "T1556"
+  - pattern: "\\bhashlib\\."
+    description: "Hash functions action"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+  - pattern: "\\bos\\.path\\.(abspath|realpath)\\s*\\("
+    description: "Path validation action"
+    attack_vector:
+      - "T1083"
+      - "T1564"
+
+resources:
+  - pattern: "\\bopen\\s*\\("
+    description: "File operations resource"
+    attack_vector:
+      - "T1083"
+      - "T1005"
+  - pattern: "\\bsubprocess\\."
+    description: "Process execution resource"
+    attack_vector:
+      - "T1059"
+      - "T1055"
+  - pattern: "\\bos\\.system\\s*\\("
+    description: "System command execution resource"
+    attack_vector:
+      - "T1059"
+      - "T1106"
+  - pattern: "\\beval\\s*\\("
+    description: "Code evaluation resource"
+    attack_vector:
+      - "T1059"
+      - "T1027"
+  - pattern: "\\bexec\\s*\\("
+    description: "Code execution resource"
+    attack_vector:
+      - "T1059"
+      - "T1106"
+  - pattern: "\\.execute\\s*\\("
+    description: "SQL execution resource"
+    attack_vector:
+      - "T1190"
+      - "T1213"

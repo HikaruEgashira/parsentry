@@ -1,0 +1,90 @@
+principals:
+  - pattern: "app\\.(get|post|put|delete)\\(.*?\\)"
+    description: "Express route handlers"
+    attack_vector:
+      - "T1190"
+      - "T1071"
+  - pattern: "fetch\\(.*?\\)"
+    description: "Fetch API requests"
+    attack_vector:
+      - "T1071"
+      - "T1190"
+  - pattern: "require\\s*\\("
+    description: "Module imports"
+    attack_vector:
+      - "T1105"
+      - "T1027"
+  - pattern: "process\\.env"
+    description: "Environment variables"
+    attack_vector:
+      - "T1083"
+      - "T1552"
+  - pattern: "\\.(findOne|findMany|findFirst)\\s*\\("
+    description: "Prisma ORM queries"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\.rows\\[.*?\\]"
+    description: "Database query row results"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "await\\s+.*?\\.(query|exec)\\(.*?\\)"
+    description: "Async database operations"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+
+actions:
+  - pattern: "\\bvalidator\\."
+    description: "Validator.js library"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bzod\\."
+    description: "Schema validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\byup\\."
+    description: "Schema validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bDOMPurify\\."
+    description: "DOM sanitization"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\bhelmet\\."
+    description: "Security middleware"
+    attack_vector:
+      - "T1550"
+      - "T1556"
+  - pattern: "\\bbcrypt\\."
+    description: "Password hashing"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+
+resources:
+  - pattern: "\\beval\\s*\\("
+    description: "Code evaluation"
+    attack_vector:
+      - "T1059"
+      - "T1027"
+  - pattern: "document\\.write\\s*\\("
+    description: "Document write operations"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\.innerHTML\\s*="
+    description: "HTML injection"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "child_process"
+    description: "Process execution"
+    attack_vector:
+      - "T1059"
+      - "T1055"

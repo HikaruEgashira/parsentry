@@ -164,29 +164,32 @@ impl SecurityRiskPatterns {
     fn load_patterns() -> HashMap<Language, LanguagePatterns> {
         use Language::*;
 
-        let content = include_str!("patterns.yml");
-        let raw_map: HashMap<String, LanguagePatterns> =
-            serde_yaml::from_str(content).expect("failed to parse src/patterns.yml");
-
         let mut map = HashMap::new();
-        for (lang, patterns) in raw_map {
-            let key = match lang.as_str() {
-                "Python" => Python,
-                "JavaScript" => JavaScript,
-                "Rust" => Rust,
-                "TypeScript" => TypeScript,
-                "Java" => Java,
-                "Go" => Go,
-                "Ruby" => Ruby,
-                "C" => C,
-                "Cpp" => Cpp,
-                "Terraform" => Terraform,
-                "CloudFormation" => CloudFormation,
-                "Kubernetes" => Kubernetes,
-                "Other" => Other,
-                _ => continue,
-            };
-            map.insert(key, patterns);
+
+        // Load patterns from individual language files
+        let languages = [
+            (Python, include_str!("patterns/python.yml")),
+            (JavaScript, include_str!("patterns/javascript.yml")),
+            (Rust, include_str!("patterns/rust.yml")),
+            (TypeScript, include_str!("patterns/typescript.yml")),
+            (Java, include_str!("patterns/java.yml")),
+            (Go, include_str!("patterns/go.yml")),
+            (Ruby, include_str!("patterns/ruby.yml")),
+            (C, include_str!("patterns/c.yml")),
+            (Cpp, include_str!("patterns/cpp.yml")),
+            (Terraform, include_str!("patterns/terraform.yml")),
+            (Kubernetes, include_str!("patterns/kubernetes.yml")),
+        ];
+
+        for (lang, content) in languages {
+            match serde_yaml::from_str::<LanguagePatterns>(content) {
+                Ok(patterns) => {
+                    map.insert(lang, patterns);
+                }
+                Err(e) => {
+                    eprintln!("Failed to parse patterns for {:?}: {}", lang, e);
+                }
+            }
         }
 
         map

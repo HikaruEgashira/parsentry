@@ -1,0 +1,115 @@
+principals:
+  - pattern: "std::cin"
+    description: "Standard input operations"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "\\bgetline\\s*\\("
+    description: "Line input operations"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "\\brecv\\s*\\("
+    description: "Network receive operations"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+  - pattern: "\\baccept\\s*\\("
+    description: "Socket accept operations"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+  - pattern: "std::getenv\\s*\\("
+    description: "Environment variable access"
+    attack_vector:
+      - "T1083"
+      - "T1552"
+  - pattern: "argc.*argv"
+    description: "Command line arguments"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "boost::asio"
+    description: "Network I/O operations"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+
+actions:
+  - pattern: "std::regex"
+    description: "Regular expression validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\.empty\\s*\\(\\)"
+    description: "Container emptiness check"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\.size\\s*\\(\\)"
+    description: "Container size validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "std::isdigit\\s*\\("
+    description: "Character validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "std::isalpha\\s*\\("
+    description: "Character validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "boost::algorithm::trim"
+    description: "String trimming"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "std::clamp\\s*\\("
+    description: "Value clamping"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+
+resources:
+  - pattern: "std::system\\s*\\("
+    description: "System command execution"
+    attack_vector:
+      - "T1059"
+      - "T1106"
+  - pattern: "\\bexec[lv]p?\\s*\\("
+    description: "Process execution"
+    attack_vector:
+      - "T1059"
+      - "T1055"
+  - pattern: "new\\s+"
+    description: "Dynamic memory allocation"
+    attack_vector:
+      - "T1055"
+      - "T1569"
+  - pattern: "delete\\s+"
+    description: "Memory deallocation"
+    attack_vector:
+      - "T1055"
+      - "T1569"
+  - pattern: "std::cout"
+    description: "Standard output operations"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "printf\\s*\\("
+    description: "C-style formatting"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "sprintf\\s*\\("
+    description: "Unsafe string formatting"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "strcpy\\s*\\("
+    description: "Unsafe string copying"
+    attack_vector:
+      - "T1055"
+      - "T1190"

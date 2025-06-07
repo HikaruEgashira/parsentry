@@ -1,0 +1,80 @@
+principals:
+  - pattern: "kind:\\s*ServiceAccount"
+    description: "Service account"
+    attack_vector:
+      - "T1078"
+      - "T1550"
+  - pattern: "kind:\\s*User"
+    description: "User"
+    attack_vector:
+      - "T1078"
+      - "T1136"
+  - pattern: "kind:\\s*Group"
+    description: "Group"
+    attack_vector:
+      - "T1078"
+      - "T1484"
+  - pattern: "system:masters"
+    description: "Cluster admin"
+    attack_vector:
+      - "T1078"
+      - "T1548"
+  - pattern: "system:anonymous"
+    description: "Anonymous access"
+    attack_vector:
+      - "T1078"
+      - "T1190"
+
+actions:
+  - pattern: "verbs:\\s*\\[.*\"\\*\".*\\]"
+    description: "Wildcard permissions"
+    attack_vector:
+      - "T1548"
+      - "T1484"
+  - pattern: "resources:\\s*\\[.*\"\\*\".*\\]"
+    description: "All resources access"
+    attack_vector:
+      - "T1548"
+      - "T1484"
+  - pattern: "apiGroups:\\s*\\[.*\"\\*\".*\\]"
+    description: "All API groups access"
+    attack_vector:
+      - "T1548"
+      - "T1484"
+  - pattern: "readOnlyRootFilesystem:\\s*true"
+    description: "Read-only filesystem security"
+    attack_vector:
+      - "T1070"
+      - "T1083"
+  - pattern: "runAsNonRoot:\\s*true"
+    description: "Non-root execution security"
+    attack_vector:
+      - "T1548"
+      - "T1055"
+
+resources:
+  - pattern: "privileged:\\s*true"
+    description: "Privileged container"
+    attack_vector:
+      - "T1548"
+      - "T1611"
+  - pattern: "hostNetwork:\\s*true"
+    description: "Host network access"
+    attack_vector:
+      - "T1548"
+      - "T1611"
+  - pattern: "hostPID:\\s*true"
+    description: "Host PID access"
+    attack_vector:
+      - "T1548"
+      - "T1611"
+  - pattern: "containers:.*image:.*latest"
+    description: "Latest tag container"
+    attack_vector:
+      - "T1525"
+      - "T1190"
+  - pattern: "type:\\s*LoadBalancer"
+    description: "LoadBalancer service"
+    attack_vector:
+      - "T1190"
+      - "T1021"

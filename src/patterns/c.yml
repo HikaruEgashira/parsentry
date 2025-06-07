@@ -1,0 +1,115 @@
+principals:
+  - pattern: "\\brecv\\s*\\("
+    description: "Network receive operations"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+  - pattern: "\\baccept\\s*\\("
+    description: "Socket accept operations"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+  - pattern: "\\bfgets\\s*\\("
+    description: "File input operations"
+    attack_vector:
+      - "T1083"
+      - "T1005"
+  - pattern: "\\bgetenv\\s*\\("
+    description: "Environment variable access"
+    attack_vector:
+      - "T1083"
+      - "T1552"
+  - pattern: "\\bargv\\["
+    description: "Command line arguments"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "\\bscanf\\s*\\("
+    description: "Input scanning"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "\\bgets\\s*\\("
+    description: "Unsafe string input"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+
+actions:
+  - pattern: "\\bstrlen\\s*\\("
+    description: "String length validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bisdigit\\s*\\("
+    description: "Character validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bisalpha\\s*\\("
+    description: "Character validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bstrnlen\\s*\\("
+    description: "Safe string length"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bsnprintf\\s*\\("
+    description: "Safe string formatting"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bstrncat\\s*\\("
+    description: "Safe string concatenation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bstrncpy\\s*\\("
+    description: "Safe string copying"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+
+resources:
+  - pattern: "\\bsystem\\s*\\("
+    description: "System command execution"
+    attack_vector:
+      - "T1059"
+      - "T1106"
+  - pattern: "\\bexec[lv]p?\\s*\\("
+    description: "Process execution"
+    attack_vector:
+      - "T1059"
+      - "T1055"
+  - pattern: "\\bsprintf\\s*\\("
+    description: "Unsafe string formatting"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "\\bstrcpy\\s*\\("
+    description: "Unsafe string copying"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "\\bstrcat\\s*\\("
+    description: "Unsafe string concatenation"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "\\bmalloc\\s*\\("
+    description: "Memory allocation"
+    attack_vector:
+      - "T1055"
+      - "T1569"
+  - pattern: "\\bfree\\s*\\("
+    description: "Memory deallocation"
+    attack_vector:
+      - "T1055"
+      - "T1569"
+  - pattern: "\\bprintf\\s*\\("
+    description: "Format string operations"
+    attack_vector:
+      - "T1055"
+      - "T1190"

@@ -1,0 +1,115 @@
+principals:
+  - pattern: "fetch\\(.*?\\)"
+    description: "Fetch API requests"
+    attack_vector:
+      - "T1071"
+      - "T1190"
+  - pattern: "XMLHttpRequest"
+    description: "XMLHttpRequest API"
+    attack_vector:
+      - "T1071"
+      - "T1105"
+  - pattern: "require\\s*\\("
+    description: "Module imports"
+    attack_vector:
+      - "T1105"
+      - "T1027"
+  - pattern: "process\\.env"
+    description: "Environment variables"
+    attack_vector:
+      - "T1083"
+      - "T1552"
+  - pattern: "document\\.(getElementById|querySelector)"
+    description: "DOM access"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\.(findOne|findMany|findAll)\\s*\\("
+    description: "Database ORM queries"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "db\\.(collection|query)\\(.*?\\)\\.find\\("
+    description: "Database find operations"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\bresult\\.(rows|recordset)\\["
+    description: "Database result rows"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "await\\s+db\\.(query|execute)\\("
+    description: "Database async queries"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\.(json|text)\\(\\)\\s*\\.(then|await)"
+    description: "API response data"
+    attack_vector:
+      - "T1071"
+      - "T1005"
+
+actions:
+  - pattern: "\\bvalidator\\."
+    description: "Validator.js library action"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bDOMPurify\\."
+    description: "DOM sanitization action"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\bescape-html"
+    description: "HTML escaping action"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\bxss\\s*\\("
+    description: "XSS filtering action"
+    attack_vector:
+      - "T1055"
+      - "T1027"
+  - pattern: "\\bhelmet\\."
+    description: "Security middleware action"
+    attack_vector:
+      - "T1550"
+      - "T1556"
+  - pattern: "\\bbcrypt\\."
+    description: "Password hashing action"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+  - pattern: "\\.normalize\\s*\\("
+    description: "Data normalization action"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+
+resources:
+  - pattern: "\\beval\\s*\\("
+    description: "Code evaluation resource"
+    attack_vector:
+      - "T1059"
+      - "T1027"
+  - pattern: "document\\.write\\s*\\("
+    description: "Document write operations resource"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\.innerHTML\\s*="
+    description: "HTML injection resource"
+    attack_vector:
+      - "T1055"
+      - "T1190"
+  - pattern: "child_process"
+    description: "Process execution resource"
+    attack_vector:
+      - "T1059"
+      - "T1055"
+  - pattern: "fs\\.writeFile"
+    description: "File writing resource"
+    attack_vector:
+      - "T1083"
+      - "T1005"

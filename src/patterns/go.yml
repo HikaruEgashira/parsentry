@@ -1,0 +1,85 @@
+principals:
+  - pattern: "\\bhttp\\.HandleFunc\\s*\\("
+    description: "HTTP handlers"
+    attack_vector:
+      - "T1190"
+      - "T1071"
+  - pattern: "\\bnet\\.Dial\\s*\\("
+    description: "Network dialing"
+    attack_vector:
+      - "T1095"
+      - "T1571"
+  - pattern: "\\bsql\\.Open\\s*\\("
+    description: "Database connections"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "os\\.Args"
+    description: "Command line arguments"
+    attack_vector:
+      - "T1059"
+      - "T1204"
+  - pattern: "rows\\.Scan\\s*\\("
+    description: "Database row scanning"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\.(Find|First|Where)\\s*\\(.*?\\)\\.(Scan|Take)"
+    description: "GORM query results"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\brows\\.Next\\(\\).*?rows\\.Scan"
+    description: "SQL row iteration"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+  - pattern: "\\.(QueryRow|Query)\\s*\\(.*?\\)\\.Scan"
+    description: "SQL query scanning"
+    attack_vector:
+      - "T1005"
+      - "T1213"
+
+actions:
+  - pattern: "\\bregexp\\."
+    description: "Regex validation"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bvalidator\\."
+    description: "Validation package"
+    attack_vector:
+      - "T1070"
+      - "T1027"
+  - pattern: "\\bfilepaths\\.Clean\\s*\\("
+    description: "Path cleaning"
+    attack_vector:
+      - "T1083"
+      - "T1564"
+  - pattern: "\\bhtml\\.EscapeString\\s*\\("
+    description: "HTML escaping"
+    attack_vector:
+      - "T1055"
+      - "T1106"
+  - pattern: "\\bcrypto/"
+    description: "Cryptographic operations"
+    attack_vector:
+      - "T1552"
+      - "T1078"
+
+resources:
+  - pattern: "\\bexec\\.Command\\s*\\("
+    description: "Command execution"
+    attack_vector:
+      - "T1059"
+      - "T1055"
+  - pattern: "\\bdb\\.Query\\s*\\("
+    description: "Database queries"
+    attack_vector:
+      - "T1190"
+      - "T1213"
+  - pattern: "\\bos\\.Open\\s*\\("
+    description: "File operations"
+    attack_vector:
+      - "T1083"
+      - "T1005"

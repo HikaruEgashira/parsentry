@@ -21,9 +21,10 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("hxx"), Language::Cpp);
     assert_eq!(Language::from_extension("tf"), Language::Terraform);
     assert_eq!(Language::from_extension("hcl"), Language::Terraform);
-    assert_eq!(Language::from_extension("yaml"), Language::Kubernetes);
-    assert_eq!(Language::from_extension("yml"), Language::Kubernetes);
-    assert_eq!(Language::from_extension("json"), Language::CloudFormation);
+    // YAML and JSON support has been disabled
+    assert_eq!(Language::from_extension("yaml"), Language::Other);
+    assert_eq!(Language::from_extension("yml"), Language::Other);
+    assert_eq!(Language::from_extension("json"), Language::Other);
 
     assert_eq!(Language::from_extension("txt"), Language::Other);
     assert_eq!(Language::from_extension(""), Language::Other);
@@ -60,6 +61,7 @@ fn test_pattern_config_creation() {
     let config = PatternConfig {
         pattern: "eval\\(".to_string(),
         description: "Dynamic code execution".to_string(),
+        attack_vector: vec!["T1059".to_string()],
     };
 
     assert_eq!(config.pattern, "eval\\(");
@@ -72,16 +74,19 @@ fn test_language_patterns_creation() {
         PatternConfig {
             pattern: "input\\(".to_string(),
             description: "User input".to_string(),
+            attack_vector: vec!["T1059".to_string()],
         },
         PatternConfig {
             pattern: "request\\.get".to_string(),
             description: "HTTP request parameter".to_string(),
+            attack_vector: vec!["T1071".to_string()],
         },
     ];
 
     let resources = vec![PatternConfig {
         pattern: "eval\\(".to_string(),
         description: "Code execution".to_string(),
+        attack_vector: vec!["T1059".to_string()],
     }];
 
     let patterns = LanguagePatterns {
@@ -115,6 +120,7 @@ fn test_language_patterns_partial() {
         principals: Some(vec![PatternConfig {
             pattern: "test".to_string(),
             description: "test description".to_string(),
+            attack_vector: vec!["T1000".to_string()],
         }]),
         actions: None,
         resources: None,
@@ -171,7 +177,7 @@ fn test_language_clone() {
 fn test_pattern_config_deserialization() {
     use serde_json;
 
-    let json_data = r#"{"pattern": "test_pattern", "description": "test description"}"#;
+    let json_data = r#"{"pattern": "test_pattern", "description": "test description", "attack_vector": ["T1000"]}"#;
     let config: Result<PatternConfig, _> = serde_json::from_str(json_data);
 
     assert!(config.is_ok());
@@ -185,9 +191,9 @@ fn test_language_patterns_deserialization() {
     use serde_json;
 
     let json_data = r#"{
-        "principals": [{"pattern": "input", "description": "User input"}],
-        "actions": [{"pattern": "validate", "description": "Input validation"}],
-        "resources": [{"pattern": "eval", "description": "Code execution"}]
+        "principals": [{"pattern": "input", "description": "User input", "attack_vector": ["T1059"]}],
+        "actions": [{"pattern": "validate", "description": "Input validation", "attack_vector": ["T1070"]}],
+        "resources": [{"pattern": "eval", "description": "Code execution", "attack_vector": ["T1059"]}]
     }"#;
 
     let patterns: Result<LanguagePatterns, _> = serde_json::from_str(json_data);

@@ -100,6 +100,7 @@ fn test_yaml_pattern_format() {
             pattern: "\\\\btest_resource\\\\s*\\\\(".to_string(),
             description: "Test resource function".to_string(),
             reasoning: "Test reasoning for resource".to_string(),
+            attack_vector: vec!["T1059".to_string()],
         },
         PatternClassification {
             function_name: "test_principal".to_string(),
@@ -107,6 +108,7 @@ fn test_yaml_pattern_format() {
             pattern: "\\\\btest_principal\\\\s*\\\\(".to_string(),
             description: "Test principal function".to_string(),
             reasoning: "Test reasoning for principal".to_string(),
+            attack_vector: vec!["T1190".to_string()],
         },
         PatternClassification {
             function_name: "test_action".to_string(),
@@ -114,6 +116,7 @@ fn test_yaml_pattern_format() {
             pattern: "\\\\btest_action\\\\s*\\\\(".to_string(),
             description: "Test action function".to_string(),
             reasoning: "Test reasoning for action".to_string(),
+            attack_vector: vec!["T1070".to_string()],
         },
     ];
 
@@ -191,6 +194,7 @@ fn test_yaml_append_functionality() {
         pattern: "\\\\bnew_function\\\\s*\\\\(".to_string(),
         description: "New function pattern".to_string(),
         reasoning: "Test reasoning".to_string(),
+        attack_vector: vec!["T1059".to_string()],
     }];
 
     let result =
@@ -214,6 +218,7 @@ fn test_empty_patterns_handling() {
         pattern: "".to_string(),
         description: "".to_string(),
         reasoning: "Not a security pattern".to_string(),
+        attack_vector: vec![],
     }];
 
     let result =
@@ -237,6 +242,7 @@ fn test_language_filtering() {
         pattern: "test_pattern".to_string(),
         description: "Test description".to_string(),
         reasoning: "Test reasoning".to_string(),
+        attack_vector: vec!["T1059".to_string()],
     }];
 
     // Test that Other language is skipped
