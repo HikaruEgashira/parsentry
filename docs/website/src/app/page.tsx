@@ -14,7 +14,7 @@ export default function Home() {
   };
 
   const copyToClipboard = async () => {
-    const command = 'docker run -e OPENAI_API_KEY=$OPENAI_API_KEY ghcr.io/hikaruegashira/vulnhuntrs:latest --repo your-org/your-repo';
+    const command = 'docker run -e OPENAI_API_KEY=$OPENAI_API_KEY ghcr.io/hikaruegashira/parsentry:latest --repo your-org/your-repo';
     try {
       await navigator.clipboard.writeText(command);
       setCopied(true);
@@ -49,8 +49,8 @@ export default function Home() {
               {/* Logo */}
               <div className="mb-12 flex justify-center">
                 <Image
-                  src="/vulnhuntrs/logo.png"
-                  alt="Vulnhuntrs Logo"
+                  src="/parsentry/logo.png"
+                  alt="Parsentry Logo"
                   width={120}
                   height={120}
                   priority
@@ -67,7 +67,7 @@ export default function Home() {
 
               {/* Heading */}
               <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl lg:text-7xl">
-                <span className="block">Vulnhuntrs</span>
+                <span className="block">Parsentry</span>
                 <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   Security Scanner
                 </span>
@@ -87,7 +87,7 @@ export default function Home() {
                   Get Started
                 </button>
                 <a
-                  href="https://github.com/HikaruEgashira/vulnhuntrs"
+                  href="https://github.com/HikaruEgashira/parsentry"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-lg bg-white/10 backdrop-blur-sm px-8 py-3 text-sm font-semibold text-gray-900 dark:text-white ring-1 ring-gray-900/10 dark:ring-white/20 hover:ring-gray-900/20 dark:hover:ring-white/30 transition-all duration-200 hover:scale-105"
@@ -113,7 +113,7 @@ export default function Home() {
               Quick Start
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Get started with Vulnhuntrs in seconds. Just run this single Docker command:
+              Get started with Parsentry in seconds. Just run this single Docker command:
             </p>
           </div>
 
@@ -151,7 +151,7 @@ export default function Home() {
               </div>
               <pre className="text-left text-blue-600 dark:text-green-400 font-mono text-sm md:text-base leading-relaxed overflow-x-auto">
                 <code>{`docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \\
-  ghcr.io/hikaruegashira/vulnhuntrs:latest \\
+  ghcr.io/hikaruegashira/parsentry:latest \\
   --repo your-org/your-repo`}</code>
               </pre>
             </div>
@@ -246,8 +246,8 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="flex justify-center mb-6">
             <Image
-              src="/vulnhuntrs/logo.png"
-              alt="Vulnhuntrs Logo"
+              src="/parsentry/logo.png"
+              alt="Parsentry Logo"
               width={60}
               height={60}
             />
@@ -257,7 +257,7 @@ export default function Home() {
           </p>
           <div className="flex justify-center space-x-6">
             <a
-              href="https://github.com/HikaruEgashira/vulnhuntrs"
+              href="https://github.com/HikaruEgashira/parsentry"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
@@ -265,7 +265,7 @@ export default function Home() {
               GitHub
             </a>
             <a
-              href="https://github.com/HikaruEgashira/vulnhuntrs/issues"
+              href="https://github.com/HikaruEgashira/parsentry/issues"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"

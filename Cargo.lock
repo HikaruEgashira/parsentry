@@ -1209,6 +1209,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "parsentry"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cc",
+ "clap",
+ "dotenvy",
+ "env_logger",
+ "futures",
+ "genai",
+ "git2",
+ "insta",
+ "log",
+ "quick-xml",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "streaming-iterator",
+ "tempfile",
+ "tokio",
+ "tokio-test",
+ "tree-sitter 0.25.6",
+ "tree-sitter-ruby",
+ "tree-sitter-typescript",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2148,35 +2177,6 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
-
-[[package]]
-name = "vulnhuntrs"
-version = "0.6.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cc",
- "clap",
- "dotenvy",
- "env_logger",
- "futures",
- "genai",
- "git2",
- "insta",
- "log",
- "quick-xml",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "streaming-iterator",
- "tempfile",
- "tokio",
- "tokio-test",
- "tree-sitter 0.25.6",
- "tree-sitter-ruby",
- "tree-sitter-typescript",
-]
 
 [[package]]
 name = "want"

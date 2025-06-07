@@ -1,6 +1,6 @@
 # Adding New Language Support
 
-This guide explains how to add support for a new programming language to Vulnhuntrs.
+This guide explains how to add support for a new programming language to Parsentry.
 
 ## Prerequisites
 
@@ -164,7 +164,7 @@ cargo build
 cargo test
 
 # Test with a sample file
-vulnhuntrs -r ./example/<lang>-vulnerable-app --model gpt-4o-mini
+parsentry -r ./example/<lang>-vulnerable-app --model gpt-4o-mini
 ```
 
 ## Implementation Checklist

@@ -11,8 +11,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Vulnhuntrs",
-    default: "Vulnhuntrs - AI-Powered Security Scanner",
+    template: "%s | Parsentry",
+    default: "Parsentry - AI-Powered Security Scanner",
   },
   description: "AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities.",
   keywords: ["security", "vulnerability", "scanner", "AI", "static analysis", "LLM"],
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://hikaruegashira.github.io/vulnhuntrs/",
-    title: "Vulnhuntrs - AI-Powered Security Scanner",
+    url: "https://hikaruegashira.github.io/parsentry/",
+    title: "Parsentry - AI-Powered Security Scanner",
     description: "AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities.",
-    siteName: "Vulnhuntrs",
+    siteName: "Parsentry",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vulnhuntrs - AI-Powered Security Scanner",
+    title: "Parsentry - AI-Powered Security Scanner",
     description: "AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities.",
   },
   robots: {

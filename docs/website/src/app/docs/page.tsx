@@ -2,11 +2,11 @@ export default function DocsPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-16 max-w-4xl">
-        <h1 className="text-4xl font-bold mb-8">Vulnhuntrs Documentation</h1>
+        <h1 className="text-4xl font-bold mb-8">Parsentry Documentation</h1>
         
         <div className="prose prose-lg max-w-none">
           <p className="text-xl text-gray-600 mb-8">
-            Vulnhuntrs is an AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities.
+            Parsentry is an AI-powered security vulnerability scanner that combines static code analysis with LLMs to detect remotely exploitable vulnerabilities.
           </p>
 
           <h2>Features</h2>
@@ -22,24 +22,24 @@ export default function DocsPage() {
           <h3>Installation</h3>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
             <code>{`# Using Docker (recommended)
-docker pull ghcr.io/hikaruegashira/vulnhuntrs:latest
+docker pull ghcr.io/hikaruegashira/parsentry:latest
 
 # Or build from source
-git clone https://github.com/HikaruEgashira/vulnhuntrs
-cd vulnhuntrs
+git clone https://github.com/HikaruEgashira/parsentry
+cd parsentry
 cargo build --release`}</code>
           </pre>
 
           <h3>Basic Usage</h3>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
             <code>{`# Analyze a local directory
-vulnhuntrs -r /path/to/project
+parsentry -r /path/to/project
 
 # Analyze a GitHub repository
-vulnhuntrs --repo owner/repository
+parsentry --repo owner/repository
 
 # Generate summary report
-vulnhuntrs -r /path/to/project --summary`}</code>
+parsentry -r /path/to/project --summary`}</code>
           </pre>
 
           <h2>Raw Documentation for LLMs</h2>
@@ -58,8 +58,8 @@ vulnhuntrs -r /path/to/project --summary`}</code>
 
           <h2>Links</h2>
           <ul>
-            <li><a href="https://github.com/HikaruEgashira/vulnhuntrs" className="text-blue-600 hover:underline">GitHub Repository</a></li>
-            <li><a href="https://hub.docker.com/r/hikaruegashira/vulnhuntrs" className="text-blue-600 hover:underline">Docker Hub</a></li>
+            <li><a href="https://github.com/HikaruEgashira/parsentry" className="text-blue-600 hover:underline">GitHub Repository</a></li>
+            <li><a href="https://hub.docker.com/r/hikaruegashira/parsentry" className="text-blue-600 hover:underline">Docker Hub</a></li>
           </ul>
         </div>
       </div>
