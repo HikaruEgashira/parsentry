@@ -48,6 +48,7 @@ pub enum PatternType {
 pub struct PatternConfig {
     pub pattern: String,
     pub description: String,
+    pub attack_vector: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -62,6 +63,7 @@ pub struct SecurityRiskPatterns {
     action_patterns: Vec<Regex>,      // What patterns
     resource_patterns: Vec<Regex>,    // Where patterns
     pattern_type_map: HashMap<String, PatternType>,
+    attack_vector_map: HashMap<String, Vec<String>>,
 }
 
 impl SecurityRiskPatterns {
@@ -80,11 +82,15 @@ impl SecurityRiskPatterns {
         let mut action_patterns = Vec::new();
         let mut resource_patterns = Vec::new();
         let mut pattern_type_map = HashMap::new();
+        let mut attack_vector_map = HashMap::new();
 
         if let Some(principals) = &lang_patterns.principals {
             for config in principals {
                 let regex = Regex::new(&config.pattern).unwrap();
                 pattern_type_map.insert(config.pattern.clone(), PatternType::Principal);
+                if !config.attack_vector.is_empty() {
+                    attack_vector_map.insert(config.pattern.clone(), config.attack_vector.clone());
+                }
                 principal_patterns.push(regex);
             }
         }
@@ -93,6 +99,9 @@ impl SecurityRiskPatterns {
             for config in actions {
                 let regex = Regex::new(&config.pattern).unwrap();
                 pattern_type_map.insert(config.pattern.clone(), PatternType::Action);
+                if !config.attack_vector.is_empty() {
+                    attack_vector_map.insert(config.pattern.clone(), config.attack_vector.clone());
+                }
                 action_patterns.push(regex);
             }
         }
@@ -101,6 +110,9 @@ impl SecurityRiskPatterns {
             for config in resources {
                 let regex = Regex::new(&config.pattern).unwrap();
                 pattern_type_map.insert(config.pattern.clone(), PatternType::Resource);
+                if !config.attack_vector.is_empty() {
+                    attack_vector_map.insert(config.pattern.clone(), config.attack_vector.clone());
+                }
                 resource_patterns.push(regex);
             }
         }
@@ -110,6 +122,7 @@ impl SecurityRiskPatterns {
             action_patterns,
             resource_patterns,
             pattern_type_map,
+            attack_vector_map,
         }
     }
 
@@ -135,6 +148,17 @@ impl SecurityRiskPatterns {
             }
         }
         None
+    }
+
+    pub fn get_attack_vectors(&self, content: &str) -> Vec<String> {
+        for (pattern_str, attack_vectors) in &self.attack_vector_map {
+            if let Ok(regex) = Regex::new(pattern_str) {
+                if regex.is_match(content) {
+                    return attack_vectors.clone();
+                }
+            }
+        }
+        Vec::new()
     }
 
     fn load_patterns() -> HashMap<Language, LanguagePatterns> {

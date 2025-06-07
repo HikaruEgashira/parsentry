@@ -76,7 +76,7 @@ impl CodeParser {
         }
     }
 
-    fn get_query_path(&self, language: &Language, query_name: &str) -> Result<PathBuf> {
+    fn get_query_content(&self, language: &Language, query_name: &str) -> Result<&'static str> {
         let lang_name = if language == &unsafe { tree_sitter_c() } {
             "c"
         } else if language == &unsafe { tree_sitter_cpp() } {
@@ -108,21 +108,56 @@ impl CodeParser {
             return Err(anyhow!("クエリパスのクエリ名が不正です: {}", query_name));
         }
 
-        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let query_file_name = format!("{}.scm", query_name);
-        let query_path = manifest_dir
-            .join("src/queries")
-            .join(lang_name)
-            .join(&query_file_name);
+        let query_content = match lang_name {
+            "c" => match query_name {
+                "definitions" => include_str!("queries/c/definitions.scm"),
+                "references" => include_str!("queries/c/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "cpp" => match query_name {
+                "definitions" => include_str!("queries/cpp/definitions.scm"),
+                "references" => include_str!("queries/cpp/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "python" => match query_name {
+                "definitions" => include_str!("queries/python/definitions.scm"),
+                "references" => include_str!("queries/python/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "javascript" => match query_name {
+                "definitions" => include_str!("queries/javascript/definitions.scm"),
+                "references" => include_str!("queries/javascript/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "typescript" => match query_name {
+                "definitions" => include_str!("queries/typescript/definitions.scm"),
+                "references" => include_str!("queries/typescript/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "java" => match query_name {
+                "definitions" => include_str!("queries/java/definitions.scm"),
+                "references" => include_str!("queries/java/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "go" => match query_name {
+                "definitions" => include_str!("queries/go/definitions.scm"),
+                "references" => include_str!("queries/go/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "rust" => match query_name {
+                "definitions" => include_str!("queries/rust/definitions.scm"),
+                "references" => include_str!("queries/rust/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "ruby" => match query_name {
+                "definitions" => include_str!("queries/ruby/definitions.scm"),
+                "references" => include_str!("queries/ruby/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            _ => return Err(anyhow!("未対応の言語: {}", lang_name)),
+        };
 
-        if !query_path.exists() {
-            return Err(anyhow!(
-                "クエリファイルが見つかりません: {}",
-                query_path.display()
-            ));
-        }
-
-        Ok(query_path)
+        Ok(query_content)
     }
 
     pub fn find_definition(
@@ -151,21 +186,10 @@ impl CodeParser {
             .parse(content, None)
             .ok_or_else(|| anyhow!("ファイルのパースに失敗しました: {}", source_file.display()))?;
 
-        let query_path = self.get_query_path(&language, "definitions")?;
-        let query_str = fs::read_to_string(&query_path).map_err(|e| {
-            anyhow!(
-                "クエリファイルの読み込みに失敗しました: {}: {}",
-                query_path.display(),
-                e
-            )
-        })?;
+        let query_str = self.get_query_content(&language, "definitions")?;
 
         let query = Query::new(&language, &query_str).map_err(|e| {
-            anyhow!(
-                "クエリの生成に失敗しました: {}: {}",
-                query_path.display(),
-                e
-            )
+            anyhow!("クエリの生成に失敗しました: {}", e)
         })?;
 
         let mut query_cursor = QueryCursor::new();
@@ -228,23 +252,12 @@ impl CodeParser {
                 }
             };
 
-            let query_path = match self.get_query_path(&language, "references") {
-                Ok(p) => p,
-                Err(e) => {
-                    eprintln!(
-                        "警告: 参照クエリパスの取得に失敗しました: {}: {}",
-                        file_path.display(),
-                        e
-                    );
-                    continue;
-                }
-            };
-            let query_str = match fs::read_to_string(&query_path) {
+            let query_str = match self.get_query_content(&language, "references") {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!(
-                        "警告: 参照クエリファイルの読み込みに失敗しました: {}: {}",
-                        query_path.display(),
+                        "警告: 参照クエリの取得に失敗しました: {}: {}",
+                        file_path.display(),
                         e
                     );
                     continue;
@@ -255,8 +268,7 @@ impl CodeParser {
                 Ok(q) => q,
                 Err(e) => {
                     eprintln!(
-                        "警告: 参照クエリの生成に失敗しました: {}: {}",
-                        query_path.display(),
+                        "警告: 参照クエリの生成に失敗しました: {}",
                         e
                     );
                     continue;
@@ -320,8 +332,7 @@ impl CodeParser {
             .parse(file_content, None)
             .ok_or_else(|| anyhow::anyhow!("パース失敗: {}", start_path.display()))?;
 
-        let query_path = self.get_query_path(&language, "definitions")?;
-        let query_str = std::fs::read_to_string(&query_path)?;
+        let query_str = self.get_query_content(&language, "definitions")?;
         let query = tree_sitter::Query::new(&language, &query_str)?;
 
         let mut query_cursor = tree_sitter::QueryCursor::new();

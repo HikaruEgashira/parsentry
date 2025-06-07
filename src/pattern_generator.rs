@@ -16,6 +16,7 @@ pub struct PatternClassification {
     pub pattern: String,
     pub description: String,
     pub reasoning: String,
+    pub attack_vector: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -149,6 +150,8 @@ For each function, determine if it should be classified as:
 
 Note: Pay special attention to second-order principals - functions that return data from databases, APIs, or other external sources that could contain untrusted data originally from user input.
 
+For each function that IS a security pattern, also identify potential MITRE ATT&CK techniques that could be associated with this pattern. Use the format "T1234" for technique IDs.
+
 For each function that IS a security pattern, generate a regex pattern that would match similar functions.
 
 Function Definitions:
@@ -162,7 +165,8 @@ Return a JSON object with this exact structure:
       "pattern_type": "principals",
       "pattern": "\\\\bexample_function\\\\s*\\\\(",
       "description": "Example function description",
-      "reasoning": "Why this function is classified as this pattern type"
+      "reasoning": "Why this function is classified as this pattern type",
+      "attack_vector": ["T1059", "T1190"]
     }}
   ]
 }}
@@ -183,9 +187,15 @@ Only include functions that ARE security patterns (principals, actions, or resou
                         "pattern_type": {"type": "string", "enum": ["principals", "actions", "resources"]},
                         "pattern": {"type": "string"},
                         "description": {"type": "string"},
-                        "reasoning": {"type": "string"}
+                        "reasoning": {"type": "string"},
+                        "attack_vector": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
                     },
-                    "required": ["function_name", "pattern_type", "pattern", "description", "reasoning"]
+                    "required": ["function_name", "pattern_type", "pattern", "description", "reasoning", "attack_vector"]
                 }
             }
         },
@@ -208,8 +218,6 @@ Only include functions that ARE security patterns (principals, actions, or resou
     let content = chat_res
         .content_text_as_str()
         .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
-
-    println!("🔍 LLM Response: {}", content);
 
     let response: PatternAnalysisResponse = serde_json::from_str(content).map_err(|e| {
         anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
@@ -264,6 +272,12 @@ pub fn write_patterns_to_file(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
             ));
+            if !pattern.attack_vector.is_empty() {
+                yaml_content.push_str("      attack_vector:\n");
+                for technique in &pattern.attack_vector {
+                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
+                }
+            }
         }
     }
 
@@ -274,6 +288,12 @@ pub fn write_patterns_to_file(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
             ));
+            if !pattern.attack_vector.is_empty() {
+                yaml_content.push_str("      attack_vector:\n");
+                for technique in &pattern.attack_vector {
+                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
+                }
+            }
         }
     }
 
@@ -284,6 +304,12 @@ pub fn write_patterns_to_file(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
             ));
+            if !pattern.attack_vector.is_empty() {
+                yaml_content.push_str("      attack_vector:\n");
+                for technique in &pattern.attack_vector {
+                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
+                }
+            }
         }
     }
 

@@ -98,8 +98,6 @@ async fn main() -> Result<()> {
         panic!("root path or repo must be set");
     };
 
-    let repo = RepoOps::new(root_dir.clone());
-
     println!("🔍 Parsentry - PAR-based security scanner");
 
     // Handle pattern generation mode
@@ -107,6 +105,8 @@ async fn main() -> Result<()> {
         println!("🔧 カスタムパターン生成モードを開始します");
         return generate_custom_patterns(&root_dir, &args.model).await;
     }
+
+    let repo = RepoOps::new(root_dir.clone());
 
     let files = repo.get_relevant_files();
     println!(
