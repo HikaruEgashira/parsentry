@@ -15,7 +15,6 @@ pub enum Language {
     Ruby,
     C,
     Cpp,
-    // IaC Languages
     Terraform,
     CloudFormation,
     Kubernetes,
@@ -45,7 +44,6 @@ impl Language {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternType {
-    // PAR Model - Unified for Programming & IaC
     Principal,  // Who: user input (Programming) | AWS account/role (IaC)
     Action,     // What: operations/methods (Programming) | API actions (IaC)  
     Resource,   // Where: files/databases (Programming) | AWS resources (IaC)

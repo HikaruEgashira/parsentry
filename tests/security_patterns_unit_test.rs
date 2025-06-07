@@ -19,15 +19,12 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("cc"), Language::Cpp);
     assert_eq!(Language::from_extension("hpp"), Language::Cpp);
     assert_eq!(Language::from_extension("hxx"), Language::Cpp);
-    
-    // Test IaC extensions
     assert_eq!(Language::from_extension("tf"), Language::Terraform);
     assert_eq!(Language::from_extension("hcl"), Language::Terraform);
     assert_eq!(Language::from_extension("yaml"), Language::Kubernetes);
     assert_eq!(Language::from_extension("yml"), Language::Kubernetes);
     assert_eq!(Language::from_extension("json"), Language::CloudFormation);
 
-    // Test unknown extensions
     assert_eq!(Language::from_extension("txt"), Language::Other);
     assert_eq!(Language::from_extension(""), Language::Other);
     assert_eq!(Language::from_extension("unknown"), Language::Other);

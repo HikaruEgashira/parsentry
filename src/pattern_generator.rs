@@ -234,7 +234,6 @@ pub fn write_patterns_to_file(
         Language::Ruby => "Ruby",
         Language::C => "C",
         Language::Cpp => "Cpp",
-        // IaC Languages
         Language::Terraform => "Terraform",
         Language::CloudFormation => "CloudFormation",
         Language::Kubernetes => "Kubernetes",
