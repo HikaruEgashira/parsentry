@@ -272,7 +272,7 @@ async fn test_high_confidence_security_detection() -> Result<()> {
         return Ok(());
     }
     
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     
     // Test only the high-confidence security vulnerability cases
     let high_confidence_cases: Vec<_> = ACCURACY_TEST_CASES.iter()
@@ -316,7 +316,7 @@ async fn test_false_positive_control() -> Result<()> {
         return Ok(());
     }
     
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     
     // Test only the clear non-security cases
     let non_security_cases: Vec<_> = ACCURACY_TEST_CASES.iter()
@@ -361,7 +361,7 @@ async fn test_pattern_classification_accuracy() -> Result<()> {
         return Ok(());
     }
     
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     
     // Test only security-relevant cases with clear pattern expectations
     let pattern_cases: Vec<_> = ACCURACY_TEST_CASES.iter()
@@ -416,7 +416,7 @@ async fn test_comprehensive_accuracy() -> Result<()> {
         return Ok(());
     }
     
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     
     println!("🧪 包括的精度テスト: {}ケース", ACCURACY_TEST_CASES.len());
     

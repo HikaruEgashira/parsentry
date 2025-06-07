@@ -452,7 +452,7 @@ async fn test_prompt_slo_compliance() -> Result<()> {
         return Ok(());
     }
 
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     let slo = PromptSLO::default();
     let report = run_slo_compliance_test(model, &slo).await?;
     
@@ -517,7 +517,7 @@ async fn test_prompt_consistency_slo() -> Result<()> {
     }
     
     let slo = PromptSLO::default();
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     let runs = 3;
     
     // Select a representative test case

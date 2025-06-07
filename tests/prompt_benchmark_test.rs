@@ -325,7 +325,7 @@ async fn test_prompt_benchmark() -> Result<()> {
         return Ok(());
     }
 
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     let results = run_risk_assessment_benchmark(model).await?;
     
     println!("\n📊 ベンチマーク結果:");
@@ -389,7 +389,7 @@ function handleUserLogin(req, res) {
         reasoning: "Should consistently identify as high-risk principal".to_string(),
     };
     
-    let model = "gpt-4";
+    let model = "gpt-4.1-mini";
     let runs = 3;
     let mut risk_results = Vec::new();
     let mut pattern_results = Vec::new();
