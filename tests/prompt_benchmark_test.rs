@@ -1,8 +1,7 @@
 use anyhow::Result;
-use parsentry::parser::{CodeParser, Definition};
+use parsentry::parser::CodeParser;
 use parsentry::security_patterns::Language;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use tempfile::tempdir;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -267,7 +266,7 @@ async fn run_risk_assessment_benchmark(model: &str) -> Result<BenchmarkResults> 
                 None
             };
             
-            let risk_correct = match (&test_case.expected_risk_level.as_str(), actual_risk.as_str()) {
+            let risk_correct = match (test_case.expected_risk_level.as_str(), actual_risk.as_str()) {
                 ("high", "high") | ("medium", "high") => true, // Our filter combines high/medium
                 ("low", "none") | ("none", "none") => true,
                 _ => false,

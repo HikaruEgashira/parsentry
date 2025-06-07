@@ -498,7 +498,7 @@ async fn test_prompt_slo_compliance() -> Result<()> {
     
     if !all_slos_met {
         let failed_slos: Vec<String> = report.slo_compliance.iter()
-            .filter(|(_, &compliant)| !compliant)
+            .filter(|&(_, &compliant)| !compliant)
             .map(|(metric, _)| metric.clone())
             .collect();
         panic!("SLO violations detected in: {:?}", failed_slos);

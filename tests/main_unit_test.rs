@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use parsentry::response::FileAnalysisResult;
 use parsentry::response::{AnalysisSummary, Response, VulnType};
 
 #[test]
