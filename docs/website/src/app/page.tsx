@@ -209,7 +209,7 @@ export default function Home() {
                 </div>
                 <dt className="mt-4 font-semibold text-gray-900 dark:text-white">Multi-Language Support</dt>
                 <dd className="mt-2 leading-7 text-gray-600 dark:text-gray-300">
-                  Native support for Rust, Python, JavaScript, TypeScript, Go, Java, and Ruby with advanced tree-sitter parsing.
+                  Native support for Rust, Python, JavaScript, TypeScript, Go, Java, Ruby, C/C++, and Terraform with advanced tree-sitter parsing.
                 </dd>
               </div>
 
@@ -221,7 +221,7 @@ export default function Home() {
                 </div>
                 <dt className="mt-4 font-semibold text-gray-900 dark:text-white">AI-Powered Analysis</dt>
                 <dd className="mt-2 leading-7 text-gray-600 dark:text-gray-300">
-                  Leverages large language models to identify complex security patterns beyond traditional static analysis.
+                  Leverages large language models with PAR (Principal-Action-Resource) classification and MITRE ATT&CK mapping to identify complex security patterns.
                 </dd>
               </div>
 
@@ -233,7 +233,7 @@ export default function Home() {
                 </div>
                 <dt className="mt-4 font-semibold text-gray-900 dark:text-white">Detailed Reports</dt>
                 <dd className="mt-2 leading-7 text-gray-600 dark:text-gray-300">
-                  Comprehensive vulnerability reports with proof-of-concept exploits and actionable remediation guidance.
+                  Comprehensive vulnerability reports with confidence scoring, proof-of-concept exploits, and context-aware remediation guidance.
                 </dd>
               </div>
             </dl>

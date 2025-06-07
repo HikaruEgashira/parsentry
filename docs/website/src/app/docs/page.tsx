@@ -11,10 +11,12 @@ export default function DocsPage() {
 
           <h2>Features</h2>
           <ul>
-            <li><strong>Multi-language support</strong>: Supports Rust, Python, JavaScript, TypeScript, Go, Java, and Ruby</li>
-            <li><strong>AI-powered analysis</strong>: Uses large language models to identify complex security vulnerabilities</li>
-            <li><strong>Detailed reports</strong>: Generates comprehensive vulnerability reports with proof-of-concept code</li>
-            <li><strong>Static code analysis</strong>: Combines pattern matching with semantic analysis using tree-sitter</li>
+            <li><strong>Multi-language support</strong>: Supports Rust, Python, JavaScript, TypeScript, Go, Java, Ruby, C/C++, and Terraform</li>
+            <li><strong>PAR Classification</strong>: Uses Principal-Action-Resource framework to categorize security patterns</li>
+            <li><strong>MITRE ATT&CK Integration</strong>: Maps vulnerabilities to MITRE ATT&CK tactics and techniques</li>
+            <li><strong>AI-powered analysis</strong>: Uses large language models to identify complex security vulnerabilities with context-aware analysis</li>
+            <li><strong>Detailed reports</strong>: Generates comprehensive vulnerability reports with confidence scoring and proof-of-concept code</li>
+            <li><strong>Tree-sitter parsing</strong>: Combines pattern matching with semantic analysis using tree-sitter for accurate code understanding</li>
           </ul>
 
           <h2>Quick Start</h2>
@@ -33,28 +35,52 @@ cargo build --release`}</code>
           <h3>Basic Usage</h3>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
             <code>{`# Analyze a local directory
-parsentry -r /path/to/project
+cargo run -- -r /path/to/project
 
 # Analyze a GitHub repository
-parsentry --repo owner/repository
+cargo run -- --repo owner/repository
 
-# Generate summary report
-parsentry -r /path/to/project --summary`}</code>
+# Generate summary report with markdown output
+cargo run -- -r /path/to/project --output-dir ./reports --summary
+
+# Specify LLM model
+cargo run -- -r /path/to/project --model gpt-4
+
+# Set minimum confidence threshold
+cargo run -- -r /path/to/project --min-confidence 70`}</code>
           </pre>
 
-          <h2>Raw Documentation for LLMs</h2>
-          <p>Complete documentation is available in plain markdown format for LLM consumption:</p>
+          <h2>Supported Vulnerability Types</h2>
+          <p>Parsentry can detect the following vulnerability types:</p>
           <ul>
-            <li><a href="/docs/raw/index.md" className="text-blue-600 hover:underline">Documentation Index</a></li>
-            <li><a href="/docs/raw/getting-started.md" className="text-blue-600 hover:underline">Getting Started</a></li>
-            <li><a href="/docs/raw/installation.md" className="text-blue-600 hover:underline">Installation Guide</a></li>
-            <li><a href="/docs/raw/configuration.md" className="text-blue-600 hover:underline">Configuration</a></li>
-            <li><a href="/docs/raw/usage.md" className="text-blue-600 hover:underline">Usage Examples</a></li>
-            <li><a href="/docs/raw/examples.md" className="text-blue-600 hover:underline">Real-world Examples</a></li>
-            <li><a href="/docs/raw/architecture.md" className="text-blue-600 hover:underline">Architecture</a></li>
-            <li><a href="/docs/raw/api.md" className="text-blue-600 hover:underline">API Reference</a></li>
-            <li><a href="/docs/raw/contributing.md" className="text-blue-600 hover:underline">Contributing Guide</a></li>
+            <li><strong>LFI</strong> - Local File Inclusion</li>
+            <li><strong>RCE</strong> - Remote Code Execution</li>
+            <li><strong>SSRF</strong> - Server-Side Request Forgery</li>
+            <li><strong>AFO</strong> - Arbitrary File Operation</li>
+            <li><strong>SQLI</strong> - SQL Injection</li>
+            <li><strong>XSS</strong> - Cross-Site Scripting</li>
+            <li><strong>IDOR</strong> - Insecure Direct Object Reference</li>
           </ul>
+
+          <h2>Environment Variables</h2>
+          <p>Configure Parsentry using these environment variables:</p>
+          <ul>
+            <li><code>OPENAI_API_KEY</code> - OpenAI API key for GPT models</li>
+            <li><code>ANTHROPIC_API_KEY</code> - Anthropic API key for Claude models</li>
+            <li><code>GOOGLE_API_KEY</code> - Google API key for Gemini models</li>
+            <li><code>GROQ_API_KEY</code> - Groq API key for fast inference models</li>
+          </ul>
+
+          <h2>Architecture</h2>
+          <p>Parsentry follows a pipeline architecture:</p>
+          <ol>
+            <li><strong>File Discovery</strong> - Identifies source files to analyze</li>
+            <li><strong>Pattern Matching</strong> - Filters files using PAR classification</li>
+            <li><strong>Code Parsing</strong> - Uses tree-sitter for semantic analysis</li>
+            <li><strong>Context Building</strong> - Collects function definitions and references</li>
+            <li><strong>LLM Analysis</strong> - Sends code + context to LLM for vulnerability detection</li>
+            <li><strong>Response Handling</strong> - Formats and validates LLM responses</li>
+          </ol>
 
           <h2>Links</h2>
           <ul>
