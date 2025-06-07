@@ -1,8 +1,6 @@
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Language {
@@ -34,8 +32,6 @@ impl Language {
             "c" | "h" => Language::C,
             "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Language::Cpp,
             "tf" | "hcl" => Language::Terraform,
-            "json" => Language::CloudFormation,
-            "yaml" | "yml" => Language::Kubernetes,
             _ => Language::Other,
         }
     }
@@ -144,12 +140,9 @@ impl SecurityRiskPatterns {
     fn load_patterns() -> HashMap<Language, LanguagePatterns> {
         use Language::*;
 
-        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let yaml_path = manifest_dir.join("src/patterns.yml");
-        let content = fs::read_to_string(&yaml_path)
-            .unwrap_or_else(|_| panic!("failed to read {}", yaml_path.display()));
+        let content = include_str!("patterns.yml");
         let raw_map: HashMap<String, LanguagePatterns> =
-            serde_yaml::from_str(&content).expect("failed to parse src/patterns.yml");
+            serde_yaml::from_str(content).expect("failed to parse src/patterns.yml");
 
         let mut map = HashMap::new();
         for (lang, patterns) in raw_map {

@@ -47,9 +47,6 @@ impl RepoOps {
             "hxx".to_string(),
             "tf".to_string(),
             "hcl".to_string(),
-            "yaml".to_string(),
-            "yml".to_string(),
-            "json".to_string(),
         ];
 
         Self {
