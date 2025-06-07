@@ -24,6 +24,19 @@ struct PatternAnalysisResponse {
     patterns: Vec<PatternClassification>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct SecurityRiskAssessment {
+    function_name: String,
+    risk_level: String, // "high", "medium", "low", "none"
+    reasoning: String,
+    security_relevance: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct RiskFilterResponse {
+    assessments: Vec<SecurityRiskAssessment>,
+}
+
 pub async fn generate_custom_patterns(root_dir: &Path, model: &str) -> Result<()> {
     println!(
         "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
@@ -128,25 +141,35 @@ pub async fn generate_custom_patterns(root_dir: &Path, model: &str) -> Result<()
     Ok(())
 }
 
-async fn analyze_definitions_for_security_patterns(
+pub async fn analyze_definitions_for_security_patterns<'a>(
     model: &str,
-    definitions: &[&crate::parser::Definition],
+    definitions: &'a [&crate::parser::Definition],
     language: Language,
 ) -> Result<Vec<PatternClassification>> {
-    let definitions_text = definitions
+    // First filter definitions to only include high-risk security-related ones
+    let high_risk_definitions = filter_high_risk_definitions(model, definitions, language).await?;
+    
+    if high_risk_definitions.is_empty() {
+        println!("   ℹ️  セキュリティリスクの高い定義が見つかりませんでした");
+        return Ok(Vec::new());
+    }
+
+    println!("   🎯 {}個の高リスク定義を詳細分析中...", high_risk_definitions.len());
+    
+    let definitions_text = high_risk_definitions
         .iter()
         .map(|def| format!("Function: {}\nCode:\n{}\n---", def.name, def.source))
         .collect::<Vec<_>>()
         .join("\n\n");
 
     let prompt = format!(
-        r#"Analyze the following function definitions from a {:?} codebase and classify them as security patterns.
+        r#"Analyze the following HIGH-RISK function definitions from a {:?} codebase and classify them as security patterns.
 
-For each function, determine if it should be classified as:
+These functions have already been pre-filtered as potentially security-relevant. For each function, determine if it should be classified as:
 - "principals": Functions that represent sources of authority, user input, external data entry points, or second-order data sources (e.g., database query results, API responses, file contents)
 - "actions": Functions that perform validation, sanitization, authorization, or security operations
 - "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
-- null: Functions that don't fit any PAR security pattern category
+- null: Functions that don't fit any PAR security pattern category (should be rare for pre-filtered functions)
 
 Note: Pay special attention to second-order principals - functions that return data from databases, APIs, or other external sources that could contain untrusted data originally from user input.
 
@@ -224,6 +247,135 @@ Only include functions that ARE security patterns (principals, actions, or resou
     })?;
 
     Ok(response.patterns)
+}
+
+pub async fn filter_high_risk_definitions<'a>(
+    model: &str,
+    definitions: &'a [&crate::parser::Definition],
+    language: Language,
+) -> Result<Vec<&'a crate::parser::Definition>> {
+    let definitions_summary = definitions
+        .iter()
+        .map(|def| format!("Function: {}\nSignature: {}", def.name, def.source.lines().next().unwrap_or("")))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let prompt = format!(
+        r#"Analyze the following function definitions from a {:?} codebase and assess their security risk level.
+
+For each function, evaluate if it:
+1. Handles user input or external data (HTTP requests, file uploads, database queries, command line arguments, environment variables)
+2. Performs authentication, authorization, or access control
+3. Deals with cryptography, passwords, tokens, or secrets
+4. Accesses files, databases, networks, or system resources
+5. Performs data validation, sanitization, or encoding/decoding
+6. Executes system commands or external processes
+7. Handles configuration, logging, or error messages that might leak sensitive information
+8. Deals with session management, cookies, or state management
+9. Performs operations that could lead to code injection, path traversal, or other common vulnerabilities
+10. Is a second-order data source (returns data from databases, APIs, or external sources)
+
+Classify each function with a risk level:
+- "high": Directly security-critical functions that handle untrusted input, authentication, authorization, or resource access
+- "medium": Functions that might be security-relevant but less directly exposed
+- "low": Functions with minimal security implications
+- "none": Functions with no apparent security relevance
+
+Function Definitions:
+{}
+
+Return a JSON object with this exact structure:
+{{
+  "assessments": [
+    {{
+      "function_name": "example_function",
+      "risk_level": "high",
+      "reasoning": "Detailed explanation of why this function has this risk level",
+      "security_relevance": true
+    }}
+  ]
+}}
+
+Be conservative and inclusive - it's better to include a function that might be security-relevant than to miss one."#,
+        language, definitions_summary
+    );
+
+    let risk_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "assessments": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "function_name": {"type": "string"},
+                        "risk_level": {"type": "string", "enum": ["high", "medium", "low", "none"]},
+                        "reasoning": {"type": "string"},
+                        "security_relevance": {"type": "boolean"}
+                    },
+                    "required": ["function_name", "risk_level", "reasoning", "security_relevance"]
+                }
+            }
+        },
+        "required": ["assessments"]
+    });
+
+    let client_config = ClientConfig::default().with_chat_options(
+        ChatOptions::default().with_response_format(JsonSpec::new("json_object", risk_schema)),
+    );
+    let client = Client::builder().with_config(client_config).build();
+
+    let chat_req = ChatRequest::new(vec![
+        ChatMessage::system(
+            "You are a security risk assessor. You must reply with exactly one JSON object that matches the specified schema. Do not include any explanatory text outside the JSON object.",
+        ),
+        ChatMessage::user(&prompt),
+    ]);
+
+    let chat_res = client.exec_chat(model, chat_req, None).await?;
+    let content = chat_res
+        .content_text_as_str()
+        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
+
+    let response: RiskFilterResponse = serde_json::from_str(content).map_err(|e| {
+        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
+    })?;
+
+    // Filter to only include high-risk and medium-risk functions that are security-relevant
+    let high_risk_names: std::collections::HashSet<_> = response
+        .assessments
+        .iter()
+        .filter(|assessment| {
+            assessment.security_relevance && 
+            (assessment.risk_level == "high" || assessment.risk_level == "medium")
+        })
+        .map(|assessment| assessment.function_name.as_str())
+        .collect();
+
+    let filtered_definitions: Vec<&crate::parser::Definition> = definitions
+        .iter()
+        .filter(|def| high_risk_names.contains(def.name.as_str()))
+        .copied()
+        .collect();
+
+    println!(
+        "   🔍 {}/{}個の定義が高・中リスクとして識別されました",
+        filtered_definitions.len(),
+        definitions.len()
+    );
+
+    for assessment in &response.assessments {
+        if assessment.security_relevance && (assessment.risk_level == "high" || assessment.risk_level == "medium") {
+            println!(
+                "     - {} [{}]: {}",
+                assessment.function_name,
+                assessment.risk_level,
+                assessment.reasoning
+            );
+        }
+    }
+
+    Ok(filtered_definitions)
 }
 
 pub fn write_patterns_to_file(
