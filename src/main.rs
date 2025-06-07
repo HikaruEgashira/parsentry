@@ -55,7 +55,7 @@ struct Args {
     output_dir: Option<PathBuf>,
 
     /// 最小信頼度スコア（これ以上のスコアを持つ脆弱性のみ表示）
-    #[arg(long, default_value = "0")]
+    #[arg(long, default_value = "70")]
     min_confidence: i32,
 
     /// 特定の脆弱性タイプでフィルタリング（カンマ区切りで複数指定可）

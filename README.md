@@ -45,17 +45,17 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 # Use different LLM models
 docker run -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
   ghcr.io/hikaruegashira/parsentry:latest \
-  --repo owner/repository --model claude-3-sonnet
+  --repo owner/repository --model claude-opus-4
 ```
 
 ### Command Line Options
 
-- `--repo <REPO>`: Analyze GitHub repository (owner/repo format)
-- `--root <PATH>`: Analyze local directory  
+- `--repo <REPO>`: Analyze GitHub repository (owner/repo)
+- `--root <PATH>`: Analyze local directory
 - `--output-dir <DIR>`: Directory for markdown reports
 - `--summary`: Generate summary report
-- `--model <MODEL>`: LLM model to use (supports OpenAI, Anthropic, Google, Groq)
-- `--min-confidence <SCORE>`: Minimum confidence score filter (0-100)
+- `--model <MODEL>`: LLM model to use (supports OpenAI, Anthropic, Google, Groq, default: o4-mini)
+- `--min-confidence <SCORE>`: Minimum confidence score filter (0-100, default: 70)
 - `--vuln-types <TYPES>`: Filter by vulnerability types (LFI,RCE,SSRF,AFO,SQLI,XSS,IDOR)
 
 ## Examples
