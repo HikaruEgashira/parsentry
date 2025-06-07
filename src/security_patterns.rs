@@ -33,10 +33,9 @@ impl Language {
             "rb" => Language::Ruby,
             "c" | "h" => Language::C,
             "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Language::Cpp,
-            // IaC extensions
             "tf" | "hcl" => Language::Terraform,
-            "json" => Language::CloudFormation, // Context-dependent
-            "yaml" | "yml" => Language::Kubernetes, // Context-dependent
+            "json" => Language::CloudFormation,
+            "yaml" | "yml" => Language::Kubernetes,
             _ => Language::Other,
         }
     }
@@ -45,7 +44,7 @@ impl Language {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternType {
     Principal,  // Who: user input (Programming) | AWS account/role (IaC)
-    Action,     // What: operations/methods (Programming) | API actions (IaC)  
+    Action,     // What: operations/methods (Programming) | API actions (IaC)
     Resource,   // Where: files/databases (Programming) | AWS resources (IaC)
 }
 
@@ -57,16 +56,14 @@ pub struct PatternConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LanguagePatterns {
-    // PAR Model patterns
     pub principals: Option<Vec<PatternConfig>>,  // Who (sources of authority/input)
     pub actions: Option<Vec<PatternConfig>>,     // What (operations/permissions)
     pub resources: Option<Vec<PatternConfig>>,   // Where (targets/sinks)
 }
 
 pub struct SecurityRiskPatterns {
-    // PAR Model patterns  
     principal_patterns: Vec<Regex>,   // Who patterns
-    action_patterns: Vec<Regex>,      // What patterns  
+    action_patterns: Vec<Regex>,      // What patterns
     resource_patterns: Vec<Regex>,    // Where patterns
     pattern_type_map: HashMap<String, PatternType>,
 }
@@ -134,7 +131,6 @@ impl SecurityRiskPatterns {
                 .any(|pattern| pattern.is_match(content))
     }
 
-    /// パターンの種類を取得する。
     pub fn get_pattern_type(&self, content: &str) -> Option<PatternType> {
         for (pattern_str, pattern_type) in &self.pattern_type_map {
             let regex = Regex::new(pattern_str).ok()?;
@@ -145,7 +141,6 @@ impl SecurityRiskPatterns {
         None
     }
 
-    /// 言語ごとのパターン定義を読み込む
     fn load_patterns() -> HashMap<Language, LanguagePatterns> {
         use Language::*;
 
@@ -168,7 +163,6 @@ impl SecurityRiskPatterns {
                 "Ruby" => Ruby,
                 "C" => C,
                 "Cpp" => Cpp,
-                // IaC Languages
                 "Terraform" => Terraform,
                 "CloudFormation" => CloudFormation,
                 "Kubernetes" => Kubernetes,
