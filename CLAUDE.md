@@ -31,22 +31,6 @@ cargo run -- -r /path/to/project --model gpt-4.1-nano
 
 # Generate markdown reports
 cargo run -- -r /path/to/project --output-dir ./reports --summary
-
-# Filter by confidence and vulnerability types
-cargo run -- -r /path/to/project --min-confidence 7 --vuln-types RCE,SQLI
-```
-
-### Docker Operations
-```bash
-# Build multi-arch image
-docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/hikaruegashira/parsentry:latest --push .
-
-# Run with Docker
-docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  -v $(pwd)/reports:/reports \
-  --user $(id -u):$(id -g) \
-  ghcr.io/hikaruegashira/parsentry:latest \
-  --repo PentesterLab/cr-go --output-dir /reports --summary
 ```
 
 ### Architecture Overview
