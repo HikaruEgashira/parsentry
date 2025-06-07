@@ -439,14 +439,12 @@ mod tests {
         let mut summary = AnalysisSummary::new();
         
         let response = Response {
-            vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-            summary: "Test vulnerability".to_string(),
-            explanation: "This is a test vulnerability".to_string(),
-            vulnerability_location: "line: 42".to_string(),
+            scratchpad: "Test analysis".to_string(),
+            analysis: "This is a test vulnerability".to_string(),
+            poc: "SELECT * FROM users".to_string(),
             confidence_score: 85,
-            mitre_attack: vec!["T1190".to_string()],
-            cwe: Some("CWE-89".to_string()),
-            proof_of_concept: Some("SELECT * FROM users".to_string()),
+            vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
+            context_code: vec![],
         };
         
         summary.add_result(PathBuf::from("test.py"), response);
