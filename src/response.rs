@@ -30,12 +30,58 @@ impl std::fmt::Display for VulnType {
     }
 }
 
+impl VulnType {
+    /// Get CWE (Common Weakness Enumeration) IDs for this vulnerability type
+    pub fn cwe_ids(&self) -> Vec<String> {
+        match self {
+            VulnType::SQLI => vec!["CWE-89".to_string()],
+            VulnType::XSS => vec!["CWE-79".to_string(), "CWE-80".to_string()],
+            VulnType::RCE => vec!["CWE-77".to_string(), "CWE-78".to_string(), "CWE-94".to_string()],
+            VulnType::LFI => vec!["CWE-22".to_string(), "CWE-98".to_string()],
+            VulnType::SSRF => vec!["CWE-918".to_string()],
+            VulnType::AFO => vec!["CWE-22".to_string(), "CWE-73".to_string()],
+            VulnType::IDOR => vec!["CWE-639".to_string(), "CWE-284".to_string()],
+            VulnType::Other(_) => vec![],
+        }
+    }
+    
+    /// Get MITRE ATT&CK technique IDs for this vulnerability type
+    pub fn mitre_attack_ids(&self) -> Vec<String> {
+        match self {
+            VulnType::SQLI => vec!["T1190".to_string()], // Exploit Public-Facing Application
+            VulnType::XSS => vec!["T1190".to_string(), "T1185".to_string()], // Browser Session Hijacking
+            VulnType::RCE => vec!["T1190".to_string(), "T1059".to_string()], // Command and Scripting Interpreter
+            VulnType::LFI => vec!["T1083".to_string()], // File and Directory Discovery
+            VulnType::SSRF => vec!["T1090".to_string()], // Connection Proxy
+            VulnType::AFO => vec!["T1083".to_string(), "T1005".to_string()], // Data from Local System
+            VulnType::IDOR => vec!["T1190".to_string()],
+            VulnType::Other(_) => vec![],
+        }
+    }
+    
+    /// Get OWASP Top 10 category for this vulnerability type
+    pub fn owasp_categories(&self) -> Vec<String> {
+        match self {
+            VulnType::SQLI => vec!["A03:2021-Injection".to_string()],
+            VulnType::XSS => vec!["A03:2021-Injection".to_string()],
+            VulnType::RCE => vec!["A03:2021-Injection".to_string()],
+            VulnType::LFI => vec!["A01:2021-Broken Access Control".to_string()],
+            VulnType::SSRF => vec!["A10:2021-Server-Side Request Forgery".to_string()],
+            VulnType::AFO => vec!["A01:2021-Broken Access Control".to_string()],
+            VulnType::IDOR => vec!["A01:2021-Broken Access Control".to_string()],
+            VulnType::Other(_) => vec![],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextCode {
     pub name: String,
     pub reason: String,
     pub code_line: String,
     pub path: String,
+    pub line_number: Option<i32>,
+    pub column_number: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

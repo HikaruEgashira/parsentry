@@ -43,6 +43,8 @@ fn test_context_code_creation() {
         reason: "Uses unsafe eval() function".to_string(),
         code_line: "eval(user_input)".to_string(),
         path: "/src/vulnerable.py".to_string(),
+        line_number: None,
+        column_number: None,
     };
 
     assert_eq!(context.name, "vulnerable_function");
@@ -64,6 +66,8 @@ fn test_response_creation() {
             reason: "Direct command execution".to_string(),
             code_line: "os.system(command)".to_string(),
             path: "/src/handlers.py".to_string(),
+            line_number: None,
+            column_number: None,
         }],
     };
 
@@ -149,6 +153,8 @@ fn test_markdown_generation() {
             reason: "Test reason".to_string(),
             code_line: "test_code()".to_string(),
             path: "/test/path.py".to_string(),
+            line_number: None,
+            column_number: None,
         }],
     };
 
@@ -213,6 +219,8 @@ fn test_context_code_serialization() {
         reason: "test reason".to_string(),
         code_line: "print('test')".to_string(),
         path: "/path/to/file.py".to_string(),
+        line_number: None,
+        column_number: None,
     };
 
     let serialized = serde_json::to_string(&context).unwrap();
@@ -238,12 +246,16 @@ fn test_response_with_multiple_context_codes() {
                 reason: "reason1".to_string(),
                 code_line: "code1".to_string(),
                 path: "/path1.py".to_string(),
+                line_number: None,
+                column_number: None,
             },
             ContextCode {
                 name: "func2".to_string(),
                 reason: "reason2".to_string(),
                 code_line: "code2".to_string(),
                 path: "/path2.py".to_string(),
+                line_number: None,
+                column_number: None,
             },
         ],
     };

@@ -111,6 +111,7 @@ async fn main() -> Result<()> {
         return generate_custom_patterns(&root_dir, &args.model).await;
     }
 
+
     let repo = RepoOps::new(root_dir.clone());
 
     let files = repo.get_relevant_files();
@@ -232,6 +233,7 @@ async fn main() -> Result<()> {
     for (file_path, response) in results.into_iter().flatten().flatten() {
         summary.add_result(file_path, response);
     }
+
 
     summary.sort_by_confidence();
 

@@ -223,15 +223,15 @@ impl SarifReport {
                                 uri: file_path.to_string_lossy().to_string(),
                                 index: Some(artifact_index),
                             },
-                            region: None, // TODO: Parse location from context
+                            region: extract_region_from_context(&response.context_code),
                         },
                     }],
                     fingerprints: Some(generate_fingerprints(file_path, response)),
                     properties: Some(SarifResultProperties {
                         confidence: Some(response.confidence_score as f64 / 100.0),
-                        mitre_attack: None, // TODO: Add MITRE mapping
-                        cwe: None, // TODO: Add CWE mapping
-                        owasp: None, // TODO: Add OWASP mapping
+                        mitre_attack: Some(vuln_type.mitre_attack_ids()),
+                        cwe: Some(vuln_type.cwe_ids()),
+                        owasp: Some(vuln_type.owasp_categories()),
                     }),
                 });
             }
@@ -376,22 +376,65 @@ fn confidence_to_level(confidence: i32) -> String {
     }
 }
 
-fn parse_line_number(location: &str) -> Option<SarifRegion> {
-    // Try to extract line number from location string
-    if let Some(captures) = regex::Regex::new(r"line[:\s]+(\d+)")
-        .unwrap()
-        .captures(location)
-    {
-        if let Ok(line_num) = captures[1].parse::<i32>() {
+fn extract_region_from_context(context_code: &[crate::response::ContextCode]) -> Option<SarifRegion> {
+    // Use line number from context if available
+    for context in context_code {
+        if let Some(line_num) = context.line_number {
             return Some(SarifRegion {
                 start_line: line_num,
-                start_column: None,
+                start_column: context.column_number,
                 end_line: None,
                 end_column: None,
-                snippet: None,
+                snippet: Some(SarifArtifactContent {
+                    text: context.code_line.clone(),
+                }),
             });
         }
     }
+    
+    // Fallback to parsing location strings for line numbers
+    for context in context_code {
+        if let Some(region) = parse_line_number_from_text(&context.code_line) {
+            return Some(region);
+        }
+    }
+    
+    None
+}
+
+fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
+    // Enhanced regex patterns for line number detection
+    let patterns = [
+        r"(?:line|ln)[:\s]+(\d+)",  // "line: 42" or "ln 42"
+        r":(\d+):(\d+)",            // ":42:10" (line:column)
+        r"@(\d+)",                  // "@42" (line marker)
+        r"\[(\d+)\]",               // "[42]" (line reference)
+    ];
+    
+    for pattern in &patterns {
+        if let Ok(regex) = regex::Regex::new(pattern) {
+            if let Some(captures) = regex.captures(text) {
+                if let Ok(line_num) = captures[1].parse::<i32>() {
+                    let column = if captures.len() > 2 {
+                        captures[2].parse::<i32>().ok()
+                    } else {
+                        None
+                    };
+                    
+                    return Some(SarifRegion {
+                        start_line: line_num,
+                        start_column: column,
+                        end_line: None,
+                        end_column: None,
+                        snippet: Some(SarifArtifactContent {
+                            text: text.to_string(),
+                        }),
+                    });
+                }
+            }
+        }
+    }
+    
     None
 }
 
@@ -444,7 +487,14 @@ mod tests {
             poc: "SELECT * FROM users".to_string(),
             confidence_score: 85,
             vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-            context_code: vec![],
+            context_code: vec![crate::response::ContextCode {
+                name: "test_function".to_string(),
+                reason: "Contains SQL query".to_string(),
+                code_line: "SELECT * FROM users WHERE id = ?".to_string(),
+                path: "test.py".to_string(),
+                line_number: Some(42),
+                column_number: Some(10),
+            }],
         };
         
         summary.add_result(PathBuf::from("test.py"), response);
@@ -479,5 +529,116 @@ mod tests {
         
         let content = std::fs::read_to_string(&sarif_path).unwrap();
         assert!(content.contains("Parsentry"));
+    }
+
+    #[test]
+    fn test_vulnerability_mappings() {
+        // Test CWE mappings
+        assert_eq!(VulnType::SQLI.cwe_ids(), vec!["CWE-89"]);
+        assert_eq!(VulnType::XSS.cwe_ids(), vec!["CWE-79", "CWE-80"]);
+        assert_eq!(VulnType::RCE.cwe_ids(), vec!["CWE-77", "CWE-78", "CWE-94"]);
+        
+        // Test MITRE ATT&CK mappings
+        assert_eq!(VulnType::SQLI.mitre_attack_ids(), vec!["T1190"]);
+        assert_eq!(VulnType::XSS.mitre_attack_ids(), vec!["T1190", "T1185"]);
+        assert_eq!(VulnType::RCE.mitre_attack_ids(), vec!["T1190", "T1059"]);
+        
+        // Test OWASP mappings
+        assert_eq!(VulnType::SQLI.owasp_categories(), vec!["A03:2021-Injection"]);
+        assert_eq!(VulnType::SSRF.owasp_categories(), vec!["A10:2021-Server-Side Request Forgery"]);
+        assert_eq!(VulnType::IDOR.owasp_categories(), vec!["A01:2021-Broken Access Control"]);
+    }
+
+    #[test]
+    fn test_region_extraction_from_context() {
+        let context_with_line = vec![crate::response::ContextCode {
+            name: "test_func".to_string(),
+            reason: "test".to_string(),
+            code_line: "vulnerable code".to_string(),
+            path: "test.py".to_string(),
+            line_number: Some(42),
+            column_number: Some(10),
+        }];
+        
+        let region = extract_region_from_context(&context_with_line);
+        assert!(region.is_some());
+        
+        let region = region.unwrap();
+        assert_eq!(region.start_line, 42);
+        assert_eq!(region.start_column, Some(10));
+        assert!(region.snippet.is_some());
+    }
+
+    #[test]
+    fn test_parse_line_number_from_text() {
+        // Test line:column format
+        let region = parse_line_number_from_text("error at :42:10");
+        assert!(region.is_some());
+        let region = region.unwrap();
+        assert_eq!(region.start_line, 42);
+        assert_eq!(region.start_column, Some(10));
+        
+        // Test line marker format
+        let region = parse_line_number_from_text("function @25 is vulnerable");
+        assert!(region.is_some());
+        let region = region.unwrap();
+        assert_eq!(region.start_line, 25);
+        assert_eq!(region.start_column, None);
+        
+        // Test line reference format
+        let region = parse_line_number_from_text("vulnerability found [100]");
+        assert!(region.is_some());
+        let region = region.unwrap();
+        assert_eq!(region.start_line, 100);
+    }
+
+    #[test]
+    fn test_sarif_with_enhanced_properties() {
+        let mut summary = AnalysisSummary::new();
+        
+        let response = Response {
+            scratchpad: "Enhanced test".to_string(),
+            analysis: "SQL injection vulnerability found".to_string(),
+            poc: "SELECT * FROM users WHERE id = ? -- user_input injection".to_string(),
+            confidence_score: 95,
+            vulnerability_types: vec![VulnType::SQLI],
+            context_code: vec![crate::response::ContextCode {
+                name: "get_user".to_string(),
+                reason: "Direct string concatenation in SQL query".to_string(),
+                code_line: "query = \"SELECT * FROM users WHERE id = '\" + user_id + \"'\"".to_string(),
+                path: "user_service.py".to_string(),
+                line_number: Some(156),
+                column_number: Some(8),
+            }],
+        };
+        
+        summary.add_result(PathBuf::from("user_service.py"), response);
+        let sarif = SarifReport::from_analysis_summary(&summary);
+        
+        // Verify SARIF structure
+        assert_eq!(sarif.runs.len(), 1);
+        assert_eq!(sarif.runs[0].results.len(), 1);
+        
+        let result = &sarif.runs[0].results[0];
+        
+        // Verify properties include proper mappings
+        assert!(result.properties.is_some());
+        let props = result.properties.as_ref().unwrap();
+        
+        assert!(props.cwe.is_some());
+        assert_eq!(props.cwe.as_ref().unwrap(), &vec!["CWE-89"]);
+        
+        assert!(props.mitre_attack.is_some());
+        assert_eq!(props.mitre_attack.as_ref().unwrap(), &vec!["T1190"]);
+        
+        assert!(props.owasp.is_some());
+        assert_eq!(props.owasp.as_ref().unwrap(), &vec!["A03:2021-Injection"]);
+        
+        // Verify region information
+        assert!(result.locations[0].physical_location.region.is_some());
+        let region = result.locations[0].physical_location.region.as_ref().unwrap();
+        assert_eq!(region.start_line, 156);
+        assert_eq!(region.start_column, Some(8));
+        assert!(region.snippet.is_some());
     }
 }
