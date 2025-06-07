@@ -142,10 +142,10 @@ async fn analyze_definitions_for_security_patterns(
         r#"Analyze the following function definitions from a {:?} codebase and classify them as security patterns.
 
 For each function, determine if it should be classified as:
-- "sources": Functions that introduce user input, external data, or untrusted data into the application
-- "sinks": Functions that can execute, write, or perform dangerous operations with data
-- "validate": Functions that validate, sanitize, or secure data
-- null: Functions that don't fit any security pattern category
+- "principals": Functions that represent sources of authority, user input, or external data entry points
+- "actions": Functions that perform validation, sanitization, authorization, or security operations
+- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
+- null: Functions that don't fit any PAR security pattern category
 
 For each function that IS a security pattern, generate a regex pattern that would match similar functions.
 
@@ -157,7 +157,7 @@ Return a JSON object with this exact structure:
   "patterns": [
     {{
       "function_name": "example_function",
-      "pattern_type": "sources",
+      "pattern_type": "principals",
       "pattern": "\\\\bexample_function\\\\s*\\\\(",
       "description": "Example function description",
       "reasoning": "Why this function is classified as this pattern type"
@@ -165,7 +165,7 @@ Return a JSON object with this exact structure:
   ]
 }}
 
-Only include functions that ARE security patterns (sources, sinks, or validate). Do not include functions that are not security-related."#,
+Only include functions that ARE security patterns (principals, actions, or resources). Do not include functions that are not security-related."#,
         language, definitions_text
     );
 
@@ -178,7 +178,7 @@ Only include functions that ARE security patterns (sources, sinks, or validate).
                     "type": "object",
                     "properties": {
                         "function_name": {"type": "string"},
-                        "pattern_type": {"type": "string", "enum": ["sources", "sinks", "validate"]},
+                        "pattern_type": {"type": "string", "enum": ["principals", "actions", "resources"]},
                         "pattern": {"type": "string"},
                         "description": {"type": "string"},
                         "reasoning": {"type": "string"}
@@ -240,24 +240,24 @@ pub fn write_patterns_to_file(
         Language::Other => return Ok(()),
     };
 
-    let mut sources = Vec::new();
-    let mut sinks = Vec::new();
-    let mut validate = Vec::new();
+    let mut principals = Vec::new();
+    let mut actions = Vec::new();
+    let mut resources = Vec::new();
 
     for pattern in patterns {
         match pattern.pattern_type.as_deref() {
-            Some("sources") => sources.push(pattern),
-            Some("sinks") => sinks.push(pattern),
-            Some("validate") => validate.push(pattern),
+            Some("principals") => principals.push(pattern),
+            Some("actions") => actions.push(pattern),
+            Some("resources") => resources.push(pattern),
             _ => {}
         }
     }
 
     let mut yaml_content = format!("{}:\n", lang_name);
 
-    if !sources.is_empty() {
-        yaml_content.push_str("  sources:\n");
-        for pattern in sources {
+    if !principals.is_empty() {
+        yaml_content.push_str("  principals:\n");
+        for pattern in principals {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
@@ -265,9 +265,9 @@ pub fn write_patterns_to_file(
         }
     }
 
-    if !validate.is_empty() {
-        yaml_content.push_str("  validate:\n");
-        for pattern in validate {
+    if !actions.is_empty() {
+        yaml_content.push_str("  actions:\n");
+        for pattern in actions {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
@@ -275,9 +275,9 @@ pub fn write_patterns_to_file(
         }
     }
 
-    if !sinks.is_empty() {
-        yaml_content.push_str("  sinks:\n");
-        for pattern in sinks {
+    if !resources.is_empty() {
+        yaml_content.push_str("  resources:\n");
+        for pattern in resources {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description

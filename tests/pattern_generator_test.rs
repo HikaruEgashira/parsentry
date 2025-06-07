@@ -95,25 +95,25 @@ fn test_yaml_pattern_format() {
 
     let patterns = vec![
         PatternClassification {
-            function_name: "test_sink".to_string(),
-            pattern_type: Some("sinks".to_string()),
-            pattern: "\\\\btest_sink\\\\s*\\\\(".to_string(),
-            description: "Test sink function".to_string(),
-            reasoning: "Test reasoning for sink".to_string(),
+            function_name: "test_resource".to_string(),
+            pattern_type: Some("resources".to_string()),
+            pattern: "\\\\btest_resource\\\\s*\\\\(".to_string(),
+            description: "Test resource function".to_string(),
+            reasoning: "Test reasoning for resource".to_string(),
         },
         PatternClassification {
-            function_name: "test_source".to_string(),
-            pattern_type: Some("sources".to_string()),
-            pattern: "\\\\btest_source\\\\s*\\\\(".to_string(),
-            description: "Test source function".to_string(),
-            reasoning: "Test reasoning for source".to_string(),
+            function_name: "test_principal".to_string(),
+            pattern_type: Some("principals".to_string()),
+            pattern: "\\\\btest_principal\\\\s*\\\\(".to_string(),
+            description: "Test principal function".to_string(),
+            reasoning: "Test reasoning for principal".to_string(),
         },
         PatternClassification {
-            function_name: "test_validate".to_string(),
-            pattern_type: Some("validate".to_string()),
-            pattern: "\\\\btest_validate\\\\s*\\\\(".to_string(),
-            description: "Test validation function".to_string(),
-            reasoning: "Test reasoning for validation".to_string(),
+            function_name: "test_action".to_string(),
+            pattern_type: Some("actions".to_string()),
+            pattern: "\\\\btest_action\\\\s*\\\\(".to_string(),
+            description: "Test action function".to_string(),
+            reasoning: "Test reasoning for action".to_string(),
         },
     ];
 
@@ -126,12 +126,12 @@ fn test_yaml_pattern_format() {
 
     let content = fs::read_to_string(&yaml_path).unwrap();
     assert!(content.contains("Python:"));
-    assert!(content.contains("sources:"));
-    assert!(content.contains("sinks:"));
-    assert!(content.contains("validate:"));
-    assert!(content.contains("test_sink"));
-    assert!(content.contains("test_source"));
-    assert!(content.contains("test_validate"));
+    assert!(content.contains("principals:"));
+    assert!(content.contains("resources:"));
+    assert!(content.contains("actions:"));
+    assert!(content.contains("test_resource"));
+    assert!(content.contains("test_principal"));
+    assert!(content.contains("test_action"));
 }
 
 // Integration test that doesn't require API calls
@@ -183,11 +183,11 @@ fn test_yaml_append_functionality() {
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
 
     // Write initial content
-    fs::write(&yaml_path, "Go:\n  sinks:\n    - pattern: \"existing_pattern\"\n      description: \"Existing pattern\"\n").unwrap();
+    fs::write(&yaml_path, "Go:\n  resources:\n    - pattern: \"existing_pattern\"\n      description: \"Existing pattern\"\n").unwrap();
 
     let patterns = vec![PatternClassification {
         function_name: "new_function".to_string(),
-        pattern_type: Some("sinks".to_string()),
+        pattern_type: Some("resources".to_string()),
         pattern: "\\\\bnew_function\\\\s*\\\\(".to_string(),
         description: "New function pattern".to_string(),
         reasoning: "Test reasoning".to_string(),
@@ -233,7 +233,7 @@ fn test_language_filtering() {
 
     let patterns = vec![PatternClassification {
         function_name: "test_function".to_string(),
-        pattern_type: Some("sinks".to_string()),
+        pattern_type: Some("resources".to_string()),
         pattern: "test_pattern".to_string(),
         description: "Test description".to_string(),
         reasoning: "Test reasoning".to_string(),
