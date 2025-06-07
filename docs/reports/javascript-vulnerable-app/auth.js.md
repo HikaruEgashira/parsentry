@@ -1,92 +1,56 @@
 # 解析レポート
 
-![高信頼度](https://img.shields.io/badge/信頼度-高-red) **信頼度スコア: 90**
+![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 85**
 
 ## 脆弱性タイプ
 
 - `SQLI`
-- `AFO`
+- `IDOR`
 
 ## 解析結果
 
-提示されたコードには多数の致命的なセキュリティ脆弱性があります。特にSQLインジェクション、認証弱体化、機密情報の漏洩を多く含んでいます。
-1. ユーザー入力を直接SQL文字列に埋め込んでいるため、認証・登録・パスワードリセット・変更処理でSQLインジェクションが可能です。
-2. パスワード・APIキー・クエリ文字列をログに平文出力・レスポンスに含めており、機密情報が漏洩します。
-3. JWTトークンの生成・検証が脆弱で、トークン失効処理を行わないため、盗聴やリプレイ攻撃を受けやすい設計です。
-4. パスワードリセットトークンはMD5＋タイムスタンプで予測可能、かつ応答に返却しているため攻撃者が容易に悪用できます。
-5. パスワード変更で既存パスワード検証を実施せず、リセットトークン検証も甘いためアカウント乗っ取りが可能です。
-6. 登録時にroleを任意に設定可能で、管理者権限作成まで許しており、認可設計が大きく欠落しています。
+認証処理において「alg: 'none'」を許可しているため、署名検証をバイパスして任意のpayload（user_id）を注入できます。さらに、SQLクエリを文字列連結で組み立てており、user_idがそのままクエリに埋め込まれるため、SQLインジェクションが成立します。また、x-role-overrideヘッダー等により権限を動的に昇格できるため、IDOR的な権限エスカレーションも可能です。
 
 ## PoC（概念実証コード）
 
 ```text
-1) SQLインジェクション認証バイパス例:
-   POST /login
-   Content-Type: application/json
-   {
-     "username": "' OR '1'='1",
-     "password": "any"
-   }
-2) パスワードリセットトークン予測:
-   - 同一メールで2回リセットを行い、得られるトークンを比較。MD5のタイムスタンプ差分から生成規則を解析し他ユーザーをリセット。
-3) 管理者権限作成:
-   POST /register
-   { "username":"attacker","password":"pass","email":"a@b.com","role":"admin" }
-   => 管理者ユーザーが作成可能
+1. JWTヘッダーで{"alg":"none"}、ペイロードに{"user_id":"1 OR 1=1"}を設定し、署名を空にしたトークンを生成
+2. HTTPヘッダーにAuthorization: Bearer <改ざんトークン>を設定してエンドポイントにアクセス
+3. verify処理で検証がスキップされ、decoded.user_idに"1 OR 1=1"が入り、SQLクエリに注入されて全ユーザー情報を取得可能
+
+-- x-role-overrideヘッダー利用例 --
+1. リクエストヘッダーに x-role-override: admin を追加
+2. requireRoleによりユーザー権限がadminに昇格され、保護リソースへのアクセスが可能
 ```
 
 ## 関連コードコンテキスト
 
-### 関数名: login SQLインジェクション
-- 理由: ユーザー入力を直接埋め込んでおり、' OR '1'='1' 等で認証バイパス可能
-- パス: routes/auth.js
+### 関数名: authenticateToken
+- 理由: 署名検証で'none'アルゴリズムを許可しており、改ざんトークンで認証バイパスが可能
+- パス: repo/middleware/auth.js
 ```rust
-const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
+const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256', 'none'] });
 ```
 
-### 関数名: 機密情報のログ出力
-- 理由: ユーザー名・パスワードを平文でログに出力し、ログから漏洩リスクが高い
-- パス: routes/auth.js
+### 関数名: authenticateToken
+- 理由: user_idが直接埋め込まれた動的SQL。攻撃者制御下のpayloadでSQLインジェクションを引き起こす
+- パス: repo/middleware/auth.js
 ```rust
-console.log(`Login attempt: ${username}:${password} from ${req.ip}`);
+const query = `SELECT * FROM users WHERE id = ${decoded.user_id}`;
 ```
 
-### 関数名: エラーレスポンスにSQLクエリを含有
-- 理由: 実行クエリを外部に晒し、攻撃者が構造把握や二次攻撃に利用可能
-- パス: routes/auth.js
+### 関数名: requireRole
+- 理由: x-role-overrideヘッダーで任意のロールを設定でき、権限チェックをバイパス可能
+- パス: repo/middleware/auth.js
 ```rust
-res.status(500).json({ error: `Authentication failed: ${err.message}`, query: query});
-```
-
-### 関数名: 予測可能なパスワードリセットトークン
-- 理由: MD5＋タイムスタンプは予測可能で、総当りでリセット可能
-- パス: routes/auth.js
-```rust
-const resetToken = crypto.createHash('md5').update(email + Date.now()).digest('hex');
-```
-
-### 関数名: リセットトークン保存SQLインジェクション
-- 理由: emailフィールドをエスケープせずクエリに組み込み、任意実行可能
-- パス: routes/auth.js
-```rust
-const query = `UPDATE users SET reset_token = '${resetToken}' WHERE email = '${email}'`;
-```
-
-### 関数名: 登録処理のSQLインジェクション
-- 理由: あらゆるユーザー入力を直接埋め込み、管理者権限登録や任意クエリ実行が可能
-- パス: routes/auth.js
-```rust
-const query = `INSERT INTO users (username, password, email, role) VALUES ('${username}', '${password}', '${email}', '${userRole}')`;
-```
-
-### 関数名: トークン失効処理未実装
-- 理由: クライアントへログアウト成功を返すのみで、JWTは依然有効なまま
-- パス: routes/auth.js
-```rust
-res.json({ message: 'Logged out successfully', warning: 'JWT token not invalidated...', token_hint: token ? token.substring(0, 20) + '...' : 'none' });
+if (roleOverride) { req.user.role = roleOverride; return next(); }
 ```
 
 ## 解析ノート
 
-SQLIが主要。ログ・レスポンスに機密露出多数。JWT設計も認可機構も欠落。IDORはないがAFOに分類。
+認証処理、SQLクエリ組み立て、権限チェックのバイパスポイントを特定
+・jwt.verifyのalg none許可 => 攻撃者が任意payload埋め込み
+・payload.user_id -> 動的SQLに直接埋め込み => SQLインジェクション
+・requireRoleでx-role-overrideにより権限昇格 => IDOR的利用
+評価: 実用的な攻撃手法として高リスク
 

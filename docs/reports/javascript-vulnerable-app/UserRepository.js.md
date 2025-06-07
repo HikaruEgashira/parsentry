@@ -1,74 +1,90 @@
 # 解析レポート
 
-![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 80**
+![高信頼度](https://img.shields.io/badge/信頼度-高-red) **信頼度スコア: 90**
 
 ## 脆弱性タイプ
 
 - `SQLI`
+- `IDOR`
 
 ## 解析結果
 
-このUserRepository.jsには、全てのDBクエリ構築箇所で入力パラメータを直接文字列連結・埋め込みしており、ユーザー入力によるSQLインジェクションが多重に発生しています。特にID／username／emailなどの単一パラメータを埋め込むメソッド（findById, findByUsername, findByEmail）、動的フィルタ・ソート・制限を構築するfindAll、可変フィールドを更新するupdate、認証用authenticate、汎用executeQueryなどが脆弱です。適切なプリペアドステートメントやパラメータ化クエリを利用せず、重大な認証バイパスや任意SQL実行を許します。
+本リポジトリのUserRepositoryクラス全域にわたり、ユーザー入力を直接SQL文字列に埋め込む実装が多く見られ、SQLインジェクション(SQLI)の脆弱性が多数存在します。特にfindById/findByUsername/findByEmail/findAll/create/update/authenticate/search/executeQueryといったメソッドでは、パラメータをプレースホルダやプリペアドステートメントで保護せず、そのままクエリ文字列に連結・埋め込みしているため、攻撃者により任意のSQLを実行されるリスクがあります。また、deleteメソッドは認可チェックなしで任意のユーザーIDを削除可能なIDORも含んでいます。
 
 ## PoC（概念実証コード）
 
 ```text
-// 認証バイパス例
+// SQLインジェクションの例: idに '1 OR 1=1' を渡すと全ユーザー取得可能
 const repo = new UserRepository();
-repo.authenticate("' OR '1'='1", "any").then(user => console.log(user));
-
-// findByIdで全件取得例
-repo.findById('1 OR 1=1').then(rows => console.log(rows));
-
-// findAllでDROP TABLE実行例
-repo.findAll({orderBy: "id; DROP TABLE users;--"});
+repo.findById("1 OR 1=1").then(users => console.log(users));
 ```
 
 ## 関連コードコンテキスト
 
 ### 関数名: findById
-- 理由: IDパラメータを直接埋め込んでおり、例: id = 1 OR 1=1 による全件取得が可能です。
-- パス: example/javascript-vulnerable-app/infrastructure/database/UserRepository.js:12
+- 理由: idパラメータを直接埋め込んでおり、SQLインジェクションを許可している
+- パス: repo/infrastructure/database/UserRepository.js
 ```rust
 const query = `SELECT * FROM users WHERE id = ${id}`;
 ```
 
 ### 関数名: findByUsername
-- 理由: usernameをエスケープせずに文字列連結し、' OR '1'='1 などで認証バイパスできます。
-- パス: example/javascript-vulnerable-app/infrastructure/database/UserRepository.js:22
+- 理由: usernameをエスケープせずに連結しており、SQLインジェクションの危険がある
+- パス: repo/infrastructure/database/UserRepository.js
 ```rust
 const query = `SELECT * FROM users WHERE username = '${username}'`;
 ```
 
-### 関数名: findAll
-- 理由: orderBy句を直接挿入し、DROP TABLEなど任意クエリを混入できます。
-- パス: example/javascript-vulnerable-app/infrastructure/database/UserRepository.js:46
+### 関数名: findByEmail
+- 理由: emailを直接埋め込んでおり、SQLインジェクションを引き起こす可能性がある
+- パス: repo/infrastructure/database/UserRepository.js
 ```rust
-if (filters.orderBy) { query += ` ORDER BY ${filters.orderBy}`; }
+const query = `SELECT * FROM users WHERE email = '${email}'`;
+```
+
+### 関数名: findAll
+- 理由: filters.roleを文字列連結して利用し、SQLインジェクションを許している
+- パス: repo/infrastructure/database/UserRepository.js
+```rust
+query += ` AND role = '${filters.role}'`;
+```
+
+### 関数名: create
+- 理由: INSERT時にユーザー提供値を直接埋め込み、SQL注入リスクがある
+- パス: repo/infrastructure/database/UserRepository.js
+```rust
+const query = `INSERT INTO users (username, password, email, role) VALUES ('${username}', '${password}', '${email}', '${role || 'user'}')`;
 ```
 
 ### 関数名: update
-- 理由: 可変更新フィールドとIDを直接連結しており、update.idやdataフィールドでSQLインジェクション可能です。
-- パス: example/javascript-vulnerable-app/infrastructure/database/UserRepository.js:71
+- 理由: SET句を文字列連結で構築し、複数のSQLインジェクションポイントを生じている
+- パス: repo/infrastructure/database/UserRepository.js
 ```rust
 const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ${id}`;
 ```
 
+### 関数名: delete
+- 理由: 認可チェックなく任意のidで削除可能、IDORとSQLインジェクションの両方を含む
+- パス: repo/infrastructure/database/UserRepository.js
+```rust
+const query = `DELETE FROM users WHERE id = ${id}`;
+```
+
 ### 関数名: authenticate
-- 理由: 認証クエリを直接文字列連結し、' OR '1'='1による認証バイパスを許します。
-- パス: example/javascript-vulnerable-app/infrastructure/database/UserRepository.js:100
+- 理由: 認証クエリにユーザー提供値を直接連結し、認証バイパス目的のSQL注入を許可している
+- パス: repo/infrastructure/database/UserRepository.js
 ```rust
 const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
 ```
 
 ### 関数名: executeQuery
-- 理由: 任意のSQLを引数として実行可能で、管理画面などから悪意あるクエリ実行を許す恐れがあります。
-- パス: example/javascript-vulnerable-app/infrastructure/database/UserRepository.js:131
+- 理由: 任意のSQLクエリを直接実行でき、アプリケーション内からRCE的にデータベースを操作できる
+- パス: repo/infrastructure/database/UserRepository.js
 ```rust
-this.db.all(query, params, (err, rows) => { ... });
+this.db.all(query, params, (err, rows) => {
 ```
 
 ## 解析ノート
 
-コードを見たところ、DBアクセスは全てsqlite3でプリペアドステートメントを使わず、入力を直接SQL文字列に埋め込んでいます。findById/findByUsername/findByEmailは単純埋め込み、findAllはフィルタとorderBy/limitも埋め込み、create/update/delete/authenticate/searchも同様。executeQueryは任意SQL実行をラップしており、管理者権限などの制限がない場合は直接DB操作を乗っ取れます。これら全てに対してパラメータバインディングや入力検証がなく、典型的なSQLインジェクション脆弱性です。
+各メソッドが文字列連結でSQLを構築していることを確認。プレースホルダ不使用、認可チェック欠如によるIDORも検出。主にSQLIおよびIDORの脆弱性が深刻。修正にはプリペアドステートメントやORM導入、認可ロジック追加が必要。
 

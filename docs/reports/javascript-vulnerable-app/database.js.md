@@ -1,69 +1,71 @@
 # 解析レポート
 
-![中低信頼度](https://img.shields.io/badge/信頼度-中低-green) **信頼度スコア: 40**
+![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 80**
 
 ## 脆弱性タイプ
 
-- `LFI`
+- `SQLI`
+- `IDOR`
 
 ## 解析結果
 
-このコードでは、初期化時に以下のリスクがあるデフォルトデータを挿入しています。
-
-1. 平文の管理者アカウント（admin/admin123）やゲストアカウントが作成されるため、初期設定のまま運用すると容易にログイン突破される。
-2. ドキュメントテーブルにファイルパス（'/etc/passwd' や '../../etc/shadow'）が含まれており、これらをファイル提供エンドポイントで読み込むとLFI攻撃として機能する可能性がある。
-3. system_configテーブルにDBパスワードやAPIシークレットを平文で保存しており、データベース内から容易に漏洩する。
-4. APIトークンやプロファイルデータも固定値で挿入されるため、リプレイ攻撃や権限昇格が可能。
-
-以上により、初期デプロイ直後の環境は認証認可が破綻し、LFIや権限の不正取得（AFO/IDOR的問題）を招きます。
+このコードベースでは、ユーザー入力や外部パラメータをエスケープせずに文字列連結でSQLクエリを構築している箇所が多数あり、SQLインジェクションのリスクが高いです。また、認証・認可チェックを行わずに管理操作（特権昇格やバッチ操作、任意クエリ実行など）を実行できるため、IDOR／権限昇格の問題もあります。
 
 ## PoC（概念実証コード）
 
 ```text
-1) 管理者ログインの証明: curl -X POST http://<host>/login -d 'username=admin&password=admin123'  
-2) ファイル読み込みエンドポイント例: curl http://<host>/download?path=/etc/passwd →  /etc/passwd の内容が表示される
+// searchUsersへのリクエスト例 (SQLインジェクション)
+const maliciousParams = { username: "' OR '1'='1'; DROP TABLE users; --" };
+db.searchUsers(maliciousParams).catch(console.error);
+// 上記によりusersテーブルが削除される
 
-これにより、認証バイパスおよびLFIが実証できる。
 ```
 
 ## 関連コードコンテキスト
 
-### 関数名: insertDefaultUsers
-- 理由: 平文の管理者アカウントを初期挿入しており、認証が破綻するリスクがある
-- パス: example/javascript-vulnerable-app/config/database.js
+### 関数名: searchUsers
+- 理由: ユーザー入力を直接LIKE句に埋め込んでおり、SQLインジェクションが可能
+- パス: repo/services/database.js
 ```rust
-`INSERT OR IGNORE INTO users (username, password, email, role, api_key) VALUES ('admin', 'admin123', 'admin@example.com', 'admin', 'sk-js-1234567890abcdef')`
+query += ` AND u.username LIKE '%${username}%'`;
 ```
 
-### 関数名: insertDefaultDocuments
-- 理由: ファイルパスにシステムファイルを指定しており、LFI攻撃として利用される恐れがある
-- パス: example/javascript-vulnerable-app/config/database.js
+### 関数名: executeStoredProcedure
+- 理由: パラメータを直接連結してUPDATEを実行しており、任意SQL実行を許可している
+- パス: repo/services/database.js
 ```rust
-`INSERT OR IGNORE INTO documents (title, content, owner_id, file_path) VALUES ('Secret Config', 'database_password=super_secret_123', 1, '/etc/passwd')`
+query = `UPDATE users SET role = '${parameters.newRole}', metadata = '${parameters.metadata}' WHERE ${parameters.whereClause}`;
 ```
 
-### 関数名: insertDefaultDocuments
-- 理由: 相対パスでシステムファイルを指定し、ディレクトリトラバーサルを誘発可能
-- パス: example/javascript-vulnerable-app/config/database.js
+### 関数名: batchOperation
+- 理由: テーブル名・値を検証せずに連結してINSERTを実行しており、SQLインジェクションや任意テーブル操作が可能
+- パス: repo/services/database.js
 ```rust
-`INSERT OR IGNORE INTO documents (title, content, owner_id, file_path) VALUES ('User Data', 'Sensitive user information', 2, '../../etc/shadow')`
+query = `INSERT INTO ${op.table} (${op.columns.join(',')}) VALUES (${op.values.map(v => `'${v}'`).join(',')})`
 ```
 
-### 関数名: insertDefaultConfig
-- 理由: 機密情報をデータベースに平文保存しており、漏洩リスクが高い
-- パス: example/javascript-vulnerable-app/config/database.js
+### 関数名: elevatePrivileges
+- 理由: 特権昇格時の新ロールや正当化をサニタイズせずに埋め込んでおり、SQLインジェクション／IDORの危険がある
+- パス: repo/services/database.js
 ```rust
-`INSERT OR IGNORE INTO system_config (key, value, description, is_sensitive) VALUES ('database_password', 'super_secret_db_pass', 'Main database password', 1)`
+const auditQuery = `INSERT INTO audit_trail ... '{"new_role": "${targetRole}", "justification": "${justification}"}' ...`;
 ```
 
-### 関数名: insertDefaultTokens
-- 理由: 固定トークンを挿入しており、リプレイ攻撃や不正利用が可能
-- パス: example/javascript-vulnerable-app/config/database.js
+### 関数名: getTableMetadata
+- 理由: ユーザー制御可能なtableNameを直接埋め込み、任意テーブルの情報取得やSQLインジェクションが可能
+- パス: repo/services/database.js
 ```rust
-`INSERT OR IGNORE INTO api_tokens (token, user_id, permissions, expires_at) VALUES ('admin_token_2024_secret', 1, 'admin,read,write,delete', datetime('now', '+1 year'))`
+this.db.all(`SELECT * FROM ${tableName}`, ...);
+```
+
+### 関数名: getConnection
+- 理由: 外部から与えられたクエリをそのまま実行しており、任意SQL実行が可能
+- パス: repo/services/database.js
+```rust
+return {connectionId, execute: (query) => { ... this.db.all(query, ...)} };
 ```
 
 ## 解析ノート
 
-コードを確認すると、ユーザー入力を扱う箇所は無いが、初期データとして固定の管理者アカウントやファイルパスが登録されている。これらは実運用向けとは言えず、放置すると悪用される。特にファイルパスのエントリをそのまま返すAPIがあるとLFIになる。データのサニタイズや環境変数管理が一切ない点も問題。
+多くのメソッドで文字列連結による動的SQL構築を行っている。パラメータバインディングや入力検証がないためSQLIが至る所で成立。特にsearchUsers, executeStoredProcedure, batchOperation, elevatePrivileges, getTableMetadata, getConnectionは危険度高い。また、認可チェックが欠如しておりIDOR/権限昇格リスクも存在。
 
