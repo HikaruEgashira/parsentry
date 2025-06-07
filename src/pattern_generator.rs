@@ -142,10 +142,12 @@ async fn analyze_definitions_for_security_patterns(
         r#"Analyze the following function definitions from a {:?} codebase and classify them as security patterns.
 
 For each function, determine if it should be classified as:
-- "principals": Functions that represent sources of authority, user input, or external data entry points
+- "principals": Functions that represent sources of authority, user input, external data entry points, or second-order data sources (e.g., database query results, API responses, file contents)
 - "actions": Functions that perform validation, sanitization, authorization, or security operations
 - "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
 - null: Functions that don't fit any PAR security pattern category
+
+Note: Pay special attention to second-order principals - functions that return data from databases, APIs, or other external sources that could contain untrusted data originally from user input.
 
 For each function that IS a security pattern, generate a regex pattern that would match similar functions.
 
