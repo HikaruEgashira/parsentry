@@ -32,31 +32,35 @@ Parsentryは以下を目的とした多層プロンプトシステムを使用�
 ```json
 {
   "scratchpad": "Analysis thought process",
-  "analysis": "Detailed vulnerability explanation",
+  "analysis": "Detailed vulnerability explanation", 
   "poc": "Proof of concept code",
   "confidence_score": 0-10,
-  "vulnerability_types": ["Type1", "Type2"],
-  "context_code": "Relevant code snippets"
+  "vulnerability_types": ["LFI", "RCE", "SSRF", "AFO", "SQLI", "XSS", "IDOR"],
+  "context_code": [
+    {
+      "name": "function/method name",
+      "reason": "why this code is vulnerable",
+      "code_line": "actual vulnerable code",
+      "path": "file path"
+    }
+  ]
 }
 ```
 
-### 2. プロジェクトコンテキストプロンプト
+### 2. システムプロンプト（実装済み）
 
-**目的**: READMEファイルから主要情報を抽出してプロジェクトスコープを理解
-
-**抽出焦点**:
-- プロジェクトの目的と機能
-- APIエンドポイントとルート
-- データフローと処理
-- 言及されたセキュリティ対策
-- 技術スタック
-
-**Output Format**: 
-```xml
-<summary>
-Concise project summary focusing on security-relevant aspects
-</summary>
+**実際のシステムプロンプト**:
 ```
+You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { "scratchpad": string, "analysis": string, "poc": string, "confidence_score": integer, "vulnerability_types": array of strings, "context_code": array of objects with { "name": string, "reason": string, "code_line": string } }. Do not include any explanatory text outside the JSON object.
+```
+
+**日本語ガイドライン**:
+- セキュリティ研究者として、コードの脆弱性を分析
+- 入力値の検証とサニタイズに注目
+- 認証・認可の確認
+- データの取り扱いと漏洩
+- コマンドインジェクションの可能性
+- パストラバーサルの脆弱性
 
 ### 3. 初期解析プロンプト
 
@@ -75,54 +79,44 @@ Concise project summary focusing on security-relevant aspects
 - 対象ファイルの完全なソースコード
 - ファイルパスとプロジェクト構造ヒント
 
-### 4. 脆弱性固有プロンプト
+### 4. 脆弱性固有プロンプト（実装済み）
 
-確認された脆弱性タイプの深堀りプロンプト:
+各脆弱性タイプに対して専用のバイパス技術が定義済み：
 
 #### ローカルファイルインクルージョン (LFI)
-```
-焦点: パストラバーサルパターン、ファイルインクルージョン関数
-バイパス技術: 
-- ヌルバイトインジェクション
-- ダブルエンコーディング
-- パス正規化バイパス
-```
+- Path traversal sequences(../../)
+- URL encoding
+- Null byte injection
 
-#### リモートコード実行 (RCE)
-```
-焦点: eval()、exec()、system()の使用
-バイパス技術:
-- コマンドチェイニング
-- 環境変数インジェクション
-- デシリアライゼーション攻撃
-```
+#### リモートコード実行 (RCE) 
+- Shell metacharacters for command injection
+- Python execution vectors
+- Deserialization attacks
 
 #### SQLインジェクション (SQLI)
-```
-焦点: データベースクエリ構築
-バイパス技術:
-- WAF回避
-- 時間ベースブラインドインジェクション
-- セカンドオーダーインジェクション
-```
+- UNION-based injection
+- Boolean-based blind injection
+- Time-based blind injection
 
 #### クロスサイトスクリプティング (XSS)
-```
-焦点: 出力エンコーディング、DOM操作
-バイパス技術:
-- フィルタ回避
-- ポリグロットペイロード
-- DOMベースベクター
-```
+- HTML entity encoding bypass
+- JavaScript template injection
+- DOM-based XSS vectors
 
 #### サーバーサイドリクエストフォージェリ (SSRF)
-```
-焦点: 外部リクエスト、URL処理
-バイパス技術:
-- DNSリバインディング
-- プロトコルスマグリング
-- 内部サービス発見
-```
+- DNS rebinding
+- IP address encoding tricks
+- Redirect chain
+
+#### 任意ファイル操作 (AFO)
+- Directory traversal sequences
+- Following symbolic links
+- Race conditions
+
+#### 安全でない直接オブジェクト参照 (IDOR)
+- Parameter tampering
+- Horizontal privilege escalation
+- Predictable resource paths
 
 ### 5. 解析ガイドライン
 

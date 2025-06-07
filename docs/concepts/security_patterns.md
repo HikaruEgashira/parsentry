@@ -6,40 +6,54 @@ Parsentryが使用するパターンベースの脆弱性検出システムの�
 
 セキュリティパターンは、LLM解析の前段階で潜在的な脆弱性を効率的にフィルタリングする正規表現ベースのルールです。複数のプログラミング言語に対応し、データフロー解析と組み合わせて使用されます。
 
-## パターンの分類
+## PAR（Principal-Action-Resource）分類
 
-### Source（データソース）
-外部データがアプリケーションに入るエントリーポイントを識別します。
+### Principal（プリンシパル）
+認証主体や信頼できるデータソースを識別します。
 
+**プログラミング言語における例**:
 - **Webフレームワーク**: HTTPリクエストハンドラー、フォームデータ処理
 - **ファイルシステム**: ファイル読み取り、設定ファイル解析
 - **ネットワーク**: API応答、外部サービス呼び出し
-- **環境**: 環境変数、コマンドライン引数
+- **環境**: 環境変数、コマンドライン引数、データベース結果
 
-### Sink（データシンク）
-検証されていないデータが脆弱性を引き起こす可能性のある危険な操作を識別します。
+**IaCにおける例**:
+- **AWS IAM**: ユーザー、ロール、アカウント
+- **アクセス権限**: ポリシーアタッチメント
 
-- **コード実行**: `eval()`、動的コード実行、テンプレートインジェクション
+### Action（アクション）
+データ処理、検証、セキュリティ制御を表す操作を識別します。
+
+**プログラミング言語における例**:
+- **データ検証**: スキーマ検証、型チェック、正規表現検証
+- **データサニタイゼーション**: HTMLエスケープ、パス正規化
+- **セキュリティ制御**: ハッシュ化、暗号化、トークン検証
+
+**IaCにおける例**:
+- **AWS API操作**: s3:GetObject、ec2:DescribeInstances
+- **権限変更**: IAMポリシー更新
+
+### Resource（リソース）
+データの最終的な出力先や危険な操作対象を識別します。
+
+**プログラミング言語における例**:
+- **コード実行**: `eval()`、`exec()`、動的コード実行
 - **コマンド実行**: シェル実行、プロセス生成
 - **データベース**: SQLクエリ実行、NoSQL操作
 - **ファイルシステム**: ファイル書き込み、パストラバーサル
 - **ネットワーク**: 外部HTTPリクエスト、URL構築
 
-### Validate（バリデーション）
-データを適切にサニタイズ、検証、エスケープするセキュリティ制御を識別します。
-
-- **入力検証**: スキーマ検証、型チェック
-- **出力エンコーディング**: HTMLエスケープ、URLエンコーディング
-- **サニタイゼーション**: XSS保護、パス正規化
-- **認証・認可**: トークン検証、権限チェック
+**IaCにおける例**:
+- **AWS サービス**: S3バケット、EC2インスタンス、Lambda関数
+- **ネットワークリソース**: VPC、サブネット、セキュリティグループ
 
 ## データフロー解析との統合
 
 パターンマッチングの結果に基づいて、適切なコンテキスト抽出を行います：
 
-- **Sourceマッチ**: `find_references`を使用してデータの流れを追跡
-- **Sinkマッチ**: `find_definitions`を使用してデータの起源を追跡
-- **Validateマッチ**: データフロー内のセキュリティ制御を特定
+- **Principalマッチ**: `find_references()`を使用してデータの流れを前方追跡
+- **Action/Resourceマッチ**: `find_definition()`を使用してデータの起源を後方追跡
+- **攻撃ベクター**: MITRE ATT&CKフレームワークのタクティクスIDで脅威を分類
 
 ## リスクスコアリング
 
@@ -66,20 +80,37 @@ Parsentryが使用するパターンベースの脆弱性検出システムの�
 
 ## 設定とカスタマイゼーション
 
-パターンは`src/patterns.yml`で管理され、言語別に以下の構造で定義されます：
+パターンは`src/patterns/`ディレクトリで言語別に管理され、以下の構造で定義されます：
 
 ```yaml
-<language>:
-  sources:
-    - pattern: "正規表現パターン"
-      description: "説明"
-  sinks:
-    - pattern: "正規表現パターン"
-      description: "説明"
-  validate:
-    - pattern: "正規表現パターン"
-      description: "説明"
+# 例: src/patterns/python.yml
+principals:
+  - pattern: "\\brequests\\."
+    description: "HTTP requests library"
+    attack_vector:
+      - "T1071"  # Application Layer Protocol
+      - "T1090"  # Proxy
+
+actions:
+  - pattern: "\\bhtml\\.escape\\s*\\("
+    description: "HTML escaping action"
+    attack_vector:
+      - "T1055"  # Process Injection
+      - "T1106"  # Native API
+
+resources:
+  - pattern: "\\bopen\\s*\\("
+    description: "File operations resource"
+    attack_vector:
+      - "T1083"  # File and Directory Discovery
+      - "T1005"  # Data from Local System
 ```
+
+サポートされる言語ファイル:
+- `python.yml`, `javascript.yml`, `typescript.yml`
+- `rust.yml`, `java.yml`, `go.yml`, `ruby.yml`
+- `c.yml`, `cpp.yml`
+- `terraform.yml`, `kubernetes.yml`
 
 ## 将来の拡張
 

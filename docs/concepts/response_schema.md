@@ -95,18 +95,21 @@ Parsentryは以下を保証するためにLLMレスポンスの厳密なJSONス�
   - `name`: 脆弱なコンポーネントの識別子
   - `reason`: 脆弱性関連性の説明
   - `code_line`: 実際の脆弱なコードスニペット
+  - `path`: ファイルパス（現在の実装で追加）
 - **例**:
 ```json
 "context_code": [
   {
     "name": "get_user",
     "reason": "サニタイズされていない入力でSQLクエリを構築",
-    "code_line": "query = \"SELECT * FROM users WHERE id = \" + request.params.id"
+    "code_line": "query = \"SELECT * FROM users WHERE id = \" + request.params.id",
+    "path": "src/database.py"
   },
   {
-    "name": "execute_query",
+    "name": "execute_query", 
     "reason": "脆弱なクエリを実行",
-    "code_line": "results = db.execute(query)"
+    "code_line": "results = db.execute(query)",
+    "path": "src/database.py"
   }
 ]
 ```
@@ -137,9 +140,10 @@ All six top-level fields must be present in every response.
 
 ### Type Constraints
 - Strings must be non-empty
-- `confidence_score` must be integer 0-10
+- `confidence_score` must be integer 0-100 (normalized from 0-10 input)
 - `vulnerability_types` must contain valid enum values
 - `context_code` must have at least one entry if vulnerability found
+- `context_code.path` field is required in current implementation
 
 ### Content Guidelines
 - `scratchpad`: Include actual analysis steps
@@ -177,9 +181,12 @@ All six top-level fields must be present in every response.
 ### Schema Validation
 
 The schema is enforced by:
-1. JSON parsing in `parse_json_response()`
-2. Serde deserialization to `Response` struct
-3. Type validation via Rust's type system
+1. JSON schema specification in `response_json_schema()` function
+2. genai client configuration with ChatOptions and JsonSpec
+3. JSON parsing in `parse_json_response()`
+4. Serde deserialization to `Response` struct
+5. Type validation via Rust's type system
+6. Confidence score normalization via `normalize_confidence_score()`
 
 ## Best Practices
 

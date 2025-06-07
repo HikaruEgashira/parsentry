@@ -4,7 +4,7 @@
 
 ## 概要
 
-解析プロセスは、静的コード解析とLLMを使用した脆弱性検出を組み合わせています。システムは最初にパターンマッチングを使用して潜在的に脆弱なファイルを特定し、その後LLMを使用して深度解析を実行し、脆弱性を確認・特性化します。
+解析プロセスは、静的コード解析とLLMを使用した脆弱性検出を組み合わせています。システムは最初にセキュリティパターンマッチングを使用して潜在的に脆弱なファイルを特定し、その後LLMを使用して深度解析を実行し、脆弱性を確認・特性化します。
 
 ## 解析パイプライン
 
@@ -12,17 +12,18 @@
 
 - リポジトリがソースファイルをスキャン
 - ファイルは以下の基準でフィルタリング：
-  - 言語サポート（Rust、Python、JavaScript/TypeScript、Ruby、Go、Java）
-  - `src/patterns.yml`で定義されたセキュリティリスクパターン
+  - 言語サポート（Rust、Python、JavaScript/TypeScript、Ruby、Go、Java、C/C++、Terraform）
+  - `src/patterns/`ディレクトリで言語別に定義されたセキュリティリスクパターン
   - ファイルサイズと複雑度の閾値
 
 ### 2. パターンベースリスク評価
 
-- 各ファイルは言語固有のセキュリティパターンに対して評価
+- 各ファイルは言語固有のセキュリティパターン（PAR分類）に対して評価
 - リスクスコアは以下に基づいて計算：
-  - パターンマッチ（例：`eval()`、`exec()`、SQLクエリ）
-  - パターンカテゴリ（code_execution、sql_injection、path_traversal等）
-  - 複数パターンからの累積リスク
+  - Principal（データソース）パターン：入力源、リクエストハンドラー、環境変数等
+  - Action（操作）パターン：データ検証、サニタイゼーション、ハッシュ化等
+  - Resource（リソース）パターン：ファイル操作、データベース、コマンド実行等
+- MITRE ATT&CKフレームワークに基づく攻撃ベクターの関連付け
 
 ### 3. コードコンテキスト構築
 
@@ -35,11 +36,11 @@
 
 #### 改進されたコンテキスト追跡
 
-新しいパターン分類システム（Source/Sink/Validate）により、コンテキスト収集が最適化されました：
+PAR（Principal-Action-Resource）分類システムにより、コンテキスト収集が最適化されました：
 
-- **Sourceパターン**: `find_references()` を使用してデータの流れを前方追跡
-- **Sinkパターン**: `find_definition()` を使用して定義を後方追跡  
-- **Validateパターン**: データサニタイゼーション・検証処理を識別
+- **Principalパターン**: `find_references()` を使用してデータの流れを前方追跡
+- **Action/Resourceパターン**: `find_definition()` を使用して定義を後方追跡  
+- **攻撃ベクター**: MITRE ATT&CKタクティクスに基づく脅威の分類
 
 これにより、より正確なデータフロー解析と脆弱性のコンテキスト理解が可能になります。
 
@@ -108,9 +109,11 @@
 ### モデル選択
 
 サポートされるモデル：
-- OpenAI: gpt-4.1-nano、o4-mini
-- Anthropic: claude-opus-4、claude-sonnet-4
-- 互換APIを通じたローカルモデル
+- OpenAI: gpt-4、gpt-4-turbo、gpt-3.5-turbo
+- Anthropic: claude-3-opus、claude-3-sonnet、claude-3-haiku
+- Google: gemini-pro
+- Groq: llama等の高速推論モデル
+- ローカルモデル（Ollama等との互換）
 
 ### 解析パラメータ
 

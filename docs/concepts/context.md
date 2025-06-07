@@ -120,37 +120,43 @@ Tree-sitter解析を使用：
 
 ### Tree-sitterクエリ
 
-Python関数抽出のクエリ例：
+関数定義と参照抽出のクエリ例：
 ```scheme
+; 定義クエリ（definitions.scm）
 (function_definition
-  name: (identifier) @function.name
-  parameters: (parameters) @function.params
-  body: (block) @function.body)
+  name: (identifier) @name
+  body: (block)) @definition
+
+; 参照クエリ（references.scm）
+(identifier) @reference
 ```
+
+現在サポートされる言語：C、C++、Python、JavaScript、TypeScript、Java、Go、Rust、Ruby
 
 ### コンテキストテンプレート構造
 
-```json
-{
-  "project": {
-    "name": "...",
-    "description": "...",
-    "main_language": "...",
-    "dependencies": []
-  },
-  "file": {
-    "path": "...",
-    "language": "...",
-    "imports": [],
-    "functions": [],
-    "classes": []
-  },
-  "security_context": {
-    "input_sources": [],
-    "sensitive_operations": [],
-    "external_calls": []
-  }
+```rust
+// Definition構造体
+pub struct Definition {
+    pub name: String,
+    pub start_byte: usize,
+    pub end_byte: usize, 
+    pub source: String,
 }
+
+// Context構造体
+pub struct Context {
+    pub definitions: Vec<Definition>,
+}
+```
+
+プロンプトで使用される実際のコンテキスト形式：
+```
+Context Definitions:
+
+Function/Definition: function_name
+Code:
+function_body_source_code
 ```
 
 ## ベストプラクティス
