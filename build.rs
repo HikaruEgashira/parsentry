@@ -97,24 +97,25 @@ fn main() {
         .flag("-Wno-unused-parameter")
         .compile("tree-sitter-ruby");
 
-    cc::Build::new()
-        .include(&dir)
-        .include(&tree_sitter_dir)
-        .include(dir.join("tree-sitter-yaml/src"))
-        .file(dir.join("tree-sitter-yaml/src/parser.c"))
-        .file(dir.join("tree-sitter-yaml/src/scanner.cc"))
-        .flag("-Wno-unused-parameter")
-        .cpp(true)
-        .compile("tree-sitter-yaml");
+    // TODO: Add YAML and Bash support once tree-sitter submodules are properly set up
+    // cc::Build::new()
+    //     .include(&dir)
+    //     .include(&tree_sitter_dir)
+    //     .include(dir.join("tree-sitter-yaml/src"))
+    //     .file(dir.join("tree-sitter-yaml/src/parser.c"))
+    //     .file(dir.join("tree-sitter-yaml/src/scanner.cc"))
+    //     .flag("-Wno-unused-parameter")
+    //     .cpp(true)
+    //     .compile("tree-sitter-yaml");
 
-    cc::Build::new()
-        .include(&dir)
-        .include(&tree_sitter_dir)
-        .include(dir.join("tree-sitter-bash/src"))
-        .file(dir.join("tree-sitter-bash/src/parser.c"))
-        .file(dir.join("tree-sitter-bash/src/scanner.c"))
-        .flag("-Wno-unused-parameter")
-        .compile("tree-sitter-bash");
+    // cc::Build::new()
+    //     .include(&dir)
+    //     .include(&tree_sitter_dir)
+    //     .include(dir.join("tree-sitter-bash/src"))
+    //     .file(dir.join("tree-sitter-bash/src/parser.c"))
+    //     .file(dir.join("tree-sitter-bash/src/scanner.c"))
+    //     .flag("-Wno-unused-parameter")
+    //     .compile("tree-sitter-bash");
 
     // Add library search path
     println!("cargo:rustc-link-search=native={}", out_dir.display());
