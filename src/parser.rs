@@ -18,7 +18,7 @@ unsafe extern "C" {
     fn tree_sitter_java() -> Language;
     fn tree_sitter_go() -> Language;
     fn tree_sitter_ruby() -> Language;
-
+    fn tree_sitter_hcl() -> Language;
 }
 
 #[derive(Debug, Clone)]
@@ -72,6 +72,7 @@ impl CodeParser {
             Some("rs") => Some(unsafe { tree_sitter_rust() }),
             Some("go") => Some(unsafe { tree_sitter_go() }),
             Some("rb") => Some(unsafe { tree_sitter_ruby() }),
+            Some("tf") | Some("hcl") => Some(unsafe { tree_sitter_hcl() }),
             _ => None,
         }
     }
@@ -97,6 +98,8 @@ impl CodeParser {
             "rust"
         } else if language == &unsafe { tree_sitter_ruby() } {
             "ruby"
+        } else if language == &unsafe { tree_sitter_hcl() } {
+            "terraform"
         } else {
             return Err(anyhow!("クエリに対応していない言語です"));
         };
@@ -152,6 +155,11 @@ impl CodeParser {
             "ruby" => match query_name {
                 "definitions" => include_str!("queries/ruby/definitions.scm"),
                 "references" => include_str!("queries/ruby/references.scm"),
+                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+            },
+            "terraform" => match query_name {
+                "definitions" => include_str!("queries/terraform/definitions.scm"),
+                "references" => include_str!("queries/terraform/references.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             _ => return Err(anyhow!("未対応の言語: {}", lang_name)),

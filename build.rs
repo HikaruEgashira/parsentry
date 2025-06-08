@@ -97,6 +97,15 @@ fn main() {
         .flag("-Wno-unused-parameter")
         .compile("tree-sitter-ruby");
 
+    // Add HCL/Terraform parser
+    cc::Build::new()
+        .include(&dir)
+        .include(&tree_sitter_dir)
+        .file(dir.join("tree-sitter-terraform/src/parser.c"))
+        .file(dir.join("tree-sitter-terraform/src/scanner.c"))
+        .flag("-Wno-unused-parameter")
+        .compile("tree-sitter-hcl");
+
     // TODO: Add YAML and Bash support once tree-sitter submodules are properly set up
     // cc::Build::new()
     //     .include(&dir)
