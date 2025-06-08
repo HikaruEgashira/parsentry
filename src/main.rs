@@ -64,19 +64,9 @@ struct Args {
     #[arg(long)]
     vuln_types: Option<String>,
 
-    /// サマリーレポートを生成する
-    #[arg(long)]
-    summary: bool,
-
     /// カスタムパターンを生成する（現在のディレクトリを解析してセキュリティパターンを自動検出）
     #[arg(long)]
     generate_patterns: bool,
-
-    /// SARIF形式で出力する
-    #[arg(long)]
-    sarif: bool,
-
-
 }
 
 #[tokio::main]
@@ -324,7 +314,8 @@ async fn main() -> Result<()> {
         filtered_summary = filtered_summary.filter_by_vuln_types(&vuln_types);
     }
 
-    if args.summary {
+    // Always generate summary report
+    {
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
@@ -352,8 +343,8 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Generate SARIF report if requested
-    if args.sarif {
+    // Always generate SARIF report
+    {
         let sarif_report = SarifReport::from_analysis_summary(&filtered_summary);
         
         if let Some(ref final_output_dir) = output_dir {
