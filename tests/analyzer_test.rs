@@ -5,7 +5,7 @@ use tempfile::NamedTempFile;
 #[allow(unused_imports)]
 use parsentry::analyzer::analyze_file;
 #[allow(unused_imports)]
-use parsentry::response::{ContextCode, VulnType};
+use parsentry::response::VulnType;
 
 #[cfg(feature = "snapshot-test")]
 #[tokio::test]
@@ -29,7 +29,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
     assert_eq!(result.poc, String::new());
     assert_eq!(result.confidence_score, 0);
     assert!(result.vulnerability_types.is_empty());
-    assert!(result.context_code.is_empty());
+    // Note: context_code field no longer exists in Response struct
 
     Ok(())
 }
@@ -69,10 +69,8 @@ fn main() {
         !result.vulnerability_types.is_empty(),
         "Should detect vulnerabilities"
     );
-    assert!(
-        !result.context_code.is_empty(),
-        "Should include context code"
-    );
+    // Note: context_code field no longer exists in Response struct
+    // Context information is now provided through PAR analysis
 
     Ok(())
 }

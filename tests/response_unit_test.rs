@@ -1,6 +1,6 @@
 use serde_json::json;
 use parsentry::response::{
-    AnalysisSummary, ContextCode, Response, VulnType, response_json_schema,
+    AnalysisSummary, Response, VulnType, response_json_schema, ParAnalysis, RemediationGuidance,
 };
 
 #[test]
@@ -36,22 +36,11 @@ fn test_vuln_type_equality() {
     );
 }
 
-#[test]
-fn test_context_code_creation() {
-    let context = ContextCode {
-        name: "vulnerable_function".to_string(),
-        reason: "Uses unsafe eval() function".to_string(),
-        code_line: "eval(user_input)".to_string(),
-        path: "/src/vulnerable.py".to_string(),
-        line_number: None,
-        column_number: None,
-    };
-
-    assert_eq!(context.name, "vulnerable_function");
-    assert_eq!(context.reason, "Uses unsafe eval() function");
-    assert_eq!(context.code_line, "eval(user_input)");
-    assert_eq!(context.path, "/src/vulnerable.py");
-}
+// Note: ContextCode struct no longer exists - test removed
+// #[test]
+// fn test_context_code_creation() {
+//     // ContextCode struct has been removed from the Response struct
+// }
 
 #[test]
 fn test_response_creation() {
@@ -61,19 +50,20 @@ fn test_response_creation() {
         poc: "curl -X POST -d 'cmd=ls' /vulnerable-endpoint".to_string(),
         confidence_score: 9,
         vulnerability_types: vec![VulnType::RCE],
-        context_code: vec![ContextCode {
-            name: "process_command".to_string(),
-            reason: "Direct command execution".to_string(),
-            code_line: "os.system(command)".to_string(),
-            path: "/src/handlers.py".to_string(),
-            line_number: None,
-            column_number: None,
-        }],
+        par_analysis: ParAnalysis {
+            principals: vec![],
+            actions: vec![],
+            resources: vec![],
+            policy_violations: vec![],
+        },
+        remediation_guidance: RemediationGuidance {
+            policy_enforcement: vec![],
+        },
     };
 
     assert_eq!(response.confidence_score, 9);
     assert_eq!(response.vulnerability_types.len(), 1);
-    assert_eq!(response.context_code.len(), 1);
+    // Note: context_code field no longer exists
     assert!(response.analysis.contains("RCE"));
 }
 
@@ -85,7 +75,15 @@ fn test_response_serialization() {
         poc: "Test PoC".to_string(),
         confidence_score: 7,
         vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-        context_code: vec![],
+        par_analysis: ParAnalysis {
+            principals: vec![],
+            actions: vec![],
+            resources: vec![],
+            policy_violations: vec![],
+        },
+        remediation_guidance: RemediationGuidance {
+            policy_enforcement: vec![],
+        },
     };
 
     let serialized = serde_json::to_string(&response).unwrap();
@@ -148,29 +146,30 @@ fn test_markdown_generation() {
         poc: "echo 'test'".to_string(),
         confidence_score: 8,
         vulnerability_types: vec![VulnType::RCE, VulnType::SQLI],
-        context_code: vec![ContextCode {
-            name: "test_function".to_string(),
-            reason: "Test reason".to_string(),
-            code_line: "test_code()".to_string(),
-            path: "/test/path.py".to_string(),
-            line_number: None,
-            column_number: None,
-        }],
+        par_analysis: ParAnalysis {
+            principals: vec![],
+            actions: vec![],
+            resources: vec![],
+            policy_violations: vec![],
+        },
+        remediation_guidance: RemediationGuidance {
+            policy_enforcement: vec![],
+        },
     };
 
     let markdown = response.to_markdown();
 
     // Verify markdown contains expected sections
-    assert!(markdown.contains("# 解析レポート"));
+    assert!(markdown.contains("# PAR Security Analysis Report"));
     assert!(markdown.contains("信頼度スコア: 8"));
     assert!(markdown.contains("## 脆弱性タイプ"));
     assert!(markdown.contains("RCE"));
     assert!(markdown.contains("SQLI"));
-    assert!(markdown.contains("## 解析結果"));
+    assert!(markdown.contains("## 詳細解析"));
     assert!(markdown.contains("This is a test analysis"));
     assert!(markdown.contains("## PoC（概念実証コード）"));
     assert!(markdown.contains("echo 'test'"));
-    assert!(markdown.contains("## 関連コードコンテキスト"));
+    // Note: context_code related sections no longer exist
 }
 
 #[test]
@@ -185,7 +184,15 @@ fn test_confidence_score_validation() {
             poc: String::new(),
             confidence_score: score,
             vulnerability_types: vec![],
-            context_code: vec![],
+            par_analysis: ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: RemediationGuidance {
+                policy_enforcement: vec![],
+            },
         };
 
         // Confidence score should be stored as-is (validation is handled elsewhere)
@@ -201,7 +208,15 @@ fn test_empty_response() {
         poc: String::new(),
         confidence_score: 0,
         vulnerability_types: vec![],
-        context_code: vec![],
+        par_analysis: ParAnalysis {
+            principals: vec![],
+            actions: vec![],
+            resources: vec![],
+            policy_violations: vec![],
+        },
+        remediation_guidance: RemediationGuidance {
+            policy_enforcement: vec![],
+        },
     };
 
     assert!(response.scratchpad.is_empty());
@@ -209,58 +224,18 @@ fn test_empty_response() {
     assert!(response.poc.is_empty());
     assert_eq!(response.confidence_score, 0);
     assert!(response.vulnerability_types.is_empty());
-    assert!(response.context_code.is_empty());
+    // Note: context_code field no longer exists
 }
 
-#[test]
-fn test_context_code_serialization() {
-    let context = ContextCode {
-        name: "test_func".to_string(),
-        reason: "test reason".to_string(),
-        code_line: "print('test')".to_string(),
-        path: "/path/to/file.py".to_string(),
-        line_number: None,
-        column_number: None,
-    };
+// Note: ContextCode struct no longer exists - test removed
+// #[test]
+// fn test_context_code_serialization() {
+//     // ContextCode struct has been removed from the Response struct
+// }
 
-    let serialized = serde_json::to_string(&context).unwrap();
-    let deserialized: ContextCode = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(context.name, deserialized.name);
-    assert_eq!(context.reason, deserialized.reason);
-    assert_eq!(context.code_line, deserialized.code_line);
-    assert_eq!(context.path, deserialized.path);
-}
-
-#[test]
-fn test_response_with_multiple_context_codes() {
-    let response = Response {
-        scratchpad: "Multiple contexts".to_string(),
-        analysis: "Analysis with multiple context codes".to_string(),
-        poc: "PoC code".to_string(),
-        confidence_score: 6,
-        vulnerability_types: vec![VulnType::XSS],
-        context_code: vec![
-            ContextCode {
-                name: "func1".to_string(),
-                reason: "reason1".to_string(),
-                code_line: "code1".to_string(),
-                path: "/path1.py".to_string(),
-                line_number: None,
-                column_number: None,
-            },
-            ContextCode {
-                name: "func2".to_string(),
-                reason: "reason2".to_string(),
-                code_line: "code2".to_string(),
-                path: "/path2.py".to_string(),
-                line_number: None,
-                column_number: None,
-            },
-        ],
-    };
-
-    assert_eq!(response.context_code.len(), 2);
-    assert_eq!(response.context_code[0].name, "func1");
-    assert_eq!(response.context_code[1].name, "func2");
-}
+// Note: ContextCode struct no longer exists - test removed
+// #[test]
+// fn test_response_with_multiple_context_codes() {
+//     // ContextCode struct has been removed from the Response struct
+//     // This test functionality has been replaced by PAR analysis
+// }

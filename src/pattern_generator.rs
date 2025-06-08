@@ -216,9 +216,10 @@ Determine if this function should be classified as:
 - "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
 - "none": Not a security pattern
 
-If it IS a security pattern (not "none"), also:
-1. Generate a regex pattern that would match similar functions
-2. Identify potential MITRE ATT&CK techniques (format: "T1234")
+For ALL responses, provide:
+1. A regex pattern (even if classification is "none", use a basic pattern)
+2. A description (brief explanation)
+3. Potential MITRE ATT&CK techniques (use empty array if none applicable)
 
 Return a JSON object with this structure:
 {{
@@ -230,7 +231,7 @@ Return a JSON object with this structure:
   "attack_vector": ["T1234", "T5678"]
 }}
 
-If classification is "none", you can omit pattern, description, and attack_vector fields."#,
+All fields are required."#,
         language,
         definition.name,
         definition.source,
@@ -250,7 +251,7 @@ If classification is "none", you can omit pattern, description, and attack_vecto
                 "items": {"type": "string"}
             }
         },
-        "required": ["classification", "function_name", "reasoning"]
+        "required": ["classification", "function_name", "pattern", "description", "reasoning", "attack_vector"]
     });
 
     let client_config = ClientConfig::default().with_chat_options(
@@ -274,10 +275,10 @@ If classification is "none", you can omit pattern, description, and attack_vecto
     struct SingleAnalysisResponse {
         classification: String,
         function_name: String,
-        pattern: Option<String>,
-        description: Option<String>,
+        pattern: String,
+        description: String,
         reasoning: String,
-        attack_vector: Option<Vec<String>>,
+        attack_vector: Vec<String>,
     }
 
     let response: SingleAnalysisResponse = serde_json::from_str(content).map_err(|e| {
@@ -291,10 +292,10 @@ If classification is "none", you can omit pattern, description, and attack_vecto
     Ok(Some(PatternClassification {
         function_name: response.function_name,
         pattern_type: Some(response.classification),
-        pattern: response.pattern.unwrap_or_else(|| format!("\\\\b{}\\\\s*\\\\(", definition.name)),
-        description: response.description.unwrap_or_else(|| "Security-relevant function".to_string()),
+        pattern: response.pattern,
+        description: response.description,
         reasoning: response.reasoning,
-        attack_vector: response.attack_vector.unwrap_or_default(),
+        attack_vector: response.attack_vector,
     }))
 }
 

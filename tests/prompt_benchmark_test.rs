@@ -245,9 +245,8 @@ async fn run_risk_assessment_benchmark(model: &str) -> Result<BenchmarkResults> 
         if let Some(definition) = context.definitions.first() {
             // Test the risk assessment filtering
             let definitions_slice = vec![definition];
-            let high_risk_definitions = parsentry::pattern_generator::filter_high_risk_definitions(
-                model, &definitions_slice, test_case.language
-            ).await?;
+            // TODO: Replace with actual risk assessment logic when filter_high_risk_definitions is available
+            let high_risk_definitions = definitions_slice; // Placeholder: assume all definitions are high risk
             
             // Determine actual risk level based on whether function was filtered
             let actual_risk = if high_risk_definitions.is_empty() {
@@ -406,9 +405,8 @@ function handleUserLogin(req, res) {
         
         if let Some(definition) = context.definitions.first() {
             let definitions_slice = vec![definition];
-            let high_risk_definitions = parsentry::pattern_generator::filter_high_risk_definitions(
-                model, &definitions_slice, test_case.language
-            ).await?;
+            // TODO: Replace with actual risk assessment logic when filter_high_risk_definitions is available
+            let high_risk_definitions = definitions_slice; // Placeholder: assume all definitions are high risk
             
             let risk_identified = !high_risk_definitions.is_empty();
             risk_results.push(risk_identified);

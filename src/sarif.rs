@@ -474,14 +474,15 @@ mod tests {
             poc: "SELECT * FROM users".to_string(),
             confidence_score: 85,
             vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-            context_code: vec![crate::response::ContextCode {
-                name: "test_function".to_string(),
-                reason: "Contains SQL query".to_string(),
-                code_line: "SELECT * FROM users WHERE id = ?".to_string(),
-                path: "test.py".to_string(),
-                line_number: Some(42),
-                column_number: Some(10),
-            }],
+            par_analysis: crate::response::ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: crate::response::RemediationGuidance {
+                policy_enforcement: vec![],
+            },
         };
         
         summary.add_result(PathBuf::from("test.py"), response);
@@ -536,25 +537,7 @@ mod tests {
         assert_eq!(VulnType::IDOR.owasp_categories(), vec!["A01:2021-Broken Access Control"]);
     }
 
-    #[test]
-    fn test_region_extraction_from_context() {
-        let context_with_line = vec![crate::response::ContextCode {
-            name: "test_func".to_string(),
-            reason: "test".to_string(),
-            code_line: "vulnerable code".to_string(),
-            path: "test.py".to_string(),
-            line_number: Some(42),
-            column_number: Some(10),
-        }];
-        
-        let region = extract_region_from_context(&context_with_line);
-        assert!(region.is_some());
-        
-        let region = region.unwrap();
-        assert_eq!(region.start_line, 42);
-        assert_eq!(region.start_column, Some(10));
-        assert!(region.snippet.is_some());
-    }
+    // Removed test_region_extraction_from_context as ContextCode no longer exists
 
     #[test]
     fn test_parse_line_number_from_text() {
@@ -589,14 +572,15 @@ mod tests {
             poc: "SELECT * FROM users WHERE id = ? -- user_input injection".to_string(),
             confidence_score: 95,
             vulnerability_types: vec![VulnType::SQLI],
-            context_code: vec![crate::response::ContextCode {
-                name: "get_user".to_string(),
-                reason: "Direct string concatenation in SQL query".to_string(),
-                code_line: "query = \"SELECT * FROM users WHERE id = '\" + user_id + \"'\"".to_string(),
-                path: "user_service.py".to_string(),
-                line_number: Some(156),
-                column_number: Some(8),
-            }],
+            par_analysis: crate::response::ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: crate::response::RemediationGuidance {
+                policy_enforcement: vec![],
+            },
         };
         
         summary.add_result(PathBuf::from("user_service.py"), response);
@@ -621,11 +605,8 @@ mod tests {
         assert!(props.owasp.is_some());
         assert_eq!(props.owasp.as_ref().unwrap(), &vec!["A03:2021-Injection"]);
         
-        // Verify region information
-        assert!(result.locations[0].physical_location.region.is_some());
-        let region = result.locations[0].physical_location.region.as_ref().unwrap();
-        assert_eq!(region.start_line, 156);
-        assert_eq!(region.start_column, Some(8));
-        assert!(region.snippet.is_some());
+        // TODO: Region information verification - currently disabled due to ContextCode removal
+        // Once new location tracking is implemented, these assertions can be restored
+        // assert!(result.locations[0].physical_location.region.is_some());
     }
 }
