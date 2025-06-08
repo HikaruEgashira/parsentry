@@ -12,18 +12,21 @@ pub const SYS_PROMPT_TEMPLATE: &str = r#"
 "#;
 
 pub const INITIAL_ANALYSIS_PROMPT_TEMPLATE: &str = r#"
-与えられたコードをPAR（Principal-Action-Resource）モデルに基づいて分析してください：
+与えられたコードをPAR（Principal-Action-Resource）モデルに基づいて分析し、以下のJSON形式で結果を出力してください：
 
 **Principal（誰が/データ源）**: データの起点となるエンティティや入力源
 - ユーザー入力、API応答、ファイル読み込み、環境変数など
+- 各Principalの信頼レベル（trusted/semi_trusted/untrusted）を評価
 
 **Action（何を/検証・処理）**: データ処理や検証操作（脆弱性の可能性を含む）
 - 入力検証、サニタイズ、認証・認可、暗号化など（バイパス可能性要注意）
+- 実装品質（adequate/insufficient/missing/bypassed）を評価
 
 **Resource（どこで/危険な操作）**: 機密性・完全性・可用性に影響する操作
 - ファイル書き込み、コマンド実行、データベース更新、出力など
+- 機密性レベル（low/medium/high/critical）を評価
 
-各コード要素がどのPAR役割を持ち、適切なセキュリティポリシーが実装されているかを評価してください。
+各コード要素がどのPAR役割を持ち、適切なセキュリティポリシーが実装されているかを評価し、policy_violationsとして報告してください。
 "#;
 
 pub const ANALYSIS_APPROACH_TEMPLATE: &str = r#"
@@ -38,12 +41,60 @@ PARモデルに基づく分析手順：
 pub const GUIDELINES_TEMPLATE: &str = r#"
 PARベースのセキュリティポリシー評価ガイドライン：
 
+## 分析手順
 1. **Principal評価**: 信頼できないデータ源を特定し、その危険性を評価
 2. **Resource評価**: 機密性・完全性・可用性に影響する操作の危険性を評価
 3. **Action評価**: Principal-Resource間の適切な防御策実装を評価
 4. **ポリシー違反**: 危険なPrincipalが適切なActionなしでResourceに直接アクセスする場合を検出
 5. **文脈考慮**: コード全体の文脈でPAR関係の適切性を判断
 6. **宣言的判定**: 「このPrincipalにはこのActionが必要」といった宣言的ポリシーで評価
+
+## 出力形式要件
+必ずJSON形式で以下のstructureに従って出力してください：
+{
+  "scratchpad": "解析思考プロセス",
+  "analysis": "詳細な脆弱性説明",
+  "poc": "概念実証コード",
+  "confidence_score": 0-100の整数,
+  "vulnerability_types": ["LFI","RCE","SSRF","AFO","SQLI","XSS","IDOR"],
+  "par_analysis": {
+    "principals": [{
+      "identifier": "識別子",
+      "trust_level": "trusted|semi_trusted|untrusted",
+      "source_context": "コンテキスト説明",
+      "risk_factors": ["リスク要因リスト"]
+    }],
+    "actions": [{
+      "identifier": "識別子",
+      "security_function": "セキュリティ機能説明",
+      "implementation_quality": "adequate|insufficient|missing|bypassed",
+      "detected_weaknesses": ["弱点リスト"],
+      "bypass_vectors": ["バイパス手法リスト"]
+    }],
+    "resources": [{
+      "identifier": "識別子",
+      "sensitivity_level": "low|medium|high|critical",
+      "operation_type": "操作タイプ",
+      "protection_mechanisms": ["保護メカニズムリスト"]
+    }],
+    "policy_violations": [{
+      "rule_id": "ルールID",
+      "rule_description": "ルール説明",
+      "violation_path": "違反パス",
+      "severity": "重要度",
+      "confidence": 0.0-1.0の浮動小数点
+    }]
+  },
+  "remediation_guidance": {
+    "policy_enforcement": [{
+      "component": "コンポーネント名",
+      "required_improvement": "必要な改善",
+      "specific_guidance": "具体的なガイダンス",
+      "priority": "優先度"
+    }]
+  }
+}
+
 7. 必ず日本語で応答してください
 
 注意: Actionパターン（バリデーション・処理）はバイパス可能性があり、実装不備が脆弱性の直接原因となります。

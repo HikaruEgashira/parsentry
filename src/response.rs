@@ -75,13 +75,92 @@ impl VulnType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextCode {
-    pub name: String,
-    pub reason: String,
-    pub code_line: String,
-    pub path: String,
-    pub line_number: Option<i32>,
-    pub column_number: Option<i32>,
+pub enum TrustLevel {
+    #[serde(rename = "trusted")]
+    Trusted,
+    #[serde(rename = "semi_trusted")]
+    SemiTrusted,
+    #[serde(rename = "untrusted")]
+    Untrusted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SensitivityLevel {
+    #[serde(rename = "low")]
+    Low,
+    #[serde(rename = "medium")]
+    Medium,
+    #[serde(rename = "high")]
+    High,
+    #[serde(rename = "critical")]
+    Critical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SecurityFunctionQuality {
+    #[serde(rename = "adequate")]
+    Adequate,
+    #[serde(rename = "insufficient")]
+    Insufficient,
+    #[serde(rename = "missing")]
+    Missing,
+    #[serde(rename = "bypassed")]
+    Bypassed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrincipalInfo {
+    pub identifier: String,
+    pub trust_level: TrustLevel,
+    pub source_context: String,
+    pub risk_factors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionInfo {
+    pub identifier: String,
+    pub security_function: String,
+    pub implementation_quality: SecurityFunctionQuality,
+    pub detected_weaknesses: Vec<String>,
+    pub bypass_vectors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceInfo {
+    pub identifier: String,
+    pub sensitivity_level: SensitivityLevel,
+    pub operation_type: String,
+    pub protection_mechanisms: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolicyViolation {
+    pub rule_id: String,
+    pub rule_description: String,
+    pub violation_path: String,
+    pub severity: String,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParAnalysis {
+    pub principals: Vec<PrincipalInfo>,
+    pub actions: Vec<ActionInfo>,
+    pub resources: Vec<ResourceInfo>,
+    pub policy_violations: Vec<PolicyViolation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemediationAction {
+    pub component: String,
+    pub required_improvement: String,
+    pub specific_guidance: String,
+    pub priority: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemediationGuidance {
+    pub policy_enforcement: Vec<RemediationAction>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,7 +170,8 @@ pub struct Response {
     pub poc: String,
     pub confidence_score: i32,
     pub vulnerability_types: Vec<VulnType>,
-    pub context_code: Vec<ContextCode>,
+    pub par_analysis: ParAnalysis,
+    pub remediation_guidance: RemediationGuidance,
 }
 
 pub fn response_json_schema() -> serde_json::Value {
@@ -109,21 +189,87 @@ pub fn response_json_schema() -> serde_json::Value {
                     "enum": ["LFI", "RCE", "SSRF", "AFO", "SQLI", "XSS", "IDOR"]
                 }
             },
-            "context_code": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" },
-                        "reason": { "type": "string" },
-                        "code_line": { "type": "string" },
-                        "path": { "type": "string" }
+            "par_analysis": {
+                "type": "object",
+                "properties": {
+                    "principals": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "identifier": { "type": "string" },
+                                "trust_level": { "type": "string", "enum": ["trusted", "semi_trusted", "untrusted"] },
+                                "source_context": { "type": "string" },
+                                "risk_factors": { "type": "array", "items": { "type": "string" } }
+                            },
+                            "required": ["identifier", "trust_level", "source_context", "risk_factors"]
+                        }
                     },
-                    "required": ["name", "reason", "code_line", "path"]
-                }
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "identifier": { "type": "string" },
+                                "security_function": { "type": "string" },
+                                "implementation_quality": { "type": "string", "enum": ["adequate", "insufficient", "missing", "bypassed"] },
+                                "detected_weaknesses": { "type": "array", "items": { "type": "string" } },
+                                "bypass_vectors": { "type": "array", "items": { "type": "string" } }
+                            },
+                            "required": ["identifier", "security_function", "implementation_quality", "detected_weaknesses", "bypass_vectors"]
+                        }
+                    },
+                    "resources": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "identifier": { "type": "string" },
+                                "sensitivity_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                                "operation_type": { "type": "string" },
+                                "protection_mechanisms": { "type": "array", "items": { "type": "string" } }
+                            },
+                            "required": ["identifier", "sensitivity_level", "operation_type", "protection_mechanisms"]
+                        }
+                    },
+                    "policy_violations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "rule_id": { "type": "string" },
+                                "rule_description": { "type": "string" },
+                                "violation_path": { "type": "string" },
+                                "severity": { "type": "string" },
+                                "confidence": { "type": "number" }
+                            },
+                            "required": ["rule_id", "rule_description", "violation_path", "severity", "confidence"]
+                        }
+                    }
+                },
+                "required": ["principals", "actions", "resources", "policy_violations"]
+            },
+            "remediation_guidance": {
+                "type": "object",
+                "properties": {
+                    "policy_enforcement": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "component": { "type": "string" },
+                                "required_improvement": { "type": "string" },
+                                "specific_guidance": { "type": "string" },
+                                "priority": { "type": "string" }
+                            },
+                            "required": ["component", "required_improvement", "specific_guidance", "priority"]
+                        }
+                    }
+                },
+                "required": ["policy_enforcement"]
             }
         },
-        "required": ["scratchpad", "analysis", "poc", "confidence_score", "vulnerability_types", "context_code"]
+        "required": ["scratchpad", "analysis", "poc", "confidence_score", "vulnerability_types", "par_analysis", "remediation_guidance"]
     })
 }
 
@@ -137,7 +283,7 @@ impl Response {
     }
 
     pub fn print_readable(&self) {
-        println!("\n📝 解析レポート");
+        println!("\n📝 PAR Security Analysis Report");
         println!("{}", "=".repeat(80));
 
         let confidence_icon = match self.confidence_score {
@@ -159,7 +305,40 @@ impl Response {
             }
         }
 
-        println!("\n🔍 解析結果:");
+        println!("\n🔍 PAR Policy Analysis:");
+        println!("{}", "-".repeat(80));
+
+        if !self.par_analysis.principals.is_empty() {
+            println!("\n🧑 Principals (データ源):");
+            for principal in &self.par_analysis.principals {
+                println!("  - {}: {:?} ({})", principal.identifier, principal.trust_level, principal.source_context);
+            }
+        }
+
+        if !self.par_analysis.actions.is_empty() {
+            println!("\n⚙ Actions (セキュリティ制御):");
+            for action in &self.par_analysis.actions {
+                println!("  - {}: {:?} ({})", action.identifier, action.implementation_quality, action.security_function);
+            }
+        }
+
+        if !self.par_analysis.resources.is_empty() {
+            println!("\n🗄 Resources (操作対象):");
+            for resource in &self.par_analysis.resources {
+                println!("  - {}: {:?} ({})", resource.identifier, resource.sensitivity_level, resource.operation_type);
+            }
+        }
+
+        if !self.par_analysis.policy_violations.is_empty() {
+            println!("\n❌ Policy Violations:");
+            for violation in &self.par_analysis.policy_violations {
+                println!("  - {}: {}", violation.rule_id, violation.rule_description);
+                println!("    Path: {}", violation.violation_path);
+                println!("    Severity: {} (Confidence: {:.2})", violation.severity, violation.confidence);
+            }
+        }
+
+        println!("\n📊 詳細解析:");
         println!("{}", "-".repeat(80));
         println!("{}", self.analysis);
 
@@ -169,14 +348,14 @@ impl Response {
             println!("{}", self.poc);
         }
 
-        if !self.context_code.is_empty() {
-            println!("\n📄 関連コードコンテキスト:");
+        if !self.remediation_guidance.policy_enforcement.is_empty() {
+            println!("\n🔧 修復ガイダンス:");
             println!("{}", "-".repeat(80));
-            for context in &self.context_code {
-                println!("関数名: {}", context.name);
-                println!("理由: {}", context.reason);
-                println!("コード: {}", context.code_line);
-                println!("パス: {}", context.path);
+            for remediation in &self.remediation_guidance.policy_enforcement {
+                println!("Component: {}", remediation.component);
+                println!("Required: {}", remediation.required_improvement);
+                println!("Guidance: {}", remediation.specific_guidance);
+                println!("Priority: {}", remediation.priority);
                 println!();
             }
         }
@@ -192,7 +371,7 @@ impl Response {
 
     pub fn to_markdown(&self) -> String {
         let mut md = String::new();
-        md.push_str("# 解析レポート\n\n");
+        md.push_str("# PAR Security Analysis Report\n\n");
 
         let confidence_badge = match self.confidence_score {
             90..=100 => "![高信頼度](https://img.shields.io/badge/信頼度-高-red)",
@@ -214,7 +393,44 @@ impl Response {
             md.push('\n');
         }
 
-        md.push_str("## 解析結果\n\n");
+        md.push_str("## PAR Policy Analysis\n\n");
+
+        md.push_str("### Principals (データ源)\n\n");
+        for principal in &self.par_analysis.principals {
+            md.push_str(&format!("- **{}**: {:?}\n", principal.identifier, principal.trust_level));
+            md.push_str(&format!("  - Context: {}\n", principal.source_context));
+            md.push_str(&format!("  - Risk Factors: {}\n", principal.risk_factors.join(", ")));
+        }
+        md.push('\n');
+
+        md.push_str("### Actions (セキュリティ制御)\n\n");
+        for action in &self.par_analysis.actions {
+            md.push_str(&format!("- **{}**: {:?}\n", action.identifier, action.implementation_quality));
+            md.push_str(&format!("  - Function: {}\n", action.security_function));
+            md.push_str(&format!("  - Weaknesses: {}\n", action.detected_weaknesses.join(", ")));
+            md.push_str(&format!("  - Bypass Vectors: {}\n", action.bypass_vectors.join(", ")));
+        }
+        md.push('\n');
+
+        md.push_str("### Resources (操作対象)\n\n");
+        for resource in &self.par_analysis.resources {
+            md.push_str(&format!("- **{}**: {:?}\n", resource.identifier, resource.sensitivity_level));
+            md.push_str(&format!("  - Operation: {}\n", resource.operation_type));
+            md.push_str(&format!("  - Protection: {}\n", resource.protection_mechanisms.join(", ")));
+        }
+        md.push('\n');
+
+        if !self.par_analysis.policy_violations.is_empty() {
+            md.push_str("### Policy Violations\n\n");
+            for violation in &self.par_analysis.policy_violations {
+                md.push_str(&format!("#### {}: {}\n\n", violation.rule_id, violation.rule_description));
+                md.push_str(&format!("- **Path**: {}\n", violation.violation_path));
+                md.push_str(&format!("- **Severity**: {}\n", violation.severity));
+                md.push_str(&format!("- **Confidence**: {:.2}\n\n", violation.confidence));
+            }
+        }
+
+        md.push_str("## 詳細解析\n\n");
         md.push_str(&self.analysis);
         md.push_str("\n\n");
 
@@ -225,15 +441,13 @@ impl Response {
             md.push_str("\n```\n\n");
         }
 
-        if !self.context_code.is_empty() {
-            md.push_str("## 関連コードコンテキスト\n\n");
-            for context in &self.context_code {
-                md.push_str(&format!("### 関数名: {}\n", context.name));
-                md.push_str(&format!("- 理由: {}\n", context.reason));
-                md.push_str(&format!("- パス: {}\n", context.path));
-                md.push_str("```rust\n");
-                md.push_str(&context.code_line);
-                md.push_str("\n```\n\n");
+        if !self.remediation_guidance.policy_enforcement.is_empty() {
+            md.push_str("## 修復ガイダンス\n\n");
+            for remediation in &self.remediation_guidance.policy_enforcement {
+                md.push_str(&format!("### {}\n\n", remediation.component));
+                md.push_str(&format!("- **Required**: {}\n", remediation.required_improvement));
+                md.push_str(&format!("- **Guidance**: {}\n", remediation.specific_guidance));
+                md.push_str(&format!("- **Priority**: {}\n\n", remediation.priority));
             }
         }
 
@@ -307,11 +521,11 @@ impl AnalysisSummary {
 
     pub fn to_markdown(&self) -> String {
         let mut md = String::new();
-        md.push_str("# 脆弱性解析サマリーレポート\n\n");
+        md.push_str("# PAR Security Analysis Summary Report\n\n");
 
         md.push_str("## 概要\n\n");
-        md.push_str("| ファイル | 脆弱性タイプ | 信頼度 | 重要度 |\n");
-        md.push_str("|---------|------------|--------|--------|\n");
+        md.push_str("| ファイル | 脆弱性タイプ | 信頼度 | Policy Violations |\n");
+        md.push_str("|---------|------------|--------|------------------|\n");
 
         for result in &self.results {
             if result.response.confidence_score > 0 {
@@ -331,6 +545,15 @@ impl AnalysisSummary {
                     .collect::<Vec<_>>()
                     .join(", ");
 
+                let violations = result
+                    .response
+                    .par_analysis
+                    .policy_violations
+                    .iter()
+                    .map(|v| v.rule_id.clone())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
                 md.push_str(&format!(
                     "| [{}]({}.md) | {} | {} | {} |\n",
                     result
@@ -344,26 +567,35 @@ impl AnalysisSummary {
                         .unwrap_or_default()
                         .to_string_lossy(),
                     vuln_types,
-                    result.response.confidence_score,
-                    confidence_level
+                    confidence_level,
+                    violations
                 ));
             }
         }
 
-        md.push_str("\n## 脆弱性タイプ別集計\n\n");
-
-        let mut type_count: HashMap<&VulnType, i32> = HashMap::new();
+        md.push_str("\n## Policy Violation Analysis\n\n");
+        
+        let mut violation_count: HashMap<String, i32> = HashMap::new();
         for result in &self.results {
-            for vuln_type in &result.response.vulnerability_types {
-                *type_count.entry(vuln_type).or_insert(0) += 1;
+            for violation in &result.response.par_analysis.policy_violations {
+                *violation_count.entry(violation.rule_id.clone()).or_insert(0) += 1;
             }
         }
 
-        md.push_str("| 脆弱性タイプ | 件数 |\n");
-        md.push_str("|------------|------|\n");
+        md.push_str("| Rule ID | 件数 | 説明 |\n");
+        md.push_str("|---------|------|------|\n");
 
-        for (vuln_type, count) in type_count.iter() {
-            md.push_str(&format!("| {:?} | {} |\n", vuln_type, count));
+        for (rule_id, count) in violation_count.iter() {
+            // Find the first occurrence to get the description
+            let description = self
+                .results
+                .iter()
+                .flat_map(|r| &r.response.par_analysis.policy_violations)
+                .find(|v| v.rule_id == *rule_id)
+                .map(|v| v.rule_description.clone())
+                .unwrap_or_default();
+                
+            md.push_str(&format!("| {} | {} | {} |\n", rule_id, count, description));
         }
 
         md

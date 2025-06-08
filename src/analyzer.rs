@@ -77,7 +77,15 @@ pub async fn analyze_file(
             poc: String::new(),
             confidence_score: 0,
             vulnerability_types: vec![],
-            context_code: vec![],
+            par_analysis: crate::response::ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: crate::response::RemediationGuidance {
+                policy_enforcement: vec![],
+            },
         });
     }
 
@@ -105,7 +113,7 @@ pub async fn analyze_file(
 
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(
-            "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { \"scratchpad\": string, \"analysis\": string, \"poc\": string, \"confidence_score\": integer, \"vulnerability_types\": array of strings, \"context_code\": array of objects with { \"name\": string, \"reason\": string, \"code_line\": string } }. Do not include any explanatory text outside the JSON object.",
+            "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Do not include any explanatory text outside the JSON object.",
         ),
         ChatMessage::user(&prompt),
     ]);
@@ -195,16 +203,16 @@ pub async fn analyze_file(
                         "  analysis要約: {}",
                         &vuln_response.analysis.chars().take(60).collect::<String>()
                     );
-                    if !vuln_response.context_code.is_empty() {
-                        println!("  context_code:");
-                        for ctx in &vuln_response.context_code {
-                            println!("    - {}: {}", ctx.name, ctx.reason);
+                    if !vuln_response.par_analysis.policy_violations.is_empty() {
+                        println!("  policy_violations:");
+                        for violation in &vuln_response.par_analysis.policy_violations {
+                            println!("    - {}: {}", violation.rule_id, violation.rule_description);
                         }
                     }
                     return Ok(vuln_response);
                 }
 
-                if vuln_response.context_code.is_empty() {
+                if vuln_response.par_analysis.policy_violations.is_empty() {
                     if verbosity == 0 {
                         return Ok(vuln_response);
                     }
@@ -219,17 +227,28 @@ pub async fn analyze_file(
                 let language = Language::from_extension(file_extension);
                 let patterns = SecurityRiskPatterns::new(language);
 
-                for context in vuln_response.context_code {
-                    let escaped_name = escape(&context.name);
+                // Extract identifiers from PAR analysis for context building
+                let mut identifiers_to_search = Vec::new();
+                
+                for principal in &vuln_response.par_analysis.principals {
+                    identifiers_to_search.push((principal.identifier.clone(), PatternType::Principal));
+                }
+                for action in &vuln_response.par_analysis.actions {
+                    identifiers_to_search.push((action.identifier.clone(), PatternType::Action));
+                }
+                for resource in &vuln_response.par_analysis.resources {
+                    identifiers_to_search.push((resource.identifier.clone(), PatternType::Resource));
+                }
+                
+                for (identifier, pattern_type) in identifiers_to_search {
+                    let escaped_name = escape(&identifier);
                     if !stored_code_definitions
                         .iter()
                         .any(|(_, def)| def.name == escaped_name)
                     {
-                        // Determine pattern type to choose appropriate search method
-                        let pattern_type = patterns.get_pattern_type(&context.name);
 
                         match pattern_type {
-                            Some(PatternType::Principal) => {
+                            PatternType::Principal => {
                                 // For principals, use find_references to track data flow forward
                                 match parser.find_references(&escaped_name) {
                                     Ok(refs) => {
@@ -243,7 +262,7 @@ pub async fn analyze_file(
                                     }
                                 }
                             }
-                            Some(PatternType::Action) => {
+                            PatternType::Action => {
                                 // For actions, use bidirectional tracking to understand both input and output
                                 match parser.find_bidirectional(&escaped_name, file_path) {
                                     Ok(bidirectional_results) => {
@@ -257,8 +276,8 @@ pub async fn analyze_file(
                                     }
                                 }
                             }
-                            Some(PatternType::Resource) | None => {
-                                // For resources or unknown patterns, use find_definition to track data origin
+                            PatternType::Resource => {
+                                // For resources, use find_definition to track data origin
                                 match parser.find_definition(&escaped_name, file_path) {
                                     Ok(Some(def)) => {
                                         stored_code_definitions.push(def);

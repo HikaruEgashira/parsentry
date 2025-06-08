@@ -223,7 +223,7 @@ impl SarifReport {
                                 uri: file_path.to_string_lossy().to_string(),
                                 index: Some(artifact_index),
                             },
-                            region: extract_region_from_context(&response.context_code),
+                            region: extract_region_from_par_analysis(&response.par_analysis),
                         },
                     }],
                     fingerprints: Some(generate_fingerprints(file_path, response)),
@@ -376,29 +376,16 @@ fn confidence_to_level(confidence: i32) -> String {
     }
 }
 
-fn extract_region_from_context(context_code: &[crate::response::ContextCode]) -> Option<SarifRegion> {
-    // Use line number from context if available
-    for context in context_code {
-        if let Some(line_num) = context.line_number {
-            return Some(SarifRegion {
-                start_line: line_num,
-                start_column: context.column_number,
-                end_line: None,
-                end_column: None,
-                snippet: Some(SarifArtifactContent {
-                    text: context.code_line.clone(),
-                }),
-            });
-        }
-    }
-    
-    // Fallback to parsing location strings for line numbers
-    for context in context_code {
-        if let Some(region) = parse_line_number_from_text(&context.code_line) {
+fn extract_region_from_par_analysis(par_analysis: &crate::response::ParAnalysis) -> Option<SarifRegion> {
+    // Try to extract location information from policy violations
+    for violation in &par_analysis.policy_violations {
+        if let Some(region) = parse_line_number_from_text(&violation.violation_path) {
             return Some(region);
         }
     }
     
+    // Fallback: try to get line info from principals, actions, or resources
+    // For now, just return None as we don't have line number info in the new schema
     None
 }
 
