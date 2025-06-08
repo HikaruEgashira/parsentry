@@ -9,7 +9,6 @@
 | [jquery.slim.js](jquery.slim.js.md) | XSS | 🔴 高 | JSXSS |
 | [jquery.js](jquery.js.md) | XSS | 🟠 中高 | XSS001 |
 | [bootstrap.js](bootstrap.js.md) | XSS | 🟠 中高 | XSS.VULN.UNSAFE_HTML |
-| [graphql.js](graphql.js.md) | SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF, SSRF | 🟠 中高 |  |
 | [jquery.min.js](jquery.min.js.md) | XSS | 🟠 中高 | JQ-001, JQ-002, JQ-003 |
 | [jquery.slim.min.js](jquery.slim.min.js.md) | XSS | 🟠 中高 | XSS-UNSAFE-DOM |
 
