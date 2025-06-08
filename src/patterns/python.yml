@@ -99,7 +99,12 @@ actions:
     description: "Path validation action"
     attack_vector:
       - "T1083"
-      - "T1564"
+      - "T1005"
+  - pattern: "\\blogger\\.(info|debug|warning|error)\\s*\\("
+    description: "Logging operations"
+    attack_vector:
+      - "T1005"
+      - "T1552"
 
 resources:
   - pattern: "\\bopen\\s*\\("
