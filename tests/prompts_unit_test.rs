@@ -16,29 +16,29 @@ fn test_sys_prompt_template() {
 #[test]
 fn test_initial_analysis_prompt_template() {
     assert!(!INITIAL_ANALYSIS_PROMPT_TEMPLATE.is_empty());
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("セキュリティ脆弱性"));
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("ユーザー入力"));
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("データベースクエリ"));
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("コマンド実行"));
+    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("PAR"));
+    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("Principal"));
+    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("Action"));
+    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("Resource"));
 }
 
 #[test]
 fn test_analysis_approach_template() {
     assert!(!ANALYSIS_APPROACH_TEMPLATE.is_empty());
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("手順"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("エントリポイント"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("データフロー"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("バイパス"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("影響を評価"));
+    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("PARモデル"));
+    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("Principal識別"));
+    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("Resource識別"));
+    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("Action評価"));
+    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("ポリシー違反"));
 }
 
 #[test]
 fn test_guidelines_template() {
     assert!(!GUIDELINES_TEMPLATE.is_empty());
-    assert!(GUIDELINES_TEMPLATE.contains("ガイドライン"));
-    assert!(GUIDELINES_TEMPLATE.contains("悪用可能"));
-    assert!(GUIDELINES_TEMPLATE.contains("行番号"));
-    assert!(GUIDELINES_TEMPLATE.contains("信頼度"));
+    assert!(GUIDELINES_TEMPLATE.contains("PAR"));
+    assert!(GUIDELINES_TEMPLATE.contains("Principal評価"));
+    assert!(GUIDELINES_TEMPLATE.contains("Resource評価"));
+    assert!(GUIDELINES_TEMPLATE.contains("Action評価"));
     assert!(GUIDELINES_TEMPLATE.contains("日本語"));
 }
 
