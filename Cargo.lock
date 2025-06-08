@@ -266,6 +266,7 @@ dependencies = [
  "encode_unicode",
  "libc",
  "once_cell",
+ "unicode-width",
  "windows-sys 0.59.0",
 ]
 
@@ -910,6 +911,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "indicatif"
+version = "0.17.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "183b3088984b400f4cfac3620d5e076c84da5364016b4f49473de574b2586235"
+dependencies = [
+ "console",
+ "number_prefix",
+ "portable-atomic",
+ "unicode-width",
+ "web-time",
+]
+
+[[package]]
 name = "insta"
 version = "1.43.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1147,6 +1161,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "number_prefix"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
+
+[[package]]
 name = "object"
 version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1221,6 +1241,7 @@ dependencies = [
  "futures",
  "genai",
  "git2",
+ "indicatif",
  "insta",
  "log",
  "quick-xml",
@@ -2119,6 +2140,12 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+
+[[package]]
+name = "unicode-width"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 
 [[package]]
 name = "unicode-xid"

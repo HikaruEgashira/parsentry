@@ -13,8 +13,9 @@ use parsentry::repo::RepoOps;
 use parsentry::repo_clone::clone_github_repo;
 use parsentry::response::{AnalysisSummary, VulnType};
 
-use futures::future::join_all;
+use futures::stream::{self, StreamExt};
 use std::sync::Arc;
+use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -74,6 +75,10 @@ struct Args {
     /// SARIF形式で出力する
     #[arg(long)]
     sarif: bool,
+
+    /// 並列解析数の制限（デフォルト: 4）
+    #[arg(long, default_value = "4")]
+    max_parallel: usize,
 }
 
 #[tokio::main]
@@ -152,88 +157,126 @@ async fn main() -> Result<()> {
 
     let mut summary = AnalysisSummary::new();
 
-    let tasks = pattern_files.iter().enumerate().map(|(idx, file_path)| {
-        let file_path = file_path.clone();
-        let root_dir = Arc::clone(&root_dir);
-        let output_dir = output_dir.clone();
-        let model = model.clone();
-        let files = files.clone();
+    // プログレスバーを設定
+    let progress_bar = ProgressBar::new(total as u64);
+    progress_bar.set_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} {msg}")
+            .unwrap()
+            .progress_chars("█▉▊▋▌▍▎▏  ")
+    );
+    progress_bar.set_message("Analyzing files...");
 
-        tokio::spawn(async move {
-            let file_name = file_path.display().to_string();
-            println!("📄 解析対象: {} ({} / {})", file_name, idx + 1, total);
-            println!("{}", "=".repeat(80));
+    // 並列度を制御してタスクを実行
+    let results = stream::iter(pattern_files.iter().enumerate())
+        .map(|(idx, file_path)| {
+            let file_path = file_path.clone();
+            let root_dir = Arc::clone(&root_dir);
+            let output_dir = output_dir.clone();
+            let model = model.clone();
+            let files = files.clone();
+            let progress_bar = progress_bar.clone();
 
-            let mut repo = RepoOps::new((*root_dir).clone());
-            if let Err(e) = repo.add_file_to_parser(&file_path) {
-                println!(
-                    "❌ ファイルのパース追加に失敗: {}: {}",
-                    file_path.display(),
-                    e
-                );
-                return None;
-            }
-            let context = match repo.collect_context_for_security_pattern(&file_path) {
-                Ok(ctx) => ctx,
-                Err(e) => {
-                    println!("⚠️  コンテキスト収集に失敗（空のコンテキストで継続）: {}: {}", file_path.display(), e);
-                    // For IaC files and other unsupported file types, continue with empty context
-                    parser::Context { definitions: Vec::new() }
+            async move {
+                let file_name = file_path.display().to_string();
+                progress_bar.set_message(format!("Analyzing: {}", file_name));
+                if verbosity > 0 {
+                    println!("📄 解析対象: {} ({} / {})", file_name, idx + 1, total);
+                    println!("{}", "=".repeat(80));
                 }
-            };
 
-            let analysis_result =
-                match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
-                    Ok(res) => res,
+                let mut repo = RepoOps::new((*root_dir).clone());
+                if let Err(e) = repo.add_file_to_parser(&file_path) {
+                    if verbosity > 0 {
+                        println!(
+                            "❌ ファイルのパース追加に失敗: {}: {}",
+                            file_path.display(),
+                            e
+                        );
+                    }
+                    progress_bar.inc(1);
+                    return None;
+                }
+                let context = match repo.collect_context_for_security_pattern(&file_path) {
+                    Ok(ctx) => ctx,
                     Err(e) => {
-                        println!("❌ 解析に失敗: {}: {}", file_path.display(), e);
-                        return None;
+                        println!("⚠️  コンテキスト収集に失敗（空のコンテキストで継続）: {}: {}", file_path.display(), e);
+                        // For IaC files and other unsupported file types, continue with empty context
+                        parser::Context { definitions: Vec::new() }
                     }
                 };
 
-            if analysis_result.vulnerability_types.is_empty()
-                || analysis_result.confidence_score < 1
-            {
-                return None;
-            }
+                let analysis_result =
+                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
+                        Ok(res) => res,
+                        Err(e) => {
+                            if verbosity > 0 {
+                                println!("❌ 解析に失敗: {}: {}", file_path.display(), e);
+                            }
+                            progress_bar.inc(1);
+                            return None;
+                        }
+                    };
 
-            if let Some(ref output_dir) = output_dir {
-                if let Err(e) = std::fs::create_dir_all(output_dir) {
-                    println!(
-                        "❌ 出力ディレクトリ作成に失敗: {}: {}",
-                        output_dir.display(),
-                        e
-                    );
+                if analysis_result.vulnerability_types.is_empty()
+                    || analysis_result.confidence_score < 1
+                {
+                    progress_bar.inc(1);
                     return None;
                 }
-                let fname = file_path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string() + ".md")
-                    .unwrap_or_else(|| "report.md".to_string());
-                let mut out_path = output_dir.clone();
-                out_path.push(fname);
-                if let Err(e) = std::fs::write(&out_path, analysis_result.to_markdown()) {
-                    println!(
-                        "❌ Markdownレポート出力に失敗: {}: {}",
-                        out_path.display(),
-                        e
-                    );
-                    return None;
+
+                if let Some(ref output_dir) = output_dir {
+                    if let Err(e) = std::fs::create_dir_all(output_dir) {
+                        if verbosity > 0 {
+                            println!(
+                                "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                                output_dir.display(),
+                                e
+                            );
+                        }
+                        progress_bar.inc(1);
+                        return None;
+                    }
+                    let fname = file_path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string() + ".md")
+                        .unwrap_or_else(|| "report.md".to_string());
+                    let mut out_path = output_dir.clone();
+                    out_path.push(fname);
+                    if let Err(e) = std::fs::write(&out_path, analysis_result.to_markdown()) {
+                        if verbosity > 0 {
+                            println!(
+                                "❌ Markdownレポート出力に失敗: {}: {}",
+                                out_path.display(),
+                                e
+                            );
+                        }
+                        progress_bar.inc(1);
+                        return None;
+                    }
+                    if verbosity > 0 {
+                        println!("📝 Markdownレポートを出力: {}", out_path.display());
+                    }
                 }
-                println!("📝 Markdownレポートを出力: {}", out_path.display());
+
+                if verbosity > 0 {
+                    analysis_result.print_readable();
+                }
+
+                progress_bar.inc(1);
+                Some((file_path, analysis_result))
             }
-
-            analysis_result.print_readable();
-
-            Some((file_path, analysis_result))
         })
-    });
-
-    let results = join_all(tasks).await;
-    for (file_path, response) in results.into_iter().flatten().flatten() {
-        summary.add_result(file_path, response);
+        .buffer_unordered(args.max_parallel)  // 並列度を制御
+        .collect::<Vec<_>>()
+        .await;
+    for result in results.into_iter() {
+        if let Some((file_path, response)) = result {
+            summary.add_result(file_path, response);
+        }
     }
 
+    progress_bar.finish_with_message("Analysis completed!");
 
     summary.sort_by_confidence();
 

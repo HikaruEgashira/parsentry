@@ -5,6 +5,8 @@ use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
+use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
@@ -24,16 +26,59 @@ async fn execute_chat_request(
     model: &str,
     chat_req: ChatRequest,
 ) -> Result<String> {
-    let chat_res = client.exec_chat(model, chat_req, None).await?;
-    match chat_res.content_text_as_str() {
-        Some(content) => Ok(content.to_string()),
-        None => {
-            error!("Failed to get content text from chat response");
-            Err(anyhow::anyhow!(
-                "Failed to get content text from chat response"
-            ))
+    // 30秒のタイムアウトを設定
+    let result = timeout(Duration::from_secs(30), async {
+        client.exec_chat(model, chat_req, None).await
+    }).await;
+
+    match result {
+        Ok(Ok(chat_res)) => {
+            match chat_res.content_text_as_str() {
+                Some(content) => Ok(content.to_string()),
+                None => {
+                    error!("Failed to get content text from chat response");
+                    Err(anyhow::anyhow!(
+                        "Failed to get content text from chat response"
+                    ))
+                }
+            }
+        }
+        Ok(Err(e)) => {
+            error!("Chat request failed: {}", e);
+            Err(e.into())
+        }
+        Err(_) => {
+            error!("Chat request timed out after 30 seconds");
+            Err(anyhow::anyhow!("Chat request timed out after 30 seconds"))
         }
     }
+}
+
+async fn execute_chat_request_with_retry(
+    client: &Client,
+    model: &str,
+    chat_req: ChatRequest,
+    max_retries: u32,
+) -> Result<String> {
+    let mut last_error = None;
+    
+    for attempt in 0..=max_retries {
+        if attempt > 0 {
+            warn!("Retrying chat request (attempt {}/{})", attempt + 1, max_retries + 1);
+            // 指数バックオフで待機
+            tokio::time::sleep(Duration::from_millis(1000 * (1 << attempt))).await;
+        }
+        
+        match execute_chat_request(client, model, chat_req.clone()).await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                warn!("Chat request failed on attempt {}: {}", attempt + 1, e);
+                last_error = Some(e);
+            }
+        }
+    }
+    
+    Err(last_error.unwrap_or_else(|| anyhow::anyhow!("All retry attempts failed")))
 }
 
 fn parse_json_response<T: DeserializeOwned>(chat_content: &str) -> Result<T> {
@@ -188,7 +233,7 @@ pub async fn analyze_file(
                 ]);
 
                 let json_client = create_api_client();
-                let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
+                let chat_content = execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
                 debug!("[LLM Response]\n{}", chat_content);
                 let mut vuln_response: Response = parse_json_response(&chat_content)?;
 

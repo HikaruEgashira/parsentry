@@ -43,6 +43,7 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - `--summary`: Generate summary report
 - `--sarif`: Generate SARIF report
 - `--generate-patterns`: Generate custom patterns from codebase
+- `--max-parallel <NUMBER>`: Maximum parallel analysis tasks (default: 4)
 
 ## Examples
 
