@@ -11,7 +11,7 @@ use tokio::time::timeout;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{Response, response_json_schema};
-use crate::security_patterns::{Language, PatternType, SecurityRiskPatterns};
+use crate::security_patterns::{PatternType, SecurityRiskPatterns};
 
 fn create_api_client() -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -268,11 +268,8 @@ pub async fn analyze_file(
                 }
 
                 // Get language for pattern detection
-                let file_extension = file_path
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .unwrap_or("");
-                let language = Language::from_extension(file_extension);
+                let filename = file_path.to_string_lossy();
+                let language = crate::file_classifier::FileClassifier::classify(&filename, &content);
                 let _patterns = SecurityRiskPatterns::new(language);
 
                 // Extract identifiers from PAR analysis for context building

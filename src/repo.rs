@@ -47,6 +47,10 @@ impl RepoOps {
             "hxx".to_string(),
             "tf".to_string(),
             "hcl".to_string(),
+            "yml".to_string(),
+            "yaml".to_string(),
+            "sh".to_string(),
+            "bash".to_string(),
         ];
 
         Self {
@@ -180,8 +184,8 @@ impl RepoOps {
         let mut network_files = Vec::new();
         for file_path in files {
             if let Ok(content) = read_to_string(file_path) {
-                let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                let lang = crate::security_patterns::Language::from_extension(ext);
+                let filename = file_path.to_string_lossy();
+                let lang = crate::file_classifier::FileClassifier::classify(&filename, &content);
                 let patterns = SecurityRiskPatterns::new(lang);
                 if patterns.matches(&content) {
                     network_files.push(file_path.clone());

@@ -3,10 +3,10 @@ use clap::Parser;
 use dotenvy::dotenv;
 use std::path::PathBuf;
 use parsentry::analyzer::analyze_file;
+use parsentry::file_classifier::FileClassifier;
 use parsentry::parser;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::sarif::SarifReport;
-use parsentry::security_patterns::Language;
 use parsentry::security_patterns::SecurityRiskPatterns;
 
 use parsentry::repo::RepoOps;
@@ -128,8 +128,9 @@ async fn main() -> Result<()> {
     let mut pattern_files = Vec::new();
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
-            let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            let lang = Language::from_extension(ext);
+            let filename = file_path.to_string_lossy();
+            let lang = FileClassifier::classify(&filename, &content);
+            
             let patterns = SecurityRiskPatterns::new(lang);
             if patterns.matches(&content) {
                 pattern_files.push(file_path.clone());

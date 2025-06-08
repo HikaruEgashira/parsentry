@@ -16,6 +16,9 @@ pub enum Language {
     Terraform,
     CloudFormation,
     Kubernetes,
+    Yaml,
+    Bash,
+    Shell,
     Other,
 }
 
@@ -32,7 +35,21 @@ impl Language {
             "c" | "h" => Language::C,
             "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Language::Cpp,
             "tf" | "hcl" => Language::Terraform,
+            "yml" | "yaml" => Language::Yaml,
+            "sh" | "bash" => Language::Bash,
             _ => Language::Other,
+        }
+    }
+
+    pub fn from_filename(filename: &str) -> Self {
+        // Extract extension and use existing logic
+        if let Some(ext) = std::path::Path::new(filename)
+            .extension()
+            .and_then(|e| e.to_str()) 
+        {
+            Self::from_extension(ext)
+        } else {
+            Language::Other
         }
     }
 }
@@ -179,6 +196,8 @@ impl SecurityRiskPatterns {
             (Cpp, include_str!("patterns/cpp.yml")),
             (Terraform, include_str!("patterns/terraform.yml")),
             (Kubernetes, include_str!("patterns/kubernetes.yml")),
+            (Yaml, include_str!("patterns/yaml.yml")),
+            (Bash, include_str!("patterns/bash.yml")),
         ];
 
         for (lang, content) in languages {

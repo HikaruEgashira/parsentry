@@ -60,8 +60,9 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
 
         match parser.build_context_from_file(file_path) {
             Ok(context) => {
-                let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                let language = Language::from_extension(ext);
+                let filename = file_path.to_string_lossy();
+                let content = std::fs::read_to_string(file_path).unwrap_or_default();
+                let language = crate::file_classifier::FileClassifier::classify(&filename, &content);
                 languages_found.insert(language, true);
 
                 println!(
@@ -321,6 +322,9 @@ pub fn write_patterns_to_file(
         Language::Terraform => "Terraform",
         Language::CloudFormation => "CloudFormation",
         Language::Kubernetes => "Kubernetes",
+        Language::Yaml => "YAML",
+        Language::Bash => "Bash",
+        Language::Shell => "Shell",
         Language::Other => return Ok(()),
     };
 

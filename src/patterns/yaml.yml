@@ -1,0 +1,136 @@
+# GitHub Actions and YAML Security Patterns (PAR Framework)
+# Focus: CI/CD Pipeline Security, Supply Chain Attacks, Credential Exposure
+
+principals:
+  # External code execution sources
+  - pattern: "uses:\\s+[^@/]+/[^@/]+@[^v]"
+    description: "Third-party action without version pinning"
+    attack_vector:
+      - "T1195.001"  # Supply Chain Compromise: Software Supply Chain
+      - "T1195.002"  # Supply Chain Compromise: Compromise Hardware Supply Chain
+
+  # Event triggers that accept external input
+  - pattern: "on:\\s+\\[?pull_request_target"
+    description: "pull_request_target trigger (dangerous with external input)"
+    attack_vector:
+      - "T1134"  # Access Token Manipulation
+      - "T1068"  # Exploitation for Privilege Escalation
+
+  - pattern: "on:\\s+\\[?issue_comment"
+    description: "Issue comment trigger with external input"
+    attack_vector:
+      - "T1134"  # Access Token Manipulation
+      - "T1055"  # Process Injection
+
+  # Self-hosted runners (potential compromise vector)
+  - pattern: "runs-on:\\s+self-hosted"
+    description: "Self-hosted runner usage"
+    attack_vector:
+      - "T1609"  # Container Administration Command
+      - "T1611"  # Escape to Host
+
+  # External repository access
+  - pattern: "repository:\\s+[^/]+/[^\\s]+"
+    description: "External repository access"
+    attack_vector:
+      - "T1199"  # Trusted Relationship
+      - "T1195"  # Supply Chain Compromise
+
+actions:
+  # Credential and secret exposure
+  - pattern: "\\$\\{\\{\\s*secrets\\.[^}]+\\}\\}"
+    description: "Direct secret usage in workflow"
+    attack_vector:
+      - "T1552.001"  # Unsecured Credentials: Credentials In Files
+      - "T1078"       # Valid Accounts
+
+  # Environment variable injection
+  - pattern: "\\$\\{\\{\\s*github\\.event\\.[^}]+\\}\\}"
+    description: "Direct GitHub event data usage (injection risk)"
+    attack_vector:
+      - "T1059"  # Command and Scripting Interpreter
+      - "T1055"  # Process Injection
+
+  # Code execution with external input
+  - pattern: "run:\\s*\\|[\\s\\S]*\\$\\{\\{[^}]*github\\.event[^}]*\\}\\}"
+    description: "Shell execution with GitHub event data"
+    attack_vector:
+      - "T1059.004"  # Command and Scripting Interpreter: Unix Shell
+      - "T1068"       # Exploitation for Privilege Escalation
+
+  # Artifact uploads without verification
+  - pattern: "uses:\\s+actions/upload-artifact"
+    description: "Artifact upload action"
+    attack_vector:
+      - "T1105"  # Ingress Tool Transfer
+      - "T1027"  # Obfuscated Files or Information
+
+  # Docker image pulls
+  - pattern: "docker\\s+pull\\s+[^\\s]+"
+    description: "Docker image pull without digest pinning"
+    attack_vector:
+      - "T1610"  # Deploy Container
+      - "T1195"  # Supply Chain Compromise
+
+  # Package installations
+  - pattern: "(npm|pip|gem|cargo)\\s+install"
+    description: "Package installation in workflow"
+    attack_vector:
+      - "T1195.001"  # Supply Chain Compromise: Software Supply Chain
+      - "T1105"       # Ingress Tool Transfer
+
+resources:
+  # Write permissions
+  - pattern: "permissions:[\\s\\S]*write-all"
+    description: "Overly broad write permissions"
+    attack_vector:
+      - "T1068"  # Exploitation for Privilege Escalation
+      - "T1134"  # Access Token Manipulation
+
+  - pattern: "permissions:[\\s\\S]*contents:\\s*write"
+    description: "Repository write access"
+    attack_vector:
+      - "T1565"  # Data Manipulation
+      - "T1195"  # Supply Chain Compromise
+
+  # Token exposure
+  - pattern: "GITHUB_TOKEN"
+    description: "GitHub token usage"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1134"  # Access Token Manipulation
+
+  # Environment secrets
+  - pattern: "environment:[\\s\\S]*secrets:"
+    description: "Environment-specific secrets"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1078"  # Valid Accounts
+
+  # Cache access
+  - pattern: "uses:\\s+actions/cache"
+    description: "Cache action usage"
+    attack_vector:
+      - "T1020"  # Automated Exfiltration
+      - "T1005"  # Data from Local System
+
+  # SSH keys
+  - pattern: "(ssh_key|SSH_KEY|id_rsa|id_ed25519)"
+    description: "SSH key reference"
+    attack_vector:
+      - "T1552.004"  # Unsecured Credentials: Private Keys
+      - "T1021.004"  # Remote Services: SSH
+
+  # Cloud credentials
+  - pattern: "(AWS_ACCESS_KEY|AZURE_CLIENT|GCP_SA_KEY|GOOGLE_APPLICATION_CREDENTIALS)"
+    description: "Cloud provider credentials"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1078"  # Valid Accounts
+
+  # Registry access
+  - pattern: "(DOCKER_USERNAME|REGISTRY_TOKEN|NPM_TOKEN)"
+    description: "Registry authentication tokens"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1195"  # Supply Chain Compromise
