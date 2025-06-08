@@ -281,6 +281,27 @@ impl Response {
             score
         }
     }
+    
+    /// Clean up and validate the response data
+    pub fn sanitize(&mut self) {
+        // Remove duplicate vulnerability types
+        let mut unique_vulns = std::collections::HashSet::new();
+        self.vulnerability_types.retain(|v| unique_vulns.insert(v.clone()));
+        
+        // If no vulnerability types and high confidence, reset confidence
+        if self.vulnerability_types.is_empty() && self.confidence_score > 50 {
+            self.confidence_score = 0;
+        }
+        
+        // If PAR analysis is empty but high confidence, adjust confidence
+        if self.par_analysis.principals.is_empty() 
+            && self.par_analysis.actions.is_empty() 
+            && self.par_analysis.resources.is_empty() 
+            && self.par_analysis.policy_violations.is_empty() 
+            && self.confidence_score > 30 {
+            self.confidence_score = std::cmp::min(self.confidence_score, 30);
+        }
+    }
 
     pub fn print_readable(&self) {
         println!("\n📝 PAR Security Analysis Report");
@@ -395,30 +416,36 @@ impl Response {
 
         md.push_str("## PAR Policy Analysis\n\n");
 
-        md.push_str("### Principals (データ源)\n\n");
-        for principal in &self.par_analysis.principals {
-            md.push_str(&format!("- **{}**: {:?}\n", principal.identifier, principal.trust_level));
-            md.push_str(&format!("  - Context: {}\n", principal.source_context));
-            md.push_str(&format!("  - Risk Factors: {}\n", principal.risk_factors.join(", ")));
+        if !self.par_analysis.principals.is_empty() {
+            md.push_str("### Principals (データ源)\n\n");
+            for principal in &self.par_analysis.principals {
+                md.push_str(&format!("- **{}**: {:?}\n", principal.identifier, principal.trust_level));
+                md.push_str(&format!("  - Context: {}\n", principal.source_context));
+                md.push_str(&format!("  - Risk Factors: {}\n", principal.risk_factors.join(", ")));
+            }
+            md.push('\n');
         }
-        md.push('\n');
 
-        md.push_str("### Actions (セキュリティ制御)\n\n");
-        for action in &self.par_analysis.actions {
-            md.push_str(&format!("- **{}**: {:?}\n", action.identifier, action.implementation_quality));
-            md.push_str(&format!("  - Function: {}\n", action.security_function));
-            md.push_str(&format!("  - Weaknesses: {}\n", action.detected_weaknesses.join(", ")));
-            md.push_str(&format!("  - Bypass Vectors: {}\n", action.bypass_vectors.join(", ")));
+        if !self.par_analysis.actions.is_empty() {
+            md.push_str("### Actions (セキュリティ制御)\n\n");
+            for action in &self.par_analysis.actions {
+                md.push_str(&format!("- **{}**: {:?}\n", action.identifier, action.implementation_quality));
+                md.push_str(&format!("  - Function: {}\n", action.security_function));
+                md.push_str(&format!("  - Weaknesses: {}\n", action.detected_weaknesses.join(", ")));
+                md.push_str(&format!("  - Bypass Vectors: {}\n", action.bypass_vectors.join(", ")));
+            }
+            md.push('\n');
         }
-        md.push('\n');
 
-        md.push_str("### Resources (操作対象)\n\n");
-        for resource in &self.par_analysis.resources {
-            md.push_str(&format!("- **{}**: {:?}\n", resource.identifier, resource.sensitivity_level));
-            md.push_str(&format!("  - Operation: {}\n", resource.operation_type));
-            md.push_str(&format!("  - Protection: {}\n", resource.protection_mechanisms.join(", ")));
+        if !self.par_analysis.resources.is_empty() {
+            md.push_str("### Resources (操作対象)\n\n");
+            for resource in &self.par_analysis.resources {
+                md.push_str(&format!("- **{}**: {:?}\n", resource.identifier, resource.sensitivity_level));
+                md.push_str(&format!("  - Operation: {}\n", resource.operation_type));
+                md.push_str(&format!("  - Protection: {}\n", resource.protection_mechanisms.join(", ")));
+            }
+            md.push('\n');
         }
-        md.push('\n');
 
         if !self.par_analysis.policy_violations.is_empty() {
             md.push_str("### Policy Violations\n\n");

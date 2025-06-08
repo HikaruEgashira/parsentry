@@ -125,6 +125,9 @@ pub async fn analyze_file(
 
     response.confidence_score =
         crate::response::Response::normalize_confidence_score(response.confidence_score);
+    
+    // Clean up and validate the response
+    response.sanitize();
 
     info!("Initial analysis complete");
 

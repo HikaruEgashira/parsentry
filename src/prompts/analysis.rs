@@ -50,50 +50,53 @@ PARベースのセキュリティポリシー評価ガイドライン：
 6. **宣言的判定**: 「このPrincipalにはこのActionが必要」といった宣言的ポリシーで評価
 
 ## 出力形式要件
-必ずJSON形式で以下のstructureに従って出力してください：
+必ずJSON形式で以下のstructureに従って出力してください。脆弱性が見つからない場合はconfidence_score=0、vulnerability_types=[]とし、空のPAR analysisを返してください：
+
 {
   "scratchpad": "解析思考プロセス",
   "analysis": "詳細な脆弱性説明",
-  "poc": "概念実証コード",
+  "poc": "概念実証コード（見つからない場合は空文字列）",
   "confidence_score": 0-100の整数,
-  "vulnerability_types": ["LFI","RCE","SSRF","AFO","SQLI","XSS","IDOR"],
+  "vulnerability_types": ["LFI","RCE","SSRF","AFO","SQLI","XSS","IDOR"] // 実際に検出された脆弱性のみ、重複なし,
   "par_analysis": {
-    "principals": [{
+    "principals": [{ // 実際に特定されたPrincipalのみ
       "identifier": "識別子",
       "trust_level": "trusted|semi_trusted|untrusted",
       "source_context": "コンテキスト説明",
       "risk_factors": ["リスク要因リスト"]
     }],
-    "actions": [{
-      "identifier": "識別子",
+    "actions": [{ // 実際に特定されたActionのみ
+      "identifier": "識別子", 
       "security_function": "セキュリティ機能説明",
       "implementation_quality": "adequate|insufficient|missing|bypassed",
       "detected_weaknesses": ["弱点リスト"],
       "bypass_vectors": ["バイパス手法リスト"]
     }],
-    "resources": [{
+    "resources": [{ // 実際に特定されたResourceのみ
       "identifier": "識別子",
-      "sensitivity_level": "low|medium|high|critical",
+      "sensitivity_level": "low|medium|high|critical", 
       "operation_type": "操作タイプ",
       "protection_mechanisms": ["保護メカニズムリスト"]
     }],
-    "policy_violations": [{
+    "policy_violations": [{ // 実際に検出されたPolicy Violationのみ
       "rule_id": "ルールID",
-      "rule_description": "ルール説明",
+      "rule_description": "ルール説明", 
       "violation_path": "違反パス",
       "severity": "重要度",
       "confidence": 0.0-1.0の浮動小数点
     }]
   },
   "remediation_guidance": {
-    "policy_enforcement": [{
+    "policy_enforcement": [{ // 修復が必要な場合のみ
       "component": "コンポーネント名",
       "required_improvement": "必要な改善",
-      "specific_guidance": "具体的なガイダンス",
+      "specific_guidance": "具体的なガイダンス", 
       "priority": "優先度"
     }]
   }
 }
+
+重要: 脆弱性が存在しない場合は、虚偽の検出を避けるため、confidence_score=0、vulnerability_types=[]、空のpar_analysisを返してください。
 
 7. 必ず日本語で応答してください
 

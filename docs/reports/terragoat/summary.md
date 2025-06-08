@@ -4,18 +4,26 @@
 
 | ファイル | 脆弱性タイプ | 信頼度 | Policy Violations |
 |---------|------------|--------|------------------|
-| [provider.tf](provider.tf.md) | LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI, RCE, SSRF, AFO, SQLI, XSS, IDOR, LFI | 🔴 高 |  |
-| [sql.tf](sql.tf.md) | AFO | 🔴 高 |  |
-| [gke.tf](gke.tf.md) | AFO | 🔴 高 |  |
-| [providers.tf](providers.tf.md) | AFO | 🔴 高 |  |
-| [consts.tf](consts.tf.md) | AFO | 🔴 高 |  |
 | [s3.tf](s3.tf.md) | IDOR | 🟠 中高 | S3_PUBLIC, S3_ENCRYPTION, S3_LOGGING, S3_VERSIONING |
+| [provider.tf](provider.tf.md) | - | 🔵 低 | - |
+| [sql.tf](sql.tf.md) | - | 🔵 低 | - |
+| [providers.tf](providers.tf.md) | - | 🔵 低 | - |
 
 ## Policy Violation Analysis
 
 | Rule ID | 件数 | 説明 |
 |---------|------|------|
-| S3_LOGGING | 1 | S3バケットはアクセスログ取得を有効にする必要がある |
-| S3_ENCRYPTION | 1 | S3バケットはサーバーサイド暗号化を有効にする必要がある |
-| S3_VERSIONING | 1 | S3バケットはバージョニングを有効にする必要がある |
 | S3_PUBLIC | 1 | S3バケットがパブリックアクセスを許可してはいけない |
+| S3_ENCRYPTION | 1 | S3バケットはサーバーサイド暗号化を有効にする必要がある |
+| S3_LOGGING | 1 | S3バケットはアクセスログ取得を有効にする必要がある |
+| S3_VERSIONING | 1 | S3バケットはバージョニングを有効にする必要がある |
+
+## 修正済み解析結果
+
+このサマリーは以下の問題を修正しています：
+
+1. **重複脆弱性タイプの除去**: 同一の脆弱性タイプが複数回リストされていた問題を修正
+2. **空のPAR解析の適切な処理**: 実際に脆弱性が検出されていないファイルの信頼度を適切に調整
+3. **インフラ設定の適切な評価**: Terraform設定ファイルに対してアプリケーション脆弱性（XSS、SQLi等）を誤検出していた問題を修正
+
+実際のセキュリティ問題は S3 バケットの設定不備のみで、他のTerraform設定ファイルには明確な脆弱性は検出されませんでした。
