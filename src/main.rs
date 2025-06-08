@@ -76,9 +76,6 @@ struct Args {
     #[arg(long)]
     sarif: bool,
 
-    /// 並列解析数の制限（デフォルト: 4）
-    #[arg(long, default_value = "4")]
-    max_parallel: usize,
 }
 
 #[tokio::main]
@@ -267,7 +264,7 @@ async fn main() -> Result<()> {
                 Some((file_path, analysis_result))
             }
         })
-        .buffer_unordered(args.max_parallel)  // 並列度を制御
+        .buffer_unordered(4)  // デフォルトの並列度
         .collect::<Vec<_>>()
         .await;
     for result in results.into_iter() {

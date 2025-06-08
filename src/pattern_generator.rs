@@ -1,4 +1,5 @@
 use anyhow::Result;
+use futures::stream::{self, StreamExt};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
 use serde::{Deserialize, Serialize};
@@ -24,20 +25,12 @@ struct PatternAnalysisResponse {
     patterns: Vec<PatternClassification>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct SecurityRiskAssessment {
-    function_name: String,
-    risk_level: String, // "high", "medium", "low", "none"
-    reasoning: String,
-    security_relevance: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct RiskFilterResponse {
-    assessments: Vec<SecurityRiskAssessment>,
-}
 
 pub async fn generate_custom_patterns(root_dir: &Path, model: &str) -> Result<()> {
+    generate_custom_patterns_impl(root_dir, model, 4).await
+}
+
+async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parallel: usize) -> Result<()> {
     println!(
         "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
         root_dir.display()
@@ -146,237 +139,165 @@ pub async fn analyze_definitions_for_security_patterns<'a>(
     definitions: &'a [&crate::parser::Definition],
     language: Language,
 ) -> Result<Vec<PatternClassification>> {
-    // First filter definitions to only include high-risk security-related ones
-    let high_risk_definitions = filter_high_risk_definitions(model, definitions, language).await?;
-    
-    if high_risk_definitions.is_empty() {
-        println!("   ℹ️  セキュリティリスクの高い定義が見つかりませんでした");
-        return Ok(Vec::new());
-    }
-
-    println!("   🎯 {}個の高リスク定義を詳細分析中...", high_risk_definitions.len());
-    
-    let definitions_text = high_risk_definitions
-        .iter()
-        .map(|def| format!("Function: {}\nCode:\n{}\n---", def.name, def.source))
-        .collect::<Vec<_>>()
-        .join("\n\n");
-
-    let prompt = format!(
-        r#"Analyze the following HIGH-RISK function definitions from a {:?} codebase and classify them as security patterns.
-
-These functions have already been pre-filtered as potentially security-relevant. For each function, determine if it should be classified as:
-- "principals": Functions that represent sources of authority, user input, external data entry points, or second-order data sources (e.g., database query results, API responses, file contents)
-- "actions": Functions that perform validation, sanitization, authorization, or security operations
-- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
-- null: Functions that don't fit any PAR security pattern category (should be rare for pre-filtered functions)
-
-Note: Pay special attention to second-order principals - functions that return data from databases, APIs, or other external sources that could contain untrusted data originally from user input.
-
-For each function that IS a security pattern, also identify potential MITRE ATT&CK techniques that could be associated with this pattern. Use the format "T1234" for technique IDs.
-
-For each function that IS a security pattern, generate a regex pattern that would match similar functions.
-
-Function Definitions:
-{}
-
-Return a JSON object with this exact structure:
-{{
-  "patterns": [
-    {{
-      "function_name": "example_function",
-      "pattern_type": "principals",
-      "pattern": "\\\\bexample_function\\\\s*\\\\(",
-      "description": "Example function description",
-      "reasoning": "Why this function is classified as this pattern type",
-      "attack_vector": ["T1059", "T1190"]
-    }}
-  ]
-}}
-
-Only include functions that ARE security patterns (principals, actions, or resources). Do not include functions that are not security-related."#,
-        language, definitions_text
-    );
-
-    let pattern_schema = serde_json::json!({
-        "type": "object",
-        "properties": {
-            "patterns": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "function_name": {"type": "string"},
-                        "pattern_type": {"type": "string", "enum": ["principals", "actions", "resources"]},
-                        "pattern": {"type": "string"},
-                        "description": {"type": "string"},
-                        "reasoning": {"type": "string"},
-                        "attack_vector": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "required": ["function_name", "pattern_type", "pattern", "description", "reasoning", "attack_vector"]
-                }
-            }
-        },
-        "required": ["patterns"]
-    });
-
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default().with_response_format(JsonSpec::new("json_object", pattern_schema)),
-    );
-    let client = Client::builder().with_config(client_config).build();
-
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(
-            "You are a security pattern analyzer. You must reply with exactly one JSON object that matches the specified schema. Do not include any explanatory text outside the JSON object.",
-        ),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let chat_res = client.exec_chat(model, chat_req, None).await?;
-    let content = chat_res
-        .content_text_as_str()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
-
-    let response: PatternAnalysisResponse = serde_json::from_str(content).map_err(|e| {
-        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
-    })?;
-
-    Ok(response.patterns)
-}
-
-pub async fn filter_high_risk_definitions<'a>(
-    model: &str,
-    definitions: &'a [&crate::parser::Definition],
-    language: Language,
-) -> Result<Vec<&'a crate::parser::Definition>> {
-    let definitions_summary = definitions
-        .iter()
-        .map(|def| format!("Function: {}\nSignature: {}", def.name, def.source.lines().next().unwrap_or("")))
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    let prompt = format!(
-        r#"Analyze the following function definitions from a {:?} codebase and assess their security risk level.
-
-For each function, evaluate if it:
-1. Handles user input or external data (HTTP requests, file uploads, database queries, command line arguments, environment variables)
-2. Performs authentication, authorization, or access control
-3. Deals with cryptography, passwords, tokens, or secrets
-4. Accesses files, databases, networks, or system resources
-5. Performs data validation, sanitization, or encoding/decoding
-6. Executes system commands or external processes
-7. Handles configuration, logging, or error messages that might leak sensitive information
-8. Deals with session management, cookies, or state management
-9. Performs operations that could lead to code injection, path traversal, or other common vulnerabilities
-10. Is a second-order data source (returns data from databases, APIs, or external sources)
-
-Classify each function with a risk level:
-- "high": Directly security-critical functions that handle untrusted input, authentication, authorization, or resource access
-- "medium": Functions that might be security-relevant but less directly exposed
-- "low": Functions with minimal security implications
-- "none": Functions with no apparent security relevance
-
-Function Definitions:
-{}
-
-Return a JSON object with this exact structure:
-{{
-  "assessments": [
-    {{
-      "function_name": "example_function",
-      "risk_level": "high",
-      "reasoning": "Detailed explanation of why this function has this risk level",
-      "security_relevance": true
-    }}
-  ]
-}}
-
-Be conservative and inclusive - it's better to include a function that might be security-relevant than to miss one."#,
-        language, definitions_summary
-    );
-
-    let risk_schema = serde_json::json!({
-        "type": "object",
-        "properties": {
-            "assessments": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "function_name": {"type": "string"},
-                        "risk_level": {"type": "string", "enum": ["high", "medium", "low", "none"]},
-                        "reasoning": {"type": "string"},
-                        "security_relevance": {"type": "boolean"}
-                    },
-                    "required": ["function_name", "risk_level", "reasoning", "security_relevance"]
-                }
-            }
-        },
-        "required": ["assessments"]
-    });
-
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default().with_response_format(JsonSpec::new("json_object", risk_schema)),
-    );
-    let client = Client::builder().with_config(client_config).build();
-
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(
-            "You are a security risk assessor. You must reply with exactly one JSON object that matches the specified schema. Do not include any explanatory text outside the JSON object.",
-        ),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let chat_res = client.exec_chat(model, chat_req, None).await?;
-    let content = chat_res
-        .content_text_as_str()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
-
-    let response: RiskFilterResponse = serde_json::from_str(content).map_err(|e| {
-        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
-    })?;
-
-    // Filter to only include high-risk and medium-risk functions that are security-relevant
-    let high_risk_names: std::collections::HashSet<_> = response
-        .assessments
-        .iter()
-        .filter(|assessment| {
-            assessment.security_relevance && 
-            (assessment.risk_level == "high" || assessment.risk_level == "medium")
-        })
-        .map(|assessment| assessment.function_name.as_str())
-        .collect();
-
-    let filtered_definitions: Vec<&crate::parser::Definition> = definitions
-        .iter()
-        .filter(|def| high_risk_names.contains(def.name.as_str()))
-        .copied()
-        .collect();
-
+    let max_parallel = 8; // デフォルトの並列数
     println!(
-        "   🔍 {}/{}個の定義が高・中リスクとして識別されました",
-        filtered_definitions.len(),
-        definitions.len()
+        "   🧠 {}個の定義を{}並列で個別分析中...",
+        definitions.len(),
+        max_parallel
     );
 
-    for assessment in &response.assessments {
-        if assessment.security_relevance && (assessment.risk_level == "high" || assessment.risk_level == "medium") {
-            println!(
-                "     - {} [{}]: {}",
-                assessment.function_name,
-                assessment.risk_level,
-                assessment.reasoning
-            );
+    // Create tasks for each definition analysis
+    let model_str = model.to_string();
+    let tasks = definitions.iter().enumerate().map(|(idx, def)| {
+        let model_clone = model_str.clone();
+        let def_clone = (*def).clone();
+        async move {
+            if idx % 100 == 0 {
+                println!("     🔍 定義 {}/{} を処理中...", idx + 1, definitions.len());
+            }
+            analyze_single_definition_for_pattern(&model_clone, &def_clone, language).await
+        }
+    });
+
+    // Execute tasks in parallel with controlled concurrency
+    let results: Vec<Result<Option<PatternClassification>>> = stream::iter(tasks)
+        .buffer_unordered(max_parallel)
+        .collect()
+        .await;
+
+    // Collect successful patterns
+    let mut all_patterns = Vec::new();
+    let mut success_count = 0;
+    let mut error_count = 0;
+
+    for result in results {
+        match result {
+            Ok(Some(pattern)) => {
+                all_patterns.push(pattern);
+                success_count += 1;
+            }
+            Ok(None) => {
+                // Definition was not a security pattern
+                success_count += 1;
+            }
+            Err(e) => {
+                error_count += 1;
+                if error_count <= 5 { // Only show first 5 errors
+                    eprintln!("     ⚠️  定義分析でエラー: {}", e);
+                }
+            }
         }
     }
 
-    Ok(filtered_definitions)
+    println!(
+        "   ✅ 完了: {}個成功, {}個エラー, {}個のパターンを検出",
+        success_count, error_count, all_patterns.len()
+    );
+
+    Ok(all_patterns)
 }
+
+async fn analyze_single_definition_for_pattern(
+    model: &str,
+    definition: &crate::parser::Definition,
+    language: Language,
+) -> Result<Option<PatternClassification>> {
+
+    let prompt = format!(
+        r#"Analyze this single function definition from a {:?} codebase and determine if it represents a security pattern.
+
+Function: {}
+Code:
+{}
+
+Determine if this function should be classified as:
+- "principals": Sources of authority, user input, external data entry points, or second-order data sources (e.g., database query results, API responses, file contents)
+- "actions": Functions that perform validation, sanitization, authorization, or security operations  
+- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
+- "none": Not a security pattern
+
+If it IS a security pattern (not "none"), also:
+1. Generate a regex pattern that would match similar functions
+2. Identify potential MITRE ATT&CK techniques (format: "T1234")
+
+Return a JSON object with this structure:
+{{
+  "classification": "principals|actions|resources|none",
+  "function_name": "{}",
+  "pattern": "\\\\bfunction_name\\\\s*\\\\(",
+  "description": "Brief description of what this pattern detects",
+  "reasoning": "Why this function fits this classification",
+  "attack_vector": ["T1234", "T5678"]
+}}
+
+If classification is "none", you can omit pattern, description, and attack_vector fields."#,
+        language,
+        definition.name,
+        definition.source,
+        definition.name
+    );
+
+    let response_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
+            "function_name": {"type": "string"},
+            "pattern": {"type": "string"},
+            "description": {"type": "string"},
+            "reasoning": {"type": "string"},
+            "attack_vector": {
+                "type": "array",
+                "items": {"type": "string"}
+            }
+        },
+        "required": ["classification", "function_name", "reasoning"]
+    });
+
+    let client_config = ClientConfig::default().with_chat_options(
+        ChatOptions::default().with_response_format(JsonSpec::new("json_object", response_schema)),
+    );
+    let client = Client::builder().with_config(client_config).build();
+
+    let chat_req = ChatRequest::new(vec![
+        ChatMessage::system(
+            "You are a security pattern analyzer. Reply with exactly one JSON object. Be conservative - only classify as security patterns if clearly relevant.",
+        ),
+        ChatMessage::user(&prompt),
+    ]);
+
+    let chat_res = client.exec_chat(model, chat_req, None).await?;
+    let content = chat_res
+        .content_text_as_str()
+        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
+
+    #[derive(Deserialize)]
+    struct SingleAnalysisResponse {
+        classification: String,
+        function_name: String,
+        pattern: Option<String>,
+        description: Option<String>,
+        reasoning: String,
+        attack_vector: Option<Vec<String>>,
+    }
+
+    let response: SingleAnalysisResponse = serde_json::from_str(content).map_err(|e| {
+        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
+    })?;
+
+    if response.classification == "none" {
+        return Ok(None);
+    }
+
+    Ok(Some(PatternClassification {
+        function_name: response.function_name,
+        pattern_type: Some(response.classification),
+        pattern: response.pattern.unwrap_or_else(|| format!("\\\\b{}\\\\s*\\\\(", definition.name)),
+        description: response.description.unwrap_or_else(|| "Security-relevant function".to_string()),
+        reasoning: response.reasoning,
+        attack_vector: response.attack_vector.unwrap_or_default(),
+    }))
+}
+
 
 pub fn write_patterns_to_file(
     root_dir: &Path,
