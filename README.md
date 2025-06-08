@@ -46,16 +46,13 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 
 ## Examples
 
-See actual vulnerability reports generated for each supported language:
-
-- [Python Vulnerable App](docs/reports/python-vulnerable-app/)
-- [JavaScript Vulnerable App](docs/reports/javascript-vulnerable-app/)
-- [Go Vulnerable App](docs/reports/go-vulnerable-app/)
-- [Rust Vulnerable App](docs/reports/rust-vulnerable-app/)
-- [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app/)
-- [C Vulnerable App](docs/reports/c-vulnerable-app/)
-- [C++ Vulnerable App](docs/reports/cpp-vulnerable-app/)
-- [Terraform Vulnerable App](docs/reports/terraform-vulnerable-app/)
+- [Damn Vulnerable MCP Server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/) ([Summary](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md)) - MCP protocol vulnerabilities
+- [Secure Code Game](docs/reports/skills-secure-code-game/) ([Summary](docs/reports/skills-secure-code-game/summary.md)) - Security challenges across multiple languages
+- [Broken Crystals](docs/reports/NeuraLegion-brokencrystals/) ([Summary](docs/reports/NeuraLegion-brokencrystals/summary.md)) - Web application security issues
+- [OWASP NodeGoat](docs/reports/OWASP-NodeGoat/) ([Summary](docs/reports/OWASP-NodeGoat/summary.md)) - Node.js vulnerabilities
+- [TerraGoat](docs/reports/terragoat/) ([Summary](docs/reports/terragoat/summary.md)) - Infrastructure as Code security issues
+- [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/) ([Summary](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md)) - GraphQL vulnerabilities
+- [CloudGoat](docs/reports/RhinoSecurityLabs-cloudgoat/) - AWS security misconfigurations (partial analysis)
 
 ## Documentation
 
