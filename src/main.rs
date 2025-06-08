@@ -76,6 +76,7 @@ struct Args {
     #[arg(long)]
     sarif: bool,
 
+
 }
 
 #[tokio::main]
@@ -85,7 +86,7 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let root_dir = if let Some(repo) = &args.repo {
+    let (root_dir, repo_name) = if let Some(repo) = &args.repo {
         let dest = PathBuf::from("repo");
         if dest.exists() {
             std::fs::remove_dir_all(&dest)
@@ -98,9 +99,17 @@ async fn main() -> Result<()> {
         );
         clone_github_repo(repo, &dest)
             .map_err(|e| anyhow::anyhow!("GitHubリポジトリのクローンに失敗: {}", e))?;
-        dest
+        
+        // Extract repository name for output directory
+        let repo_name = if repo.contains('/') {
+            repo.split('/').last().unwrap_or("unknown-repo").replace(".git", "")
+        } else {
+            repo.replace(".git", "")
+        };
+        
+        (dest, Some(repo_name))
     } else if let Some(root) = &args.root {
-        root.clone()
+        (root.clone(), None)
     } else {
         panic!("root path or repo must be set");
     };
@@ -148,7 +157,20 @@ async fn main() -> Result<()> {
 
     let total = pattern_files.len();
     let root_dir = Arc::new(root_dir);
-    let output_dir = args.output_dir.clone();
+    
+    // Create repository-specific output directory
+    let output_dir = if let Some(base_output_dir) = args.output_dir.clone() {
+        if let Some(ref name) = repo_name {
+            let mut repo_output_dir = base_output_dir;
+            repo_output_dir.push(name);
+            Some(repo_output_dir)
+        } else {
+            Some(base_output_dir)
+        }
+    } else {
+        None
+    };
+    
     let model = args.model.clone();
     let files = files.clone();
     let verbosity = args.verbosity;
@@ -265,7 +287,7 @@ async fn main() -> Result<()> {
                 Some((file_path, analysis_result))
             }
         })
-        .buffer_unordered(4)  // デフォルトの並列度
+        .buffer_unordered(10)  // API制限を考慮した並列処理
         .collect::<Vec<_>>()
         .await;
     for result in results.into_iter() {
@@ -303,16 +325,16 @@ async fn main() -> Result<()> {
     }
 
     if args.summary {
-        if let Some(ref output_dir) = args.output_dir {
-            if let Err(e) = std::fs::create_dir_all(output_dir) {
+        if let Some(ref final_output_dir) = output_dir {
+            if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
                     "❌ 出力ディレクトリ作成に失敗: {}: {}",
-                    output_dir.display(),
+                    final_output_dir.display(),
                     e
                 );
             } else {
                 if !filtered_summary.results.is_empty() {
-                    let mut summary_path = output_dir.clone();
+                    let mut summary_path = final_output_dir.clone();
                     summary_path.push("summary.md");
                     if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
                         println!(
@@ -334,15 +356,15 @@ async fn main() -> Result<()> {
     if args.sarif {
         let sarif_report = SarifReport::from_analysis_summary(&filtered_summary);
         
-        if let Some(ref output_dir) = args.output_dir {
-            if let Err(e) = std::fs::create_dir_all(output_dir) {
+        if let Some(ref final_output_dir) = output_dir {
+            if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
                     "❌ 出力ディレクトリ作成に失敗: {}: {}",
-                    output_dir.display(),
+                    final_output_dir.display(),
                     e
                 );
             } else {
-                let mut sarif_path = output_dir.clone();
+                let mut sarif_path = final_output_dir.clone();
                 sarif_path.push("parsentry-results.sarif");
                 if let Err(e) = sarif_report.save_to_file(&sarif_path) {
                     println!(

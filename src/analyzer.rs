@@ -26,8 +26,7 @@ async fn execute_chat_request(
     model: &str,
     chat_req: ChatRequest,
 ) -> Result<String> {
-    // 30秒のタイムアウトを設定
-    let result = timeout(Duration::from_secs(30), async {
+    let result = timeout(Duration::from_secs(120), async {
         client.exec_chat(model, chat_req, None).await
     }).await;
 
@@ -48,8 +47,8 @@ async fn execute_chat_request(
             Err(e.into())
         }
         Err(_) => {
-            error!("Chat request timed out after 30 seconds");
-            Err(anyhow::anyhow!("Chat request timed out after 30 seconds"))
+            error!("Chat request timed out after 120 seconds");
+            Err(anyhow::anyhow!("Chat request timed out after 120 seconds"))
         }
     }
 }
