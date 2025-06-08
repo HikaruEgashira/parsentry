@@ -228,7 +228,7 @@ pub async fn analyze_file(
                     .and_then(|ext| ext.to_str())
                     .unwrap_or("");
                 let language = Language::from_extension(file_extension);
-                let patterns = SecurityRiskPatterns::new(language);
+                let _patterns = SecurityRiskPatterns::new(language);
 
                 // Extract identifiers from PAR analysis for context building
                 let mut identifiers_to_search = Vec::new();
