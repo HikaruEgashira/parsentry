@@ -1,6 +1,6 @@
 [package]
 name = "parsentry"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 
 [build-dependencies]
@@ -35,6 +35,9 @@ indicatif = "0.17"
 insta = { version = "1.42.0", features = ["yaml"] }
 tempfile = "3.10"
 tokio-test = "0.4"
+
+[workspace]
+exclude = ["tree-sitter-*"]
 
 [workspace.metadata.insta]
 snapshot-path = "tests/snapshots"
