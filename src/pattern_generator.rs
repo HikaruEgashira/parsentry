@@ -40,9 +40,6 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     let files = repo.get_files_to_analyze(None)?;
 
     println!("📁 検出されたファイル数: {}", files.len());
-    for file in &files {
-        println!("   - {}", file.display());
-    }
 
     let mut all_definitions = Vec::new();
     let mut languages_found = HashMap::new();

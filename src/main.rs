@@ -78,6 +78,8 @@ async fn main() -> Result<()> {
     env_logger::init();
     dotenv().ok();
 
+    println!("🔍 Parsentry - PAR-based security scanner");
+
     let args = Args::parse();
 
     let (root_dir, repo_name) = if let Some(repo) = &args.repo {
@@ -108,8 +110,6 @@ async fn main() -> Result<()> {
         panic!("root path or repo must be set");
     };
 
-    println!("🔍 Parsentry - PAR-based security scanner");
-
     // Handle pattern generation mode
     if args.generate_patterns {
         println!("🔧 カスタムパターン生成モードを開始します");
@@ -124,9 +124,6 @@ async fn main() -> Result<()> {
         "📁 関連するソースファイルを検出しました ({}件)",
         files.len()
     );
-    for (i, f) in files.iter().enumerate() {
-        println!("  [{}] {}", i + 1, f.display());
-    }
 
     let mut pattern_files = Vec::new();
     for file_path in &files {
