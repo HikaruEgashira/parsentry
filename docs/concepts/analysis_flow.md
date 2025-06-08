@@ -39,7 +39,8 @@
 PAR（Principal-Action-Resource）分類systemにより、context収集が最適化されました：
 
 - **Principalパターン**: `find_references()` を使用してdataの流れを前方追跡
-- **Action/Resourceパターン**: `find_definition()` を使用して定義を後方追跡  
+- **Actionパターン**: `find_bidirectional()` を使用してdata処理の前後両方向を追跡
+- **Resourceパターン**: `find_definition()` を使用して定義を後方追跡  
 - **攻撃vector**: MITRE ATT&CK tacticsに基づく脅威の分類
 
 これにより、より正確なdata flow解析と脆弱性のcontext理解が可能になります。

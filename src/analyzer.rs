@@ -243,8 +243,22 @@ pub async fn analyze_file(
                                     }
                                 }
                             }
-                            Some(PatternType::Resource) | Some(PatternType::Action) | None => {
-                                // For resources, actions, or unknown patterns, use find_definition
+                            Some(PatternType::Action) => {
+                                // For actions, use bidirectional tracking to understand both input and output
+                                match parser.find_bidirectional(&escaped_name, file_path) {
+                                    Ok(bidirectional_results) => {
+                                        stored_code_definitions.extend(bidirectional_results);
+                                    }
+                                    Err(e) => {
+                                        warn!(
+                                            "Failed to find bidirectional context for action {}: {}",
+                                            escaped_name, e
+                                        );
+                                    }
+                                }
+                            }
+                            Some(PatternType::Resource) | None => {
+                                // For resources or unknown patterns, use find_definition to track data origin
                                 match parser.find_definition(&escaped_name, file_path) {
                                     Ok(Some(def)) => {
                                         stored_code_definitions.push(def);

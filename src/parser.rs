@@ -304,6 +304,32 @@ impl CodeParser {
 
         Ok(results)
     }
+
+    /// Find both definitions and references for Action patterns to enable bidirectional tracking.
+    /// This provides comprehensive context by showing both where data comes from (definitions) 
+    /// and where it flows to (references).
+    pub fn find_bidirectional(
+        &mut self, 
+        name: &str, 
+        source_file: &Path
+    ) -> Result<Vec<(PathBuf, Definition)>> {
+        let mut results = Vec::new();
+        
+        // First, find the definition (backward tracking)
+        if let Some(definition) = self.find_definition(name, source_file)? {
+            results.push(definition);
+        }
+        
+        // Then, find all references (forward tracking)
+        let references = self.find_references(name)?;
+        results.extend(references);
+        
+        // Remove duplicates based on file path and start byte
+        results.sort_by_key(|(path, def)| (path.clone(), def.start_byte));
+        results.dedup_by_key(|(path, def)| (path.clone(), def.start_byte));
+        
+        Ok(results)
+    }
     pub fn build_context_from_file(&mut self, start_path: &Path) -> Result<Context> {
         use std::collections::HashSet;
 

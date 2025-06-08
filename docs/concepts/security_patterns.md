@@ -52,7 +52,8 @@ dataの最終的な出力先や危険な操作対象を識別します。
 パターンマッチングの結果に基づいて、適切なコンテキスト抽出を行います：
 
 - **Principalマッチ**: `find_references()`を使用してデータの流れを前方追跡
-- **Action/Resourceマッチ**: `find_definition()`を使用してデータの起源を後方追跡
+- **Actionマッチ**: `find_bidirectional()`を使用してデータ処理の前後両方向を追跡
+- **Resourceマッチ**: `find_definition()`を使用してデータの起源を後方追跡
 - **攻撃ベクター**: MITRE ATT&CKフレームワークのタクティクスIDで脅威を分類
 
 ## リスクスコアリング
