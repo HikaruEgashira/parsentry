@@ -1,140 +1,140 @@
-# PAR Framework (Principal-Action-Resource)
+# PAR framework（Principal-Action-Resource）
 
-## Overview
+## 概要
 
-The PAR (Principal-Action-Resource) framework is a security analysis model that categorizes vulnerabilities by examining three key components of any security-relevant operation:
+PAR（Principal-Action-Resource）frameworkは、security関連操作の3つの主要componentを体系化することで脆弱性を分類する解析modelです：
 
-- **Principal**: Who or what is performing the action (user, service, process)
-- **Action**: What operation is being performed (read, write, execute, authenticate)
-- **Resource**: What is being accessed or modified (file, database, network endpoint, memory)
+- **Principal**: 操作を実行する主体（user、service、process）
+- **Action**: 実行される操作内容（読み取り、書き込み、実行、認証）
+- **Resource**: access対象（file、database、network endpoint、memory）
 
-## Origins and Inspiration
+## 起源と着想
 
-The PAR framework draws inspiration from established security analysis concepts while providing a more structured approach:
+PAR frameworkは既存のsecurity解析概念に基づきながら、より構造化されたアプローチを提供します：
 
-### Taint Tracking Model
-Traditional static analysis tools use taint tracking to follow data flow:
-- **Sources**: Points where untrusted data enters the system
-- **Sinks**: Points where data could cause security issues
-- **Validation**: Sanitization and checks between sources and sinks
+### taint tracking model
+従来の静的解析toolはtaint trackingによりdata flowを追跡します：
+- **Sources**: 信頼できないdataの流入点
+- **Sinks**: dataによるsecurity問題発生点
+- **Validation**: sourceとsink間のsanitization・check
 
-The PAR framework extends this model by:
-- **Principal** encompasses both traditional sources and the entities controlling them
-- **Action** includes validation/sanitization operations as well as the actual operations performed
-- **Resource** generalizes sinks to include all types of targets and system resources
+PAR frameworkはこのmodelを拡張し：
+- **Principal**は従来のsourceとそれを制御するentityを包含
+- **Action**は検証・sanitization操作および実際の実行操作を含有
+- **Resource**はsinkを一般化し、全種類のtargetとsystemリソースを包含
 
-### Cedar Language Influence
-Amazon's Cedar authorization language provides a policy framework based on:
-- **Principal**: The entity making the request
-- **Action**: The operation being requested
-- **Resource**: The target of the operation
+### Cedar言語の影響
+Amazon Cedarの認可言語は以下に基づがpolicy frameworkを提供します：
+- **Principal**: requestを実行するentity
+- **Action**: requestされる操作
+- **Resource**: 操作対象
 
-Parsentry's PAR framework adapts these concepts for vulnerability analysis:
-- Cedar focuses on authorization decisions for allowed operations
-- PAR focuses on security analysis to identify potential vulnerabilities
-- Both provide systematic ways to reason about security relationships
+ParsentryのPAR frameworkはこれらの概念を脆弱性解析に適用：
+- Cedarは許可操作の認可決定に重点
+- PARは潜在的脆弱性の特定を目的とするsecurity解析に重点
+- 双方ともsecurity関係性の体系的推論手法を提供
 
-## Why PAR Framework?
+## PARフレームワークの意義
 
-Building on these foundational concepts, the PAR framework provides a more systematic approach than traditional vulnerability scanners by:
+これらの基礎概念に基づき、PARフレームワークは従来の脆弱性スキャナーより体系的なアプローチを提供：
 
-1. **Comprehensive Coverage**: Ensures all aspects of a security operation are analyzed
-2. **Context Awareness**: Considers the relationship between actors, actions, and targets
-3. **Scalable Classification**: Works across different languages and technology stacks
-4. **Risk Assessment**: Enables better prioritization based on principal privileges and resource sensitivity
+1. **包括的カバレッジ**: セキュリティ操作の全側面を確実に解析
+2. **コンテキスト認識**: アクター、操作、ターゲット間の関係性を考慮
+3. **スケーラブル分類**: 異なる言語・技術スタック間で動作
+4. **リスク評価**: プリンシパル権限とリソース感度に基づく優先度付けを実現
 
-## PAR Components in Detail
+## PARコンポーネント詳細
 
-### Principal
-The entity initiating or controlling the action:
-- **User accounts** (authenticated, anonymous, privileged)
-- **Service accounts** (database users, API keys, service principals)
-- **Processes** (system processes, application threads)
-- **External systems** (third-party APIs, microservices)
+### Principal（主体）
+操作を開始または制御するエンティティ：
+- **ユーザーアカウント**（認証済み、匿名、特権ユーザー）
+- **サービスアカウント**（データベースユーザー、APIキー、サービスプリンシパル）
+- **プロセス**（システムプロセス、アプリケーションスレッド）
+- **外部システム**（サードパーティAPI、マイクロサービス）
 
-### Action
-The operation being performed:
-- **Data operations** (read, write, update, delete)
-- **Authentication** (login, logout, token generation)
-- **Authorization** (permission checks, role assignments)
-- **System operations** (file I/O, network calls, process execution)
-- **Cryptographic operations** (encryption, signing, hashing)
+### Action（操作）
+実行される操作：
+- **データ操作**（読み取り、書き込み、更新、削除）
+- **認証**（ログイン、ログアウト、トークン生成）
+- **認可**（権限チェック、ロール割り当て）
+- **システム操作**（ファイルI/O、ネットワーク呼び出し、プロセス実行）
+- **暗号化操作**（暗号化、署名、ハッシュ化）
 
-### Resource
-The target of the action:
-- **Data stores** (databases, files, memory)
-- **Network resources** (endpoints, protocols, certificates)
-- **System resources** (processes, services, hardware)
-- **Business logic** (workflows, transactions, state)
+### Resource（リソース）
+操作対象：
+- **データストア**（データベース、ファイル、メモリ）
+- **ネットワークリソース**（エンドポイント、プロトコル、証明書）
+- **システムリソース**（プロセス、サービス、ハードウェア）
+- **ビジネスロジック**（ワークフロー、トランザクション、状態）
 
-## PAR-Based Vulnerability Analysis
+## PARベース脆弱性解析
 
-Parsentry uses the PAR framework to systematically identify security issues:
+ParsentryはPARフレームワークを使用してセキュリティ問題を体系的に特定します：
 
-### 1. Principal Analysis
-- Identifies all actors in the code
-- Analyzes privilege levels and trust boundaries
-- Detects privilege escalation opportunities
-- Maps authentication and authorization flows
+### 1. Principal解析
+- コード内の全アクターを特定
+- 権限レベルと信頼境界を解析
+- 権限昇格機会を検出
+- 認証・認可フローをマッピング
 
-### 2. Action Analysis
-- Catalogs all security-relevant operations
-- Identifies unsafe or deprecated functions
-- Analyzes input validation and sanitization
-- Detects business logic flaws
+### 2. Action解析
+- セキュリティ関連操作を全てカタログ化
+- 安全でない関数や非推奨関数を特定
+- 入力検証・サニタイゼーションを解析
+- ビジネスロジック欠陥を検出
 
-### 3. Resource Analysis
-- Maps all accessed resources
-- Identifies sensitive data flows
-- Analyzes access control mechanisms
-- Detects resource exhaustion vulnerabilities
+### 3. Resource解析
+- 全アクセスリソースをマッピング
+- 機密データフローを特定
+- アクセス制御メカニズムを解析
+- リソース枯渇脆弱性を検出
 
-### 4. PAR Relationship Analysis
-- Examines interactions between components
-- Identifies trust boundary violations
-- Detects authorization bypasses
-- Analyzes data flow security
+### 4. PAR関係性解析
+- コンポーネント間の相互作用を検証
+- 信頼境界違反を特定
+- 認可バイパスを検出
+- データフローセキュリティを解析
 
-## Example: Vulnerability Analysis
+## 例：脆弱性解析
 
-Consider this vulnerable code:
+以下の脆弱なコードを考えます：
 ```javascript
 function validateEmail(email) {
-    // Vulnerable regex - missing anchors
+    // 脆弱な正規表現 - アンカーがない
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
     return emailRegex.test(email);
 }
 
 function processUser(userData) {
     if (validateEmail(userData.email)) {
-        // Bypass: "malicious<script>alert('xss')</script>user@example.com"
+        // バイパス例: "malicious<script>alert('xss')</script>user@example.com"
         document.getElementById('welcome').innerHTML = `Welcome ${userData.email}`;
     }
 }
 ```
 
-## Analysis Framework Comparison
+## 解析フレームワーク比較
 
-### Traditional Taint Tracking:
-- **Source**: `userData.email` (untrusted input)
-- **Sink**: `innerHTML` (DOM injection point)
-- **Validation**: Present but insufficient - regex bypass possible
+### 従来の汚染追跡：
+- **Source**: `userData.email`（信頼できない入力）
+- **Sink**: `innerHTML`（DOMインジェクションポイント）
+- **Validation**: ありだが不十分 - 正規表現バイパス可能
 
-### Cedar-style Policy Analysis:
-- **Principal**: Web application service
-- **Action**: DOM manipulation operation
-- **Resource**: User interface
-- **Policy**: "Application can update UI" (authorized but unsafe implementation)
+### Cedarスタイルポリシー解析：
+- **Principal**: Webアプリケーションサービス
+- **Action**: DOM操作
+- **Resource**: ユーザーインターフェース
+- **Policy**: 「アプリケーションはUI更新可能」（認可されているが安全でない実装）
 
-### PAR Framework Analysis:
-- **Principal**: User input via web interface (untrusted source)
-- **Action**: Email validation with flawed regex (vulnerable validation implementation)
-  - Regex lacks `^` and `$` anchors
-  - Allows valid email within malicious string
-  - Creates false trust boundary
-- **Resource**: DOM via `innerHTML` (XSS execution context)
+### PARフレームワーク解析：
+- **Principal**: Webインターフェース経由のユーザー入力（信頼できないソース）
+- **Action**: 欠陥のある正規表現によるメール検証（脆弱な検証実装）
+  - 正規表現に`^`と`$`アンカーがない
+  - 悪意のある文字列内の有効なメールを許可
+  - 偽の信頼境界を作成
+- **Resource**: `innerHTML`経由のDOM（XSS実行コンテキスト）
 
-**PAR Advantage**: Captures both the trust relationship (user input vs. application) and analyzes the quality of security actions, providing more comprehensive analysis than traditional approaches alone.
+**PARの利点**: 信頼関係（ユーザー入力 vs. アプリケーション）を捕捉し、セキュリティアクションの品質を解析することで、従来のアプローチ単体より包括的な解析を提供。
 
 ## PAR Patterns Across Contexts
 

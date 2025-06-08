@@ -1,71 +1,71 @@
-# LLM解析フロー
+# LLM解析flow
 
-このドキュメントでは、Parsentryが大規模言語モデルを活用してソースコードのセキュリティ解析を実行する方法について説明します。
+本文書では、Parsentryがlarge language modelを活用してsource codeのsecurity解析を実行する方法について説明します。
 
 ## 概要
 
-解析プロセスは、静的コード解析とLLMを使用した脆弱性検出を組み合わせています。システムは最初にセキュリティパターンマッチングを使用して潜在的に脆弱なファイルを特定し、その後LLMを使用して深度解析を実行し、脆弱性を確認・特性化します。
+解析processは、静的code解析とLLMを使用した脆弱性検出を組み合わせています。systemは最初にsecurityパターンmatchingを使用して潜在的に脆弱なfileを特定し、その後LLMを使用して深度解析を実行し、脆弱性を確認・特性化します。
 
-## 解析パイプライン
+## 解析pipeline
 
-### 1. ファイル発見とフィルタリング
+### 1. file発見とfiltering
 
-- リポジトリがソースファイルをスキャン
-- ファイルは以下の基準でフィルタリング：
-  - 言語サポート（Rust、Python、JavaScript/TypeScript、Ruby、Go、Java、C/C++、Terraform）
-  - `src/patterns/`ディレクトリで言語別に定義されたセキュリティリスクパターン
-  - ファイルサイズと複雑度の閾値
+- repositoryがsource fileをscan
+- fileは以下の基準でfiltering：
+  - 言語support（Rust、Python、JavaScript/TypeScript、Ruby、Go、Java、C/C++、Terraform）
+  - `src/patterns/`directoryで言語別に定義されたsecurityリスクpattern
+  - fileサイズと複雑度の閾値
 
-### 2. パターンベースリスク評価
+### 2. patternベースリスク評価
 
-- 各ファイルは言語固有のセキュリティパターン（PAR分類）に対して評価
-- リスクスコアは以下に基づいて計算：
-  - Principal（データソース）パターン：入力源、リクエストハンドラー、環境変数等
-  - Action（操作）パターン：データ検証、サニタイゼーション、ハッシュ化等
-  - Resource（リソース）パターン：ファイル操作、データベース、コマンド実行等
-- MITRE ATT&CKフレームワークに基づく攻撃ベクターの関連付け
+- 各fileは言語固有のsecurityパターン（PAR分類）に対して評価
+- リスクscoreは以下に基づいて計算：
+  - Principal（dataソース）パターン：入力源、requestハンドラー、環境変数等
+  - Action（操作）パターン：data検証、sanitization、hash化等
+  - Resource（リソース）パターン：file操作、database、command実行等
+- MITRE ATT&CK frameworkに基づく攻撃vectorの関連付け
 
-### 3. コードコンテキスト構築
+### 3. code context構築
 
-- Tree-sitterがソースコードを解析して以下を抽出：
-  - 関数/メソッド定義
-  - 変数参照とデータフロー
-  - インポート文と依存関係
-  - コメントとドキュメント
-- セマンティック情報は潜在的脆弱性の周辺コンテキスト構築に使用
+- Tree-sitterがsource codeを解析して以下を抽出：
+  - 関数/method定義
+  - 変数参照とdata flow
+  - import文とdependency
+  - commentとdocument
+- semantic情報は潜在的脆弱性の周辺context構築に使用
 
-#### 改進されたコンテキスト追跡
+#### 改進されたcontext追跡
 
-PAR（Principal-Action-Resource）分類システムにより、コンテキスト収集が最適化されました：
+PAR（Principal-Action-Resource）分類systemにより、context収集が最適化されました：
 
-- **Principalパターン**: `find_references()` を使用してデータの流れを前方追跡
+- **Principalパターン**: `find_references()` を使用してdataの流れを前方追跡
 - **Action/Resourceパターン**: `find_definition()` を使用して定義を後方追跡  
-- **攻撃ベクター**: MITRE ATT&CKタクティクスに基づく脅威の分類
+- **攻撃vector**: MITRE ATT&CK tacticsに基づく脅威の分類
 
-これにより、より正確なデータフロー解析と脆弱性のコンテキスト理解が可能になります。
+これにより、より正確なdata flow解析と脆弱性のcontext理解が可能になります。
 
 ### 4. LLM解析
 
 #### 初期解析
 
-1. **プロンプト構築**：
-   - セキュリティ解析ガイドラインを含むシステムプロンプト
-   - 対象ファイルの完全なソースコード
-   - プロジェクトコンテキスト（READMEサマリーがある場合）
+1. **prompt構築**：
+   - security解析guidelineを含むsystem prompt
+   - 対象fileの完全なsource code
+   - project context（READMEサマリーがある場合）
    - JSON形式出力の具体的指示
 
-2. **LLMリクエスト**：
-   - APIクライアントが選択されたモデル（OpenAI、Anthropic等）にリクエスト送信
-   - モデルが脆弱性パターンのコード解析を実行
-   - レスポンスには脆弱性評価が含まれる
+2. **LLM request**：
+   - API clientが選択されたmodel（OpenAI、Anthropic等）にrequest送信
+   - modelが脆弱性patternのcode解析を実行
+   - responseには脆弱性評価が含まれる
 
-3. **レスポンス解析**：
-   - JSONレスポンスがスキーマに対して検証
-   - 抽出されるフィールドには以下が含まれる：
-     - 特定された脆弱性タイプ
+3. **response解析**：
+   - JSON responseがschemaに対して検証
+   - 抽出されるfieldには以下が含まれる：
+     - 特定された脆弱性type
      - 詳細解析
-     - 概念実証コード
-     - 信頼度スコア
+     - 概念実証code
+     - 信頼度score
      - 修復提案
 
 #### 深度脆弱性解析（オプション）

@@ -1,35 +1,35 @@
-# LLM解析のためのコンテキスト構築
+# LLM解析用context構築
 
-このドキュメントでは、Parsentryが正確な脆弱性検出のためにLLMにコンテキストを構築・提供する方法について説明します。
+本文書では、Parsentryによる正確な脆弱性検出を実現するためのLLM context構築手法を説明します。
 
 ## 概要
 
-効果的な脆弱性検出は、単独のコードスニペットだけでなく、それらが動作するより広範なコンテキストを理解する必要があります。Parsentryは多層コンテキストを構築してLLMが正確な評価を行えるよう支援します。
+正確な脆弱性検出には、個別codeセグメントの解析に加え、実行環境を含む包括的contextの理解が必要です。Parsentryは多層contextアーキテクチャによりLLMの解析精度を向上させます。
 
-## コンテキスト層
+## context層
 
-### 1. プロジェクトレベルコンテキスト
+### 1. プロジェクトレベルcontext
 
 #### README解析
 - プロジェクトREADMEファイルを自動抽出・要約
 - 以下の理解を提供：
   - プロジェクトの目的と機能
-  - 技術スタックと依存関係
-  - 開発者によって言及されたセキュリティ考慮事項
-  - APIエンドポイントとデータフロー
+  - 技術stackとdependency
+  - 開発者によって言及されたsecurity考慮事項
+  - API endpointとdata flow
 
-#### リポジトリ構造
-- プロジェクトディレクトリ構造をマップ化
+#### repository構造
+- プロジェクトdirectory構造をmapping
 - 以下を識別：
-  - エントリーポイント（メインファイル、APIルート）
+  - entry point（mainファイル、API route）
   - 設定ファイル
-  - テストディレクトリ
-  - サードパーティ依存関係
+  - test directory
+  - third-party dependency
 
-#### 依存関係解析
-- パッケージマニフェスト（package.json、Cargo.toml、requirements.txt等）を解析
-- 既知の脆弱な依存関係を識別
-- 依存関係使用パターンをマップ化
+#### dependency解析
+- package manifest（package.json、Cargo.toml、requirements.txt等）を解析
+- 既知の脆弱なdependencyを識別
+- dependency使用patternをmapping
 
 ### 2. ファイルレベルコンテキスト
 

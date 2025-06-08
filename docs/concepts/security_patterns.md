@@ -1,47 +1,47 @@
-# セキュリティパターン
+# security pattern
 
-Parsentryが使用するパターンベースの脆弱性検出システムの概念について説明します。
+Parsentryが使用するpatternベースの脆弱性検函systemの概念について説明します。
 
 ## 概要
 
-セキュリティパターンは、LLM解析の前段階で潜在的な脆弱性を効率的にフィルタリングする正規表現ベースのルールです。複数のプログラミング言語に対応し、データフロー解析と組み合わせて使用されます。
+security patternは、LLM解析の前段階で潜在的な脆弱性を効率的にfilteringする正規表現ベースのruleです。複数のprogramming言語に対応し、data flow解析と組み合わせて使用されます。
 
 ## PAR（Principal-Action-Resource）分類
 
-### Principal（プリンシパル）
-認証主体や信頼できるデータソースを識別します。
+### Principal
+認証主体や信頼できるdataソースを識別します。
 
-**プログラミング言語における例**:
-- **Webフレームワーク**: HTTPリクエストハンドラー、フォームデータ処理
-- **ファイルシステム**: ファイル読み取り、設定ファイル解析
-- **ネットワーク**: API応答、外部サービス呼び出し
-- **環境**: 環境変数、コマンドライン引数、データベース結果
+**programming言語における例**:
+- **Web framework**: HTTP requestハンドラー、form data処理
+- **file system**: file読み取り、設定file解析
+- **network**: API応答、外部service呼び出し
+- **環境**: 環境変数、commandライン引数、database結果
 
 **IaCにおける例**:
 - **AWS IAM**: ユーザー、ロール、アカウント
 - **アクセス権限**: ポリシーアタッチメント
 
-### Action（アクション）
-データ処理、検証、セキュリティ制御を表す操作を識別します。
+### Action
+data処理、検証、security制御を表す操作を識別します。
 
-**プログラミング言語における例**:
-- **データ検証**: スキーマ検証、型チェック、正規表現検証
-- **データサニタイゼーション**: HTMLエスケープ、パス正規化
-- **セキュリティ制御**: ハッシュ化、暗号化、トークン検証
+**programming言語における例**:
+- **data検証**: schema検証、型check、正規表現検証
+- **data sanitization**: HTMLエスケープ、path正規化
+- **security制御**: hash化、暗号化、token検証
 
 **IaCにおける例**:
 - **AWS API操作**: s3:GetObject、ec2:DescribeInstances
 - **権限変更**: IAMポリシー更新
 
-### Resource（リソース）
-データの最終的な出力先や危険な操作対象を識別します。
+### Resource
+dataの最終的な出力先や危険な操作対象を識別します。
 
-**プログラミング言語における例**:
-- **コード実行**: `eval()`、`exec()`、動的コード実行
-- **コマンド実行**: シェル実行、プロセス生成
-- **データベース**: SQLクエリ実行、NoSQL操作
-- **ファイルシステム**: ファイル書き込み、パストラバーサル
-- **ネットワーク**: 外部HTTPリクエスト、URL構築
+**programming言語における例**:
+- **code実行**: `eval()`、`exec()`、動的code実行
+- **command実行**: shell実行、process生成
+- **database**: SQL query実行、NoSQL操作
+- **file system**: file書き込み、path traversal
+- **network**: 外部HTTP request、URL構築
 
 **IaCにおける例**:
 - **AWS サービス**: S3バケット、EC2インスタンス、Lambda関数
