@@ -21,9 +21,9 @@ fn test_language_from_extension() {
     assert_eq!(Language::from_extension("hxx"), Language::Cpp);
     assert_eq!(Language::from_extension("tf"), Language::Terraform);
     assert_eq!(Language::from_extension("hcl"), Language::Terraform);
-    // YAML and JSON support has been disabled
-    assert_eq!(Language::from_extension("yaml"), Language::Other);
-    assert_eq!(Language::from_extension("yml"), Language::Other);
+    // YAML support is available
+    assert_eq!(Language::from_extension("yaml"), Language::Yaml);
+    assert_eq!(Language::from_extension("yml"), Language::Yaml);
     assert_eq!(Language::from_extension("json"), Language::Other);
 
     assert_eq!(Language::from_extension("txt"), Language::Other);
