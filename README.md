@@ -47,13 +47,13 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 
 ## Examples
 
-- [Damn Vulnerable MCP Server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/) ([Summary](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md)) - MCP protocol vulnerabilities
-- [Secure Code Game](docs/reports/skills-secure-code-game/) ([Summary](docs/reports/skills-secure-code-game/summary.md)) - Security challenges across multiple languages
-- [Broken Crystals](docs/reports/NeuraLegion-brokencrystals/) ([Summary](docs/reports/NeuraLegion-brokencrystals/summary.md)) - Web application security issues
-- [OWASP NodeGoat](docs/reports/OWASP-NodeGoat/) ([Summary](docs/reports/OWASP-NodeGoat/summary.md)) - Node.js vulnerabilities
-- [TerraGoat](docs/reports/terragoat/) ([Summary](docs/reports/terragoat/summary.md)) - Infrastructure as Code security issues
-- [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/) ([Summary](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md)) - GraphQL vulnerabilities
-- [CloudGoat](docs/reports/RhinoSecurityLabs-cloudgoat/) - AWS security misconfigurations (partial analysis)
+- [Secure Code Game](docs/reports/skills-secure-code-game/summary.md) - Security challenges across multiple languages
+- [Damn Vulnerable MCP Server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md) - MCP protocol vulnerabilities
+- [TerraGoat](docs/reports/terragoat/summary.md) - Infrastructure as Code security issues
+- [CloudGoat](docs/reports/cloudgoat/summary.md) - AWS security misconfigurations
+- [Broken Crystals](docs/reports/NeuraLegion-brokencrystals/summary.md) - Web application security issues
+- [OWASP NodeGoat](docs/reports/OWASP-NodeGoat/summary.md) - Node.js vulnerabilities
+- [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL vulnerabilities
 
 ## Documentation
 
