@@ -15,12 +15,10 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 ## Features
 
 - **AI-Powered Analysis**: Uses Large Language Models for advanced vulnerability detection
-- **PAR Classification**: Principal-Action-Resource framework for security pattern categorization
-- **MITRE ATT&CK Integration**: Maps vulnerabilities to MITRE ATT&CK tactics and techniques
+- **PAR Classification**: Principal-Action-Resource framework for security issue discovery
 - **Multi-Language Support**: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
 - **Tree-sitter Parsing**: Semantic code analysis for accurate context understanding
 - **Comprehensive Reports**: Detailed markdown reports with confidence scoring and PoC examples
-- **Vulnerability Detection**: SQLI, XSS, RCE, LFI, SSRF, AFO, IDOR and more
 
 ## Usage
 
@@ -29,50 +27,39 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 ```bash
 docker pull ghcr.io/hikaruegashira/parsentry:latest
 
-# Analyze a GitHub repository
+# replace owner/repository
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   ghcr.io/hikaruegashira/parsentry:latest \
   --repo owner/repository --output-dir /reports --summary
-
-# Analyze local codebase
-docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  -v $(pwd)/your-project:/project \
-  -v $(pwd)/reports:/reports \
-  ghcr.io/hikaruegashira/parsentry:latest \
-  --root /project --output-dir /reports --summary
-
-# Use different LLM models
-docker run -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-  ghcr.io/hikaruegashira/parsentry:latest \
-  --repo owner/repository --model claude-opus-4
 ```
 
 ### Command Line Options
 
 - `--repo <REPO>`: Analyze GitHub repository (owner/repo)
 - `--root <PATH>`: Analyze local directory
+- `--model <MODEL>`: supports OpenAI, Anthropic, Google, Groq, Ollama, default: o4-mini
 - `--output-dir <DIR>`: Directory for markdown reports
 - `--summary`: Generate summary report
-- `--model <MODEL>`: LLM model to use (supports OpenAI, Anthropic, Google, Groq, default: o4-mini)
-- `--min-confidence <SCORE>`: Minimum confidence score filter (0-100, default: 70)
-- `--vuln-types <TYPES>`: Filter by vulnerability types (LFI,RCE,SSRF,AFO,SQLI,XSS,IDOR)
+- `--sarif`: Generate SARIF report
+- `--generate-patterns`: Generate custom patterns from codebase
 
 ## Examples
 
 See actual vulnerability reports generated for each supported language:
 
-- [Python Vulnerable App](docs/reports/python-vulnerable-app/) - SQLI, XSS, RCE, LFI, IDOR
-- [JavaScript Vulnerable App](docs/reports/javascript-vulnerable-app/) - Most comprehensive (15 files)
-- [Go Vulnerable App](docs/reports/go-vulnerable-app/) - SQLI, XSS, RCE, LFI  
-- [Rust Vulnerable App](docs/reports/rust-vulnerable-app/) - SQLI, RCE, SSRF, AFO, IDOR
-- [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app/) - SQLI, XSS
-- [C Vulnerable App](docs/reports/c-vulnerable-app/) - Buffer overflows, RCE, LFI
-- [C++ Vulnerable App](docs/reports/cpp-vulnerable-app/) - Memory safety, SQLI, RCE
-- [Terraform Vulnerable App](docs/reports/terraform-vulnerable-app/) - Configuration security
+- [Python Vulnerable App](docs/reports/python-vulnerable-app/)
+- [JavaScript Vulnerable App](docs/reports/javascript-vulnerable-app/)
+- [Go Vulnerable App](docs/reports/go-vulnerable-app/)
+- [Rust Vulnerable App](docs/reports/rust-vulnerable-app/)
+- [Ruby Vulnerable App](docs/reports/ruby-vulnerable-app/)
+- [C Vulnerable App](docs/reports/c-vulnerable-app/)
+- [C++ Vulnerable App](docs/reports/cpp-vulnerable-app/)
+- [Terraform Vulnerable App](docs/reports/terraform-vulnerable-app/)
 
 ## Documentation
 
+- [PAR Framework](docs/concepts/par_framework.md) - Principal-Action-Resource security analysis model
 - [Analysis Flow](docs/concepts/analysis_flow.md) - How the analysis process works
 - [Context Building](docs/concepts/context.md) - Code context generation
 - [Prompts](docs/concepts/prompts.md) - LLM prompt templates

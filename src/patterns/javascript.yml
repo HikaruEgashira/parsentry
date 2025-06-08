@@ -52,40 +52,50 @@ principals:
 
 actions:
   - pattern: "\\bvalidator\\."
-    description: "Validator.js library action"
+    description: "Input validation operations"
     attack_vector:
-      - "T1070"
-      - "T1027"
+      - "T1190"
+      - "T1078"
   - pattern: "\\bDOMPurify\\."
-    description: "DOM sanitization action"
+    description: "DOM sanitization operations"
     attack_vector:
       - "T1055"
       - "T1106"
   - pattern: "\\bescape-html"
-    description: "HTML escaping action"
+    description: "HTML escaping operations"
     attack_vector:
       - "T1055"
       - "T1106"
   - pattern: "\\bxss\\s*\\("
-    description: "XSS filtering action"
+    description: "XSS filtering operations"
     attack_vector:
       - "T1055"
       - "T1027"
   - pattern: "\\bhelmet\\."
-    description: "Security middleware action"
+    description: "Security middleware operations"
     attack_vector:
       - "T1550"
       - "T1556"
   - pattern: "\\bbcrypt\\."
-    description: "Password hashing action"
+    description: "Password processing operations"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\.normalize\\s*\\("
-    description: "Data normalization action"
+  - pattern: "\\bjwt\\.(verify|sign)"
+    description: "JWT token operations"
     attack_vector:
-      - "T1070"
-      - "T1027"
+      - "T1550"
+      - "T1078"
+  - pattern: "\\$[0-9]+|\\?"
+    description: "SQL parameterization attempts"
+    attack_vector:
+      - "T1190"
+      - "T1005"
+  - pattern: "path\\.(normalize|resolve)"
+    description: "Path manipulation operations"
+    attack_vector:
+      - "T1083"
+      - "T1005"
 
 resources:
   - pattern: "\\beval\\s*\\("
