@@ -5,9 +5,6 @@
 | ファイル | 脆弱性タイプ | 信頼度 | Policy Violations |
 |---------|------------|--------|------------------|
 | [s3.tf](s3.tf.md) | IDOR | 🟠 中高 | S3_PUBLIC, S3_ENCRYPTION, S3_LOGGING, S3_VERSIONING |
-| [provider.tf](provider.tf.md) | - | 🔵 低 | - |
-| [sql.tf](sql.tf.md) | - | 🔵 低 | - |
-| [providers.tf](providers.tf.md) | - | 🔵 低 | - |
 
 ## Policy Violation Analysis
 
