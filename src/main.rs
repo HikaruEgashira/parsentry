@@ -78,7 +78,21 @@ async fn main() -> Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    println!("🔍 Parsentry - PAR-based security scanner");
+    println!(r#"
+                ▲
+               ╱ ╲
+              ╱   ╲
+             ╱ ░░░ ╲
+            ╱ ░▓▓▓░ ╲
+           ╱ ░▓███▓░ ╲
+          ╱ ░▓█████▓░ ╲
+         ╱_░▓███████▓░_╲
+           ─────┬─────
+                │
+          P A R S E N T R Y
+                │
+             v{}
+"#, env!("CARGO_PKG_VERSION"));
 
     let args = Args::parse();
 
