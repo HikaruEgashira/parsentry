@@ -67,6 +67,10 @@ struct Args {
     /// カスタムパターンを生成する（現在のディレクトリを解析してセキュリティパターンを自動検出）
     #[arg(long)]
     generate_patterns: bool,
+
+    /// Debug mode (save LLM input/output to debug folder)
+    #[arg(long)]
+    debug: bool,
 }
 
 #[tokio::main]
@@ -164,6 +168,7 @@ async fn main() -> Result<()> {
     let model = args.model.clone();
     let files = files.clone();
     let verbosity = args.verbosity;
+    let debug = args.debug;
 
     let mut summary = AnalysisSummary::new();
 
@@ -186,6 +191,7 @@ async fn main() -> Result<()> {
             let model = model.clone();
             let files = files.clone();
             let progress_bar = progress_bar.clone();
+            let debug = debug;
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -217,7 +223,7 @@ async fn main() -> Result<()> {
                 };
 
                 let analysis_result =
-                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0).await {
+                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0, debug, &output_dir).await {
                         Ok(res) => res,
                         Err(e) => {
                             if verbosity > 0 {

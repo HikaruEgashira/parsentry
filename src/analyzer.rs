@@ -7,11 +7,42 @@ use serde::de::DeserializeOwned;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::timeout;
+use std::fs;
 
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{Response, response_json_schema};
 use crate::security_patterns::{PatternType, SecurityRiskPatterns};
+
+fn save_debug_file(
+    output_dir: &Option<PathBuf>,
+    file_path: &PathBuf,
+    suffix: &str,
+    content: &str,
+) -> Result<()> {
+    if let Some(dir) = output_dir {
+        let debug_dir = dir.join("debug");
+        fs::create_dir_all(&debug_dir)?;
+        
+        let file_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+        
+        // Add timestamp to ensure uniqueness across multiple LLM calls
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        
+        let debug_file_name = format!("{}_{}_{}.txt", file_name, suffix, timestamp);
+        let debug_path = debug_dir.join(debug_file_name);
+        
+        fs::write(&debug_path, content)?;
+        info!("Debug file saved: {}", debug_path.display());
+    }
+    Ok(())
+}
 
 fn create_api_client() -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -98,6 +129,8 @@ pub async fn analyze_file(
     verbosity: u8,
     context: &crate::parser::Context,
     min_confidence: i32,
+    debug: bool,
+    output_dir: &Option<PathBuf>,
 ) -> Result<Response, Error> {
     info!("Performing initial analysis of {}", file_path.display());
 
@@ -155,6 +188,17 @@ pub async fn analyze_file(
     );
     debug!("[PROMPT]\n{}", prompt);
 
+    // Save debug input if debug mode is enabled
+    if debug {
+        let debug_content = format!("=== INITIAL ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}", 
+            model, file_path.display(), 
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            prompt);
+        if let Err(e) = save_debug_file(output_dir, file_path, "01_initial_prompt", &debug_content) {
+            warn!("Failed to save debug input file: {}", e);
+        }
+    }
+
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(
             "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Do not include any explanatory text outside the JSON object.",
@@ -165,6 +209,17 @@ pub async fn analyze_file(
     let json_client = create_api_client();
     let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
     debug!("[LLM Response]\n{}", chat_content);
+
+    // Save debug output if debug mode is enabled
+    if debug {
+        let debug_content = format!("=== INITIAL ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}", 
+            model, file_path.display(), 
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            chat_content);
+        if let Err(e) = save_debug_file(output_dir, file_path, "02_initial_response", &debug_content) {
+            warn!("Failed to save debug output file: {}", e);
+        }
+    }
     let mut response: Response = parse_json_response(&chat_content)?;
 
     response.confidence_score =
@@ -224,6 +279,18 @@ pub async fn analyze_file(
                     prompts::GUIDELINES_TEMPLATE,
                 );
 
+                // Save debug input if debug mode is enabled
+                if debug {
+                    let debug_content = format!("=== VULNERABILITY-SPECIFIC ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}", 
+                        model, file_path.display(), vuln_type,
+                        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                        prompt);
+                    let debug_suffix = format!("03_vuln_prompt_{:?}", vuln_type);
+                    if let Err(e) = save_debug_file(output_dir, file_path, &debug_suffix, &debug_content) {
+                        warn!("Failed to save debug input file: {}", e);
+                    }
+                }
+
                 let chat_req = ChatRequest::new(vec![
                     ChatMessage::system(
                         "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { \"scratchpad\": string, \"analysis\": string, \"poc\": string, \"confidence_score\": integer, \"vulnerability_types\": array of strings, \"context_code\": array of objects with { \"name\": string, \"reason\": string, \"code_line\": string } }. Do not include any explanatory text outside the JSON object.",
@@ -234,6 +301,18 @@ pub async fn analyze_file(
                 let json_client = create_api_client();
                 let chat_content = execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
                 debug!("[LLM Response]\n{}", chat_content);
+
+                // Save debug output if debug mode is enabled
+                if debug {
+                    let debug_content = format!("=== VULNERABILITY-SPECIFIC ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}", 
+                        model, file_path.display(), vuln_type,
+                        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                        chat_content);
+                    let debug_suffix = format!("04_vuln_response_{:?}", vuln_type);
+                    if let Err(e) = save_debug_file(output_dir, file_path, &debug_suffix, &debug_content) {
+                        warn!("Failed to save debug output file: {}", e);
+                    }
+                }
                 let mut vuln_response: Response = parse_json_response(&chat_content)?;
 
                 vuln_response.confidence_score =
