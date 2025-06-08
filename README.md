@@ -31,7 +31,7 @@ docker pull ghcr.io/hikaruegashira/parsentry:latest
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   ghcr.io/hikaruegashira/parsentry:latest \
-  --repo owner/repository --output-dir /reports --summary
+  --repo owner/repository --output-dir /reports --generate-patterns
 ```
 
 ### Command Line Options
@@ -40,8 +40,6 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - `--root <PATH>`: Analyze local directory
 - `--model <MODEL>`: supports OpenAI, Anthropic, Google, Groq, Ollama, default: o4-mini
 - `--output-dir <DIR>`: Directory for markdown reports
-- `--summary`: Generate summary report
-- `--sarif`: Generate SARIF report
 - `--generate-patterns`: Generate custom patterns from codebase
 - `--max-parallel <NUMBER>`: Maximum parallel analysis tasks (default: 4)
 

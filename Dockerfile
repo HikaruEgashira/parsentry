@@ -1,6 +1,5 @@
 # ---- Build Stage ----
-FROM --platform=$BUILDPLATFORM rust:1.86.0-slim AS builder
-
+FROM rust:1.86.0-slim AS builder
 
 WORKDIR /app
 
@@ -18,7 +17,6 @@ RUN mkdir -p src \
     && rm src/main.rs
 
 COPY . .
-
 
 RUN cargo build --release
 
