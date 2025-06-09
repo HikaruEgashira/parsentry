@@ -1,0 +1,149 @@
+principals:
+  - pattern: '\$_GET\['
+    description: "HTTP GET parameters - user-controlled input via URL parameters"
+    attack_vector: ["T1190", "T1071"]
+  - pattern: '\$_POST\['
+    description: "HTTP POST parameters - user-controlled input via form submissions"
+    attack_vector: ["T1190", "T1071"]
+  - pattern: '\$_REQUEST\['
+    description: "HTTP request parameters - combined GET, POST, and COOKIE data"
+    attack_vector: ["T1190", "T1071"]
+  - pattern: '\$_COOKIE\['
+    description: "HTTP cookies - user-controlled data stored in browser"
+    attack_vector: ["T1539", "T1071"]
+  - pattern: '\$_FILES\['
+    description: "File upload data - user-controlled file uploads"
+    attack_vector: ["T1190", "T1105"]
+  - pattern: '\$_SERVER\[.*(?:HTTP_|REQUEST_URI|QUERY_STRING|PATH_INFO)'
+    description: "HTTP headers and request data"
+    attack_vector: ["T1190", "T1071"]
+  - pattern: "file_get_contents\\s*\\(\\s*[\"']php://input"
+    description: "Raw POST data input"
+    attack_vector: ["T1190", "T1071"]
+  - pattern: 'stream_get_contents\s*\(\s*STDIN'
+    description: "Standard input stream"
+    attack_vector: ["T1059", "T1071"]
+
+actions:
+  - pattern: 'htmlspecialchars\s*\('
+    description: "HTML escaping - converts special characters to HTML entities"
+    attack_vector: ["T1055", "T1106"]
+  - pattern: 'htmlentities\s*\('
+    description: "HTML entity encoding - converts all applicable characters"
+    attack_vector: ["T1055", "T1106"]
+  - pattern: 'filter_var\s*\('
+    description: "Input filtering - validates and sanitizes data"
+    attack_vector: ["T1070", "T1027"]
+  - pattern: 'filter_input\s*\('
+    description: "Input filtering from superglobals"
+    attack_vector: ["T1070", "T1027"]
+  - pattern: 'mysqli_real_escape_string\s*\('
+    description: "MySQL string escaping - prevents SQL injection"
+    attack_vector: ["T1190", "T1213"]
+  - pattern: 'addslashes\s*\('
+    description: "Quote escaping - adds backslashes before quotes"
+    attack_vector: ["T1027", "T1140"]
+  - pattern: 'escapeshellarg\s*\('
+    description: "Shell argument escaping"
+    attack_vector: ["T1059", "T1140"]
+  - pattern: 'escapeshellcmd\s*\('
+    description: "Shell command escaping"
+    attack_vector: ["T1059", "T1140"]
+  - pattern: 'strip_tags\s*\('
+    description: "HTML/PHP tag removal"
+    attack_vector: ["T1055", "T1140"]
+  - pattern: 'base64_encode\s*\('
+    description: "Base64 encoding - data obfuscation"
+    attack_vector: ["T1027", "T1140"]
+  - pattern: 'base64_decode\s*\('
+    description: "Base64 decoding - reveals obfuscated data"
+    attack_vector: ["T1027", "T1140"]
+  - pattern: "preg_replace\\s*\\(\\s*[\"']/.*/e"
+    description: "PCRE eval modifier - deprecated dangerous feature"
+    attack_vector: ["T1059", "T1027"]
+
+resources:
+  - pattern: '\beval\s*\('
+    description: "Code evaluation - executes arbitrary PHP code"
+    attack_vector: ["T1059", "T1027"]
+  - pattern: '\bassert\s*\('
+    description: "Assertion evaluation - can execute code in older PHP versions"
+    attack_vector: ["T1059", "T1027"]
+  - pattern: '\bcreate_function\s*\('
+    description: "Dynamic function creation - deprecated security risk"
+    attack_vector: ["T1059", "T1027"]
+  - pattern: '\bexec\s*\('
+    description: "Command execution - runs system commands"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\bsystem\s*\('
+    description: "System command execution with output"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\bpassthru\s*\('
+    description: "Command execution - passes output directly"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\bshell_exec\s*\('
+    description: "Shell command execution"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\bpopen\s*\('
+    description: "Process file pointer - opens process"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\bproc_open\s*\('
+    description: "Process execution with IO control"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\bpcntl_exec\s*\('
+    description: "Program execution"
+    attack_vector: ["T1059", "T1106"]
+  - pattern: '\binclude\s*\('
+    description: "File inclusion - can execute PHP code"
+    attack_vector: ["T1055", "T1083"]
+  - pattern: '\binclude_once\s*\('
+    description: "File inclusion - executes PHP code once"
+    attack_vector: ["T1055", "T1083"]
+  - pattern: '\brequire\s*\('
+    description: "File requirement - fatal if fails"
+    attack_vector: ["T1055", "T1083"]
+  - pattern: '\brequire_once\s*\('
+    description: "File requirement - executes once, fatal if fails"
+    attack_vector: ["T1055", "T1083"]
+  - pattern: '\bfopen\s*\('
+    description: "File opening - potential file access vulnerability"
+    attack_vector: ["T1083", "T1005"]
+  - pattern: '\bfile_get_contents\s*\('
+    description: "File reading - reads entire file"
+    attack_vector: ["T1083", "T1005"]
+  - pattern: '\bfile_put_contents\s*\('
+    description: "File writing - writes data to file"
+    attack_vector: ["T1105", "T1074"]
+  - pattern: '\breadfile\s*\('
+    description: "File reading - outputs file contents"
+    attack_vector: ["T1083", "T1005"]
+  - pattern: '\bunserialize\s*\('
+    description: "Object deserialization - can trigger code execution"
+    attack_vector: ["T1055", "T1027"]
+  - pattern: 'mysqli?_query\s*\('
+    description: "SQL query execution"
+    attack_vector: ["T1190", "T1213"]
+  - pattern: '\$pdo->(?:query|exec|prepare)\s*\('
+    description: "PDO database operations"
+    attack_vector: ["T1190", "T1213"]
+  - pattern: 'pg_query\s*\('
+    description: "PostgreSQL query execution"
+    attack_vector: ["T1190", "T1213"]
+  - pattern: 'ldap_search\s*\('
+    description: "LDAP query execution"
+    attack_vector: ["T1190", "T1087"]
+  - pattern: "header\\s*\\(\\s*[\"']Location:"
+    description: "HTTP redirect - potential open redirect"
+    attack_vector: ["T1190", "T1204"]
+  - pattern: 'mail\s*\('
+    description: "Email sending function"
+    attack_vector: ["T1566", "T1071"]
+  - pattern: 'extract\s*\(\s*\$_(?:GET|POST|REQUEST)'
+    description: "Variable extraction from user input - dangerous"
+    attack_vector: ["T1190", "T1027"]
+  - pattern: '\$\$[a-zA-Z_]'
+    description: "Variable variables - dynamic variable access"
+    attack_vector: ["T1027", "T1055"]
+  - pattern: 'call_user_func(?:_array)?\s*\('
+    description: "Dynamic function calls"
+    attack_vector: ["T1059", "T1106"]

@@ -10,6 +10,7 @@ use streaming_iterator::StreamingIterator;
 
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
+use crate::parser::Definition;
 
 fn should_skip_reference(
     name: &str, 
@@ -103,8 +104,8 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     
     println!("📁 解析対象ファイル数: {}", filtered_files.len());
 
-    let mut all_definitions = Vec::new();
-    let mut all_references = Vec::new();
+    let mut all_definitions: Vec<(Definition, Language)> = Vec::new();
+    let mut all_references: Vec<(Definition, Language)> = Vec::new();
     let mut languages_found = HashMap::new();
     let mut seen_names = std::collections::HashSet::new();
 
@@ -416,6 +417,7 @@ pub fn write_patterns_to_file(
         Language::Yaml => "YAML",
         Language::Bash => "Bash",
         Language::Shell => "Shell",
+        Language::Php => "Php",
         Language::Other => return Ok(()),
     };
 

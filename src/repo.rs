@@ -51,6 +51,11 @@ impl RepoOps {
             "yaml".to_string(),
             "sh".to_string(),
             "bash".to_string(),
+            "php".to_string(),
+            "php3".to_string(),
+            "php4".to_string(),
+            "php5".to_string(),
+            "phtml".to_string(),
         ];
 
         Self {

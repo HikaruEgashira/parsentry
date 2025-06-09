@@ -107,6 +107,17 @@ fn main() {
         .flag("-Wno-unused-function")
         .compile("tree-sitter-hcl");
 
+    // Add PHP parser
+    cc::Build::new()
+        .include(&dir)
+        .include(&tree_sitter_dir)
+        .include(dir.join("tree-sitter-php/php/src"))
+        .include(dir.join("tree-sitter-php/common"))
+        .file(dir.join("tree-sitter-php/php/src/parser.c"))
+        .file(dir.join("tree-sitter-php/php/src/scanner.c"))
+        .flag("-Wno-unused-parameter")
+        .compile("tree-sitter-php");
+
     // TODO: Add YAML and Bash support once tree-sitter submodules are properly set up
     // cc::Build::new()
     //     .include(&dir)

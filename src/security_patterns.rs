@@ -20,6 +20,7 @@ pub enum Language {
     Yaml,
     Bash,
     Shell,
+    Php,
     Other,
 }
 
@@ -38,6 +39,7 @@ impl Language {
             "tf" | "hcl" => Language::Terraform,
             "yml" | "yaml" => Language::Yaml,
             "sh" | "bash" => Language::Bash,
+            "php" | "php3" | "php4" | "php5" | "phtml" => Language::Php,
             _ => Language::Other,
         }
     }
@@ -203,6 +205,7 @@ impl SecurityRiskPatterns {
             (Kubernetes, include_str!("patterns/kubernetes.yml")),
             (Yaml, include_str!("patterns/yaml.yml")),
             (Bash, include_str!("patterns/bash.yml")),
+            (Php, include_str!("patterns/php.yml")),
         ];
 
         for (lang, content) in languages {
@@ -253,6 +256,7 @@ impl SecurityRiskPatterns {
                                     "YAML" => Language::Yaml,
                                     "Bash" => Language::Bash,
                                     "Shell" => Language::Shell,
+                                    "Php" | "PHP" => Language::Php,
                                     _ => continue,
                                 };
 
