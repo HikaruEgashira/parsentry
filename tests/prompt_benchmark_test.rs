@@ -258,7 +258,7 @@ async fn run_risk_assessment_benchmark(model: &str) -> Result<BenchmarkResults> 
             // Test pattern classification if function was kept
             let actual_pattern = if !high_risk_definitions.is_empty() {
                 let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                    model, &high_risk_definitions, test_case.language
+                    model, &high_risk_definitions, test_case.language, None
                 ).await?;
                 patterns.first().map(|p| p.pattern_type.clone()).flatten()
             } else {
@@ -413,7 +413,7 @@ function handleUserLogin(req, res) {
             
             if risk_identified {
                 let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                    model, &high_risk_definitions, test_case.language
+                    model, &high_risk_definitions, test_case.language, None
                 ).await?;
                 let pattern_type = patterns.first().map(|p| p.pattern_type.clone()).flatten();
                 pattern_results.push(pattern_type);

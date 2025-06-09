@@ -1,6 +1,8 @@
 use anyhow::{Error, Result};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
+use genai::resolver::{Endpoint, ServiceTargetResolver};
+use genai::ServiceTarget;
 use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
@@ -44,12 +46,36 @@ fn save_debug_file(
     Ok(())
 }
 
-fn create_api_client() -> Client {
+fn create_api_client(api_base_url: Option<&str>) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
         ChatOptions::default()
             .with_response_format(JsonSpec::new("json_object", response_json_schema())),
     );
-    Client::builder().with_config(client_config).build()
+    
+    let mut client_builder = Client::builder().with_config(client_config);
+    
+    // Add custom service target resolver if base URL is provided
+    if let Some(base_url) = api_base_url {
+        let target_resolver = create_custom_target_resolver(base_url);
+        client_builder = client_builder.with_service_target_resolver(target_resolver);
+    }
+    
+    client_builder.build()
+}
+
+fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
+    let base_url_owned = base_url.to_string();
+    
+    ServiceTargetResolver::from_resolver_fn(
+        move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
+            let ServiceTarget { model, auth, .. } = service_target;
+            
+            // Use the custom base URL while keeping the original model identifier
+            let endpoint = Endpoint::from_owned(base_url_owned.clone());
+            
+            Ok(ServiceTarget { endpoint, auth, model })
+        },
+    )
 }
 
 async fn execute_chat_request(
@@ -131,6 +157,7 @@ pub async fn analyze_file(
     min_confidence: i32,
     debug: bool,
     output_dir: &Option<PathBuf>,
+    api_base_url: Option<&str>,
 ) -> Result<Response, Error> {
     info!("Performing initial analysis of {}", file_path.display());
 
@@ -206,7 +233,7 @@ pub async fn analyze_file(
         ChatMessage::user(&prompt),
     ]);
 
-    let json_client = create_api_client();
+    let json_client = create_api_client(api_base_url);
     let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
     debug!("[LLM Response]\n{}", chat_content);
 
@@ -298,7 +325,7 @@ pub async fn analyze_file(
                     ChatMessage::user(&prompt),
                 ]);
 
-                let json_client = create_api_client();
+                let json_client = create_api_client(api_base_url);
                 let chat_content = execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
                 debug!("[LLM Response]\n{}", chat_content);
 

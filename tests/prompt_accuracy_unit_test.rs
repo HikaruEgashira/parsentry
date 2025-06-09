@@ -238,7 +238,7 @@ async fn test_individual_function_accuracy(test_case: &AccuracyTestCase, model: 
         let pattern_accuracy = if detected_as_security_risk && test_case.expected_pattern.is_some() {
             let definitions_slice = vec![definition];
             let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                model, &definitions_slice, test_case.language
+                model, &definitions_slice, test_case.language, None
             ).await?;
             
             if let Some(pattern) = patterns.first() {

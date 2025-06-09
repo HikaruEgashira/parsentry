@@ -21,6 +21,9 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
             definitions: vec![],
         },
         0,
+        false,
+        &None,
+        None,
     )
     .await?;
 
@@ -57,6 +60,9 @@ fn main() {
             definitions: vec![],
         },
         0,
+        false,
+        &None,
+        None,
     )
     .await?;
 
@@ -105,6 +111,9 @@ fn main() {
             definitions: vec![],
         },
         0,
+        false,
+        &None,
+        None,
     )
     .await?;
 

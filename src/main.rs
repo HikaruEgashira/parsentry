@@ -45,6 +45,11 @@ async fn main() -> Result<()> {
 
     validate_args(&args)?;
 
+    // Get API base URL from CLI arg or environment variable
+    let env_base_url = std::env::var("API_BASE_URL").ok();
+    let api_base_url = args.api_base_url.as_deref()
+        .or_else(|| env_base_url.as_deref());
+
     let (root_dir, repo_name) = if let Some(repo) = &args.repo {
         let dest = PathBuf::from("repo");
         if dest.exists() {
@@ -76,7 +81,7 @@ async fn main() -> Result<()> {
     // Handle pattern generation mode
     if args.generate_patterns {
         println!("🔧 カスタムパターン生成モードを開始します");
-        generate_custom_patterns(&root_dir, &args.model).await?;
+        generate_custom_patterns(&root_dir, &args.model, api_base_url).await?;
         println!("✅ パターン生成が完了しました\n");
     }
 
@@ -184,7 +189,7 @@ async fn main() -> Result<()> {
                 };
 
                 let analysis_result =
-                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0, debug, &output_dir).await {
+                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0, debug, &output_dir, api_base_url).await {
                         Ok(res) => res,
                         Err(e) => {
                             if verbosity > 0 {

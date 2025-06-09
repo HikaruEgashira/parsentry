@@ -47,6 +47,9 @@ pub struct Args {
 
     #[arg(long)]
     pub debug: bool,
+
+    #[arg(long)]
+    pub api_base_url: Option<String>,
 }
 
 pub fn validate_output_directory(output_dir: &PathBuf) -> Result<()> {

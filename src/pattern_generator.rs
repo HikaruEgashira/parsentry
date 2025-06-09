@@ -2,6 +2,8 @@ use anyhow::Result;
 use futures::stream::{self, StreamExt};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
+use genai::resolver::{Endpoint, ServiceTargetResolver};
+use genai::ServiceTarget;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[allow(unused_imports)]
@@ -35,6 +37,37 @@ fn should_skip_reference(
     
     // Accept if it looks like an external API call
     !(has_capitals || has_underscores || is_long_enough)
+}
+
+fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
+    let client_config = ClientConfig::default().with_chat_options(
+        ChatOptions::default().with_response_format(JsonSpec::new("json_object", response_schema)),
+    );
+    
+    let mut client_builder = Client::builder().with_config(client_config);
+    
+    // Add custom service target resolver if base URL is provided
+    if let Some(base_url) = api_base_url {
+        let target_resolver = create_pattern_target_resolver(base_url);
+        client_builder = client_builder.with_service_target_resolver(target_resolver);
+    }
+    
+    client_builder.build()
+}
+
+fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
+    let base_url_owned = base_url.to_string();
+    
+    ServiceTargetResolver::from_resolver_fn(
+        move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
+            let ServiceTarget { model, auth, .. } = service_target;
+            
+            // Use the custom base URL while keeping the original model identifier
+            let endpoint = Endpoint::from_owned(base_url_owned.clone());
+            
+            Ok(ServiceTarget { endpoint, auth, model })
+        },
+    )
 }
 
 fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
@@ -79,11 +112,11 @@ struct PatternAnalysisResponse {
 }
 
 
-pub async fn generate_custom_patterns(root_dir: &Path, model: &str) -> Result<()> {
-    generate_custom_patterns_impl(root_dir, model, 4).await
+pub async fn generate_custom_patterns(root_dir: &Path, model: &str, api_base_url: Option<&str>) -> Result<()> {
+    generate_custom_patterns_impl(root_dir, model, 4, api_base_url).await
 }
 
-async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parallel: usize) -> Result<()> {
+async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parallel: usize, api_base_url: Option<&str>) -> Result<()> {
     println!(
         "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
         root_dir.display()
@@ -105,7 +138,7 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     println!("📁 解析対象ファイル数: {}", filtered_files.len());
 
     let mut all_definitions: Vec<(Definition, Language)> = Vec::new();
-    let mut all_references: Vec<(Definition, Language)> = Vec::new();
+    let all_references: Vec<(Definition, Language)> = Vec::new();
     let mut languages_found = HashMap::new();
     let mut seen_names = std::collections::HashSet::new();
 
@@ -188,13 +221,13 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
         
         if !lang_definitions.is_empty() {
             let def_patterns =
-                analyze_definitions_for_security_patterns(model, &lang_definitions, language).await?;
+                analyze_definitions_for_security_patterns(model, &lang_definitions, language, api_base_url).await?;
             all_patterns.extend(def_patterns);
         }
         
         if !lang_references.is_empty() {
             let ref_patterns =
-                analyze_definitions_for_security_patterns(model, &lang_references, language).await?;
+                analyze_definitions_for_security_patterns(model, &lang_references, language, api_base_url).await?;
             all_patterns.extend(ref_patterns);
         }
 
@@ -231,6 +264,7 @@ pub async fn analyze_definitions_for_security_patterns<'a>(
     model: &str,
     definitions: &'a [&crate::parser::Definition],
     language: Language,
+    api_base_url: Option<&str>,
 ) -> Result<Vec<PatternClassification>> {
     let max_parallel = 8; // デフォルトの並列数
     println!(
@@ -241,14 +275,16 @@ pub async fn analyze_definitions_for_security_patterns<'a>(
 
     // Create tasks for each definition analysis
     let model_str = model.to_string();
+    let api_base_url_clone = api_base_url.map(|s| s.to_string());
     let tasks = definitions.iter().enumerate().map(|(idx, def)| {
         let model_clone = model_str.clone();
         let def_clone = (*def).clone();
+        let api_base_url_ref = api_base_url_clone.as_deref();
         async move {
             if idx % 100 == 0 {
                 println!("     🔍 定義 {}/{} を処理中...", idx + 1, definitions.len());
             }
-            analyze_single_definition_for_pattern(&model_clone, &def_clone, language).await
+            analyze_single_definition_for_pattern(&model_clone, &def_clone, language, api_base_url_ref).await
         }
     });
 
@@ -294,6 +330,7 @@ async fn analyze_single_definition_for_pattern(
     model: &str,
     definition: &crate::parser::Definition,
     language: Language,
+    api_base_url: Option<&str>,
 ) -> Result<Option<PatternClassification>> {
 
     let prompt = format!(
@@ -347,10 +384,7 @@ All fields are required."#,
         "required": ["classification", "function_name", "pattern", "description", "reasoning", "attack_vector"]
     });
 
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default().with_response_format(JsonSpec::new("json_object", response_schema)),
-    );
-    let client = Client::builder().with_config(client_config).build();
+    let client = create_pattern_client(api_base_url, response_schema);
 
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(

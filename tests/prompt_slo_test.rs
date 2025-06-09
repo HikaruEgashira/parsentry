@@ -354,7 +354,7 @@ pub async fn run_slo_compliance_test(model: &str, slo: &PromptSLO) -> Result<SLO
             // Test pattern classification
             let actual_pattern_type = if !high_risk_definitions.is_empty() {
                 let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                    model, &high_risk_definitions, test_case.language
+                    model, &high_risk_definitions, test_case.language, None
                 ).await?;
                 
                 patterns.first().and_then(|p| {
@@ -558,7 +558,7 @@ function authenticateUser(username, password) {
             
             let pattern_type = if !high_risk_definitions.is_empty() {
                 let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                    model, &high_risk_definitions, test_case.language
+                    model, &high_risk_definitions, test_case.language, None
                 ).await?;
                 patterns.first().and_then(|p| p.pattern_type.clone())
             } else {
