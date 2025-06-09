@@ -47,7 +47,7 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - [TerraGoat](docs/reports/terragoat/summary.md) - Infrastructure as Code security issues
 - [CloudGoat](docs/reports/cloudgoat/summary.md) - AWS security misconfigurations
 - [Broken Crystals](docs/reports/NeuraLegion-brokencrystals/summary.md) - Web application security issues
-- [OWASP NodeGoat](docs/reports/OWASP-NodeGoat/summary.md) - Node.js vulnerabilities
+- [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js vulnerabilities
 - [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL vulnerabilities
 
 ## Understand the Concepts
