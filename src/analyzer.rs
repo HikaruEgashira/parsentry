@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
 use genai::resolver::{Endpoint, ServiceTargetResolver};
-use genai::ServiceTarget;
+use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
 use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
@@ -70,8 +70,11 @@ fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
             let ServiceTarget { model, auth, .. } = service_target;
             
-            // Use the custom base URL while keeping the original model identifier
+            // Use the custom base URL and force OpenAI adapter for compatibility
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
+            
+            // When using custom base URL, assume OpenAI-compatible API
+            let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
             
             Ok(ServiceTarget { endpoint, auth, model })
         },
