@@ -186,7 +186,7 @@ impl RepoOps {
             if let Ok(content) = read_to_string(file_path) {
                 let filename = file_path.to_string_lossy();
                 let lang = crate::file_classifier::FileClassifier::classify(&filename, &content);
-                let patterns = SecurityRiskPatterns::new(lang);
+                let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&self.repo_path));
                 if patterns.matches(&content) {
                     network_files.push(file_path.clone());
                 }

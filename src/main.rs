@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
     // Handle pattern generation mode
     if args.generate_patterns {
         println!("🔧 カスタムパターン生成モードを開始します");
-        return generate_custom_patterns(&root_dir, &args.model).await;
+        generate_custom_patterns(&root_dir, &args.model).await;
     }
 
 
@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
             let filename = file_path.to_string_lossy();
             let lang = FileClassifier::classify(&filename, &content);
             
-            let patterns = SecurityRiskPatterns::new(lang);
+            let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
             if patterns.matches(&content) {
                 pattern_files.push(file_path.clone());
             }

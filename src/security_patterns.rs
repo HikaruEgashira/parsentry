@@ -1,6 +1,7 @@
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Language {
@@ -85,7 +86,11 @@ pub struct SecurityRiskPatterns {
 
 impl SecurityRiskPatterns {
     pub fn new(language: Language) -> Self {
-        let pattern_map = Self::load_patterns();
+        Self::new_with_root(language, None)
+    }
+
+    pub fn new_with_root(language: Language, root_dir: Option<&Path>) -> Self {
+        let pattern_map = Self::load_patterns(root_dir);
         let lang_patterns = pattern_map
             .get(&language)
             .or_else(|| pattern_map.get(&Language::Other))
@@ -178,7 +183,7 @@ impl SecurityRiskPatterns {
         Vec::new()
     }
 
-    fn load_patterns() -> HashMap<Language, LanguagePatterns> {
+    fn load_patterns(root_dir: Option<&Path>) -> HashMap<Language, LanguagePatterns> {
         use Language::*;
 
         let mut map = HashMap::new();
@@ -211,6 +216,89 @@ impl SecurityRiskPatterns {
             }
         }
 
+        // Load custom patterns from vuln-patterns.yml if it exists
+        Self::load_custom_patterns(&mut map, root_dir);
+
         map
+    }
+
+    fn load_custom_patterns(map: &mut HashMap<Language, LanguagePatterns>, root_dir: Option<&Path>) {
+        let vuln_patterns_path = if let Some(root) = root_dir {
+            root.join("vuln-patterns.yml")
+        } else {
+            Path::new("vuln-patterns.yml").to_path_buf()
+        };
+        
+        if vuln_patterns_path.exists() {
+            match std::fs::read_to_string(&vuln_patterns_path) {
+                Ok(content) => {
+                    // Parse the entire file as a map of language names to patterns
+                    match serde_yaml::from_str::<HashMap<String, LanguagePatterns>>(&content) {
+                        Ok(custom_patterns) => {
+                            for (lang_name, patterns) in custom_patterns {
+                                // Convert language name to Language enum
+                                let language = match lang_name.as_str() {
+                                    "Python" => Language::Python,
+                                    "JavaScript" => Language::JavaScript,
+                                    "TypeScript" => Language::TypeScript,
+                                    "Rust" => Language::Rust,
+                                    "Java" => Language::Java,
+                                    "Go" => Language::Go,
+                                    "Ruby" => Language::Ruby,
+                                    "C" => Language::C,
+                                    "Cpp" => Language::Cpp,
+                                    "Terraform" => Language::Terraform,
+                                    "CloudFormation" => Language::CloudFormation,
+                                    "Kubernetes" => Language::Kubernetes,
+                                    "YAML" => Language::Yaml,
+                                    "Bash" => Language::Bash,
+                                    "Shell" => Language::Shell,
+                                    _ => continue,
+                                };
+
+                                // Merge custom patterns with existing patterns
+                                match map.get_mut(&language) {
+                                    Some(existing) => {
+                                        // Merge principals
+                                        if let Some(custom_principals) = patterns.principals {
+                                            match &mut existing.principals {
+                                                Some(principals) => principals.extend(custom_principals),
+                                                None => existing.principals = Some(custom_principals),
+                                            }
+                                        }
+                                        // Merge actions
+                                        if let Some(custom_actions) = patterns.actions {
+                                            match &mut existing.actions {
+                                                Some(actions) => actions.extend(custom_actions),
+                                                None => existing.actions = Some(custom_actions),
+                                            }
+                                        }
+                                        // Merge resources
+                                        if let Some(custom_resources) = patterns.resources {
+                                            match &mut existing.resources {
+                                                Some(resources) => resources.extend(custom_resources),
+                                                None => existing.resources = Some(custom_resources),
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        // Insert new language patterns
+                                        map.insert(language, patterns);
+                                    }
+                                }
+
+                                println!("✅ Loaded custom patterns for {:?} from vuln-patterns.yml", language);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to parse vuln-patterns.yml: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to read vuln-patterns.yml: {}", e);
+                }
+            }
+        }
     }
 }

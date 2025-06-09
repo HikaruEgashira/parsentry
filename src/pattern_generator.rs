@@ -105,7 +105,7 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
         }
 
         println!(
-            "🧠 {:?}言語の{}個のdefinitionsをLLMで分析中...",
+            "🧠 {:?}言語の{}個のdefinitionsを分析中...",
             language,
             lang_definitions.len()
         );
@@ -188,7 +188,7 @@ pub async fn analyze_definitions_for_security_patterns<'a>(
     }
 
     println!(
-        "   ✅ 完了: {}個成功, {}個エラー, {}個のパターンを検出",
+        "   ✅ 完了: 成功={}, エラー={}, 検出パターン={}個",
         success_count, error_count, all_patterns.len()
     );
 
