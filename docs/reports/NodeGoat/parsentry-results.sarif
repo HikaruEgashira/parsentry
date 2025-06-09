@@ -1,0 +1,1850 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.7.0",
+          "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "short_description": {
+                "text": "Potential IDOR vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential IDOR vulnerability detected",
+                "markdown": "**Insecure Direct Object Reference**\n\nIDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "help": {
+                "text": "IDOR allows unauthorized access to objects. Implement proper authorization checks.",
+                "markdown": "IDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "idor"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.5",
+                "security_severity": "5.5"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "SSRF",
+              "name": "Server-Side Request Forgery",
+              "short_description": {
+                "text": "Potential SSRF vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SSRF vulnerability detected",
+                "markdown": "**Server-Side Request Forgery**\n\nSSRF allows attackers to make requests from the server. Validate and restrict URLs."
+              },
+              "help": {
+                "text": "SSRF allows attackers to make requests from the server. Validate and restrict URLs.",
+                "markdown": "SSRF allows attackers to make requests from the server. Validate and restrict URLs."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "network",
+                  "ssrf"
+                ],
+                "precision": "medium",
+                "problem_severity": "7.0",
+                "security_severity": "7.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "short_description": {
+                "text": "Potential arbitrary file operation vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential arbitrary file operation vulnerability detected",
+                "markdown": "**Arbitrary File Operation**\n\nArbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "help": {
+                "text": "Arbitrary file operations can lead to unauthorized file access. Validate file operations.",
+                "markdown": "Arbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "afo"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.0",
+                "security_severity": "6.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "short_description": {
+                "text": "Potential XSS vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential XSS vulnerability detected",
+                "markdown": "**Cross-Site Scripting**\n\nCross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input."
+              },
+              "help": {
+                "text": "Cross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input.",
+                "markdown": "Cross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "xss"
+                ],
+                "precision": "medium",
+                "problem_severity": "7.5",
+                "security_severity": "7.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "short_description": {
+                "text": "Potential local file inclusion vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential local file inclusion vulnerability detected",
+                "markdown": "**Local File Inclusion**\n\nLocal file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "help": {
+                "text": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths.",
+                "markdown": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "lfi"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.5",
+                "security_severity": "6.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "short_description": {
+                "text": "Potential remote code execution vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential remote code execution vulnerability detected",
+                "markdown": "**Remote Code Execution**\n\nRemote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "help": {
+                "text": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code.",
+                "markdown": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "execution",
+                  "rce"
+                ],
+                "precision": "medium",
+                "problem_severity": "9.0",
+                "security_severity": "9.0"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "short_description": {
+                "text": "Potential SQL injection vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SQL injection vulnerability detected",
+                "markdown": "**SQL Injection**\n\nSQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "help": {
+                "text": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements.",
+                "markdown": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "sql"
+                ],
+                "precision": "medium",
+                "problem_severity": "8.5",
+                "security_severity": "8.5"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "IDOR: 本コードでは、userIdパラメータをクライアントから直接受け取り、そのままDBクエリの条件として使用しています。認可チェックやセッションに紐づく認証情報との照合が一切行われておらず、任意のuserIdを指定することで他ユーザーの資産情報（contributions）を閲覧・更新できてしまいます。したがって、Insecure Direct Object Reference (IDOR) の脆弱性が存在します。\n\nPARモデルによる評価:\n1. Principal（主体）: ユーザー入力のuserId（untrusted）\n2. Resource（リソース）: contributionsDBコレクション内の他ユーザーのcontributionsドキュメント（sensitivity: high）\n3. Action（操作）: update()、getByUserId() によるドキュメントの読み書き\n4. 防御策: 入力検証や認可チェックが実装されておらず、容易にバイパス可能\n5. ポリシー違反: untrustedなPrincipalが適切な認可なしで高感度Resourceへの直接アクセスを行える",
+            "markdown": "本コードでは、userIdパラメータをクライアントから直接受け取り、そのままDBクエリの条件として使用しています。認可チェックやセッションに紐づく認証情報との照合が一切行われておらず、任意のuserIdを指定することで他ユーザーの資産情報（contributions）を閲覧・更新できてしまいます。したがって、Insecure Direct Object Reference (IDOR) の脆弱性が存在します。\n\nPARモデルによる評価:\n1. Principal（主体）: ユーザー入力のuserId（untrusted）\n2. Resource（リソース）: contributionsDBコレクション内の他ユーザーのcontributionsドキュメント（sensitivity: high）\n3. Action（操作）: update()、getByUserId() によるドキュメントの読み書き\n4. 防御策: 入力検証や認可チェックが実装されておらず、容易にバイパス可能\n5. ポリシー違反: untrustedなPrincipalが適切な認可なしで高感度Resourceへの直接アクセスを行える"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/data/contributions-dao.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "62c4d5fdf325850",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability.",
+            "markdown": "The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/research.js",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SSRF",
+            "parsentry/v1": "d79d42c235310211"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "IDOR: The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability.",
+            "markdown": "The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/research.js",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SSRF",
+            "parsentry/v1": "d79d42c235310211"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability.",
+            "markdown": "The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/research.js",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SSRF",
+            "parsentry/v1": "d79d42c235310211"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "XSS: The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability.",
+            "markdown": "The application concatenates unvalidated user-supplied parameters (`req.query.url` and `req.query.symbol`) into a target URL and directly issues a server‐side HTTP request via `needle.get()`. This allows an attacker to supply an arbitrary URL (including internal network endpoints or metadata services) and retrieve data, resulting in a Server‐Side Request Forgery (SSRF) vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/research.js",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SSRF",
+            "parsentry/v1": "d79d42c235310211"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "IDOR: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c511faa1a1722bff",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c511faa1a1722bff",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "c511faa1a1722bff"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "LFI: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c511faa1a1722bff",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "RCE: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "c511faa1a1722bff"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "SQLI: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c511faa1a1722bff",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "XSS: このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。",
+            "markdown": "このコードでは、認可チェックを行わずにリクエストパラメータから直接userIdを受け取り、そのままデータベース照会に利用しているため、攻撃者が任意のuserIdを指定すると他ユーザの機密データを取得できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/allocations.js",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c511faa1a1722bff",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "RCE: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "RCE",
+            "parsentry/v1": "a0a85e5d23802b44"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a0a85e5d23802b44",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a0a85e5d23802b44",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "SSRF: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a0a85e5d23802b44",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "LFI: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a0a85e5d23802b44",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "RCE",
+            "parsentry/v1": "a0a85e5d23802b44"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "XSS: Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。",
+            "markdown": "Gruntfile.js内のdb-resetタスクでは、ユーザ指定の引数（arg）または環境変数NODE_ENVを検証なしでシェルコマンドに埋め込み、child_process.execで実行しているため、任意のシェルコマンドを注入できるRCE脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Gruntfile.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "RCE",
+            "parsentry/v1": "a0a85e5d23802b44"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "XSS: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b77c3bfa9ab4d6c",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "b77c3bfa9ab4d6c"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b77c3bfa9ab4d6c",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "LFI: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b77c3bfa9ab4d6c",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "RCE: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "b77c3bfa9ab4d6c"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "SSRF: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "b77c3bfa9ab4d6c"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。",
+            "markdown": "このライブラリでは、ユーザーが指定した\"step.template\"や\"step.title\"、\"step.content\"をサニタイズせずにそのままHTMLとして挿入し、$(element).popover({ html: true, content: step.content, template: step.template, title: step.title })で表示しています。つまり、悪意あるスクリプトを含む入力を渡すと、DOM上にそのままスクリプトが埋め込まれ、実行される可能性があります。これは典型的なDOMベースのXSSです。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b77c3bfa9ab4d6c",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: `getByUserIdAndThreshold` uses the user-supplied `threshold` directly in a MongoDB `$where` clause via string concatenation, enabling NoSQL injection. There is no input validation or sanitization for `threshold`, so attackers can inject JavaScript code into the query. Other inputs (userId, stocks, funds, bonds) are parsed or passed without strict checks but the immediate critical issue is the unsanitized threshold in `$where`.",
+            "markdown": "`getByUserIdAndThreshold` uses the user-supplied `threshold` directly in a MongoDB `$where` clause via string concatenation, enabling NoSQL injection. There is no input validation or sanitization for `threshold`, so attackers can inject JavaScript code into the query. Other inputs (userId, stocks, funds, bonds) are parsed or passed without strict checks but the immediate critical issue is the unsanitized threshold in `$where`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/data/allocations-dao.js",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1fe89ad6463ed152",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: コードでは、HTTPリクエストの req.body.userId と req.body.benefitStartDate を信頼せず、認可チェックや入力バリデーションを行わずに直接 DAO の updateBenefits を呼び出しているため、非管理者ユーザーでも任意のユーザーの福利厚生開始日を更新できる IDOR 脆弱性が存在します。",
+            "markdown": "コードでは、HTTPリクエストの req.body.userId と req.body.benefitStartDate を信頼せず、認可チェックや入力バリデーションを行わずに直接 DAO の updateBenefits を呼び出しているため、非管理者ユーザーでも任意のユーザーの福利厚生開始日を更新できる IDOR 脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/benefits.js",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "56d6995aefda10ec"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "RCE: handleContributionsUpdate関数内で、req.body.preTax／afterTax／rothの値を直接eval()に渡しており、SSJSインジェクションにより任意のサーバサイドコード実行（RCE）が可能です。ユーザー入力は数値チェック前に評価されるため、攻撃者はprocess.exit()やchild_process.exec()を呼び出すなど、サーバ制御やシステムコマンド実行を引き起こせます。",
+            "markdown": "handleContributionsUpdate関数内で、req.body.preTax／afterTax／rothの値を直接eval()に渡しており、SSJSインジェクションにより任意のサーバサイドコード実行（RCE）が可能です。ユーザー入力は数値チェック前に評価されるため、攻撃者はprocess.exit()やchild_process.exec()を呼び出すなど、サーバ制御やシステムコマンド実行を引き起こせます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/contributions.js",
+                  "index": 7
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "50b02ebcd8b1a4aa",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fb783dbbf94150bd",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fb783dbbf94150bd",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "fb783dbbf94150bd"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "RCE: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "fb783dbbf94150bd"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "LFI: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "fb783dbbf94150bd"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "SSRF: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fb783dbbf94150bd",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。",
+            "markdown": "ProfileHandler.displayProfileでは、ユーザー入力（doc.firstName）をHTMLコンテキスト用にESAPI.encoder().encodeForHTMLでエンコードし、firstNameSafeStringに格納しています。しかし、同じ変数をURL属性のコンテキスト（リンクヘッダー）でも使用しているため、HTMLエンコードではURL属性内のクォート(\\\")や特殊文字がブラウザの属性デコード時に復元され、属性切断・スクリプト挿入が可能です。この不適切なコンテキストでのエンコーディング選択がXSS脆弱性を生じさせています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/profile.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fb783dbbf94150bd",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "XSS: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "3ccbae53b514b921"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3ccbae53b514b921",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "3ccbae53b514b921"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "RCE: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "3ccbae53b514b921"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "LFI: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3ccbae53b514b921",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "SSRF: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "3ccbae53b514b921"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。",
+            "markdown": "このコードでは、ユーザから送信されたreq.body.memoをサニタイズせずにデータベースに保存し、出力時にテンプレートへエスケープ処理なしで渡しているため、XSS攻撃が可能です。たとえば「<script>alert(1)</script>」をメモとして登録すると、表示画面でスクリプトが実行されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/routes/memos.js",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3ccbae53b514b921",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "repo/app/data/contributions-dao.js",
+            "index": 0
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/routes/research.js",
+            "index": 1
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/routes/allocations.js",
+            "index": 2
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/Gruntfile.js",
+            "index": 3
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/assets/vendor/bootstrap/bootstrap-tour.js",
+            "index": 4
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/data/allocations-dao.js",
+            "index": 5
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/routes/benefits.js",
+            "index": 6
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/routes/contributions.js",
+            "index": 7
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/routes/profile.js",
+            "index": 8
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/app/routes/memos.js",
+            "index": 9
+          },
+          "mime_type": "application/javascript"
+        }
+      ],
+      "invocation": {
+        "executionSuccessful": true
+      }
+    }
+  ]
+}

@@ -8,3 +8,4 @@ repo
 .claude/settings.local.json
 example/**/vuln-patterns.yml
 coverage
+debug
