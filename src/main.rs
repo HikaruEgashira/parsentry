@@ -3,6 +3,7 @@ use clap::Parser;
 use dotenvy::dotenv;
 use std::path::PathBuf;
 use parsentry::analyzer::analyze_file;
+use parsentry::args::{Args, validate_args};
 use parsentry::file_classifier::FileClassifier;
 use parsentry::parser;
 use parsentry::pattern_generator::generate_custom_patterns;
@@ -17,61 +18,7 @@ use futures::stream::{self, StreamExt};
 use std::sync::Arc;
 use indicatif::{ProgressBar, ProgressStyle};
 
-#[derive(Parser, Debug)]
-#[command(
-    author,
-    version,
-    about,
-    long_about = None,
-    group = clap::ArgGroup::new("target")
-        .required(true)
-        .args(&["root", "repo"])
-)]
-struct Args {
-    /// Path to the root directory of the project
-    #[arg(short, long, group = "target")]
-    root: Option<PathBuf>,
 
-    /// GitHub repository (owner/repo or URL)
-    #[arg(long, group = "target")]
-    repo: Option<String>,
-
-    /// Specific path or file within the project to analyze
-    #[arg(short, long)]
-    analyze: Option<PathBuf>,
-
-    /// LLM model to use (default: o4-mini)
-    #[arg(short, long, default_value = "o4-mini")]
-    model: String,
-
-    /// Increase output verbosity
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    verbosity: u8,
-
-    /// Enable evaluation mode for example vulnerable apps
-    #[arg(short, long)]
-    evaluate: bool,
-
-    /// Output directory for markdown reports
-    #[arg(long)]
-    output_dir: Option<PathBuf>,
-
-    /// 最小信頼度スコア（これ以上のスコアを持つ脆弱性のみ表示）
-    #[arg(long, default_value = "70")]
-    min_confidence: i32,
-
-    /// 特定の脆弱性タイプでフィルタリング（カンマ区切りで複数指定可）
-    #[arg(long)]
-    vuln_types: Option<String>,
-
-    /// カスタムパターンを生成する（現在のディレクトリを解析してセキュリティパターンを自動検出）
-    #[arg(long)]
-    generate_patterns: bool,
-
-    /// Debug mode (save LLM input/output to debug folder)
-    #[arg(long)]
-    debug: bool,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -95,6 +42,8 @@ async fn main() -> Result<()> {
 "#, env!("CARGO_PKG_VERSION"));
 
     let args = Args::parse();
+
+    validate_args(&args)?;
 
     let (root_dir, repo_name) = if let Some(repo) = &args.repo {
         let dest = PathBuf::from("repo");
@@ -127,7 +76,8 @@ async fn main() -> Result<()> {
     // Handle pattern generation mode
     if args.generate_patterns {
         println!("🔧 カスタムパターン生成モードを開始します");
-        generate_custom_patterns(&root_dir, &args.model).await;
+        generate_custom_patterns(&root_dir, &args.model).await?;
+        println!("✅ パターン生成が完了しました\n");
     }
 
 

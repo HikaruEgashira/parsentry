@@ -1,4 +1,5 @@
 pub mod analyzer;
+pub mod args;
 pub mod file_classifier;
 pub mod parser;
 pub mod pattern_generator;
