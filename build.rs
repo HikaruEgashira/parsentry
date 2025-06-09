@@ -104,6 +104,7 @@ fn main() {
         .file(dir.join("tree-sitter-terraform/src/parser.c"))
         .file(dir.join("tree-sitter-terraform/src/scanner.c"))
         .flag("-Wno-unused-parameter")
+        .flag("-Wno-unused-function")
         .compile("tree-sitter-hcl");
 
     // TODO: Add YAML and Bash support once tree-sitter submodules are properly set up

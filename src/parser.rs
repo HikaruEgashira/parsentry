@@ -59,7 +59,7 @@ impl CodeParser {
         Ok(())
     }
 
-    fn get_language(&self, path: &Path) -> Option<Language> {
+    pub fn get_language(&self, path: &Path) -> Option<Language> {
         let extension = path.extension().and_then(|ext| ext.to_str());
         match extension {
             Some("c") | Some("h") => Some(unsafe { tree_sitter_c() }),
@@ -77,7 +77,7 @@ impl CodeParser {
         }
     }
 
-    fn get_query_content(&self, language: &Language, query_name: &str) -> Result<&'static str> {
+    pub fn get_query_content(&self, language: &Language, query_name: &str) -> Result<&'static str> {
         let lang_name = if language == &unsafe { tree_sitter_c() } {
             "c"
         } else if language == &unsafe { tree_sitter_cpp() } {

@@ -6,9 +6,61 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
+use streaming_iterator::StreamingIterator;
 
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
+
+fn should_skip_reference(
+    name: &str, 
+    seen_names: &std::collections::HashSet<String>, 
+    found_references: &std::collections::HashSet<String>
+) -> bool {
+    // Skip if already seen as definition or already found in this file
+    if seen_names.contains(name) || found_references.contains(name) {
+        return true;
+    }
+    
+    // Skip if too short
+    if name.len() < 3 {
+        return true;
+    }
+    
+    // Only consider names that likely represent external libraries or APIs
+    // Prefer names with capital letters, underscores, or longer names that suggest external APIs
+    let has_capitals = name.chars().any(|c| c.is_uppercase());
+    let has_underscores = name.contains('_');
+    let is_long_enough = name.len() >= 5;
+    
+    // Accept if it looks like an external API call
+    !(has_capitals || has_underscores || is_long_enough)
+}
+
+fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
+    let mut filtered_files = Vec::new();
+    
+    for file_path in files {
+        match std::fs::read_to_string(file_path) {
+            Ok(content) => {
+                let line_count = content.lines().count();
+                if line_count <= max_lines {
+                    filtered_files.push(file_path.clone());
+                }
+            },
+            Err(e) => {
+                eprintln!(
+                    "⚠️  ファイル読み込みエラー: {}: {}", 
+                    file_path.display(), 
+                    e
+                );
+                // Skip files that can't be read
+                continue;
+            }
+        }
+    }
+    
+    Ok(filtered_files)
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PatternClassification {
@@ -40,11 +92,23 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     let files = repo.get_files_to_analyze(None)?;
 
     println!("📁 検出されたファイル数: {}", files.len());
+    
+    let max_lines = 1000;
+    let filtered_files = filter_files_by_size(&files, max_lines)?;
+    let skipped_count = files.len() - filtered_files.len();
+    
+    if skipped_count > 0 {
+        println!("⚠️  {}行を超える大きなファイル{}個をスキップしました", max_lines, skipped_count);
+    }
+    
+    println!("📁 解析対象ファイル数: {}", filtered_files.len());
 
     let mut all_definitions = Vec::new();
+    let mut all_references = Vec::new();
     let mut languages_found = HashMap::new();
+    let mut seen_names = std::collections::HashSet::new();
 
-    for file_path in &files {
+    for file_path in &filtered_files {
         let mut parser = crate::parser::CodeParser::new()?;
         if let Err(e) = parser.add_file(file_path) {
             eprintln!(
@@ -68,17 +132,14 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
                     language,
                     context.definitions.len()
                 );
-                if context.definitions.is_empty() {
-                    eprintln!(
-                        "   ⚠️  定義が見つかりませんでした。tree-sitterクエリが適切に動作していない可能性があります。"
-                    );
-                } else {
+                if !context.definitions.is_empty() {
                     for def in &context.definitions {
                         print!("{},", def.name);
                     }
                     println!();
                 }
                 for def in context.definitions {
+                    seen_names.insert(def.name.clone());
                     all_definitions.push((def, language));
                 }
             }
@@ -90,36 +151,68 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     }
 
     println!(
-        "🔍 総計 {}個のdefinitionsを抽出しました",
-        all_definitions.len()
+        "🔍 総計 {}個のdefinitions、{}個のreferencesを抽出しました",
+        all_definitions.len(),
+        all_references.len()
     );
 
     for (language, _) in languages_found {
+        // Combine definitions and references for this language
         let lang_definitions: Vec<_> = all_definitions
             .iter()
             .filter(|(_, lang)| *lang == language)
             .map(|(def, _)| def)
             .collect();
+            
+        let lang_references: Vec<_> = all_references
+            .iter()
+            .filter(|(_, lang)| *lang == language)
+            .map(|(def, _)| def)
+            .collect();
 
-        if lang_definitions.is_empty() {
+        let total_items = lang_definitions.len() + lang_references.len();
+        if total_items == 0 {
             continue;
         }
 
         println!(
-            "🧠 {:?}言語の{}個のdefinitionsを分析中...",
+            "🧠 {:?}言語の{}個のdefinitions、{}個のreferencesを分析中...",
             language,
-            lang_definitions.len()
+            lang_definitions.len(),
+            lang_references.len()
         );
 
-        let patterns =
-            analyze_definitions_for_security_patterns(model, &lang_definitions, language).await?;
+        // Analyze both definitions and references
+        let mut all_patterns = Vec::new();
+        
+        if !lang_definitions.is_empty() {
+            let def_patterns =
+                analyze_definitions_for_security_patterns(model, &lang_definitions, language).await?;
+            all_patterns.extend(def_patterns);
+        }
+        
+        if !lang_references.is_empty() {
+            let ref_patterns =
+                analyze_definitions_for_security_patterns(model, &lang_references, language).await?;
+            all_patterns.extend(ref_patterns);
+        }
 
-        if !patterns.is_empty() {
-            write_patterns_to_file(root_dir, language, &patterns)?;
+        // Deduplicate patterns based on function name
+        let mut unique_patterns = Vec::new();
+        let mut seen_functions = std::collections::HashSet::new();
+        
+        for pattern in all_patterns {
+            if seen_functions.insert(pattern.function_name.clone()) {
+                unique_patterns.push(pattern);
+            }
+        }
+
+        if !unique_patterns.is_empty() {
+            write_patterns_to_file(root_dir, language, &unique_patterns)?;
             println!(
                 "✅ {:?}言語用の{}個のパターンを生成しました",
                 language,
-                patterns.len()
+                unique_patterns.len()
             );
         } else {
             println!(
