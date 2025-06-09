@@ -69,13 +69,14 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
                     context.definitions.len()
                 );
                 if context.definitions.is_empty() {
-                    println!(
+                    eprintln!(
                         "   ⚠️  定義が見つかりませんでした。tree-sitterクエリが適切に動作していない可能性があります。"
                     );
                 } else {
                     for def in &context.definitions {
-                        println!("   - {}", def.name);
+                        print!("{},", def.name);
                     }
+                    println!();
                 }
                 for def in context.definitions {
                     all_definitions.push((def, language));
