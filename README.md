@@ -22,8 +22,6 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 
 ## Usage
 
-### Docker Usage
-
 ```bash
 docker pull ghcr.io/hikaruegashira/parsentry:latest
 
@@ -41,7 +39,6 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - `--model <MODEL>`: supports OpenAI, Anthropic, Google, Groq, Ollama, default: o4-mini
 - `--output-dir <DIR>`: Directory for markdown reports
 - `--generate-patterns`: Generate custom patterns from codebase
-- `--max-parallel <NUMBER>`: Maximum parallel analysis tasks (default: 4)
 
 ## Examples
 
@@ -53,7 +50,7 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - [OWASP NodeGoat](docs/reports/OWASP-NodeGoat/summary.md) - Node.js vulnerabilities
 - [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL vulnerabilities
 
-## Documentation
+## Understand the Concepts
 
 - [PAR Framework](docs/concepts/par_framework.md) - Principal-Action-Resource security analysis model
 - [Analysis Flow](docs/concepts/analysis_flow.md) - How the analysis process works
