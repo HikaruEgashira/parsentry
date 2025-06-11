@@ -160,7 +160,7 @@ fn test_markdown_generation() {
     let markdown = response.to_markdown();
 
     // Verify markdown contains expected sections
-    assert!(markdown.contains("# PAR Security Analysis Report"));
+    assert!(markdown.contains("# Analysis Report"));
     assert!(markdown.contains("信頼度スコア: 8"));
     assert!(markdown.contains("## 脆弱性タイプ"));
     assert!(markdown.contains("RCE"));

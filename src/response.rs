@@ -392,7 +392,7 @@ impl Response {
 
     pub fn to_markdown(&self) -> String {
         let mut md = String::new();
-        md.push_str("# PAR Security Analysis Report\n\n");
+        md.push_str("# Analysis Report\n\n");
 
         let confidence_badge = match self.confidence_score {
             90..=100 => "![高信頼度](https://img.shields.io/badge/信頼度-高-red)",

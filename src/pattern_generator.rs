@@ -2,17 +2,66 @@ use anyhow::Result;
 use futures::stream::{self, StreamExt};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
-use genai::resolver::{Endpoint, ServiceTargetResolver};
+use genai::resolver::{Endpoint, ServiceTargetResolver, AuthData};
 use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use streaming_iterator::StreamingIterator;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
-use streaming_iterator::StreamingIterator;
 
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
 use crate::parser::Definition;
+
+fn extract_references_from_file(
+    parser: &mut crate::parser::CodeParser,
+    file_path: &Path,
+    seen_names: &std::collections::HashSet<String>
+) -> Result<Vec<Definition>> {
+    let mut references = Vec::new();
+    let mut found_references = std::collections::HashSet::new();
+    
+    let file_content = std::fs::read_to_string(file_path).unwrap_or_default();
+    let language = match parser.get_language(file_path) {
+        Some(lang) => lang,
+        None => return Ok(references),
+    };
+    
+    parser.parser.set_language(&language).map_err(|e| {
+        anyhow::anyhow!("言語設定失敗: {}", e)
+    })?;
+    
+    let tree = parser.parser.parse(&file_content, None)
+        .ok_or_else(|| anyhow::anyhow!("パース失敗: {}", file_path.display()))?;
+    
+    let query_str = parser.get_query_content(&language, "references")?;
+    let query = tree_sitter::Query::new(&language, query_str)?;
+    
+    let mut query_cursor = tree_sitter::QueryCursor::new();
+    let mut matches = query_cursor.matches(&query, tree.root_node(), file_content.as_bytes());
+    
+    while let Some(mat) = matches.next() {
+        for cap in mat.captures {
+            if query.capture_names()[cap.index as usize] == "reference" {
+                let node = cap.node;
+                if let Ok(name) = node.utf8_text(file_content.as_bytes()) {
+                    if !should_skip_reference(name, seen_names, &found_references) {
+                        found_references.insert(name.to_string());
+                        references.push(Definition {
+                            name: name.to_string(),
+                            start_byte: node.start_byte(),
+                            end_byte: node.end_byte(),
+                            source: name.to_string(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(references)
+}
 
 fn should_skip_reference(
     name: &str, 
@@ -57,18 +106,26 @@ fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json
 
 fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
     let base_url_owned = base_url.to_string();
-    
+
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { model, auth, .. } = service_target;
-            
-            // Use the custom base URL and force OpenAI adapter for compatibility
+            let ServiceTarget { model, .. } = service_target;
+
+            // OpenAI adapter automatically adds /v1/chat/completions, so we need to provide base URL only
+            // The adapter will construct: base_url + /v1/chat/completions
+            // So we provide the base URL without any path to get the desired result
+            println!("🔍 Debug (Pattern): Base URL provided to OpenAI adapter: {}", base_url_owned);
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
-            
-            // When using custom base URL, assume OpenAI-compatible API
+
+            // Use OpenAI adapter but with custom endpoint that already includes the full path
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-            
-            Ok(ServiceTarget { endpoint, auth, model })
+            let auth = None; // Let genai resolve OpenAI auth automatically
+
+            Ok(ServiceTarget {
+                endpoint,
+                auth: auth.unwrap_or_else(|| AuthData::from_env("OPENAI_API_KEY")),
+                model
+            })
         },
     )
 }
@@ -141,7 +198,7 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     println!("📁 解析対象ファイル数: {}", filtered_files.len());
 
     let mut all_definitions: Vec<(Definition, Language)> = Vec::new();
-    let all_references: Vec<(Definition, Language)> = Vec::new();
+    let mut all_references: Vec<(Definition, Language)> = Vec::new();
     let mut languages_found = HashMap::new();
     let mut seen_names = std::collections::HashSet::new();
 
@@ -178,6 +235,23 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
                 for def in context.definitions {
                     seen_names.insert(def.name.clone());
                     all_definitions.push((def, language));
+                }
+
+                // Extract references that are not already seen as definitions
+                let references = extract_references_from_file(&mut parser, file_path, &seen_names)?;
+                if !references.is_empty() {
+                    println!(
+                        "🔗 {} から {}個のreferencesを検出",
+                        file_path.display(),
+                        references.len()
+                    );
+                    for reference in &references {
+                        print!("{},", reference.name);
+                    }
+                    println!();
+                }
+                for reference in references {
+                    all_references.push((reference, language));
                 }
             }
             Err(e) => {
@@ -480,8 +554,10 @@ pub fn write_patterns_to_file(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
             ));
-            if !pattern.attack_vector.is_empty() {
-                yaml_content.push_str("      attack_vector:\n");
+            yaml_content.push_str("      attack_vector:\n");
+            if pattern.attack_vector.is_empty() {
+                yaml_content.push_str("        []\n");
+            } else {
                 for technique in &pattern.attack_vector {
                     yaml_content.push_str(&format!("        - \"{}\"\n", technique));
                 }
@@ -496,8 +572,10 @@ pub fn write_patterns_to_file(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
             ));
-            if !pattern.attack_vector.is_empty() {
-                yaml_content.push_str("      attack_vector:\n");
+            yaml_content.push_str("      attack_vector:\n");
+            if pattern.attack_vector.is_empty() {
+                yaml_content.push_str("        []\n");
+            } else {
                 for technique in &pattern.attack_vector {
                     yaml_content.push_str(&format!("        - \"{}\"\n", technique));
                 }
@@ -512,8 +590,10 @@ pub fn write_patterns_to_file(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
                 pattern.pattern, pattern.description
             ));
-            if !pattern.attack_vector.is_empty() {
-                yaml_content.push_str("      attack_vector:\n");
+            yaml_content.push_str("      attack_vector:\n");
+            if pattern.attack_vector.is_empty() {
+                yaml_content.push_str("        []\n");
+            } else {
                 for technique in &pattern.attack_vector {
                     yaml_content.push_str(&format!("        - \"{}\"\n", technique));
                 }

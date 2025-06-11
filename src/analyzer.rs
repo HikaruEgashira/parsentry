@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
-use genai::resolver::{Endpoint, ServiceTargetResolver};
+use genai::resolver::{Endpoint, ServiceTargetResolver, AuthData};
 use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
 use log::{debug, error, info, warn};
 use regex::escape;
@@ -68,15 +68,23 @@ fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
     
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { model, auth, .. } = service_target;
+            let ServiceTarget { model, .. } = service_target;
             
-            // Use the custom base URL and force OpenAI adapter for compatibility
+            // OpenAI adapter automatically adds /v1/chat/completions, so we need to provide base URL only
+            // The adapter will construct: base_url + /v1/chat/completions
+            // So we provide the base URL without any path to get the desired result
+            println!("🔍 Debug: Base URL provided to OpenAI adapter: {}", base_url_owned);
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
             
-            // When using custom base URL, assume OpenAI-compatible API
+            // Use OpenAI adapter but with custom endpoint that already includes the full path
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
+            let auth = None; // Let genai resolve OpenAI auth automatically
             
-            Ok(ServiceTarget { endpoint, auth, model })
+            Ok(ServiceTarget {
+                endpoint,
+                auth: auth.unwrap_or_else(|| AuthData::from_env("OPENAI_API_KEY")),
+                model
+            })
         },
     )
 }
