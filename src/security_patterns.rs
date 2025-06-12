@@ -110,8 +110,6 @@ pub struct SecurityRiskPatterns {
     action_reference_queries: Vec<Query>,
     resource_definition_queries: Vec<Query>,
     resource_reference_queries: Vec<Query>,
-    pattern_type_map: HashMap<String, PatternType>,
-    attack_vector_map: HashMap<String, Vec<String>>,
     language: TreeSitterLanguage,
 }
 
@@ -139,8 +137,6 @@ impl SecurityRiskPatterns {
         let mut action_reference_queries = Vec::new();
         let mut resource_definition_queries = Vec::new();
         let mut resource_reference_queries = Vec::new();
-        let mut pattern_type_map = HashMap::new();
-        let mut attack_vector_map = HashMap::new();
 
         if let Some(principals) = &lang_patterns.principals {
             for config in principals {
@@ -148,19 +144,11 @@ impl SecurityRiskPatterns {
                     PatternQuery::Definition { definition } => {
                         if let Ok(query) = Query::new(&ts_language, definition) {
                             principal_definition_queries.push(query);
-                            pattern_type_map.insert(definition.clone(), PatternType::Principal);
-                            if !config.attack_vector.is_empty() {
-                                attack_vector_map.insert(definition.clone(), config.attack_vector.clone());
-                            }
                         }
                     }
                     PatternQuery::Reference { reference } => {
                         if let Ok(query) = Query::new(&ts_language, reference) {
                             principal_reference_queries.push(query);
-                            pattern_type_map.insert(reference.clone(), PatternType::Principal);
-                            if !config.attack_vector.is_empty() {
-                                attack_vector_map.insert(reference.clone(), config.attack_vector.clone());
-                            }
                         }
                     }
                     PatternQuery::Legacy { pattern: _ } => {
@@ -176,19 +164,11 @@ impl SecurityRiskPatterns {
                     PatternQuery::Definition { definition } => {
                         if let Ok(query) = Query::new(&ts_language, definition) {
                             action_definition_queries.push(query);
-                            pattern_type_map.insert(definition.clone(), PatternType::Action);
-                            if !config.attack_vector.is_empty() {
-                                attack_vector_map.insert(definition.clone(), config.attack_vector.clone());
-                            }
                         }
                     }
                     PatternQuery::Reference { reference } => {
                         if let Ok(query) = Query::new(&ts_language, reference) {
                             action_reference_queries.push(query);
-                            pattern_type_map.insert(reference.clone(), PatternType::Action);
-                            if !config.attack_vector.is_empty() {
-                                attack_vector_map.insert(reference.clone(), config.attack_vector.clone());
-                            }
                         }
                     }
                     PatternQuery::Legacy { pattern: _ } => {
@@ -204,19 +184,11 @@ impl SecurityRiskPatterns {
                     PatternQuery::Definition { definition } => {
                         if let Ok(query) = Query::new(&ts_language, definition) {
                             resource_definition_queries.push(query);
-                            pattern_type_map.insert(definition.clone(), PatternType::Resource);
-                            if !config.attack_vector.is_empty() {
-                                attack_vector_map.insert(definition.clone(), config.attack_vector.clone());
-                            }
                         }
                     }
                     PatternQuery::Reference { reference } => {
                         if let Ok(query) = Query::new(&ts_language, reference) {
                             resource_reference_queries.push(query);
-                            pattern_type_map.insert(reference.clone(), PatternType::Resource);
-                            if !config.attack_vector.is_empty() {
-                                attack_vector_map.insert(reference.clone(), config.attack_vector.clone());
-                            }
                         }
                     }
                     PatternQuery::Legacy { pattern: _ } => {
@@ -233,8 +205,6 @@ impl SecurityRiskPatterns {
             action_reference_queries,
             resource_definition_queries,
             resource_reference_queries,
-            pattern_type_map,
-            attack_vector_map,
             language: ts_language,
         }
     }
