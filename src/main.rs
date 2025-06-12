@@ -184,7 +184,7 @@ async fn main() -> Result<()> {
                     Err(e) => {
                         println!("⚠️  コンテキスト収集に失敗（空のコンテキストで継続）: {}: {}", file_path.display(), e);
                         // For IaC files and other unsupported file types, continue with empty context
-                        parser::Context { definitions: Vec::new() }
+                        parser::Context { definitions: Vec::new(), references: Vec::new() }
                     }
                 };
 

@@ -33,6 +33,7 @@ pub struct Definition {
 #[derive(Debug, Clone)]
 pub struct Context {
     pub definitions: Vec<Definition>,
+    pub references: Vec<Definition>,
 }
 
 pub struct CodeParser {
@@ -352,6 +353,7 @@ impl CodeParser {
 
         let mut collected: HashSet<String> = HashSet::new();
         let mut definitions: Vec<Definition> = Vec::new();
+        let mut references: Vec<Definition> = Vec::new();
 
         let file_content = self
             .files
@@ -364,7 +366,7 @@ impl CodeParser {
             Some(lang) => lang,
             None => {
                 // For IaC files and other unsupported file types, return empty context
-                return Ok(Context { definitions: Vec::new() });
+                return Ok(Context { definitions: Vec::new(), references: Vec::new() });
             }
         };
         self.parser
@@ -375,11 +377,12 @@ impl CodeParser {
             .parse(file_content, None)
             .ok_or_else(|| anyhow::anyhow!("パース失敗: {}", start_path.display()))?;
 
-        let query_str = self.get_query_content(&language, "definitions")?;
-        let query = tree_sitter::Query::new(&language, &query_str)?;
+        // Extract definitions
+        let definitions_query_str = self.get_query_content(&language, "definitions")?;
+        let definitions_query = tree_sitter::Query::new(&language, &definitions_query_str)?;
 
         let mut query_cursor = tree_sitter::QueryCursor::new();
-        let mut matches = query_cursor.matches(&query, tree.root_node(), file_content.as_bytes());
+        let mut matches = query_cursor.matches(&definitions_query, tree.root_node(), file_content.as_bytes());
 
         let mut to_visit: Vec<(PathBuf, String)> = Vec::new();
 
@@ -387,7 +390,7 @@ impl CodeParser {
             let mut def_node: Option<tree_sitter::Node> = None;
             let mut name_node: Option<tree_sitter::Node> = None;
             for cap in mat.captures {
-                let capture_name = &query.capture_names()[cap.index as usize];
+                let capture_name = &definitions_query.capture_names()[cap.index as usize];
                 match &capture_name[..] {
                     "definition" => def_node = Some(cap.node),
                     "name" => name_node = Some(cap.node),
@@ -412,6 +415,33 @@ impl CodeParser {
             }
         }
 
+        // Extract references
+        let references_query_str = self.get_query_content(&language, "references")?;
+        let references_query = tree_sitter::Query::new(&language, &references_query_str)?;
+        
+        let mut references_cursor = tree_sitter::QueryCursor::new();
+        let mut ref_matches = references_cursor.matches(&references_query, tree.root_node(), file_content.as_bytes());
+        
+        while let Some(mat) = ref_matches.next() {
+            for cap in mat.captures {
+                let capture_name = &references_query.capture_names()[cap.index as usize];
+                if *capture_name == "reference" {
+                    let node = cap.node;
+                    let name = node.utf8_text(file_content.as_bytes())?.to_string();
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let source = node.utf8_text(file_content.as_bytes())?.to_string();
+                    
+                    references.push(Definition {
+                        name,
+                        start_byte,
+                        end_byte,
+                        source,
+                    });
+                }
+            }
+        }
+
         while let Some((file_path, func_name)) = to_visit.pop() {
             if let Some((_, def)) = self.find_definition(&func_name, &file_path)? {
                 // referencesクエリで呼び出し先を抽出
@@ -426,6 +456,6 @@ impl CodeParser {
             }
         }
 
-        Ok(Context { definitions })
+        Ok(Context { definitions, references })
     }
 }
