@@ -1,8 +1,8 @@
-use clap::Parser;
-use std::path::PathBuf;
 use anyhow::Result;
+use clap::Parser;
 use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -63,7 +63,7 @@ pub fn validate_output_directory(output_dir: &PathBuf) -> Result<()> {
 
     let mut test_file_path = output_dir.clone();
     test_file_path.push(".parsentry_write_test");
-    
+
     match fs::File::create(&test_file_path) {
         Ok(mut file) => {
             if let Err(e) = file.write_all(b"test") {
@@ -85,7 +85,11 @@ pub fn validate_output_directory(output_dir: &PathBuf) -> Result<()> {
 pub fn validate_args(args: &Args) -> Result<()> {
     if let Some(output_dir) = &args.output_dir {
         if let Err(e) = validate_output_directory(output_dir) {
-            eprintln!("❌ 出力ディレクトリのチェックに失敗: {}: {}", output_dir.display(), e);
+            eprintln!(
+                "❌ 出力ディレクトリのチェックに失敗: {}: {}",
+                output_dir.display(),
+                e
+            );
             std::process::exit(1);
         }
     }

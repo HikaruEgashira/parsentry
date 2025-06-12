@@ -36,7 +36,11 @@ impl VulnType {
         match self {
             VulnType::SQLI => vec!["CWE-89".to_string()],
             VulnType::XSS => vec!["CWE-79".to_string(), "CWE-80".to_string()],
-            VulnType::RCE => vec!["CWE-77".to_string(), "CWE-78".to_string(), "CWE-94".to_string()],
+            VulnType::RCE => vec![
+                "CWE-77".to_string(),
+                "CWE-78".to_string(),
+                "CWE-94".to_string(),
+            ],
             VulnType::LFI => vec!["CWE-22".to_string(), "CWE-98".to_string()],
             VulnType::SSRF => vec!["CWE-918".to_string()],
             VulnType::AFO => vec!["CWE-22".to_string(), "CWE-73".to_string()],
@@ -44,7 +48,7 @@ impl VulnType {
             VulnType::Other(_) => vec![],
         }
     }
-    
+
     /// Get MITRE ATT&CK technique IDs for this vulnerability type
     pub fn mitre_attack_ids(&self) -> Vec<String> {
         match self {
@@ -58,7 +62,7 @@ impl VulnType {
             VulnType::Other(_) => vec![],
         }
     }
-    
+
     /// Get OWASP Top 10 category for this vulnerability type
     pub fn owasp_categories(&self) -> Vec<String> {
         match self {
@@ -281,24 +285,26 @@ impl Response {
             score
         }
     }
-    
+
     /// Clean up and validate the response data
     pub fn sanitize(&mut self) {
         // Remove duplicate vulnerability types
         let mut unique_vulns = std::collections::HashSet::new();
-        self.vulnerability_types.retain(|v| unique_vulns.insert(v.clone()));
-        
+        self.vulnerability_types
+            .retain(|v| unique_vulns.insert(v.clone()));
+
         // If no vulnerability types and high confidence, reset confidence
         if self.vulnerability_types.is_empty() && self.confidence_score > 50 {
             self.confidence_score = 0;
         }
-        
+
         // If PAR analysis is empty but high confidence, adjust confidence
-        if self.par_analysis.principals.is_empty() 
-            && self.par_analysis.actions.is_empty() 
-            && self.par_analysis.resources.is_empty() 
-            && self.par_analysis.policy_violations.is_empty() 
-            && self.confidence_score > 30 {
+        if self.par_analysis.principals.is_empty()
+            && self.par_analysis.actions.is_empty()
+            && self.par_analysis.resources.is_empty()
+            && self.par_analysis.policy_violations.is_empty()
+            && self.confidence_score > 30
+        {
             self.confidence_score = std::cmp::min(self.confidence_score, 30);
         }
     }
@@ -332,21 +338,30 @@ impl Response {
         if !self.par_analysis.principals.is_empty() {
             println!("\n🧑 Principals (データ源):");
             for principal in &self.par_analysis.principals {
-                println!("  - {}: {:?} ({})", principal.identifier, principal.trust_level, principal.source_context);
+                println!(
+                    "  - {}: {:?} ({})",
+                    principal.identifier, principal.trust_level, principal.source_context
+                );
             }
         }
 
         if !self.par_analysis.actions.is_empty() {
             println!("\n⚙ Actions (セキュリティ制御):");
             for action in &self.par_analysis.actions {
-                println!("  - {}: {:?} ({})", action.identifier, action.implementation_quality, action.security_function);
+                println!(
+                    "  - {}: {:?} ({})",
+                    action.identifier, action.implementation_quality, action.security_function
+                );
             }
         }
 
         if !self.par_analysis.resources.is_empty() {
             println!("\n🗄 Resources (操作対象):");
             for resource in &self.par_analysis.resources {
-                println!("  - {}: {:?} ({})", resource.identifier, resource.sensitivity_level, resource.operation_type);
+                println!(
+                    "  - {}: {:?} ({})",
+                    resource.identifier, resource.sensitivity_level, resource.operation_type
+                );
             }
         }
 
@@ -355,7 +370,10 @@ impl Response {
             for violation in &self.par_analysis.policy_violations {
                 println!("  - {}: {}", violation.rule_id, violation.rule_description);
                 println!("    Path: {}", violation.violation_path);
-                println!("    Severity: {} (Confidence: {:.2})", violation.severity, violation.confidence);
+                println!(
+                    "    Severity: {} (Confidence: {:.2})",
+                    violation.severity, violation.confidence
+                );
             }
         }
 
@@ -419,9 +437,15 @@ impl Response {
         if !self.par_analysis.principals.is_empty() {
             md.push_str("### Principals (データ源)\n\n");
             for principal in &self.par_analysis.principals {
-                md.push_str(&format!("- **{}**: {:?}\n", principal.identifier, principal.trust_level));
+                md.push_str(&format!(
+                    "- **{}**: {:?}\n",
+                    principal.identifier, principal.trust_level
+                ));
                 md.push_str(&format!("  - Context: {}\n", principal.source_context));
-                md.push_str(&format!("  - Risk Factors: {}\n", principal.risk_factors.join(", ")));
+                md.push_str(&format!(
+                    "  - Risk Factors: {}\n",
+                    principal.risk_factors.join(", ")
+                ));
             }
             md.push('\n');
         }
@@ -429,10 +453,19 @@ impl Response {
         if !self.par_analysis.actions.is_empty() {
             md.push_str("### Actions (セキュリティ制御)\n\n");
             for action in &self.par_analysis.actions {
-                md.push_str(&format!("- **{}**: {:?}\n", action.identifier, action.implementation_quality));
+                md.push_str(&format!(
+                    "- **{}**: {:?}\n",
+                    action.identifier, action.implementation_quality
+                ));
                 md.push_str(&format!("  - Function: {}\n", action.security_function));
-                md.push_str(&format!("  - Weaknesses: {}\n", action.detected_weaknesses.join(", ")));
-                md.push_str(&format!("  - Bypass Vectors: {}\n", action.bypass_vectors.join(", ")));
+                md.push_str(&format!(
+                    "  - Weaknesses: {}\n",
+                    action.detected_weaknesses.join(", ")
+                ));
+                md.push_str(&format!(
+                    "  - Bypass Vectors: {}\n",
+                    action.bypass_vectors.join(", ")
+                ));
             }
             md.push('\n');
         }
@@ -440,9 +473,15 @@ impl Response {
         if !self.par_analysis.resources.is_empty() {
             md.push_str("### Resources (操作対象)\n\n");
             for resource in &self.par_analysis.resources {
-                md.push_str(&format!("- **{}**: {:?}\n", resource.identifier, resource.sensitivity_level));
+                md.push_str(&format!(
+                    "- **{}**: {:?}\n",
+                    resource.identifier, resource.sensitivity_level
+                ));
                 md.push_str(&format!("  - Operation: {}\n", resource.operation_type));
-                md.push_str(&format!("  - Protection: {}\n", resource.protection_mechanisms.join(", ")));
+                md.push_str(&format!(
+                    "  - Protection: {}\n",
+                    resource.protection_mechanisms.join(", ")
+                ));
             }
             md.push('\n');
         }
@@ -450,10 +489,16 @@ impl Response {
         if !self.par_analysis.policy_violations.is_empty() {
             md.push_str("### Policy Violations\n\n");
             for violation in &self.par_analysis.policy_violations {
-                md.push_str(&format!("#### {}: {}\n\n", violation.rule_id, violation.rule_description));
+                md.push_str(&format!(
+                    "#### {}: {}\n\n",
+                    violation.rule_id, violation.rule_description
+                ));
                 md.push_str(&format!("- **Path**: {}\n", violation.violation_path));
                 md.push_str(&format!("- **Severity**: {}\n", violation.severity));
-                md.push_str(&format!("- **Confidence**: {:.2}\n\n", violation.confidence));
+                md.push_str(&format!(
+                    "- **Confidence**: {:.2}\n\n",
+                    violation.confidence
+                ));
             }
         }
 
@@ -472,8 +517,14 @@ impl Response {
             md.push_str("## 修復ガイダンス\n\n");
             for remediation in &self.remediation_guidance.policy_enforcement {
                 md.push_str(&format!("### {}\n\n", remediation.component));
-                md.push_str(&format!("- **Required**: {}\n", remediation.required_improvement));
-                md.push_str(&format!("- **Guidance**: {}\n", remediation.specific_guidance));
+                md.push_str(&format!(
+                    "- **Required**: {}\n",
+                    remediation.required_improvement
+                ));
+                md.push_str(&format!(
+                    "- **Guidance**: {}\n",
+                    remediation.specific_guidance
+                ));
                 md.push_str(&format!("- **Priority**: {}\n\n", remediation.priority));
             }
         }
@@ -601,11 +652,13 @@ impl AnalysisSummary {
         }
 
         md.push_str("\n## Policy Violation Analysis\n\n");
-        
+
         let mut violation_count: HashMap<String, i32> = HashMap::new();
         for result in &self.results {
             for violation in &result.response.par_analysis.policy_violations {
-                *violation_count.entry(violation.rule_id.clone()).or_insert(0) += 1;
+                *violation_count
+                    .entry(violation.rule_id.clone())
+                    .or_insert(0) += 1;
             }
         }
 
@@ -621,7 +674,7 @@ impl AnalysisSummary {
                 .find(|v| v.rule_id == *rule_id)
                 .map(|v| v.rule_description.clone())
                 .unwrap_or_default();
-                
+
             md.push_str(&format!("| {} | {} | {} |\n", rule_id, count, description));
         }
 

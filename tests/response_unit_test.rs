@@ -1,7 +1,7 @@
-use serde_json::json;
 use parsentry::response::{
-    AnalysisSummary, Response, VulnType, response_json_schema, ParAnalysis, RemediationGuidance,
+    AnalysisSummary, ParAnalysis, RemediationGuidance, Response, VulnType, response_json_schema,
 };
+use serde_json::json;
 
 #[test]
 fn test_vuln_type_serialization() {

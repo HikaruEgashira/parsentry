@@ -1,19 +1,19 @@
 use anyhow::{Error, Result};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
+use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ClientConfig};
-use genai::resolver::{Endpoint, ServiceTargetResolver, AuthData};
-use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
+use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
 use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
+use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::timeout;
-use std::fs;
 
+use crate::language::Language;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
-use crate::language::Language;
 use crate::response::{Response, response_json_schema};
 use crate::security_patterns::{PatternType, SecurityRiskPatterns};
 
@@ -26,21 +26,21 @@ fn save_debug_file(
     if let Some(dir) = output_dir {
         let debug_dir = dir.join("debug");
         fs::create_dir_all(&debug_dir)?;
-        
+
         let file_name = file_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
-        
+
         // Add timestamp to ensure uniqueness across multiple LLM calls
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_millis();
-        
+
         let debug_file_name = format!("{}_{}_{}.txt", file_name, suffix, timestamp);
         let debug_path = debug_dir.join(debug_file_name);
-        
+
         fs::write(&debug_path, content)?;
         info!("Debug file saved: {}", debug_path.display());
     }
@@ -52,41 +52,44 @@ fn create_api_client(api_base_url: Option<&str>) -> Client {
         ChatOptions::default()
             .with_response_format(JsonSpec::new("json_object", response_json_schema())),
     );
-    
+
     let mut client_builder = Client::builder().with_config(client_config);
-    
+
     // Add custom service target resolver if base URL is provided
     if let Some(base_url) = api_base_url {
         let target_resolver = create_custom_target_resolver(base_url);
         client_builder = client_builder.with_service_target_resolver(target_resolver);
     }
-    
+
     client_builder.build()
 }
 
 fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
     let base_url_owned = base_url.to_string();
-    
+
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
             let ServiceTarget { model, .. } = service_target;
-            
+
             // OpenAI adapter automatically adds /v1/chat/completions, so we need to provide base URL only
             // The adapter will construct: base_url + /v1/chat/completions
             // So we provide the base URL without any path to get the desired result
-            println!("🔍 Debug: Base URL provided to OpenAI adapter: {}", base_url_owned);
+            println!(
+                "🔍 Debug: Base URL provided to OpenAI adapter: {}",
+                base_url_owned
+            );
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
-            
+
             // Use OpenAI adapter but with custom endpoint that already includes the full path
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-            
+
             // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
             let auth = AuthData::from_env("OPENAI_API_KEY");
-            
+
             Ok(ServiceTarget {
                 endpoint,
                 auth,
-                model
+                model,
             })
         },
     )
@@ -99,20 +102,19 @@ async fn execute_chat_request(
 ) -> Result<String> {
     let result = timeout(Duration::from_secs(240), async {
         client.exec_chat(model, chat_req, None).await
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(chat_res)) => {
-            match chat_res.content_text_as_str() {
-                Some(content) => Ok(content.to_string()),
-                None => {
-                    error!("Failed to get content text from chat response");
-                    Err(anyhow::anyhow!(
-                        "Failed to get content text from chat response"
-                    ))
-                }
+        Ok(Ok(chat_res)) => match chat_res.content_text_as_str() {
+            Some(content) => Ok(content.to_string()),
+            None => {
+                error!("Failed to get content text from chat response");
+                Err(anyhow::anyhow!(
+                    "Failed to get content text from chat response"
+                ))
             }
-        }
+        },
         Ok(Err(e)) => {
             error!("Chat request failed: {}", e);
             Err(e.into())
@@ -131,14 +133,18 @@ async fn execute_chat_request_with_retry(
     max_retries: u32,
 ) -> Result<String> {
     let mut last_error = None;
-    
+
     for attempt in 0..=max_retries {
         if attempt > 0 {
-            warn!("Retrying chat request (attempt {}/{})", attempt + 1, max_retries + 1);
+            warn!(
+                "Retrying chat request (attempt {}/{})",
+                attempt + 1,
+                max_retries + 1
+            );
             // 指数バックオフで待機
             tokio::time::sleep(Duration::from_millis(1000 * (1 << attempt))).await;
         }
-        
+
         match execute_chat_request(client, model, chat_req.clone()).await {
             Ok(result) => return Ok(result),
             Err(e) => {
@@ -147,7 +153,7 @@ async fn execute_chat_request_with_retry(
             }
         }
     }
-    
+
     Err(last_error.unwrap_or_else(|| anyhow::anyhow!("All retry attempts failed")))
 }
 
@@ -232,11 +238,18 @@ pub async fn analyze_file(
 
     // Save debug input if debug mode is enabled
     if debug {
-        let debug_content = format!("=== INITIAL ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}", 
-            model, file_path.display(), 
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-            prompt);
-        if let Err(e) = save_debug_file(output_dir, file_path, "01_initial_prompt", &debug_content) {
+        let debug_content = format!(
+            "=== INITIAL ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}",
+            model,
+            file_path.display(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            prompt
+        );
+        if let Err(e) = save_debug_file(output_dir, file_path, "01_initial_prompt", &debug_content)
+        {
             warn!("Failed to save debug input file: {}", e);
         }
     }
@@ -254,11 +267,19 @@ pub async fn analyze_file(
 
     // Save debug output if debug mode is enabled
     if debug {
-        let debug_content = format!("=== INITIAL ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}", 
-            model, file_path.display(), 
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-            chat_content);
-        if let Err(e) = save_debug_file(output_dir, file_path, "02_initial_response", &debug_content) {
+        let debug_content = format!(
+            "=== INITIAL ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}",
+            model,
+            file_path.display(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            chat_content
+        );
+        if let Err(e) =
+            save_debug_file(output_dir, file_path, "02_initial_response", &debug_content)
+        {
             warn!("Failed to save debug output file: {}", e);
         }
     }
@@ -266,7 +287,7 @@ pub async fn analyze_file(
 
     response.confidence_score =
         crate::response::Response::normalize_confidence_score(response.confidence_score);
-    
+
     // Clean up and validate the response
     response.sanitize();
 
@@ -323,12 +344,21 @@ pub async fn analyze_file(
 
                 // Save debug input if debug mode is enabled
                 if debug {
-                    let debug_content = format!("=== VULNERABILITY-SPECIFIC ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}", 
-                        model, file_path.display(), vuln_type,
-                        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-                        prompt);
+                    let debug_content = format!(
+                        "=== VULNERABILITY-SPECIFIC ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}",
+                        model,
+                        file_path.display(),
+                        vuln_type,
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                        prompt
+                    );
                     let debug_suffix = format!("03_vuln_prompt_{:?}", vuln_type);
-                    if let Err(e) = save_debug_file(output_dir, file_path, &debug_suffix, &debug_content) {
+                    if let Err(e) =
+                        save_debug_file(output_dir, file_path, &debug_suffix, &debug_content)
+                    {
                         warn!("Failed to save debug input file: {}", e);
                     }
                 }
@@ -341,17 +371,27 @@ pub async fn analyze_file(
                 ]);
 
                 let json_client = create_api_client(api_base_url);
-                let chat_content = execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
+                let chat_content =
+                    execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
                 debug!("[LLM Response]\n{}", chat_content);
 
                 // Save debug output if debug mode is enabled
                 if debug {
-                    let debug_content = format!("=== VULNERABILITY-SPECIFIC ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}", 
-                        model, file_path.display(), vuln_type,
-                        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-                        chat_content);
+                    let debug_content = format!(
+                        "=== VULNERABILITY-SPECIFIC ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}",
+                        model,
+                        file_path.display(),
+                        vuln_type,
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                        chat_content
+                    );
                     let debug_suffix = format!("04_vuln_response_{:?}", vuln_type);
-                    if let Err(e) = save_debug_file(output_dir, file_path, &debug_suffix, &debug_content) {
+                    if let Err(e) =
+                        save_debug_file(output_dir, file_path, &debug_suffix, &debug_content)
+                    {
                         warn!("Failed to save debug output file: {}", e);
                     }
                 }
@@ -374,7 +414,10 @@ pub async fn analyze_file(
                     if !vuln_response.par_analysis.policy_violations.is_empty() {
                         println!("  policy_violations:");
                         for violation in &vuln_response.par_analysis.policy_violations {
-                            println!("    - {}: {}", violation.rule_id, violation.rule_description);
+                            println!(
+                                "    - {}: {}",
+                                violation.rule_id, violation.rule_description
+                            );
                         }
                     }
                     return Ok(vuln_response);
@@ -389,29 +432,31 @@ pub async fn analyze_file(
 
                 // Get language for pattern detection
                 let filename = file_path.to_string_lossy();
-                let language = crate::file_classifier::FileClassifier::classify(&filename, &content);
+                let language =
+                    crate::file_classifier::FileClassifier::classify(&filename, &content);
                 let _patterns = SecurityRiskPatterns::new(language);
 
                 // Extract identifiers from PAR analysis for context building
                 let mut identifiers_to_search = Vec::new();
-                
+
                 for principal in &vuln_response.par_analysis.principals {
-                    identifiers_to_search.push((principal.identifier.clone(), PatternType::Principal));
+                    identifiers_to_search
+                        .push((principal.identifier.clone(), PatternType::Principal));
                 }
                 for action in &vuln_response.par_analysis.actions {
                     identifiers_to_search.push((action.identifier.clone(), PatternType::Action));
                 }
                 for resource in &vuln_response.par_analysis.resources {
-                    identifiers_to_search.push((resource.identifier.clone(), PatternType::Resource));
+                    identifiers_to_search
+                        .push((resource.identifier.clone(), PatternType::Resource));
                 }
-                
+
                 for (identifier, pattern_type) in identifiers_to_search {
                     let escaped_name = escape(&identifier);
                     if !stored_code_definitions
                         .iter()
                         .any(|(_, def)| def.name == escaped_name)
                     {
-
                         match pattern_type {
                             PatternType::Principal => {
                                 // For principals, use find_references to track data flow forward

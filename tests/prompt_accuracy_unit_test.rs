@@ -31,7 +31,6 @@ def get_user_data(user_id):
         expected_pattern: Some("principals"),
         test_rationale: "Direct string interpolation in SQL query - classic injection vulnerability",
     },
-    
     AccuracyTestCase {
         name: "Command injection vulnerable function",
         language: Language::Python,
@@ -44,7 +43,6 @@ def process_file(filename):
         expected_pattern: Some("resources"),
         test_rationale: "Direct execution of user-controlled filename in system command",
     },
-    
     AccuracyTestCase {
         name: "XSS vulnerable template rendering",
         language: Language::JavaScript,
@@ -57,7 +55,6 @@ function renderUserComment(comment) {
         expected_pattern: Some("resources"),
         test_rationale: "Direct insertion of user content into DOM without sanitization",
     },
-    
     AccuracyTestCase {
         name: "Path traversal vulnerable file reader",
         language: Language::JavaScript,
@@ -71,7 +68,6 @@ function readUserFile(filepath) {
         expected_pattern: Some("resources"),
         test_rationale: "Direct file access without path validation - path traversal risk",
     },
-    
     AccuracyTestCase {
         name: "Authentication bypass vulnerability",
         language: Language::Python,
@@ -85,7 +81,6 @@ def authenticate(username, password):
         expected_pattern: Some("actions"),
         test_rationale: "Weak authentication logic that accepts any non-empty password for admin",
     },
-    
     // Security-related but properly implemented - should still be detected as security patterns
     AccuracyTestCase {
         name: "Proper parameterized query",
@@ -99,7 +94,6 @@ def get_user_secure(user_id):
         expected_pattern: Some("principals"),
         test_rationale: "Database query function - security-relevant even if properly implemented",
     },
-    
     AccuracyTestCase {
         name: "Input validation function",
         language: Language::JavaScript,
@@ -113,7 +107,6 @@ function validateEmail(email) {
         expected_pattern: Some("actions"),
         test_rationale: "Input validation is a security action even when properly implemented",
     },
-    
     AccuracyTestCase {
         name: "Password hashing function",
         language: Language::Python,
@@ -126,7 +119,6 @@ def hash_password(password, salt):
         expected_pattern: Some("actions"),
         test_rationale: "Cryptographic operations are security-relevant actions",
     },
-    
     // Clear non-security functions - should NOT be detected
     AccuracyTestCase {
         name: "Simple math calculation",
@@ -139,7 +131,6 @@ def calculate_area(width, height):
         expected_pattern: None,
         test_rationale: "Pure mathematical calculation with no security implications",
     },
-    
     AccuracyTestCase {
         name: "String formatting utility",
         language: Language::JavaScript,
@@ -152,7 +143,6 @@ function formatName(first, last) {
         expected_pattern: None,
         test_rationale: "Simple string manipulation with no external data or security context",
     },
-    
     AccuracyTestCase {
         name: "Array sorting function",
         language: Language::Python,
@@ -164,7 +154,6 @@ def sort_numbers(numbers):
         expected_pattern: None,
         test_rationale: "Pure data structure operation with no security implications",
     },
-    
     // Edge cases that could be tricky
     AccuracyTestCase {
         name: "Logging function with user data",
@@ -177,7 +166,6 @@ def log_user_action(user_id, action):
         expected_pattern: Some("actions"),
         test_rationale: "Logging user data can be security-relevant for audit trails and information disclosure",
     },
-    
     AccuracyTestCase {
         name: "Configuration parser",
         language: Language::JavaScript,
@@ -190,7 +178,6 @@ function parseConfig(configString) {
         expected_pattern: Some("principals"),
         test_rationale: "Parsing configuration data could introduce security risks if untrusted",
     },
-    
     AccuracyTestCase {
         name: "Environment variable reader",
         language: Language::Python,
@@ -205,7 +192,10 @@ def get_api_key():
     },
 ];
 
-async fn test_individual_function_accuracy(test_case: &AccuracyTestCase, model: &str) -> Result<(bool, bool)> {
+async fn test_individual_function_accuracy(
+    test_case: &AccuracyTestCase,
+    model: &str,
+) -> Result<(bool, bool)> {
     // Create temporary file
     let temp_dir = tempdir()?;
     let file_extension = match test_case.language {
@@ -220,27 +210,32 @@ async fn test_individual_function_accuracy(test_case: &AccuracyTestCase, model: 
         Language::Cpp => "cpp",
         _ => "txt",
     };
-    
+
     let test_file = temp_dir.path().join(format!("test.{}", file_extension));
     std::fs::write(&test_file, test_case.code)?;
-    
+
     // Parse the function
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let context = parser.build_context_from_file(&test_file)?;
-    
+
     if let Some(definition) = context.definitions.first() {
         // Test pattern analysis - simplified since filter_high_risk_definitions no longer exists
         let detected_as_security_risk = true; // Assume detected for now
         let risk_accuracy = detected_as_security_risk == test_case.expected_security_risk;
-        
+
         // Test pattern classification - simplified
-        let pattern_accuracy = if detected_as_security_risk && test_case.expected_pattern.is_some() {
+        let pattern_accuracy = if detected_as_security_risk && test_case.expected_pattern.is_some()
+        {
             let definitions_slice = vec![definition];
             let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                model, &definitions_slice, test_case.language, None
-            ).await?;
-            
+                model,
+                &definitions_slice,
+                test_case.language,
+                None,
+            )
+            .await?;
+
             if let Some(pattern) = patterns.first() {
                 let detected_pattern = pattern.pattern_type.as_deref();
                 detected_pattern == test_case.expected_pattern
@@ -252,11 +247,14 @@ async fn test_individual_function_accuracy(test_case: &AccuracyTestCase, model: 
         } else {
             false
         };
-        
+
         Ok((risk_accuracy, pattern_accuracy))
     } else {
         // No function found - this is an error in the test setup
-        Err(anyhow::anyhow!("No function definition found in test case: {}", test_case.name))
+        Err(anyhow::anyhow!(
+            "No function definition found in test case: {}",
+            test_case.name
+        ))
     }
 }
 
@@ -267,23 +265,27 @@ async fn test_high_confidence_security_detection() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping accuracy test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     // Test only the high-confidence security vulnerability cases
-    let high_confidence_cases: Vec<_> = ACCURACY_TEST_CASES.iter()
+    let high_confidence_cases: Vec<_> = ACCURACY_TEST_CASES
+        .iter()
         .filter(|case| case.expected_security_risk && case.name.contains("vulnerable"))
         .collect();
-    
-    println!("🎯 高信頼度セキュリティ検出テスト: {}ケース", high_confidence_cases.len());
-    
+
+    println!(
+        "🎯 高信頼度セキュリティ検出テスト: {}ケース",
+        high_confidence_cases.len()
+    );
+
     let mut correct_detections = 0;
     let mut total_tests = 0;
-    
+
     for test_case in high_confidence_cases {
         println!("  テスト中: {}", test_case.name);
         let (risk_accuracy, _) = test_individual_function_accuracy(test_case, model).await?;
-        
+
         if risk_accuracy {
             correct_detections += 1;
             println!("    ✅ 正しく検出");
@@ -292,15 +294,20 @@ async fn test_high_confidence_security_detection() -> Result<()> {
         }
         total_tests += 1;
     }
-    
+
     let accuracy = (correct_detections as f64 / total_tests as f64) * 100.0;
-    println!("\n📊 高信頼度セキュリティ検出精度: {:.1}% ({}/{})", 
-             accuracy, correct_detections, total_tests);
-    
+    println!(
+        "\n📊 高信頼度セキュリティ検出精度: {:.1}% ({}/{})",
+        accuracy, correct_detections, total_tests
+    );
+
     // High-confidence security vulnerabilities should be detected with 90%+ accuracy
-    assert!(accuracy >= 90.0, 
-           "High-confidence security detection accuracy too low: {:.1}%", accuracy);
-    
+    assert!(
+        accuracy >= 90.0,
+        "High-confidence security detection accuracy too low: {:.1}%",
+        accuracy
+    );
+
     Ok(())
 }
 
@@ -311,24 +318,29 @@ async fn test_false_positive_control() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping false positive test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     // Test only the clear non-security cases
-    let non_security_cases: Vec<_> = ACCURACY_TEST_CASES.iter()
-        .filter(|case| !case.expected_security_risk && 
-                (case.name.contains("math") || case.name.contains("string") || case.name.contains("array")))
+    let non_security_cases: Vec<_> = ACCURACY_TEST_CASES
+        .iter()
+        .filter(|case| {
+            !case.expected_security_risk
+                && (case.name.contains("math")
+                    || case.name.contains("string")
+                    || case.name.contains("array"))
+        })
         .collect();
-    
+
     println!("🔍 偽陽性制御テスト: {}ケース", non_security_cases.len());
-    
+
     let mut correct_rejections = 0;
     let mut total_tests = 0;
-    
+
     for test_case in non_security_cases {
         println!("  テスト中: {}", test_case.name);
         let (risk_accuracy, _) = test_individual_function_accuracy(test_case, model).await?;
-        
+
         if risk_accuracy {
             correct_rejections += 1;
             println!("    ✅ 正しく非セキュリティとして識別");
@@ -337,15 +349,20 @@ async fn test_false_positive_control() -> Result<()> {
         }
         total_tests += 1;
     }
-    
+
     let accuracy = (correct_rejections as f64 / total_tests as f64) * 100.0;
-    println!("\n📊 偽陽性制御精度: {:.1}% ({}/{})", 
-             accuracy, correct_rejections, total_tests);
-    
+    println!(
+        "\n📊 偽陽性制御精度: {:.1}% ({}/{})",
+        accuracy, correct_rejections, total_tests
+    );
+
     // Non-security functions should be correctly rejected with 85%+ accuracy
-    assert!(accuracy >= 85.0, 
-           "False positive control accuracy too low: {:.1}%", accuracy);
-    
+    assert!(
+        accuracy >= 85.0,
+        "False positive control accuracy too low: {:.1}%",
+        accuracy
+    );
+
     Ok(())
 }
 
@@ -356,28 +373,35 @@ async fn test_pattern_classification_accuracy() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping pattern classification test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     // Test only security-relevant cases with clear pattern expectations
-    let pattern_cases: Vec<_> = ACCURACY_TEST_CASES.iter()
+    let pattern_cases: Vec<_> = ACCURACY_TEST_CASES
+        .iter()
         .filter(|case| case.expected_security_risk && case.expected_pattern.is_some())
         .collect();
-    
-    println!("🏷️  PARパターン分類精度テスト: {}ケース", pattern_cases.len());
-    
+
+    println!(
+        "🏷️  PARパターン分類精度テスト: {}ケース",
+        pattern_cases.len()
+    );
+
     let mut pattern_stats = HashMap::new();
     let mut correct_classifications = 0;
     let mut total_tests = 0;
-    
+
     for test_case in pattern_cases {
-        println!("  テスト中: {} (期待: {:?})", test_case.name, test_case.expected_pattern);
+        println!(
+            "  テスト中: {} (期待: {:?})",
+            test_case.name, test_case.expected_pattern
+        );
         let (_, pattern_accuracy) = test_individual_function_accuracy(test_case, model).await?;
-        
+
         let expected = test_case.expected_pattern.unwrap();
         let entry = pattern_stats.entry(expected).or_insert((0, 0));
         entry.1 += 1; // total
-        
+
         if pattern_accuracy {
             correct_classifications += 1;
             entry.0 += 1; // correct
@@ -387,20 +411,29 @@ async fn test_pattern_classification_accuracy() -> Result<()> {
         }
         total_tests += 1;
     }
-    
+
     let overall_accuracy = (correct_classifications as f64 / total_tests as f64) * 100.0;
     println!("\n📊 PARパターン分類結果:");
-    println!("  全体精度: {:.1}% ({}/{})", overall_accuracy, correct_classifications, total_tests);
-    
+    println!(
+        "  全体精度: {:.1}% ({}/{})",
+        overall_accuracy, correct_classifications, total_tests
+    );
+
     for (pattern, (correct, total)) in pattern_stats {
         let accuracy = (correct as f64 / total as f64) * 100.0;
-        println!("  {} パターン: {:.1}% ({}/{})", pattern, accuracy, correct, total);
+        println!(
+            "  {} パターン: {:.1}% ({}/{})",
+            pattern, accuracy, correct, total
+        );
     }
-    
+
     // Pattern classification should be accurate for clear cases
-    assert!(overall_accuracy >= 75.0, 
-           "Pattern classification accuracy too low: {:.1}%", overall_accuracy);
-    
+    assert!(
+        overall_accuracy >= 75.0,
+        "Pattern classification accuracy too low: {:.1}%",
+        overall_accuracy
+    );
+
     Ok(())
 }
 
@@ -411,57 +444,74 @@ async fn test_comprehensive_accuracy() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping comprehensive accuracy test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     println!("🧪 包括的精度テスト: {}ケース", ACCURACY_TEST_CASES.len());
-    
+
     let mut risk_correct = 0;
     let mut pattern_correct = 0;
     let mut total_tests = 0;
     let mut failed_cases = Vec::new();
-    
+
     for test_case in ACCURACY_TEST_CASES {
-        println!("  [{}/{}] テスト中: {}", 
-                 total_tests + 1, ACCURACY_TEST_CASES.len(), test_case.name);
-        
-        let (risk_accuracy, pattern_accuracy) = test_individual_function_accuracy(test_case, model).await?;
-        
+        println!(
+            "  [{}/{}] テスト中: {}",
+            total_tests + 1,
+            ACCURACY_TEST_CASES.len(),
+            test_case.name
+        );
+
+        let (risk_accuracy, pattern_accuracy) =
+            test_individual_function_accuracy(test_case, model).await?;
+
         if risk_accuracy {
             risk_correct += 1;
         } else {
             failed_cases.push(format!("{} (リスク検出失敗)", test_case.name));
         }
-        
+
         if pattern_accuracy {
             pattern_correct += 1;
         } else if test_case.expected_security_risk {
             failed_cases.push(format!("{} (パターン分類失敗)", test_case.name));
         }
-        
+
         total_tests += 1;
     }
-    
+
     let risk_accuracy = (risk_correct as f64 / total_tests as f64) * 100.0;
     let pattern_accuracy = (pattern_correct as f64 / total_tests as f64) * 100.0;
-    
+
     println!("\n📊 包括的精度結果:");
-    println!("  リスク検出精度: {:.1}% ({}/{})", risk_accuracy, risk_correct, total_tests);
-    println!("  パターン分類精度: {:.1}% ({}/{})", pattern_accuracy, pattern_correct, total_tests);
-    
+    println!(
+        "  リスク検出精度: {:.1}% ({}/{})",
+        risk_accuracy, risk_correct, total_tests
+    );
+    println!(
+        "  パターン分類精度: {:.1}% ({}/{})",
+        pattern_accuracy, pattern_correct, total_tests
+    );
+
     if !failed_cases.is_empty() {
         println!("\n❌ 失敗したケース:");
         for case in &failed_cases {
             println!("    - {}", case);
         }
     }
-    
+
     // Overall accuracy thresholds
-    assert!(risk_accuracy >= 80.0, 
-           "Overall risk detection accuracy too low: {:.1}%", risk_accuracy);
-    assert!(pattern_accuracy >= 70.0, 
-           "Overall pattern classification accuracy too low: {:.1}%", pattern_accuracy);
-    
+    assert!(
+        risk_accuracy >= 80.0,
+        "Overall risk detection accuracy too low: {:.1}%",
+        risk_accuracy
+    );
+    assert!(
+        pattern_accuracy >= 70.0,
+        "Overall pattern classification accuracy too low: {:.1}%",
+        pattern_accuracy
+    );
+
     println!("\n🎉 包括的精度テスト合格!");
     Ok(())
 }

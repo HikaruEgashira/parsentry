@@ -65,7 +65,7 @@ def get_user_by_id(user_id):
             expected_pattern_type: Some("principals".to_string()),
             reasoning: "Returns data from database, potential SQL injection vulnerability".to_string(),
         },
-        
+
         // High-risk actions (security operations)
         TestCase {
             name: "Password validation".to_string(),
@@ -93,7 +93,7 @@ def sanitize_html_input(user_input):
             expected_pattern_type: Some("actions".to_string()),
             reasoning: "Sanitizes user input to prevent XSS".to_string(),
         },
-        
+
         // High-risk resources (file/system access)
         TestCase {
             name: "File operation".to_string(),
@@ -119,7 +119,7 @@ def execute_user_command(command):
             expected_pattern_type: Some("resources".to_string()),
             reasoning: "Executes system commands, potential command injection vulnerability".to_string(),
         },
-        
+
         // Medium-risk functions
         TestCase {
             name: "Configuration loader".to_string(),
@@ -147,7 +147,7 @@ def log_error(error_message, user_context):
             expected_pattern_type: Some("actions".to_string()),
             reasoning: "Logs data that might contain sensitive information".to_string(),
         },
-        
+
         // Low-risk functions
         TestCase {
             name: "String utility".to_string(),
@@ -172,7 +172,7 @@ def calculate_total(items):
             expected_pattern_type: None,
             reasoning: "Pure mathematical calculation with no security relevance".to_string(),
         },
-        
+
         // Edge cases
         TestCase {
             name: "Second-order data source".to_string(),
@@ -214,11 +214,14 @@ async fn run_risk_assessment_benchmark(model: &str) -> Result<BenchmarkResults> 
     let mut false_positives = Vec::new();
     let mut false_negatives = Vec::new();
 
-    println!("🧪 プロンプトベンチマークテスト開始: {}ケース", test_cases.len());
+    println!(
+        "🧪 プロンプトベンチマークテスト開始: {}ケース",
+        test_cases.len()
+    );
 
     for test_case in &test_cases {
         println!("  テスト中: {}", test_case.name);
-        
+
         // Create a temporary file with the test function
         let temp_dir = tempdir()?;
         let file_extension = match test_case.language {
@@ -233,60 +236,69 @@ async fn run_risk_assessment_benchmark(model: &str) -> Result<BenchmarkResults> 
             Language::Cpp => "cpp",
             _ => "txt",
         };
-        
+
         let test_file = temp_dir.path().join(format!("test.{}", file_extension));
         std::fs::write(&test_file, &test_case.function_definition)?;
-        
+
         // Parse the function to get Definition
         let mut parser = CodeParser::new()?;
         parser.add_file(&test_file)?;
         let context = parser.build_context_from_file(&test_file)?;
-        
+
         if let Some(definition) = context.definitions.first() {
             // Test the risk assessment filtering
             let definitions_slice = vec![definition];
             // TODO: Replace with actual risk assessment logic when filter_high_risk_definitions is available
             let high_risk_definitions = definitions_slice; // Placeholder: assume all definitions are high risk
-            
+
             // Determine actual risk level based on whether function was filtered
             let actual_risk = if high_risk_definitions.is_empty() {
                 "none".to_string()
             } else {
                 "high".to_string() // Our filter only keeps high/medium, so assume high for simplicity
             };
-            
+
             // Test pattern classification if function was kept
             let actual_pattern = if !high_risk_definitions.is_empty() {
-                let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                    model, &high_risk_definitions, test_case.language, None
-                ).await?;
+                let patterns =
+                    parsentry::pattern_generator::analyze_definitions_for_security_patterns(
+                        model,
+                        &high_risk_definitions,
+                        test_case.language,
+                        None,
+                    )
+                    .await?;
                 patterns.first().map(|p| p.pattern_type.clone()).flatten()
             } else {
                 None
             };
-            
-            let risk_correct = match (test_case.expected_risk_level.as_str(), actual_risk.as_str()) {
+
+            let risk_correct = match (test_case.expected_risk_level.as_str(), actual_risk.as_str())
+            {
                 ("high", "high") | ("medium", "high") => true, // Our filter combines high/medium
                 ("low", "none") | ("none", "none") => true,
                 _ => false,
             };
-            
+
             let pattern_correct = test_case.expected_pattern_type == actual_pattern;
-            
+
             if risk_correct {
                 correct_risk += 1;
             } else {
                 if test_case.expected_risk_level == "none" && actual_risk == "high" {
                     false_positives.push(test_case.name.clone());
-                } else if (test_case.expected_risk_level == "high" || test_case.expected_risk_level == "medium") && actual_risk == "none" {
+                } else if (test_case.expected_risk_level == "high"
+                    || test_case.expected_risk_level == "medium")
+                    && actual_risk == "none"
+                {
                     false_negatives.push(test_case.name.clone());
                 }
             }
-            
+
             if pattern_correct {
                 correct_pattern += 1;
             }
-            
+
             results.push(TestResult {
                 case_name: test_case.name.clone(),
                 expected_risk: test_case.expected_risk_level.clone(),
@@ -325,42 +337,56 @@ async fn test_prompt_benchmark() -> Result<()> {
 
     let model = "gpt-4.1-mini";
     let results = run_risk_assessment_benchmark(model).await?;
-    
+
     println!("\n📊 ベンチマーク結果:");
     println!("  総テストケース: {}", results.total_cases);
-    println!("  リスク評価精度: {:.1}% ({}/{})", 
-             results.risk_accuracy * 100.0, 
-             results.correct_risk_assessments, 
-             results.total_cases);
-    println!("  パターン分類精度: {:.1}% ({}/{})", 
-             results.pattern_accuracy * 100.0, 
-             results.correct_pattern_classifications, 
-             results.total_cases);
-    
+    println!(
+        "  リスク評価精度: {:.1}% ({}/{})",
+        results.risk_accuracy * 100.0,
+        results.correct_risk_assessments,
+        results.total_cases
+    );
+    println!(
+        "  パターン分類精度: {:.1}% ({}/{})",
+        results.pattern_accuracy * 100.0,
+        results.correct_pattern_classifications,
+        results.total_cases
+    );
+
     if !results.false_positives.is_empty() {
         println!("  誤検知 (False Positives): {:?}", results.false_positives);
     }
-    
+
     if !results.false_negatives.is_empty() {
         println!("  見逃し (False Negatives): {:?}", results.false_negatives);
     }
-    
+
     // Detailed results for debugging
     for result in &results.details {
         if !result.risk_correct || !result.pattern_correct {
-            println!("  ❌ {}: 期待[{:?}/{:?}] 実際[{}/{:?}]", 
-                     result.case_name,
-                     result.expected_risk,
-                     result.expected_pattern,
-                     result.actual_risk,
-                     result.actual_pattern);
+            println!(
+                "  ❌ {}: 期待[{:?}/{:?}] 実際[{}/{:?}]",
+                result.case_name,
+                result.expected_risk,
+                result.expected_pattern,
+                result.actual_risk,
+                result.actual_pattern
+            );
         }
     }
-    
+
     // Assert minimum accuracy thresholds
-    assert!(results.risk_accuracy >= 0.7, "Risk assessment accuracy too low: {:.1}%", results.risk_accuracy * 100.0);
-    assert!(results.pattern_accuracy >= 0.6, "Pattern classification accuracy too low: {:.1}%", results.pattern_accuracy * 100.0);
-    
+    assert!(
+        results.risk_accuracy >= 0.7,
+        "Risk assessment accuracy too low: {:.1}%",
+        results.risk_accuracy * 100.0
+    );
+    assert!(
+        results.pattern_accuracy >= 0.6,
+        "Pattern classification accuracy too low: {:.1}%",
+        results.pattern_accuracy * 100.0
+    );
+
     Ok(())
 }
 
@@ -371,7 +397,7 @@ async fn test_prompt_consistency() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping consistency test");
         return Ok(());
     }
-    
+
     // Test same input multiple times to check consistency
     let test_case = TestCase {
         name: "Consistency test".to_string(),
@@ -381,46 +407,52 @@ function handleUserLogin(req, res) {
     const { username, password } = req.body;
     return authenticateUser(username, password);
 }
-"#.to_string(),
+"#
+        .to_string(),
         expected_risk_level: "high".to_string(),
         expected_pattern_type: Some("principals".to_string()),
         reasoning: "Should consistently identify as high-risk principal".to_string(),
     };
-    
+
     let model = "gpt-4.1-mini";
     let runs = 3;
     let mut risk_results = Vec::new();
     let mut pattern_results = Vec::new();
-    
+
     for i in 0..runs {
         println!("一貫性テスト実行 {}/{}", i + 1, runs);
-        
+
         let temp_dir = tempdir()?;
         let test_file = temp_dir.path().join("test.js");
         std::fs::write(&test_file, &test_case.function_definition)?;
-        
+
         let mut parser = CodeParser::new()?;
         parser.add_file(&test_file)?;
         let context = parser.build_context_from_file(&test_file)?;
-        
+
         if let Some(definition) = context.definitions.first() {
             let definitions_slice = vec![definition];
             // TODO: Replace with actual risk assessment logic when filter_high_risk_definitions is available
             let high_risk_definitions = definitions_slice; // Placeholder: assume all definitions are high risk
-            
+
             let risk_identified = !high_risk_definitions.is_empty();
             risk_results.push(risk_identified);
-            
+
             if risk_identified {
-                let patterns = parsentry::pattern_generator::analyze_definitions_for_security_patterns(
-                    model, &high_risk_definitions, test_case.language, None
-                ).await?;
+                let patterns =
+                    parsentry::pattern_generator::analyze_definitions_for_security_patterns(
+                        model,
+                        &high_risk_definitions,
+                        test_case.language,
+                        None,
+                    )
+                    .await?;
                 let pattern_type = patterns.first().map(|p| p.pattern_type.clone()).flatten();
                 pattern_results.push(pattern_type);
             }
         }
     }
-    
+
     // Check consistency
     let risk_consistency = risk_results.iter().all(|&x| x == risk_results[0]);
     let pattern_consistency = if pattern_results.len() > 1 {
@@ -428,12 +460,24 @@ function handleUserLogin(req, res) {
     } else {
         true
     };
-    
-    println!("リスク識別一貫性: {} (結果: {:?})", risk_consistency, risk_results);
-    println!("パターン分類一貫性: {} (結果: {:?})", pattern_consistency, pattern_results);
-    
-    assert!(risk_consistency, "Risk assessment should be consistent across runs");
-    assert!(pattern_consistency, "Pattern classification should be consistent across runs");
-    
+
+    println!(
+        "リスク識別一貫性: {} (結果: {:?})",
+        risk_consistency, risk_results
+    );
+    println!(
+        "パターン分類一貫性: {} (結果: {:?})",
+        pattern_consistency, pattern_results
+    );
+
+    assert!(
+        risk_consistency,
+        "Risk assessment should be consistent across runs"
+    );
+    assert!(
+        pattern_consistency,
+        "Pattern classification should be consistent across runs"
+    );
+
     Ok(())
 }

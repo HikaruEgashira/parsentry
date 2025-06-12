@@ -48,7 +48,7 @@ impl Language {
         // Extract extension and use existing logic
         if let Some(ext) = std::path::Path::new(filename)
             .extension()
-            .and_then(|e| e.to_str()) 
+            .and_then(|e| e.to_str())
         {
             Self::from_extension(ext)
         } else {
@@ -59,9 +59,9 @@ impl Language {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternType {
-    Principal,  // Who: user input (Programming) | AWS account/role (IaC)
-    Action,     // What: operations/methods (Programming) | API actions (IaC)
-    Resource,   // Where: files/databases (Programming) | AWS resources (IaC)
+    Principal, // Who: user input (Programming) | AWS account/role (IaC)
+    Action,    // What: operations/methods (Programming) | API actions (IaC)
+    Resource,  // Where: files/databases (Programming) | AWS resources (IaC)
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -73,15 +73,15 @@ pub struct PatternConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LanguagePatterns {
-    pub principals: Option<Vec<PatternConfig>>,  // Who (sources of authority/input)
-    pub actions: Option<Vec<PatternConfig>>,     // What (operations/permissions)
-    pub resources: Option<Vec<PatternConfig>>,   // Where (targets/sinks)
+    pub principals: Option<Vec<PatternConfig>>, // Who (sources of authority/input)
+    pub actions: Option<Vec<PatternConfig>>,    // What (operations/permissions)
+    pub resources: Option<Vec<PatternConfig>>,  // Where (targets/sinks)
 }
 
 pub struct SecurityRiskPatterns {
-    principal_patterns: Vec<Regex>,   // Who patterns
-    action_patterns: Vec<Regex>,      // What patterns
-    resource_patterns: Vec<Regex>,    // Where patterns
+    principal_patterns: Vec<Regex>, // Who patterns
+    action_patterns: Vec<Regex>,    // What patterns
+    resource_patterns: Vec<Regex>,  // Where patterns
     pattern_type_map: HashMap<String, PatternType>,
     attack_vector_map: HashMap<String, Vec<String>>,
 }
@@ -225,13 +225,16 @@ impl SecurityRiskPatterns {
         map
     }
 
-    fn load_custom_patterns(map: &mut HashMap<Language, LanguagePatterns>, root_dir: Option<&Path>) {
+    fn load_custom_patterns(
+        map: &mut HashMap<Language, LanguagePatterns>,
+        root_dir: Option<&Path>,
+    ) {
         let vuln_patterns_path = if let Some(root) = root_dir {
             root.join("vuln-patterns.yml")
         } else {
             Path::new("vuln-patterns.yml").to_path_buf()
         };
-        
+
         if vuln_patterns_path.exists() {
             match std::fs::read_to_string(&vuln_patterns_path) {
                 Ok(content) => {
@@ -266,8 +269,12 @@ impl SecurityRiskPatterns {
                                         // Merge principals
                                         if let Some(custom_principals) = patterns.principals {
                                             match &mut existing.principals {
-                                                Some(principals) => principals.extend(custom_principals),
-                                                None => existing.principals = Some(custom_principals),
+                                                Some(principals) => {
+                                                    principals.extend(custom_principals)
+                                                }
+                                                None => {
+                                                    existing.principals = Some(custom_principals)
+                                                }
                                             }
                                         }
                                         // Merge actions
@@ -280,7 +287,9 @@ impl SecurityRiskPatterns {
                                         // Merge resources
                                         if let Some(custom_resources) = patterns.resources {
                                             match &mut existing.resources {
-                                                Some(resources) => resources.extend(custom_resources),
+                                                Some(resources) => {
+                                                    resources.extend(custom_resources)
+                                                }
                                                 None => existing.resources = Some(custom_resources),
                                             }
                                         }

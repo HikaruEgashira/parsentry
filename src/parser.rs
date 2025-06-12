@@ -65,7 +65,9 @@ impl CodeParser {
         let extension = path.extension().and_then(|ext| ext.to_str());
         match extension {
             Some("c") | Some("h") => Some(unsafe { tree_sitter_c() }),
-            Some("cpp") | Some("cxx") | Some("cc") | Some("hpp") | Some("hxx") => Some(unsafe { tree_sitter_cpp() }),
+            Some("cpp") | Some("cxx") | Some("cc") | Some("hpp") | Some("hxx") => {
+                Some(unsafe { tree_sitter_cpp() })
+            }
             Some("py") => Some(unsafe { tree_sitter_python() }),
             Some("js") => Some(unsafe { tree_sitter_javascript() }),
             Some("ts") => Some(unsafe { tree_sitter_typescript() }),
@@ -75,7 +77,9 @@ impl CodeParser {
             Some("go") => Some(unsafe { tree_sitter_go() }),
             Some("rb") => Some(unsafe { tree_sitter_ruby() }),
             Some("tf") | Some("hcl") => Some(unsafe { tree_sitter_hcl() }),
-            Some("php") | Some("php3") | Some("php4") | Some("php5") | Some("phtml") => Some(unsafe { tree_sitter_php() }),
+            Some("php") | Some("php3") | Some("php4") | Some("php5") | Some("phtml") => {
+                Some(unsafe { tree_sitter_php() })
+            }
             _ => None,
         }
     }
@@ -206,9 +210,8 @@ impl CodeParser {
 
         let query_str = self.get_query_content(&language, "definitions")?;
 
-        let query = Query::new(&language, &query_str).map_err(|e| {
-            anyhow!("クエリの生成に失敗しました: {}", e)
-        })?;
+        let query = Query::new(&language, &query_str)
+            .map_err(|e| anyhow!("クエリの生成に失敗しました: {}", e))?;
 
         let mut query_cursor = QueryCursor::new();
         let mut matches = query_cursor.matches(&query, tree.root_node(), content.as_bytes());
@@ -285,10 +288,7 @@ impl CodeParser {
             let query = match Query::new(&language, &query_str) {
                 Ok(q) => q,
                 Err(e) => {
-                    eprintln!(
-                        "警告: 参照クエリの生成に失敗しました: {}",
-                        e
-                    );
+                    eprintln!("警告: 参照クエリの生成に失敗しました: {}", e);
                     continue;
                 }
             };
@@ -324,28 +324,28 @@ impl CodeParser {
     }
 
     /// Find both definitions and references for Action patterns to enable bidirectional tracking.
-    /// This provides comprehensive context by showing both where data comes from (definitions) 
+    /// This provides comprehensive context by showing both where data comes from (definitions)
     /// and where it flows to (references).
     pub fn find_bidirectional(
-        &mut self, 
-        name: &str, 
-        source_file: &Path
+        &mut self,
+        name: &str,
+        source_file: &Path,
     ) -> Result<Vec<(PathBuf, Definition)>> {
         let mut results = Vec::new();
-        
+
         // First, find the definition (backward tracking)
         if let Some(definition) = self.find_definition(name, source_file)? {
             results.push(definition);
         }
-        
+
         // Then, find all references (forward tracking)
         let references = self.find_references(name)?;
         results.extend(references);
-        
+
         // Remove duplicates based on file path and start byte
         results.sort_by_key(|(path, def)| (path.clone(), def.start_byte));
         results.dedup_by_key(|(path, def)| (path.clone(), def.start_byte));
-        
+
         Ok(results)
     }
     pub fn build_context_from_file(&mut self, start_path: &Path) -> Result<Context> {
@@ -359,14 +359,17 @@ impl CodeParser {
             .files
             .get(start_path)
             .ok_or_else(|| anyhow::anyhow!("ファイルが見つかりません: {}", start_path.display()))?;
-        
+
         // If the language is not supported by tree-sitter (e.g., Terraform, YAML, JSON),
         // return an empty context instead of failing
         let language = match self.get_language(start_path) {
             Some(lang) => lang,
             None => {
                 // For IaC files and other unsupported file types, return empty context
-                return Ok(Context { definitions: Vec::new(), references: Vec::new() });
+                return Ok(Context {
+                    definitions: Vec::new(),
+                    references: Vec::new(),
+                });
             }
         };
         self.parser
@@ -382,7 +385,11 @@ impl CodeParser {
         let definitions_query = tree_sitter::Query::new(&language, &definitions_query_str)?;
 
         let mut query_cursor = tree_sitter::QueryCursor::new();
-        let mut matches = query_cursor.matches(&definitions_query, tree.root_node(), file_content.as_bytes());
+        let mut matches = query_cursor.matches(
+            &definitions_query,
+            tree.root_node(),
+            file_content.as_bytes(),
+        );
 
         let mut to_visit: Vec<(PathBuf, String)> = Vec::new();
 
@@ -418,10 +425,11 @@ impl CodeParser {
         // Extract references
         let references_query_str = self.get_query_content(&language, "references")?;
         let references_query = tree_sitter::Query::new(&language, &references_query_str)?;
-        
+
         let mut references_cursor = tree_sitter::QueryCursor::new();
-        let mut ref_matches = references_cursor.matches(&references_query, tree.root_node(), file_content.as_bytes());
-        
+        let mut ref_matches =
+            references_cursor.matches(&references_query, tree.root_node(), file_content.as_bytes());
+
         while let Some(mat) = ref_matches.next() {
             for cap in mat.captures {
                 let capture_name = &references_query.capture_names()[cap.index as usize];
@@ -431,7 +439,7 @@ impl CodeParser {
                     let start_byte = node.start_byte();
                     let end_byte = node.end_byte();
                     let source = node.utf8_text(file_content.as_bytes())?.to_string();
-                    
+
                     references.push(Definition {
                         name,
                         start_byte,
@@ -456,6 +464,9 @@ impl CodeParser {
             }
         }
 
-        Ok(Context { definitions, references })
+        Ok(Context {
+            definitions,
+            references,
+        })
     }
 }

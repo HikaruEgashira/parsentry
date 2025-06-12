@@ -1,57 +1,60 @@
 use anyhow::Result;
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
+use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ClientConfig};
-use genai::resolver::{Endpoint, ServiceTargetResolver, AuthData};
-use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
+use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
 
+use crate::parser::Definition;
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
-use crate::parser::Definition;
-
 
 fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
         ChatOptions::default().with_response_format(JsonSpec::new("json_object", response_schema)),
     );
-    
+
     let mut client_builder = Client::builder().with_config(client_config);
-    
+
     // Add custom service target resolver if base URL is provided
     if let Some(base_url) = api_base_url {
         let target_resolver = create_pattern_target_resolver(base_url);
         client_builder = client_builder.with_service_target_resolver(target_resolver);
     }
-    
+
     client_builder.build()
 }
 
 fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
     let base_url_owned = base_url.to_string();
-    
+
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
             let ServiceTarget { model, .. } = service_target;
-            
+
             // Use the custom base URL and force OpenAI adapter for compatibility
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
-            
+
             // When using custom base URL, assume OpenAI-compatible API
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-            
+
             // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
             let auth = AuthData::from_env("OPENAI_API_KEY");
-            Ok(ServiceTarget { endpoint, auth, model })
+            Ok(ServiceTarget {
+                endpoint,
+                auth,
+                model,
+            })
         },
     )
 }
 
 fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
     let mut filtered_files = Vec::new();
-    
+
     for file_path in files {
         match std::fs::read_to_string(file_path) {
             Ok(content) => {
@@ -59,19 +62,15 @@ fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathB
                 if line_count <= max_lines {
                     filtered_files.push(file_path.clone());
                 }
-            },
+            }
             Err(e) => {
-                eprintln!(
-                    "⚠️  ファイル読み込みエラー: {}: {}", 
-                    file_path.display(), 
-                    e
-                );
+                eprintln!("⚠️  ファイル読み込みエラー: {}: {}", file_path.display(), e);
                 // Skip files that can't be read
                 continue;
             }
         }
     }
-    
+
     Ok(filtered_files)
 }
 
@@ -90,12 +89,20 @@ struct PatternAnalysisResponse {
     patterns: Vec<PatternClassification>,
 }
 
-
-pub async fn generate_custom_patterns(root_dir: &Path, model: &str, api_base_url: Option<&str>) -> Result<()> {
+pub async fn generate_custom_patterns(
+    root_dir: &Path,
+    model: &str,
+    api_base_url: Option<&str>,
+) -> Result<()> {
     generate_custom_patterns_impl(root_dir, model, 4, api_base_url).await
 }
 
-async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parallel: usize, api_base_url: Option<&str>) -> Result<()> {
+async fn generate_custom_patterns_impl(
+    root_dir: &Path,
+    model: &str,
+    _max_parallel: usize,
+    api_base_url: Option<&str>,
+) -> Result<()> {
     println!(
         "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
         root_dir.display()
@@ -105,15 +112,18 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
     let files = repo.get_files_to_analyze(None)?;
 
     println!("📁 検出されたファイル数: {}", files.len());
-    
+
     let max_lines = 1000;
     let filtered_files = filter_files_by_size(&files, max_lines)?;
     let skipped_count = files.len() - filtered_files.len();
-    
+
     if skipped_count > 0 {
-        println!("⚠️  {}行を超える大きなファイル{}個をスキップしました", max_lines, skipped_count);
+        println!(
+            "⚠️  {}行を超える大きなファイル{}個をスキップしました",
+            max_lines, skipped_count
+        );
     }
-    
+
     println!("📁 解析対象ファイル数: {}", filtered_files.len());
 
     let mut all_definitions: Vec<(Definition, Language)> = Vec::new();
@@ -136,7 +146,8 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
             Ok(context) => {
                 let filename = file_path.to_string_lossy();
                 let content = std::fs::read_to_string(file_path).unwrap_or_default();
-                let language = crate::file_classifier::FileClassifier::classify(&filename, &content);
+                let language =
+                    crate::file_classifier::FileClassifier::classify(&filename, &content);
                 languages_found.insert(language, true);
 
                 println!(
@@ -186,7 +197,7 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
             .filter(|(_, lang)| *lang == language)
             .map(|(def, _)| def)
             .collect();
-            
+
         let lang_references: Vec<_> = all_references
             .iter()
             .filter(|(_, lang)| *lang == language)
@@ -208,15 +219,27 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
         // Process definitions and references separately to maintain their distinctions
         let mut definition_patterns = Vec::new();
         let mut reference_patterns = Vec::new();
-        
+
         if !lang_definitions.is_empty() {
-            definition_patterns = analyze_definitions_for_security_patterns(model, &lang_definitions, language, api_base_url).await?;
+            definition_patterns = analyze_definitions_for_security_patterns(
+                model,
+                &lang_definitions,
+                language,
+                api_base_url,
+            )
+            .await?;
         }
-        
+
         if !lang_references.is_empty() {
-            reference_patterns = analyze_references_for_security_patterns(model, &lang_references, language, api_base_url).await?;
+            reference_patterns = analyze_references_for_security_patterns(
+                model,
+                &lang_references,
+                language,
+                api_base_url,
+            )
+            .await?;
         }
-        
+
         // Combine all patterns
         let mut all_patterns = definition_patterns;
         all_patterns.extend(reference_patterns);
@@ -224,7 +247,7 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
         // Deduplicate patterns based on function name
         let mut unique_patterns = Vec::new();
         let mut seen_functions = std::collections::HashSet::new();
-        
+
         for pattern in all_patterns {
             if seen_functions.insert(pattern.function_name.clone()) {
                 unique_patterns.push(pattern);
@@ -324,8 +347,7 @@ Return a JSON object with this structure:
 }}
 
 All fields are required for each object."#,
-        language,
-        definitions_context
+        language, definitions_context
     );
 
     let response_schema = serde_json::json!({
@@ -405,7 +427,8 @@ All fields are required for each object."#,
 
     println!(
         "✅ 完了: 全{}個分析, セキュリティパターン{}個検出",
-        definitions.len(), security_pattern_count
+        definitions.len(),
+        security_pattern_count
     );
 
     Ok(patterns)
@@ -467,8 +490,7 @@ Return a JSON object with this structure:
 }}
 
 All fields are required for each object."#,
-        language,
-        references_context
+        language, references_context
     );
 
     let response_schema = serde_json::json!({
@@ -548,12 +570,12 @@ All fields are required for each object."#,
 
     println!(
         "✅ 完了: 全{}個参照分析, セキュリティパターン{}個検出",
-        references.len(), security_pattern_count
+        references.len(),
+        security_pattern_count
     );
 
     Ok(patterns)
 }
-
 
 pub fn write_patterns_to_file(
     root_dir: &Path,
@@ -603,7 +625,8 @@ pub fn write_patterns_to_file(
         for pattern in principals {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
-                pattern.pattern.replace("\\", "\\\\"), pattern.description
+                pattern.pattern.replace("\\", "\\\\"),
+                pattern.description
             ));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
@@ -621,7 +644,8 @@ pub fn write_patterns_to_file(
         for pattern in actions {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
-                pattern.pattern.replace("\\", "\\\\"), pattern.description
+                pattern.pattern.replace("\\", "\\\\"),
+                pattern.description
             ));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
@@ -639,7 +663,8 @@ pub fn write_patterns_to_file(
         for pattern in resources {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
-                pattern.pattern.replace("\\", "\\\\"), pattern.description
+                pattern.pattern.replace("\\", "\\\\"),
+                pattern.description
             ));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 pub fn get_messages() -> HashMap<&'static str, &'static str> {
     let mut messages = HashMap::new();
-    
+
     // Error messages
     messages.insert("error_clone_failed", "クローン先ディレクトリの削除に失敗");
     messages.insert("cloning_repo", "GitHubリポジトリをクローン中");
@@ -13,24 +13,48 @@ pub fn get_messages() -> HashMap<&'static str, &'static str> {
     messages.insert("error_directory_creation", "ディレクトリの作成に失敗");
     messages.insert("error_no_write_permission", "書き込み権限がありません");
     messages.insert("error_test_file_deletion", "テストファイルの削除に失敗");
-    messages.insert("error_no_file_creation_permission", "ファイル作成権限がありません");
-    messages.insert("error_output_dir_check", "❌ 出力ディレクトリのチェックに失敗");
-    messages.insert("relevant_files_detected", "関連するソースファイルを検出しました");
-    messages.insert("security_pattern_files_detected", "セキュリティパターン該当ファイルを検出しました");
+    messages.insert(
+        "error_no_file_creation_permission",
+        "ファイル作成権限がありません",
+    );
+    messages.insert(
+        "error_output_dir_check",
+        "❌ 出力ディレクトリのチェックに失敗",
+    );
+    messages.insert(
+        "relevant_files_detected",
+        "関連するソースファイルを検出しました",
+    );
+    messages.insert(
+        "security_pattern_files_detected",
+        "セキュリティパターン該当ファイルを検出しました",
+    );
     messages.insert("parse_add_failed", "ファイルのパース追加に失敗");
     messages.insert("analysis_failed", "解析に失敗");
-    messages.insert("markdown_report_output_failed", "Markdownレポート出力に失敗");
+    messages.insert(
+        "markdown_report_output_failed",
+        "Markdownレポート出力に失敗",
+    );
     messages.insert("markdown_report_output", "Markdownレポートを出力");
     messages.insert("summary_report_output_failed", "サマリーレポート出力に失敗");
     messages.insert("summary_report_output", "サマリーレポートを出力");
-    messages.insert("summary_report_needs_output_dir", "サマリーレポートを出力するには --output-dir オプションが必要です");
+    messages.insert(
+        "summary_report_needs_output_dir",
+        "サマリーレポートを出力するには --output-dir オプションが必要です",
+    );
     messages.insert("sarif_report_output_failed", "SARIFレポート出力に失敗");
     messages.insert("sarif_report_output", "SARIFレポートを出力");
     messages.insert("sarif_output_failed", "SARIF出力に失敗");
-    messages.insert("github_repo_clone_failed", "GitHubリポジトリのクローンに失敗");
-    messages.insert("custom_pattern_generation_start", "カスタムパターン生成モードを開始します");
+    messages.insert(
+        "github_repo_clone_failed",
+        "GitHubリポジトリのクローンに失敗",
+    );
+    messages.insert(
+        "custom_pattern_generation_start",
+        "カスタムパターン生成モードを開始します",
+    );
     messages.insert("pattern_generation_completed", "パターン生成が完了しました");
-    
+
     messages
 }
 

@@ -1,5 +1,5 @@
-use tempfile::tempdir;
 use parsentry::repo::RepoOps;
+use tempfile::tempdir;
 
 #[test]
 fn test_ruby_files_are_recognized() -> anyhow::Result<()> {

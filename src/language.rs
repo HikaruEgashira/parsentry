@@ -31,7 +31,7 @@ pub struct LanguageConfig {
 impl LanguageConfig {
     pub fn new(language: Language) -> Self {
         let mut messages = HashMap::new();
-        
+
         // Add common messages
         messages.insert("error_clone_failed", {
             let mut m = HashMap::new();
@@ -39,70 +39,70 @@ impl LanguageConfig {
             m.insert(Language::English, "Failed to delete clone directory");
             m
         });
-        
+
         messages.insert("cloning_repo", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "GitHubリポジトリをクローン中");
             m.insert(Language::English, "Cloning GitHub repository");
             m
         });
-        
+
         messages.insert("analysis_target", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "解析対象");
             m.insert(Language::English, "Analysis target");
             m
         });
-        
+
         messages.insert("context_collection_failed", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "コンテキスト収集に失敗");
             m.insert(Language::English, "Failed to collect context");
             m
         });
-        
+
         messages.insert("analyzing_file", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "ファイルを解析中");
             m.insert(Language::English, "Analyzing file");
             m
         });
-        
+
         messages.insert("analysis_completed", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "解析完了");
             m.insert(Language::English, "Analysis completed");
             m
         });
-        
+
         messages.insert("error_directory_creation", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "ディレクトリの作成に失敗");
             m.insert(Language::English, "Failed to create directory");
             m
         });
-        
+
         messages.insert("error_no_write_permission", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "書き込み権限がありません");
             m.insert(Language::English, "No write permission");
             m
         });
-        
+
         messages.insert("error_test_file_deletion", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "テストファイルの削除に失敗");
             m.insert(Language::English, "Failed to delete test file");
             m
         });
-        
+
         messages.insert("error_no_file_creation_permission", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "ファイル作成権限がありません");
             m.insert(Language::English, "No file creation permission");
             m
         });
-        
+
         messages.insert("error_output_dir_check", {
             let mut m = HashMap::new();
             m.insert(Language::Japanese, "❌ 出力ディレクトリのチェックに失敗");
@@ -110,10 +110,7 @@ impl LanguageConfig {
             m
         });
 
-        Self {
-            language,
-            messages,
-        }
+        Self { language, messages }
     }
 
     pub fn get_message(&self, key: &str) -> &str {

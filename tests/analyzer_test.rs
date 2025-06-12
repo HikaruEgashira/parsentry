@@ -1,13 +1,13 @@
 #[allow(unused_imports)]
-use std::path::PathBuf;
-#[allow(unused_imports)]
-use tempfile::NamedTempFile;
-#[allow(unused_imports)]
 use parsentry::analyzer::analyze_file;
+#[allow(unused_imports)]
+use parsentry::language::Language;
 #[allow(unused_imports)]
 use parsentry::response::VulnType;
 #[allow(unused_imports)]
-use parsentry::language::Language;
+use std::path::PathBuf;
+#[allow(unused_imports)]
+use tempfile::NamedTempFile;
 
 #[cfg(feature = "snapshot-test")]
 #[tokio::test]

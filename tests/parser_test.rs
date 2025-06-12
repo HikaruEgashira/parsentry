@@ -322,7 +322,7 @@ fn test_context_creation_and_validation() -> Result<()> {
     assert_eq!(context.definitions[0].source, "fn func1() {}");
     assert_eq!(context.references[0].name, "func2");
     assert_eq!(context.references[0].source, "fn func2() {}");
-    
+
     // Validate byte positions
     assert!(context.definitions[0].start_byte < context.definitions[0].end_byte);
     assert!(context.references[0].start_byte < context.references[0].end_byte);
@@ -364,7 +364,10 @@ fn test_find_definition_with_malformed_code() -> Result<()> {
     // Should handle malformed code gracefully without panicking
     let result = parser.find_definition("incomplete_function", &file_path);
     // Either succeeds or fails with an error, but should not panic
-    assert!(result.is_ok() || result.is_err(), "Parser should handle malformed code gracefully");
+    assert!(
+        result.is_ok() || result.is_err(),
+        "Parser should handle malformed code gracefully"
+    );
     Ok(())
 }
 

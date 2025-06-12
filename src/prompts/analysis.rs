@@ -1,6 +1,6 @@
-use crate::response::VulnType;
 use crate::language::Language;
 use crate::locales;
+use crate::response::VulnType;
 use std::collections::HashMap;
 
 pub fn get_sys_prompt_template(lang: &Language) -> &'static str {

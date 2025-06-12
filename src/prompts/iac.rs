@@ -220,6 +220,9 @@ pub fn get_iac_prompt(iac_type: &str) -> String {
         "kubernetes" => KUBERNETES_SPECIFIC_PROMPT,
         _ => "",
     };
-    
-    format!("{}\n{}\n{}", base_prompt, specific_prompt, IAC_COMPLIANCE_FRAMEWORKS)
+
+    format!(
+        "{}\n{}\n{}",
+        base_prompt, specific_prompt, IAC_COMPLIANCE_FRAMEWORKS
+    )
 }

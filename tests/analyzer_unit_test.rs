@@ -1,8 +1,8 @@
+use parsentry::parser::{Context, Definition};
+use parsentry::response::{ParAnalysis, RemediationGuidance, Response};
 use std::io::Write;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
-use parsentry::parser::{Context, Definition};
-use parsentry::response::{Response, ParAnalysis, RemediationGuidance};
 
 // Mock functions for testing
 #[tokio::test]

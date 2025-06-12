@@ -1,8 +1,8 @@
+use parsentry::pattern_generator::{PatternClassification, write_patterns_to_file};
+use parsentry::security_patterns::Language;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use parsentry::pattern_generator::{PatternClassification, write_patterns_to_file};
-use parsentry::security_patterns::Language;
 
 fn create_test_python_file(dir: &TempDir) -> PathBuf {
     let file_path = dir.path().join("test.py");
@@ -313,15 +313,15 @@ fn test_definition_extraction_mixed_functions() {
     // High-risk functions
     assert!(function_names.contains(&"execute_user_command"));
     assert!(function_names.contains(&"get_user_data"));
-    
+
     // Non-security functions
     assert!(function_names.contains(&"format_string"));
     assert!(function_names.contains(&"calculate_sum"));
     assert!(function_names.contains(&"get_current_time"));
-    
+
     // Medium-risk function
     assert!(function_names.contains(&"load_config"));
-    
+
     // Low-risk function
     assert!(function_names.contains(&"validate_email_format"));
 }
@@ -362,7 +362,8 @@ fn test_attack_vector_formatting() {
         ],
     }];
 
-    let result = write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
+    let result =
+        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
     assert!(result.is_ok());
 
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
@@ -388,8 +389,8 @@ fn test_security_risk_categories() {
     ];
 
     let low_risk_patterns = vec![
-        "format_string",     // String utility
-        "calculate_sum",     // Math function
+        "format_string",    // String utility
+        "calculate_sum",    // Math function
         "get_current_time", // Time utility
         "sort_array",       // Data structure operation
     ];
@@ -400,11 +401,11 @@ fn test_security_risk_categories() {
         assert!(pattern_name.len() > 0);
         // High-risk patterns typically involve user input, system operations, or security functions
         assert!(
-            pattern_name.contains("user") ||
-            pattern_name.contains("execute") ||
-            pattern_name.contains("auth") ||
-            pattern_name.contains("upload") ||
-            pattern_name.contains("get") && pattern_name.contains("data")
+            pattern_name.contains("user")
+                || pattern_name.contains("execute")
+                || pattern_name.contains("auth")
+                || pattern_name.contains("upload")
+                || pattern_name.contains("get") && pattern_name.contains("data")
         );
     }
 
@@ -412,10 +413,10 @@ fn test_security_risk_categories() {
         assert!(pattern_name.len() > 0);
         // Low-risk patterns are typically utilities without external dependencies
         assert!(
-            pattern_name.contains("format") ||
-            pattern_name.contains("calculate") ||
-            pattern_name.contains("time") ||
-            pattern_name.contains("sort")
+            pattern_name.contains("format")
+                || pattern_name.contains("calculate")
+                || pattern_name.contains("time")
+                || pattern_name.contains("sort")
         );
     }
 }
@@ -450,7 +451,13 @@ fn test_par_pattern_types() {
         attack_vector: vec!["T1005".to_string()],
     };
 
-    assert_eq!(principals_example.pattern_type, Some("principals".to_string()));
+    assert_eq!(
+        principals_example.pattern_type,
+        Some("principals".to_string())
+    );
     assert_eq!(actions_example.pattern_type, Some("actions".to_string()));
-    assert_eq!(resources_example.pattern_type, Some("resources".to_string()));
+    assert_eq!(
+        resources_example.pattern_type,
+        Some("resources".to_string())
+    );
 }

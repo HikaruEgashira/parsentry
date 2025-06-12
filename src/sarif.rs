@@ -193,7 +193,7 @@ impl SarifReport {
         for result in &summary.results {
             let file_path = &result.file_path;
             let response = &result.response;
-            
+
             let artifact_index = artifacts.len();
             artifacts.push(SarifArtifact {
                 location: SarifArtifactLocation {
@@ -376,14 +376,16 @@ fn confidence_to_level(confidence: i32) -> String {
     }
 }
 
-fn extract_region_from_par_analysis(par_analysis: &crate::response::ParAnalysis) -> Option<SarifRegion> {
+fn extract_region_from_par_analysis(
+    par_analysis: &crate::response::ParAnalysis,
+) -> Option<SarifRegion> {
     // Try to extract location information from policy violations
     for violation in &par_analysis.policy_violations {
         if let Some(region) = parse_line_number_from_text(&violation.violation_path) {
             return Some(region);
         }
     }
-    
+
     // Fallback: try to get line info from principals, actions, or resources
     // For now, just return None as we don't have line number info in the new schema
     None
@@ -392,12 +394,12 @@ fn extract_region_from_par_analysis(par_analysis: &crate::response::ParAnalysis)
 fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
     // Enhanced regex patterns for line number detection
     let patterns = [
-        r"(?:line|ln)[:\s]+(\d+)",  // "line: 42" or "ln 42"
-        r":(\d+):(\d+)",            // ":42:10" (line:column)
-        r"@(\d+)",                  // "@42" (line marker)
-        r"\[(\d+)\]",               // "[42]" (line reference)
+        r"(?:line|ln)[:\s]+(\d+)", // "line: 42" or "ln 42"
+        r":(\d+):(\d+)",           // ":42:10" (line:column)
+        r"@(\d+)",                 // "@42" (line marker)
+        r"\[(\d+)\]",              // "[42]" (line reference)
     ];
-    
+
     for pattern in &patterns {
         if let Ok(regex) = regex::Regex::new(pattern) {
             if let Some(captures) = regex.captures(text) {
@@ -407,7 +409,7 @@ fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
                     } else {
                         None
                     };
-                    
+
                     return Some(SarifRegion {
                         start_line: line_num,
                         start_column: column,
@@ -421,7 +423,7 @@ fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
             }
         }
     }
-    
+
     None
 }
 
@@ -435,7 +437,14 @@ fn generate_fingerprints(file_path: &Path, response: &Response) -> HashMap<Strin
 
     [
         ("parsentry/v1".to_string(), fingerprint),
-        ("vulnerability/type".to_string(), response.vulnerability_types.first().unwrap_or(&VulnType::Other("unknown".to_string())).to_string()),
+        (
+            "vulnerability/type".to_string(),
+            response
+                .vulnerability_types
+                .first()
+                .unwrap_or(&VulnType::Other("unknown".to_string()))
+                .to_string(),
+        ),
     ]
     .into_iter()
     .collect()
@@ -467,7 +476,7 @@ mod tests {
     #[test]
     fn test_sarif_report_creation() {
         let mut summary = AnalysisSummary::new();
-        
+
         let response = Response {
             scratchpad: "Test analysis".to_string(),
             analysis: "This is a test vulnerability".to_string(),
@@ -484,11 +493,11 @@ mod tests {
                 policy_enforcement: vec![],
             },
         };
-        
+
         summary.add_result(PathBuf::from("test.py"), response);
-        
+
         let sarif = SarifReport::from_analysis_summary(&summary);
-        
+
         assert_eq!(sarif.version, "2.1.0");
         assert_eq!(sarif.runs.len(), 1);
         assert_eq!(sarif.runs[0].results.len(), 2); // Two vulnerabilities
@@ -498,7 +507,7 @@ mod tests {
     fn test_sarif_serialization() {
         let summary = AnalysisSummary::new();
         let sarif = SarifReport::from_analysis_summary(&summary);
-        
+
         let json = sarif.to_json().unwrap();
         assert!(json.contains("\"version\": \"2.1.0\""));
         assert!(json.contains("Parsentry"));
@@ -508,13 +517,13 @@ mod tests {
     fn test_sarif_file_export() {
         let dir = tempdir().unwrap();
         let sarif_path = dir.path().join("test.sarif");
-        
+
         let summary = AnalysisSummary::new();
         let sarif = SarifReport::from_analysis_summary(&summary);
-        
+
         sarif.save_to_file(&sarif_path).unwrap();
         assert!(sarif_path.exists());
-        
+
         let content = std::fs::read_to_string(&sarif_path).unwrap();
         assert!(content.contains("Parsentry"));
     }
@@ -525,16 +534,25 @@ mod tests {
         assert_eq!(VulnType::SQLI.cwe_ids(), vec!["CWE-89"]);
         assert_eq!(VulnType::XSS.cwe_ids(), vec!["CWE-79", "CWE-80"]);
         assert_eq!(VulnType::RCE.cwe_ids(), vec!["CWE-77", "CWE-78", "CWE-94"]);
-        
+
         // Test MITRE ATT&CK mappings
         assert_eq!(VulnType::SQLI.mitre_attack_ids(), vec!["T1190"]);
         assert_eq!(VulnType::XSS.mitre_attack_ids(), vec!["T1190", "T1185"]);
         assert_eq!(VulnType::RCE.mitre_attack_ids(), vec!["T1190", "T1059"]);
-        
+
         // Test OWASP mappings
-        assert_eq!(VulnType::SQLI.owasp_categories(), vec!["A03:2021-Injection"]);
-        assert_eq!(VulnType::SSRF.owasp_categories(), vec!["A10:2021-Server-Side Request Forgery"]);
-        assert_eq!(VulnType::IDOR.owasp_categories(), vec!["A01:2021-Broken Access Control"]);
+        assert_eq!(
+            VulnType::SQLI.owasp_categories(),
+            vec!["A03:2021-Injection"]
+        );
+        assert_eq!(
+            VulnType::SSRF.owasp_categories(),
+            vec!["A10:2021-Server-Side Request Forgery"]
+        );
+        assert_eq!(
+            VulnType::IDOR.owasp_categories(),
+            vec!["A01:2021-Broken Access Control"]
+        );
     }
 
     // Removed test_region_extraction_from_context as ContextCode no longer exists
@@ -547,14 +565,14 @@ mod tests {
         let region = region.unwrap();
         assert_eq!(region.start_line, 42);
         assert_eq!(region.start_column, Some(10));
-        
+
         // Test line marker format
         let region = parse_line_number_from_text("function @25 is vulnerable");
         assert!(region.is_some());
         let region = region.unwrap();
         assert_eq!(region.start_line, 25);
         assert_eq!(region.start_column, None);
-        
+
         // Test line reference format
         let region = parse_line_number_from_text("vulnerability found [100]");
         assert!(region.is_some());
@@ -565,7 +583,7 @@ mod tests {
     #[test]
     fn test_sarif_with_enhanced_properties() {
         let mut summary = AnalysisSummary::new();
-        
+
         let response = Response {
             scratchpad: "Enhanced test".to_string(),
             analysis: "SQL injection vulnerability found".to_string(),
@@ -582,29 +600,29 @@ mod tests {
                 policy_enforcement: vec![],
             },
         };
-        
+
         summary.add_result(PathBuf::from("user_service.py"), response);
         let sarif = SarifReport::from_analysis_summary(&summary);
-        
+
         // Verify SARIF structure
         assert_eq!(sarif.runs.len(), 1);
         assert_eq!(sarif.runs[0].results.len(), 1);
-        
+
         let result = &sarif.runs[0].results[0];
-        
+
         // Verify properties include proper mappings
         assert!(result.properties.is_some());
         let props = result.properties.as_ref().unwrap();
-        
+
         assert!(props.cwe.is_some());
         assert_eq!(props.cwe.as_ref().unwrap(), &vec!["CWE-89"]);
-        
+
         assert!(props.mitre_attack.is_some());
         assert_eq!(props.mitre_attack.as_ref().unwrap(), &vec!["T1190"]);
-        
+
         assert!(props.owasp.is_some());
         assert_eq!(props.owasp.as_ref().unwrap(), &vec!["A03:2021-Injection"]);
-        
+
         // TODO: Region information verification - currently disabled due to ContextCode removal
         // Once new location tracking is implemented, these assertions can be restored
         // assert!(result.locations[0].physical_location.region.is_some());

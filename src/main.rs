@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
-use std::path::PathBuf;
 use parsentry::analyzer::analyze_file;
 use parsentry::args::{Args, validate_args};
 use parsentry::file_classifier::FileClassifier;
@@ -11,23 +10,23 @@ use parsentry::parser;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::sarif::SarifReport;
 use parsentry::security_patterns::SecurityRiskPatterns;
+use std::path::PathBuf;
 
 use parsentry::repo::RepoOps;
 use parsentry::repo_clone::clone_github_repo;
 use parsentry::response::{AnalysisSummary, VulnType};
 
 use futures::stream::{self, StreamExt};
-use std::sync::Arc;
 use indicatif::{ProgressBar, ProgressStyle};
-
-
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    println!(r#"
+    println!(
+        r#"
                 ▲
                ╱ ╲
               ╱   ╲
@@ -41,7 +40,9 @@ async fn main() -> Result<()> {
           P A R S E N T R Y
                 │
              v{}
-"#, env!("CARGO_PKG_VERSION"));
+"#,
+        env!("CARGO_PKG_VERSION")
+    );
 
     let args = Args::parse();
 
@@ -53,31 +54,52 @@ async fn main() -> Result<()> {
 
     // Get API base URL from CLI arg or environment variable
     let env_base_url = std::env::var("API_BASE_URL").ok();
-    let api_base_url = args.api_base_url.as_deref()
+    let api_base_url = args
+        .api_base_url
+        .as_deref()
         .or_else(|| env_base_url.as_deref());
 
     let (root_dir, repo_name) = if let Some(repo) = &args.repo {
         let dest = PathBuf::from("repo");
         if dest.exists() {
-            std::fs::remove_dir_all(&dest)
-                .map_err(|e| anyhow::anyhow!("{}: {}", messages.get("error_clone_failed").map_or("Failed to delete clone directory", |s| s), e))?;
+            std::fs::remove_dir_all(&dest).map_err(|e| {
+                anyhow::anyhow!(
+                    "{}: {}",
+                    messages
+                        .get("error_clone_failed")
+                        .map_or("Failed to delete clone directory", |s| s),
+                    e
+                )
+            })?;
         }
         println!(
             "🛠️  {}: {} → {}",
-            messages.get("cloning_repo").map_or("Cloning GitHub repository", |s| s),
+            messages
+                .get("cloning_repo")
+                .map_or("Cloning GitHub repository", |s| s),
             repo,
             dest.display()
         );
-        clone_github_repo(repo, &dest)
-            .map_err(|e| anyhow::anyhow!("{}: {}", messages.get("github_repo_clone_failed").map_or("Failed to clone GitHub repository", |s| s), e))?;
-        
+        clone_github_repo(repo, &dest).map_err(|e| {
+            anyhow::anyhow!(
+                "{}: {}",
+                messages
+                    .get("github_repo_clone_failed")
+                    .map_or("Failed to clone GitHub repository", |s| s),
+                e
+            )
+        })?;
+
         // Extract repository name for output directory
         let repo_name = if repo.contains('/') {
-            repo.split('/').last().unwrap_or("unknown-repo").replace(".git", "")
+            repo.split('/')
+                .last()
+                .unwrap_or("unknown-repo")
+                .replace(".git", "")
         } else {
             repo.replace(".git", "")
         };
-        
+
         (dest, Some(repo_name))
     } else if let Some(root) = &args.root {
         (root.clone(), None)
@@ -87,18 +109,29 @@ async fn main() -> Result<()> {
 
     // Handle pattern generation mode
     if args.generate_patterns {
-        println!("🔧 {}", messages.get("custom_pattern_generation_start").unwrap_or(&"Starting custom pattern generation mode"));
+        println!(
+            "🔧 {}",
+            messages
+                .get("custom_pattern_generation_start")
+                .unwrap_or(&"Starting custom pattern generation mode")
+        );
         generate_custom_patterns(&root_dir, &args.model, api_base_url).await?;
-        println!("✅ {}", messages.get("pattern_generation_completed").unwrap_or(&"Pattern generation completed"));
+        println!(
+            "✅ {}",
+            messages
+                .get("pattern_generation_completed")
+                .unwrap_or(&"Pattern generation completed")
+        );
     }
-
 
     let repo = RepoOps::new(root_dir.clone());
 
     let files = repo.get_relevant_files();
     println!(
         "📁 {} ({}件)",
-        messages.get("relevant_files_detected").unwrap_or(&"Detected relevant source files"),
+        messages
+            .get("relevant_files_detected")
+            .unwrap_or(&"Detected relevant source files"),
         files.len()
     );
 
@@ -107,7 +140,7 @@ async fn main() -> Result<()> {
         if let Ok(content) = std::fs::read_to_string(file_path) {
             let filename = file_path.to_string_lossy();
             let lang = FileClassifier::classify(&filename, &content);
-            
+
             let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
             if patterns.matches(&content) {
                 pattern_files.push(file_path.clone());
@@ -117,7 +150,9 @@ async fn main() -> Result<()> {
 
     println!(
         "🔎 {} ({}件)",
-        messages.get("security_pattern_files_detected").unwrap_or(&"Detected security pattern matching files"),
+        messages
+            .get("security_pattern_files_detected")
+            .unwrap_or(&"Detected security pattern matching files"),
         pattern_files.len()
     );
     for (i, f) in pattern_files.iter().enumerate() {
@@ -126,7 +161,7 @@ async fn main() -> Result<()> {
 
     let total = pattern_files.len();
     let root_dir = Arc::new(root_dir);
-    
+
     // Create repository-specific output directory
     let output_dir = if let Some(base_output_dir) = args.output_dir.clone() {
         if let Some(ref name) = repo_name {
@@ -139,7 +174,7 @@ async fn main() -> Result<()> {
     } else {
         None
     };
-    
+
     let model = args.model.clone();
     let files = files.clone();
     let verbosity = args.verbosity;
@@ -153,7 +188,7 @@ async fn main() -> Result<()> {
         ProgressStyle::default_bar()
             .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} {msg}")
             .unwrap()
-            .progress_chars("█▉▊▋▌▍▎▏  ")
+            .progress_chars("█▉▊▋▌▍▎▏  "),
     );
     progress_bar.set_message("Analyzing files...");
 
@@ -174,7 +209,15 @@ async fn main() -> Result<()> {
                 let file_name = file_path.display().to_string();
                 progress_bar.set_message(format!("Analyzing: {}", file_name));
                 if verbosity > 0 {
-                    println!("📄 {}: {} ({} / {})", messages.get("analysis_target").unwrap_or(&"Analysis target"), file_name, idx + 1, total);
+                    println!(
+                        "📄 {}: {} ({} / {})",
+                        messages
+                            .get("analysis_target")
+                            .unwrap_or(&"Analysis target"),
+                        file_name,
+                        idx + 1,
+                        total
+                    );
                     println!("{}", "=".repeat(80));
                 }
 
@@ -183,7 +226,9 @@ async fn main() -> Result<()> {
                     if verbosity > 0 {
                         println!(
                             "❌ {}: {}: {}",
-                            messages.get("parse_add_failed").unwrap_or(&"Failed to add file to parser"),
+                            messages
+                                .get("parse_add_failed")
+                                .unwrap_or(&"Failed to add file to parser"),
                             file_path.display(),
                             e
                         );
@@ -194,23 +239,52 @@ async fn main() -> Result<()> {
                 let context = match repo.collect_context_for_security_pattern(&file_path) {
                     Ok(ctx) => ctx,
                     Err(e) => {
-                        println!("⚠️  {}（空のコンテキストで継続）: {}: {}", messages.get("context_collection_failed").unwrap_or(&"Failed to collect context"), file_path.display(), e);
+                        println!(
+                            "⚠️  {}（空のコンテキストで継続）: {}: {}",
+                            messages
+                                .get("context_collection_failed")
+                                .unwrap_or(&"Failed to collect context"),
+                            file_path.display(),
+                            e
+                        );
                         // For IaC files and other unsupported file types, continue with empty context
-                        parser::Context { definitions: Vec::new(), references: Vec::new() }
+                        parser::Context {
+                            definitions: Vec::new(),
+                            references: Vec::new(),
+                        }
                     }
                 };
 
-                let analysis_result =
-                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0, debug, &output_dir, api_base_url, &language).await {
-                        Ok(res) => res,
-                        Err(e) => {
-                            if verbosity > 0 {
-                                println!("❌ {}: {}: {}", messages.get("analysis_failed").unwrap_or(&"Analysis failed"), file_path.display(), e);
-                            }
-                            progress_bar.inc(1);
-                            return None;
+                let analysis_result = match analyze_file(
+                    &file_path,
+                    &model,
+                    &files,
+                    verbosity,
+                    &context,
+                    0,
+                    debug,
+                    &output_dir,
+                    api_base_url,
+                    &language,
+                )
+                .await
+                {
+                    Ok(res) => res,
+                    Err(e) => {
+                        if verbosity > 0 {
+                            println!(
+                                "❌ {}: {}: {}",
+                                messages
+                                    .get("analysis_failed")
+                                    .unwrap_or(&"Analysis failed"),
+                                file_path.display(),
+                                e
+                            );
                         }
-                    };
+                        progress_bar.inc(1);
+                        return None;
+                    }
+                };
 
                 if analysis_result.vulnerability_types.is_empty()
                     || analysis_result.confidence_score < 1
@@ -224,7 +298,9 @@ async fn main() -> Result<()> {
                         if verbosity > 0 {
                             println!(
                                 "❌ {}: {}: {}",
-                                messages.get("error_directory_creation").map_or("Failed to create directory", |s| s),
+                                messages
+                                    .get("error_directory_creation")
+                                    .map_or("Failed to create directory", |s| s),
                                 output_dir.display(),
                                 e
                             );
@@ -242,7 +318,9 @@ async fn main() -> Result<()> {
                         if verbosity > 0 {
                             println!(
                                 "❌ {}: {}: {}",
-                                messages.get("markdown_report_output_failed").map_or("Failed to output Markdown report", |s| s),
+                                messages
+                                    .get("markdown_report_output_failed")
+                                    .map_or("Failed to output Markdown report", |s| s),
                                 out_path.display(),
                                 e
                             );
@@ -251,7 +329,13 @@ async fn main() -> Result<()> {
                         return None;
                     }
                     if verbosity > 0 {
-                        println!("📝 {}: {}", messages.get("markdown_report_output").map_or("Output Markdown report", |s| s), out_path.display());
+                        println!(
+                            "📝 {}: {}",
+                            messages
+                                .get("markdown_report_output")
+                                .map_or("Output Markdown report", |s| s),
+                            out_path.display()
+                        );
                     }
                 }
 
@@ -263,7 +347,7 @@ async fn main() -> Result<()> {
                 Some((file_path, analysis_result))
             }
         })
-        .buffer_unordered(10)  // API制限を考慮した並列処理
+        .buffer_unordered(10) // API制限を考慮した並列処理
         .collect::<Vec<_>>()
         .await;
     for result in results.into_iter() {
@@ -272,7 +356,11 @@ async fn main() -> Result<()> {
         }
     }
 
-    progress_bar.finish_with_message(messages.get("analysis_completed").map_or("Analysis completed!", |s| s));
+    progress_bar.finish_with_message(
+        messages
+            .get("analysis_completed")
+            .map_or("Analysis completed!", |s| s),
+    );
 
     summary.sort_by_confidence();
 
@@ -306,7 +394,9 @@ async fn main() -> Result<()> {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
                     "❌ {}: {}: {}",
-                    messages.get("error_directory_creation").map_or("Failed to create directory", |s| s),
+                    messages
+                        .get("error_directory_creation")
+                        .map_or("Failed to create directory", |s| s),
                     final_output_dir.display(),
                     e
                 );
@@ -317,29 +407,44 @@ async fn main() -> Result<()> {
                     if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
                         println!(
                             "❌ {}: {}: {}",
-                            messages.get("summary_report_output_failed").map_or("Failed to output summary report", |s| s),
+                            messages
+                                .get("summary_report_output_failed")
+                                .map_or("Failed to output summary report", |s| s),
                             summary_path.display(),
                             e
                         );
                     } else {
-                        println!("📊 {}: {}", messages.get("summary_report_output").map_or("Output summary report", |s| s), summary_path.display());
+                        println!(
+                            "📊 {}: {}",
+                            messages
+                                .get("summary_report_output")
+                                .map_or("Output summary report", |s| s),
+                            summary_path.display()
+                        );
                     }
                 }
             }
         } else {
-            println!("⚠ {}", messages.get("summary_report_needs_output_dir").map_or("Summary report output requires --output-dir option", |s| s));
+            println!(
+                "⚠ {}",
+                messages
+                    .get("summary_report_needs_output_dir")
+                    .map_or("Summary report output requires --output-dir option", |s| s)
+            );
         }
     }
 
     // Always generate SARIF report
     {
         let sarif_report = SarifReport::from_analysis_summary(&filtered_summary);
-        
+
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
                     "❌ {}: {}: {}",
-                    messages.get("error_directory_creation").map_or("Failed to create directory", |s| s),
+                    messages
+                        .get("error_directory_creation")
+                        .map_or("Failed to create directory", |s| s),
                     final_output_dir.display(),
                     e
                 );
@@ -349,24 +454,43 @@ async fn main() -> Result<()> {
                 if let Err(e) = sarif_report.save_to_file(&sarif_path) {
                     println!(
                         "❌ {}: {}: {}",
-                        messages.get("sarif_report_output_failed").map_or("Failed to output SARIF report", |s| s),
+                        messages
+                            .get("sarif_report_output_failed")
+                            .map_or("Failed to output SARIF report", |s| s),
                         sarif_path.display(),
                         e
                     );
                 } else {
-                    println!("📋 {}: {}", messages.get("sarif_report_output").map_or("Output SARIF report", |s| s), sarif_path.display());
+                    println!(
+                        "📋 {}: {}",
+                        messages
+                            .get("sarif_report_output")
+                            .map_or("Output SARIF report", |s| s),
+                        sarif_path.display()
+                    );
                 }
             }
         } else {
             // Output SARIF to stdout if no output directory specified
             match sarif_report.to_json() {
                 Ok(json) => println!("{}", json),
-                Err(e) => println!("❌ {}: {}", messages.get("sarif_output_failed").map_or("Failed to output SARIF", |s| s), e),
+                Err(e) => println!(
+                    "❌ {}: {}",
+                    messages
+                        .get("sarif_output_failed")
+                        .map_or("Failed to output SARIF", |s| s),
+                    e
+                ),
             }
         }
     }
 
-    println!("✅ {}", messages.get("analysis_completed").map_or("Analysis completed", |s| s));
+    println!(
+        "✅ {}",
+        messages
+            .get("analysis_completed")
+            .map_or("Analysis completed", |s| s)
+    );
 
     Ok(())
 }

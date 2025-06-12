@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 pub fn get_messages() -> HashMap<&'static str, &'static str> {
     let mut messages = HashMap::new();
-    
+
     // Error messages
     messages.insert("error_clone_failed", "Failed to delete clone directory");
     messages.insert("cloning_repo", "Cloning GitHub repository");
@@ -13,24 +13,54 @@ pub fn get_messages() -> HashMap<&'static str, &'static str> {
     messages.insert("error_directory_creation", "Failed to create directory");
     messages.insert("error_no_write_permission", "No write permission");
     messages.insert("error_test_file_deletion", "Failed to delete test file");
-    messages.insert("error_no_file_creation_permission", "No file creation permission");
-    messages.insert("error_output_dir_check", "❌ Failed to check output directory");
+    messages.insert(
+        "error_no_file_creation_permission",
+        "No file creation permission",
+    );
+    messages.insert(
+        "error_output_dir_check",
+        "❌ Failed to check output directory",
+    );
     messages.insert("relevant_files_detected", "Detected relevant source files");
-    messages.insert("security_pattern_files_detected", "Detected security pattern matching files");
+    messages.insert(
+        "security_pattern_files_detected",
+        "Detected security pattern matching files",
+    );
     messages.insert("parse_add_failed", "Failed to add file to parser");
     messages.insert("analysis_failed", "Analysis failed");
-    messages.insert("markdown_report_output_failed", "Failed to output Markdown report");
+    messages.insert(
+        "markdown_report_output_failed",
+        "Failed to output Markdown report",
+    );
     messages.insert("markdown_report_output", "Output Markdown report");
-    messages.insert("summary_report_output_failed", "Failed to output summary report");
+    messages.insert(
+        "summary_report_output_failed",
+        "Failed to output summary report",
+    );
     messages.insert("summary_report_output", "Output summary report");
-    messages.insert("summary_report_needs_output_dir", "Summary report output requires --output-dir option");
-    messages.insert("sarif_report_output_failed", "Failed to output SARIF report");
+    messages.insert(
+        "summary_report_needs_output_dir",
+        "Summary report output requires --output-dir option",
+    );
+    messages.insert(
+        "sarif_report_output_failed",
+        "Failed to output SARIF report",
+    );
     messages.insert("sarif_report_output", "Output SARIF report");
     messages.insert("sarif_output_failed", "Failed to output SARIF");
-    messages.insert("github_repo_clone_failed", "Failed to clone GitHub repository");
-    messages.insert("custom_pattern_generation_start", "Starting custom pattern generation mode");
-    messages.insert("pattern_generation_completed", "Pattern generation completed");
-    
+    messages.insert(
+        "github_repo_clone_failed",
+        "Failed to clone GitHub repository",
+    );
+    messages.insert(
+        "custom_pattern_generation_start",
+        "Starting custom pattern generation mode",
+    );
+    messages.insert(
+        "pattern_generation_completed",
+        "Pattern generation completed",
+    );
+
     messages
 }
 
