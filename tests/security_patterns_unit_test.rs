@@ -1,5 +1,5 @@
 use parsentry::security_patterns::{
-    Language, LanguagePatterns, PatternConfig, PatternType, SecurityRiskPatterns,
+    Language, LanguagePatterns, PatternConfig, PatternQuery, PatternType, SecurityRiskPatterns,
 };
 
 #[test]
@@ -59,12 +59,19 @@ fn test_pattern_type_equality() {
 #[test]
 fn test_pattern_config_creation() {
     let config = PatternConfig {
-        pattern: "eval\\(".to_string(),
+        pattern_type: PatternQuery::Reference { 
+            reference: "(call function: (identifier) @func (#eq? @func \"eval\"))".to_string() 
+        },
         description: "Dynamic code execution".to_string(),
         attack_vector: vec!["T1059".to_string()],
     };
 
-    assert_eq!(config.pattern, "eval\\(");
+    match &config.pattern_type {
+        PatternQuery::Reference { reference } => {
+            assert!(reference.contains("eval"));
+        }
+        _ => panic!("Expected reference pattern"),
+    }
     assert_eq!(config.description, "Dynamic code execution");
 }
 
@@ -72,19 +79,25 @@ fn test_pattern_config_creation() {
 fn test_language_patterns_creation() {
     let principals = vec![
         PatternConfig {
-            pattern: "input\\(".to_string(),
+            pattern_type: PatternQuery::Reference { 
+                reference: "(call function: (identifier) @func (#eq? @func \"input\"))".to_string() 
+            },
             description: "User input".to_string(),
             attack_vector: vec!["T1059".to_string()],
         },
         PatternConfig {
-            pattern: "request\\.get".to_string(),
+            pattern_type: PatternQuery::Reference { 
+                reference: "(member_expression object: (identifier) @obj (#eq? @obj \"request\") property: (property_identifier) @prop (#eq? @prop \"get\"))".to_string() 
+            },
             description: "HTTP request parameter".to_string(),
             attack_vector: vec!["T1071".to_string()],
         },
     ];
 
     let resources = vec![PatternConfig {
-        pattern: "eval\\(".to_string(),
+        pattern_type: PatternQuery::Reference { 
+            reference: "(call function: (identifier) @func (#eq? @func \"eval\"))".to_string() 
+        },
         description: "Code execution".to_string(),
         attack_vector: vec!["T1059".to_string()],
     }];
@@ -118,7 +131,9 @@ fn test_language_patterns_empty() {
 fn test_language_patterns_partial() {
     let patterns = LanguagePatterns {
         principals: Some(vec![PatternConfig {
-            pattern: "test".to_string(),
+            pattern_type: PatternQuery::Reference { 
+                reference: "(identifier) @name (#eq? @name \"test\")".to_string() 
+            },
             description: "test description".to_string(),
             attack_vector: vec!["T1000".to_string()],
         }]),
@@ -177,12 +192,17 @@ fn test_language_clone() {
 fn test_pattern_config_deserialization() {
     use serde_json;
 
-    let json_data = r#"{"pattern": "test_pattern", "description": "test description", "attack_vector": ["T1000"]}"#;
+    let json_data = r#"{"reference": "(identifier) @name", "description": "test description", "attack_vector": ["T1000"]}"#;
     let config: Result<PatternConfig, _> = serde_json::from_str(json_data);
 
     assert!(config.is_ok());
     let config = config.unwrap();
-    assert_eq!(config.pattern, "test_pattern");
+    match &config.pattern_type {
+        PatternQuery::Reference { reference } => {
+            assert_eq!(reference, "(identifier) @name");
+        }
+        _ => panic!("Expected reference pattern"),
+    }
     assert_eq!(config.description, "test description");
 }
 
@@ -191,9 +211,9 @@ fn test_language_patterns_deserialization() {
     use serde_json;
 
     let json_data = r#"{
-        "principals": [{"pattern": "input", "description": "User input", "attack_vector": ["T1059"]}],
-        "actions": [{"pattern": "validate", "description": "Input validation", "attack_vector": ["T1070"]}],
-        "resources": [{"pattern": "eval", "description": "Code execution", "attack_vector": ["T1059"]}]
+        "principals": [{"reference": "(call function: (identifier) @func (#eq? @func \"input\"))", "description": "User input", "attack_vector": ["T1059"]}],
+        "actions": [{"reference": "(call function: (identifier) @func (#eq? @func \"validate\"))", "description": "Input validation", "attack_vector": ["T1070"]}],
+        "resources": [{"reference": "(call function: (identifier) @func (#eq? @func \"eval\"))", "description": "Code execution", "attack_vector": ["T1059"]}]
     }"#;
 
     let patterns: Result<LanguagePatterns, _> = serde_json::from_str(json_data);

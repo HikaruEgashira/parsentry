@@ -1,7 +1,22 @@
-use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
+use tree_sitter::{Language as TreeSitterLanguage, Query, QueryCursor, Parser};
+use streaming_iterator::StreamingIterator;
+
+unsafe extern "C" {
+    fn tree_sitter_c() -> tree_sitter::Language;
+    fn tree_sitter_cpp() -> tree_sitter::Language;
+    fn tree_sitter_python() -> tree_sitter::Language;
+    fn tree_sitter_javascript() -> tree_sitter::Language;
+    fn tree_sitter_typescript() -> tree_sitter::Language;
+    fn tree_sitter_java() -> tree_sitter::Language;
+    fn tree_sitter_go() -> tree_sitter::Language;
+    fn tree_sitter_ruby() -> tree_sitter::Language;
+    fn tree_sitter_rust() -> tree_sitter::Language;
+    fn tree_sitter_hcl() -> tree_sitter::Language;
+    fn tree_sitter_php() -> tree_sitter::Language;
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Language {
@@ -66,9 +81,19 @@ pub enum PatternType {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct PatternConfig {
-    pub pattern: String,
+    #[serde(flatten)]
+    pub pattern_type: PatternQuery,
     pub description: String,
     pub attack_vector: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum PatternQuery {
+    Definition { definition: String },
+    Reference { reference: String },
+    // Legacy regex support (will be removed later)
+    Legacy { pattern: String },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -79,11 +104,15 @@ pub struct LanguagePatterns {
 }
 
 pub struct SecurityRiskPatterns {
-    principal_patterns: Vec<Regex>, // Who patterns
-    action_patterns: Vec<Regex>,    // What patterns
-    resource_patterns: Vec<Regex>,  // Where patterns
+    principal_definition_queries: Vec<Query>,
+    principal_reference_queries: Vec<Query>,
+    action_definition_queries: Vec<Query>,
+    action_reference_queries: Vec<Query>,
+    resource_definition_queries: Vec<Query>,
+    resource_reference_queries: Vec<Query>,
     pattern_type_map: HashMap<String, PatternType>,
     attack_vector_map: HashMap<String, Vec<String>>,
+    language: TreeSitterLanguage,
 }
 
 impl SecurityRiskPatterns {
@@ -102,86 +131,226 @@ impl SecurityRiskPatterns {
                 resources: None,
             });
 
-        let mut principal_patterns = Vec::new();
-        let mut action_patterns = Vec::new();
-        let mut resource_patterns = Vec::new();
+        let ts_language = Self::get_tree_sitter_language(language);
+
+        let mut principal_definition_queries = Vec::new();
+        let mut principal_reference_queries = Vec::new();
+        let mut action_definition_queries = Vec::new();
+        let mut action_reference_queries = Vec::new();
+        let mut resource_definition_queries = Vec::new();
+        let mut resource_reference_queries = Vec::new();
         let mut pattern_type_map = HashMap::new();
         let mut attack_vector_map = HashMap::new();
 
         if let Some(principals) = &lang_patterns.principals {
             for config in principals {
-                let regex = Regex::new(&config.pattern).unwrap();
-                pattern_type_map.insert(config.pattern.clone(), PatternType::Principal);
-                if !config.attack_vector.is_empty() {
-                    attack_vector_map.insert(config.pattern.clone(), config.attack_vector.clone());
+                match &config.pattern_type {
+                    PatternQuery::Definition { definition } => {
+                        if let Ok(query) = Query::new(&ts_language, definition) {
+                            principal_definition_queries.push(query);
+                            pattern_type_map.insert(definition.clone(), PatternType::Principal);
+                            if !config.attack_vector.is_empty() {
+                                attack_vector_map.insert(definition.clone(), config.attack_vector.clone());
+                            }
+                        }
+                    }
+                    PatternQuery::Reference { reference } => {
+                        if let Ok(query) = Query::new(&ts_language, reference) {
+                            principal_reference_queries.push(query);
+                            pattern_type_map.insert(reference.clone(), PatternType::Principal);
+                            if !config.attack_vector.is_empty() {
+                                attack_vector_map.insert(reference.clone(), config.attack_vector.clone());
+                            }
+                        }
+                    }
+                    PatternQuery::Legacy { pattern: _ } => {
+                        // Skip legacy patterns for now
+                    }
                 }
-                principal_patterns.push(regex);
             }
         }
 
         if let Some(actions) = &lang_patterns.actions {
             for config in actions {
-                let regex = Regex::new(&config.pattern).unwrap();
-                pattern_type_map.insert(config.pattern.clone(), PatternType::Action);
-                if !config.attack_vector.is_empty() {
-                    attack_vector_map.insert(config.pattern.clone(), config.attack_vector.clone());
+                match &config.pattern_type {
+                    PatternQuery::Definition { definition } => {
+                        if let Ok(query) = Query::new(&ts_language, definition) {
+                            action_definition_queries.push(query);
+                            pattern_type_map.insert(definition.clone(), PatternType::Action);
+                            if !config.attack_vector.is_empty() {
+                                attack_vector_map.insert(definition.clone(), config.attack_vector.clone());
+                            }
+                        }
+                    }
+                    PatternQuery::Reference { reference } => {
+                        if let Ok(query) = Query::new(&ts_language, reference) {
+                            action_reference_queries.push(query);
+                            pattern_type_map.insert(reference.clone(), PatternType::Action);
+                            if !config.attack_vector.is_empty() {
+                                attack_vector_map.insert(reference.clone(), config.attack_vector.clone());
+                            }
+                        }
+                    }
+                    PatternQuery::Legacy { pattern: _ } => {
+                        // Skip legacy patterns for now
+                    }
                 }
-                action_patterns.push(regex);
             }
         }
 
         if let Some(resources) = &lang_patterns.resources {
             for config in resources {
-                let regex = Regex::new(&config.pattern).unwrap();
-                pattern_type_map.insert(config.pattern.clone(), PatternType::Resource);
-                if !config.attack_vector.is_empty() {
-                    attack_vector_map.insert(config.pattern.clone(), config.attack_vector.clone());
+                match &config.pattern_type {
+                    PatternQuery::Definition { definition } => {
+                        if let Ok(query) = Query::new(&ts_language, definition) {
+                            resource_definition_queries.push(query);
+                            pattern_type_map.insert(definition.clone(), PatternType::Resource);
+                            if !config.attack_vector.is_empty() {
+                                attack_vector_map.insert(definition.clone(), config.attack_vector.clone());
+                            }
+                        }
+                    }
+                    PatternQuery::Reference { reference } => {
+                        if let Ok(query) = Query::new(&ts_language, reference) {
+                            resource_reference_queries.push(query);
+                            pattern_type_map.insert(reference.clone(), PatternType::Resource);
+                            if !config.attack_vector.is_empty() {
+                                attack_vector_map.insert(reference.clone(), config.attack_vector.clone());
+                            }
+                        }
+                    }
+                    PatternQuery::Legacy { pattern: _ } => {
+                        // Skip legacy patterns for now
+                    }
                 }
-                resource_patterns.push(regex);
             }
         }
 
         Self {
-            principal_patterns,
-            action_patterns,
-            resource_patterns,
+            principal_definition_queries,
+            principal_reference_queries,
+            action_definition_queries,
+            action_reference_queries,
+            resource_definition_queries,
+            resource_reference_queries,
             pattern_type_map,
             attack_vector_map,
+            language: ts_language,
+        }
+    }
+
+    fn get_tree_sitter_language(language: Language) -> TreeSitterLanguage {
+        unsafe {
+            match language {
+                Language::Python => tree_sitter_python(),
+                Language::JavaScript => tree_sitter_javascript(),
+                Language::TypeScript => tree_sitter_typescript(),
+                Language::Rust => tree_sitter_rust(),
+                Language::Java => tree_sitter_java(),
+                Language::Go => tree_sitter_go(),
+                Language::Ruby => tree_sitter_ruby(),
+                Language::C => tree_sitter_c(),
+                Language::Cpp => tree_sitter_cpp(),
+                Language::Terraform => tree_sitter_hcl(),
+                Language::Php => tree_sitter_php(),
+                _ => tree_sitter_javascript(), // Default fallback
+            }
         }
     }
 
     pub fn matches(&self, content: &str) -> bool {
-        self.principal_patterns
-            .iter()
-            .any(|pattern| pattern.is_match(content))
-            || self
-                .action_patterns
-                .iter()
-                .any(|pattern| pattern.is_match(content))
-            || self
-                .resource_patterns
-                .iter()
-                .any(|pattern| pattern.is_match(content))
-    }
+        let mut parser = Parser::new();
+        parser.set_language(&self.language).unwrap();
+        
+        let tree = match parser.parse(content, None) {
+            Some(tree) => tree,
+            None => return false,
+        };
 
-    pub fn get_pattern_type(&self, content: &str) -> Option<PatternType> {
-        for (pattern_str, pattern_type) in &self.pattern_type_map {
-            let regex = Regex::new(pattern_str).ok()?;
-            if regex.is_match(content) {
-                return Some(pattern_type.clone());
-            }
-        }
-        None
-    }
+        let root_node = tree.root_node();
+        let mut cursor = QueryCursor::new();
 
-    pub fn get_attack_vectors(&self, content: &str) -> Vec<String> {
-        for (pattern_str, attack_vectors) in &self.attack_vector_map {
-            if let Ok(regex) = Regex::new(pattern_str) {
-                if regex.is_match(content) {
-                    return attack_vectors.clone();
+        // Check all query types
+        let all_queries = [
+            &self.principal_definition_queries,
+            &self.principal_reference_queries,
+            &self.action_definition_queries,
+            &self.action_reference_queries,
+            &self.resource_definition_queries,
+            &self.resource_reference_queries,
+        ];
+
+        for query_set in all_queries {
+            for query in query_set {
+                let mut matches = cursor.matches(query, root_node, content.as_bytes());
+                if matches.any(|_| true) {
+                    return true;
                 }
             }
         }
+
+        false
+    }
+
+    pub fn get_pattern_type(&self, content: &str) -> Option<PatternType> {
+        let mut parser = Parser::new();
+        parser.set_language(&self.language).unwrap();
+        
+        let tree = match parser.parse(content, None) {
+            Some(tree) => tree,
+            None => return None,
+        };
+
+        let root_node = tree.root_node();
+        let mut cursor = QueryCursor::new();
+
+        // Check principals first
+        for query in &self.principal_definition_queries {
+            let mut matches = cursor.matches(query, root_node, content.as_bytes());
+            if matches.any(|_| true) {
+                return Some(PatternType::Principal);
+            }
+        }
+        for query in &self.principal_reference_queries {
+            let mut matches = cursor.matches(query, root_node, content.as_bytes());
+            if matches.any(|_| true) {
+                return Some(PatternType::Principal);
+            }
+        }
+
+        // Check actions
+        for query in &self.action_definition_queries {
+            let mut matches = cursor.matches(query, root_node, content.as_bytes());
+            if matches.any(|_| true) {
+                return Some(PatternType::Action);
+            }
+        }
+        for query in &self.action_reference_queries {
+            let mut matches = cursor.matches(query, root_node, content.as_bytes());
+            if matches.any(|_| true) {
+                return Some(PatternType::Action);
+            }
+        }
+
+        // Check resources
+        for query in &self.resource_definition_queries {
+            let mut matches = cursor.matches(query, root_node, content.as_bytes());
+            if matches.any(|_| true) {
+                return Some(PatternType::Resource);
+            }
+        }
+        for query in &self.resource_reference_queries {
+            let mut matches = cursor.matches(query, root_node, content.as_bytes());
+            if matches.any(|_| true) {
+                return Some(PatternType::Resource);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_attack_vectors(&self, _content: &str) -> Vec<String> {
+        // For now, return empty vector - could be enhanced to map tree-sitter queries to attack vectors
         Vec::new()
     }
 

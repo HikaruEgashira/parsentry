@@ -1,124 +1,174 @@
 principals:
-  - pattern: "fetch\\(.*?\\)"
+  # Fetch API requests
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "fetch"))
     description: "Fetch API requests"
     attack_vector:
       - "T1071"
       - "T1190"
-  - pattern: "XMLHttpRequest"
+  # XMLHttpRequest API
+  - reference: |
+      (new_expression
+        constructor: (identifier) @const (#eq? @const "XMLHttpRequest"))
     description: "XMLHttpRequest API"
     attack_vector:
       - "T1071"
       - "T1105"
-  - pattern: "require\\s*\\("
+  # Module imports
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "require"))
     description: "Module imports"
     attack_vector:
       - "T1105"
       - "T1027"
-  - pattern: "process\\.env"
+  # Environment variables
+  - reference: |
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "process")
+        property: (property_identifier) @prop (#eq? @prop "env"))
     description: "Environment variables"
     attack_vector:
       - "T1083"
       - "T1552"
-  - pattern: "document\\.(getElementById|querySelector)"
+  # DOM access
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "document")
+          property: (property_identifier) @prop (#match? @prop "(getElementById|querySelector)")))
     description: "DOM access"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\.(findOne|findMany|findAll)\\s*\\("
+  # Database ORM queries
+  - reference: |
+      (call_expression
+        function: (member_expression
+          property: (property_identifier) @prop (#match? @prop "(findOne|findMany|findAll)")))
     description: "Database ORM queries"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "db\\.(collection|query)\\(.*?\\)\\.find\\("
-    description: "Database find operations"
-    attack_vector:
-      - "T1005"
-      - "T1213"
-  - pattern: "\\bresult\\.(rows|recordset)\\["
+  # Database result rows
+  - reference: |
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "result")
+        property: (property_identifier) @prop (#match? @prop "(rows|recordset)"))
     description: "Database result rows"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "await\\s+db\\.(query|execute)\\("
-    description: "Database async queries"
-    attack_vector:
-      - "T1005"
-      - "T1213"
-  - pattern: "\\.(json|text)\\(\\)\\s*\\.(then|await)"
+  # API response data
+  - reference: |
+      (call_expression
+        function: (member_expression
+          property: (property_identifier) @prop (#match? @prop "(json|text)")))
     description: "API response data"
     attack_vector:
       - "T1071"
       - "T1005"
 
 actions:
-  - pattern: "\\bvalidator\\."
+  # Input validation operations
+  - reference: |
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "validator")
+        property: (property_identifier))
     description: "Input validation operations"
     attack_vector:
       - "T1190"
       - "T1078"
-  - pattern: "\\bDOMPurify\\."
+  # DOM sanitization operations
+  - reference: |
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "DOMPurify")
+        property: (property_identifier))
     description: "DOM sanitization operations"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\bescape-html"
-    description: "HTML escaping operations"
-    attack_vector:
-      - "T1055"
-      - "T1106"
-  - pattern: "\\bxss\\s*\\("
-    description: "XSS filtering operations"
-    attack_vector:
-      - "T1055"
-      - "T1027"
-  - pattern: "\\bhelmet\\."
+  # Security middleware operations
+  - reference: |
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "helmet")
+        property: (property_identifier))
     description: "Security middleware operations"
     attack_vector:
       - "T1550"
       - "T1556"
-  - pattern: "\\bbcrypt\\."
+  # Password processing operations
+  - reference: |
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "bcrypt")
+        property: (property_identifier))
     description: "Password processing operations"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\bjwt\\.(verify|sign)"
+  # JWT token operations
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "jwt")
+          property: (property_identifier) @prop (#match? @prop "(verify|sign)")))
     description: "JWT token operations"
     attack_vector:
       - "T1550"
       - "T1078"
-  - pattern: "\\$[0-9]+|\\?"
-    description: "SQL parameterization attempts"
-    attack_vector:
-      - "T1190"
-      - "T1005"
-  - pattern: "path\\.(normalize|resolve)"
+  # Path manipulation operations
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "path")
+          property: (property_identifier) @prop (#match? @prop "(normalize|resolve)")))
     description: "Path manipulation operations"
     attack_vector:
       - "T1083"
       - "T1005"
 
 resources:
-  - pattern: "\\beval\\s*\\("
+  # Code evaluation resource
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "eval"))
     description: "Code evaluation resource"
     attack_vector:
       - "T1059"
       - "T1027"
-  - pattern: "document\\.write\\s*\\("
+  # Document write operations resource
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "document")
+          property: (property_identifier) @prop (#eq? @prop "write")))
     description: "Document write operations resource"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\.innerHTML\\s*="
+  # HTML injection resource
+  - reference: |
+      (assignment_expression
+        left: (member_expression
+          property: (property_identifier) @prop (#eq? @prop "innerHTML")))
     description: "HTML injection resource"
     attack_vector:
       - "T1055"
       - "T1190"
-  - pattern: "child_process"
+  # Process execution resource
+  - reference: |
+      (identifier) @obj (#eq? @obj "child_process")
     description: "Process execution resource"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "fs\\.writeFile"
+  # File writing resource
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "fs")
+          property: (property_identifier) @prop (#eq? @prop "writeFile")))
     description: "File writing resource"
     attack_vector:
       - "T1083"

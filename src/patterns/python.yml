@@ -1,138 +1,206 @@
 principals:
-  - pattern: "async\\sdef\\s\\w+\\(.*?request"
+  # HTTP request handlers - function definitions with request parameters
+  - definition: |
+      (function_definition
+        name: (identifier) @func_name
+        parameters: (parameters
+          (identifier) @param
+          (#match? @param "request")))
     description: "HTTP request handlers"
     attack_vector:
       - "T1190"
       - "T1071"
-  - pattern: "@app\\.route\\(.*?\\)"
+  # Flask route decorators - decorator patterns
+  - definition: |
+      (decorator
+        (attribute
+          object: (identifier) @obj (#eq? @obj "app")
+          attribute: (identifier) @attr (#eq? @attr "route")))
     description: "Flask route decorators"
     attack_vector:
       - "T1190"
-  - pattern: "\\brequests\\."
+  # HTTP requests library - attribute access
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "requests")
+        attribute: (identifier))
     description: "HTTP requests library"
     attack_vector:
       - "T1071"
       - "T1090"
-  - pattern: "\\bsocket\\."
+  # Network socket operations
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "socket")
+        attribute: (identifier))
     description: "Network socket operations"
     attack_vector:
       - "T1095"
       - "T1571"
-  - pattern: "urllib\\."
+  # URL handling modules
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#match? @obj "urllib")
+        attribute: (identifier))
     description: "URL handling modules"
     attack_vector:
       - "T1071"
       - "T1105"
-  - pattern: "input\\s*\\("
+  # User input function
+  - reference: |
+      (call
+        function: (identifier) @func (#eq? @func "input"))
     description: "User input function"
     attack_vector:
       - "T1059"
-  - pattern: "sys\\.argv"
+  # Command line arguments
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "sys")
+        attribute: (identifier) @attr (#eq? @attr "argv"))
     description: "Command line arguments"
     attack_vector:
       - "T1059"
-  - pattern: "\\.fetchall\\s*\\(\\)"
+  # Database result fetching
+  - reference: |
+      (call
+        function: (attribute
+          attribute: (identifier) @method (#match? @method "fetch(all|one|many)")))
     description: "Database result fetching"
-    attack_vector:
-      - "T1005"
-  - pattern: "\\.fetchone\\s*\\(\\)"
-    description: "Database single result"
-    attack_vector:
-      - "T1005"
-  - pattern: "\\.fetchmany\\s*\\("
-    description: "Database multiple results"
-    attack_vector:
-      - "T1005"
-  - pattern: "cursor\\.(execute|executemany)\\s*\\(.*?\\)\\.fetchall\\(\\)"
-    description: "Database query results"
-    attack_vector:
-      - "T1005"
-  - pattern: "\\bselect\\(.*?\\)\\.all\\(\\)"
-    description: "SQLAlchemy query results"
-    attack_vector:
-      - "T1005"
-  - pattern: "\\bquery\\(.*?\\)\\.all\\(\\)"
-    description: "ORM query results"
-    attack_vector:
-      - "T1005"
-  - pattern: "Model\\.objects\\.get\\("
-    description: "Django ORM single object"
-    attack_vector:
-      - "T1005"
-  - pattern: "Model\\.objects\\.filter\\("
-    description: "Django ORM filtered results"
     attack_vector:
       - "T1005"
 
 actions:
-  - pattern: "\\bhtml\\.escape\\s*\\("
+  # HTML escaping action
+  - reference: |
+      (call
+        function: (attribute
+          object: (identifier) @obj (#eq? @obj "html")
+          attribute: (identifier) @attr (#eq? @attr "escape")))
     description: "HTML escaping action"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\bre\\.(match|search)\\s*\\("
+  # Regex validation action
+  - reference: |
+      (call
+        function: (attribute
+          object: (identifier) @obj (#eq? @obj "re")
+          attribute: (identifier) @attr (#match? @attr "(match|search)")))
     description: "Regex validation action"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bbleach\\."
+  # HTML sanitization action
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "bleach")
+        attribute: (identifier))
     description: "HTML sanitization action"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\bpydantic\\."
+  # Data validation action
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "pydantic")
+        attribute: (identifier))
     description: "Data validation action"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bwerkzeug\\.security\\."
+  # Security utilities action
+  - reference: |
+      (attribute
+        object: (attribute
+          object: (identifier) @obj1 (#eq? @obj1 "werkzeug")
+          attribute: (identifier) @obj2 (#eq? @obj2 "security"))
+        attribute: (identifier))
     description: "Security utilities action"
     attack_vector:
       - "T1550"
       - "T1556"
-  - pattern: "\\bhashlib\\."
+  # Hash functions action
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "hashlib")
+        attribute: (identifier))
     description: "Hash functions action"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\bos\\.path\\.(abspath|realpath)\\s*\\("
+  # Path validation action
+  - reference: |
+      (call
+        function: (attribute
+          object: (attribute
+            object: (identifier) @obj1 (#eq? @obj1 "os")
+            attribute: (identifier) @obj2 (#eq? @obj2 "path"))
+          attribute: (identifier) @attr (#match? @attr "(abspath|realpath)")))
     description: "Path validation action"
     attack_vector:
       - "T1083"
       - "T1005"
-  - pattern: "\\blogger\\.(info|debug|warning|error)\\s*\\("
+  # Logging operations
+  - reference: |
+      (call
+        function: (attribute
+          object: (identifier) @obj (#eq? @obj "logger")
+          attribute: (identifier) @attr (#match? @attr "(info|debug|warning|error)")))
     description: "Logging operations"
     attack_vector:
       - "T1005"
       - "T1552"
 
 resources:
-  - pattern: "\\bopen\\s*\\("
+  # File operations resource
+  - reference: |
+      (call
+        function: (identifier) @func (#eq? @func "open"))
     description: "File operations resource"
     attack_vector:
       - "T1083"
       - "T1005"
-  - pattern: "\\bsubprocess\\."
+  # Process execution resource
+  - reference: |
+      (attribute
+        object: (identifier) @obj (#eq? @obj "subprocess")
+        attribute: (identifier))
     description: "Process execution resource"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "\\bos\\.system\\s*\\("
+  # System command execution resource
+  - reference: |
+      (call
+        function: (attribute
+          object: (identifier) @obj (#eq? @obj "os")
+          attribute: (identifier) @attr (#eq? @attr "system")))
     description: "System command execution resource"
     attack_vector:
       - "T1059"
       - "T1106"
-  - pattern: "\\beval\\s*\\("
+  # Code evaluation resource
+  - reference: |
+      (call
+        function: (identifier) @func (#eq? @func "eval"))
     description: "Code evaluation resource"
     attack_vector:
       - "T1059"
       - "T1027"
-  - pattern: "\\bexec\\s*\\("
+  # Code execution resource
+  - reference: |
+      (call
+        function: (identifier) @func (#eq? @func "exec"))
     description: "Code execution resource"
     attack_vector:
       - "T1059"
       - "T1106"
-  - pattern: "\\.execute\\s*\\("
+  # SQL execution resource
+  - reference: |
+      (call
+        function: (attribute
+          attribute: (identifier) @attr (#eq? @attr "execute")))
     description: "SQL execution resource"
     attack_vector:
       - "T1190"
