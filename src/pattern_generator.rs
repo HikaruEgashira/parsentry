@@ -1,7 +1,7 @@
 use anyhow::Result;
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
-use genai::resolver::{Endpoint, ServiceTargetResolver};
+use genai::resolver::{Endpoint, ServiceTargetResolver, AuthData};
 use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -34,7 +34,7 @@ fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
     
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { model, auth, .. } = service_target;
+            let ServiceTarget { model, .. } = service_target;
             
             // Use the custom base URL and force OpenAI adapter for compatibility
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
@@ -42,6 +42,8 @@ fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
             // When using custom base URL, assume OpenAI-compatible API
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
             
+            // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
+            let auth = AuthData::from_env("OPENAI_API_KEY");
             Ok(ServiceTarget { endpoint, auth, model })
         },
     )

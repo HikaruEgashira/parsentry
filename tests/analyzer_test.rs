@@ -19,6 +19,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
         0,
         &parsentry::parser::Context {
             definitions: vec![],
+            references: vec![],
         },
         0,
         false,
@@ -58,6 +59,7 @@ fn main() {
         0,
         &parsentry::parser::Context {
             definitions: vec![],
+            references: vec![],
         },
         0,
         false,
@@ -109,6 +111,7 @@ fn main() {
         0,
         &parsentry::parser::Context {
             definitions: vec![],
+            references: vec![],
         },
         0,
         false,

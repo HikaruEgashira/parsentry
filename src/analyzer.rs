@@ -78,11 +78,13 @@ fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
             
             // Use OpenAI adapter but with custom endpoint that already includes the full path
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-            let auth = None; // Let genai resolve OpenAI auth automatically
+            
+            // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
+            let auth = AuthData::from_env("OPENAI_API_KEY");
             
             Ok(ServiceTarget {
                 endpoint,
-                auth: auth.unwrap_or_else(|| AuthData::from_env("OPENAI_API_KEY")),
+                auth,
                 model
             })
         },
