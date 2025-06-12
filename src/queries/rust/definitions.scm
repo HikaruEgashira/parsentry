@@ -2,6 +2,5 @@
 (
   (function_item
     name: (identifier) @name
-    body: (block) @definition
-  )
+  ) @definition
 )
