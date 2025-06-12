@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
     if args.generate_patterns {
         println!("🔧 カスタムパターン生成モードを開始します");
         generate_custom_patterns(&root_dir, &args.model, api_base_url).await?;
-        println!("✅ パターン生成が完了しました\n");
+        println!("✅ パターン生成が完了しました");
     }
 
 

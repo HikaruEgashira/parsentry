@@ -1,12 +1,10 @@
 use anyhow::Result;
-use futures::stream::{self, StreamExt};
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
 use genai::{Client, ClientConfig};
-use genai::resolver::{Endpoint, ServiceTargetResolver, AuthData};
+use genai::resolver::{Endpoint, ServiceTargetResolver};
 use genai::{ServiceTarget, ModelIden, adapter::AdapterKind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use streaming_iterator::StreamingIterator;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
 
@@ -14,79 +12,6 @@ use crate::repo::RepoOps;
 use crate::security_patterns::Language;
 use crate::parser::Definition;
 
-fn extract_references_from_file(
-    parser: &mut crate::parser::CodeParser,
-    file_path: &Path,
-    seen_names: &std::collections::HashSet<String>
-) -> Result<Vec<Definition>> {
-    let mut references = Vec::new();
-    let mut found_references = std::collections::HashSet::new();
-    
-    let file_content = std::fs::read_to_string(file_path).unwrap_or_default();
-    let language = match parser.get_language(file_path) {
-        Some(lang) => lang,
-        None => return Ok(references),
-    };
-    
-    parser.parser.set_language(&language).map_err(|e| {
-        anyhow::anyhow!("言語設定失敗: {}", e)
-    })?;
-    
-    let tree = parser.parser.parse(&file_content, None)
-        .ok_or_else(|| anyhow::anyhow!("パース失敗: {}", file_path.display()))?;
-    
-    let query_str = parser.get_query_content(&language, "references")?;
-    let query = tree_sitter::Query::new(&language, query_str)?;
-    
-    let mut query_cursor = tree_sitter::QueryCursor::new();
-    let mut matches = query_cursor.matches(&query, tree.root_node(), file_content.as_bytes());
-    
-    while let Some(mat) = matches.next() {
-        for cap in mat.captures {
-            if query.capture_names()[cap.index as usize] == "reference" {
-                let node = cap.node;
-                if let Ok(name) = node.utf8_text(file_content.as_bytes()) {
-                    if !should_skip_reference(name, seen_names, &found_references) {
-                        found_references.insert(name.to_string());
-                        references.push(Definition {
-                            name: name.to_string(),
-                            start_byte: node.start_byte(),
-                            end_byte: node.end_byte(),
-                            source: name.to_string(),
-                        });
-                    }
-                }
-            }
-        }
-    }
-    
-    Ok(references)
-}
-
-fn should_skip_reference(
-    name: &str, 
-    seen_names: &std::collections::HashSet<String>, 
-    found_references: &std::collections::HashSet<String>
-) -> bool {
-    // Skip if already seen as definition or already found in this file
-    if seen_names.contains(name) || found_references.contains(name) {
-        return true;
-    }
-    
-    // Skip if too short
-    if name.len() < 3 {
-        return true;
-    }
-    
-    // Only consider names that likely represent external libraries or APIs
-    // Prefer names with capital letters, underscores, or longer names that suggest external APIs
-    let has_capitals = name.chars().any(|c| c.is_uppercase());
-    let has_underscores = name.contains('_');
-    let is_long_enough = name.len() >= 5;
-    
-    // Accept if it looks like an external API call
-    !(has_capitals || has_underscores || is_long_enough)
-}
 
 fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -106,26 +31,18 @@ fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json
 
 fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
     let base_url_owned = base_url.to_string();
-
+    
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { model, .. } = service_target;
-
-            // OpenAI adapter automatically adds /v1/chat/completions, so we need to provide base URL only
-            // The adapter will construct: base_url + /v1/chat/completions
-            // So we provide the base URL without any path to get the desired result
-            println!("🔍 Debug (Pattern): Base URL provided to OpenAI adapter: {}", base_url_owned);
+            let ServiceTarget { model, auth, .. } = service_target;
+            
+            // Use the custom base URL and force OpenAI adapter for compatibility
             let endpoint = Endpoint::from_owned(base_url_owned.clone());
-
-            // Use OpenAI adapter but with custom endpoint that already includes the full path
+            
+            // When using custom base URL, assume OpenAI-compatible API
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-            let auth = None; // Let genai resolve OpenAI auth automatically
-
-            Ok(ServiceTarget {
-                endpoint,
-                auth: auth.unwrap_or_else(|| AuthData::from_env("OPENAI_API_KEY")),
-                model
-            })
+            
+            Ok(ServiceTarget { endpoint, auth, model })
         },
     )
 }
@@ -221,37 +138,30 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
                 languages_found.insert(language, true);
 
                 println!(
-                    "📄 {} (言語: {:?}) から {}個のdefinitionsを検出",
+                    "📄 {} (言語: {:?}) から {}個のdefinitions、{}個のreferencesを検出",
                     file_path.display(),
                     language,
-                    context.definitions.len()
+                    context.definitions.len(),
+                    context.references.len()
                 );
-                if !context.definitions.is_empty() {
-                    for def in &context.definitions {
-                        print!("{},", def.name);
-                    }
-                    println!();
-                }
+                // if !context.definitions.is_empty() {
+                //     for def in &context.definitions {
+                //         print!("{},", def.name);
+                //     }
+                //     println!();
+                // }
+                // if !context.references.is_empty() {
+                //     for ref_def in &context.references {
+                //         print!("{},", ref_def.name);
+                //     }
+                //     println!();
+                // }
                 for def in context.definitions {
                     seen_names.insert(def.name.clone());
                     all_definitions.push((def, language));
                 }
-
-                // Extract references that are not already seen as definitions
-                let references = extract_references_from_file(&mut parser, file_path, &seen_names)?;
-                if !references.is_empty() {
-                    println!(
-                        "🔗 {} から {}個のreferencesを検出",
-                        file_path.display(),
-                        references.len()
-                    );
-                    for reference in &references {
-                        print!("{},", reference.name);
-                    }
-                    println!();
-                }
-                for reference in references {
-                    all_references.push((reference, language));
+                for ref_def in context.references {
+                    all_references.push((ref_def, language));
                 }
             }
             Err(e) => {
@@ -293,20 +203,21 @@ async fn generate_custom_patterns_impl(root_dir: &Path, model: &str, _max_parall
             lang_references.len()
         );
 
-        // Analyze both definitions and references
-        let mut all_patterns = Vec::new();
+        // Process definitions and references separately to maintain their distinctions
+        let mut definition_patterns = Vec::new();
+        let mut reference_patterns = Vec::new();
         
         if !lang_definitions.is_empty() {
-            let def_patterns =
-                analyze_definitions_for_security_patterns(model, &lang_definitions, language, api_base_url).await?;
-            all_patterns.extend(def_patterns);
+            definition_patterns = analyze_definitions_for_security_patterns(model, &lang_definitions, language, api_base_url).await?;
         }
         
         if !lang_references.is_empty() {
-            let ref_patterns =
-                analyze_definitions_for_security_patterns(model, &lang_references, language, api_base_url).await?;
-            all_patterns.extend(ref_patterns);
+            reference_patterns = analyze_references_for_security_patterns(model, &lang_references, language, api_base_url).await?;
         }
+        
+        // Combine all patterns
+        let mut all_patterns = definition_patterns;
+        all_patterns.extend(reference_patterns);
 
         // Deduplicate patterns based on function name
         let mut unique_patterns = Vec::new();
@@ -343,129 +254,108 @@ pub async fn analyze_definitions_for_security_patterns<'a>(
     language: Language,
     api_base_url: Option<&str>,
 ) -> Result<Vec<PatternClassification>> {
-    let max_parallel = 8; // デフォルトの並列数
-    println!(
-        "   🧠 {}個の定義を{}並列で個別分析中...",
-        definitions.len(),
-        max_parallel
-    );
-
-    // Create tasks for each definition analysis
-    let model_str = model.to_string();
-    let api_base_url_clone = api_base_url.map(|s| s.to_string());
-    let tasks = definitions.iter().enumerate().map(|(idx, def)| {
-        let model_clone = model_str.clone();
-        let def_clone = (*def).clone();
-        let api_base_url_ref = api_base_url_clone.as_deref();
-        async move {
-            if idx % 100 == 0 {
-                println!("     🔍 定義 {}/{} を処理中...", idx + 1, definitions.len());
-            }
-            analyze_single_definition_for_pattern(&model_clone, &def_clone, language, api_base_url_ref).await
-        }
-    });
-
-    // Execute tasks in parallel with controlled concurrency
-    let results: Vec<Result<Option<PatternClassification>>> = stream::iter(tasks)
-        .buffer_unordered(max_parallel)
-        .collect()
-        .await;
-
-    // Collect successful patterns
-    let mut all_patterns = Vec::new();
-    let mut success_count = 0;
-    let mut error_count = 0;
-
-    for result in results {
-        match result {
-            Ok(Some(pattern)) => {
-                all_patterns.push(pattern);
-                success_count += 1;
-            }
-            Ok(None) => {
-                // Definition was not a security pattern
-                success_count += 1;
-            }
-            Err(e) => {
-                error_count += 1;
-                if error_count <= 5 { // Only show first 5 errors
-                    eprintln!("     ⚠️  定義分析でエラー: {}", e);
-                }
-            }
-        }
-    }
-
-    println!(
-        "   ✅ 完了: 成功={}, エラー={}, 検出パターン={}個",
-        success_count, error_count, all_patterns.len()
-    );
-
-    Ok(all_patterns)
+    analyze_all_definitions_at_once(model, definitions, language, api_base_url).await
 }
 
-async fn analyze_single_definition_for_pattern(
+pub async fn analyze_references_for_security_patterns<'a>(
     model: &str,
-    definition: &crate::parser::Definition,
+    references: &'a [&crate::parser::Definition],
     language: Language,
     api_base_url: Option<&str>,
-) -> Result<Option<PatternClassification>> {
+) -> Result<Vec<PatternClassification>> {
+    analyze_all_references_at_once(model, references, language, api_base_url).await
+}
+
+async fn analyze_all_definitions_at_once(
+    model: &str,
+    definitions: &[&crate::parser::Definition],
+    language: Language,
+    api_base_url: Option<&str>,
+) -> Result<Vec<PatternClassification>> {
+    if definitions.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Create context for all definitions
+    let mut definitions_context = String::new();
+    for (idx, def) in definitions.iter().enumerate() {
+        definitions_context.push_str(&format!(
+            "Definition {}: {}\nCode:\n{}\n\n",
+            idx + 1,
+            def.name,
+            def.source
+        ));
+    }
 
     let prompt = format!(
-        r#"Analyze this single function definition from a {:?} codebase and determine if it represents a security pattern.
+        r#"Analyze these function definitions from a {:?} codebase and determine which represent security patterns.
 
-Function: {}
-Code:
 {}
 
-Determine if this function should be classified as:
-- "principals": Sources of authority, user input, external data entry points, or second-order data sources (e.g., database query results, API responses, file contents)
+For each function, determine if it should be classified as:
+- "principals": Sources that act as data entry points and should be treated as tainted/untrusted. This includes:
+  * User input functions (request handlers, form parsers, parameter getters)
+  * External data sources (API responses, file readers, database queries)
+  * Network/communication inputs (socket data, HTTP requests, message queues)
+  * Environment/configuration readers that could be attacker-controlled
+  * Second-order data sources (data previously stored from user input)
+  * Any function that introduces data from outside the application's control boundary
 - "actions": Functions that perform validation, sanitization, authorization, or security operations  
 - "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
 - "none": Not a security pattern
 
-For ALL responses, provide:
-1. A regex pattern (even if classification is "none", use a basic pattern)
-2. A description (brief explanation)
-3. Potential MITRE ATT&CK techniques (use empty array if none applicable)
+Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
 
 Return a JSON object with this structure:
+
 {{
-  "classification": "principals|actions|resources|none",
-  "function_name": "{}",
-  "pattern": "\\\\bfunction_name\\\\s*\\\\(",
-  "description": "Brief description of what this pattern detects",
-  "reasoning": "Why this function fits this classification",
-  "attack_vector": ["T1234", "T5678"]
+  "patterns": [
+    {{
+      "classification": "principals|actions|resources|none",
+      "function_name": "function_name",
+      "pattern": "\\\\bfunction_name\\\\s*\\\\(",
+      "description": "Brief description of what this pattern detects",
+      "reasoning": "Why this function fits this classification",
+      "attack_vector": ["T1234", "T5678"]
+    }}
+  ]
 }}
 
-All fields are required."#,
+All fields are required for each object."#,
         language,
-        definition.name,
-        definition.source,
-        definition.name
+        definitions_context
     );
 
     let response_schema = serde_json::json!({
         "type": "object",
         "properties": {
-            "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
-            "function_name": {"type": "string"},
-            "pattern": {"type": "string"},
-            "description": {"type": "string"},
-            "reasoning": {"type": "string"},
-            "attack_vector": {
+            "patterns": {
                 "type": "array",
-                "items": {"type": "string"}
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
+                        "function_name": {"type": "string"},
+                        "pattern": {"type": "string"},
+                        "description": {"type": "string"},
+                        "reasoning": {"type": "string"},
+                        "attack_vector": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        }
+                    },
+                    "required": ["classification", "function_name", "pattern", "description", "reasoning", "attack_vector"]
+                }
             }
         },
-        "required": ["classification", "function_name", "pattern", "description", "reasoning", "attack_vector"]
+        "required": ["patterns"]
     });
 
     let client = create_pattern_client(api_base_url, response_schema);
 
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(
-            "You are a security pattern analyzer. Reply with exactly one JSON object. Be conservative - only classify as security patterns if clearly relevant.",
+            "You are a security pattern analyzer. Reply with exactly one JSON object containing a 'patterns' array with analysis for all functions. Be conservative - only classify as security patterns if clearly relevant.",
         ),
         ChatMessage::user(&prompt),
     ]);
@@ -476,7 +366,12 @@ All fields are required."#,
         .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
 
     #[derive(Deserialize)]
-    struct SingleAnalysisResponse {
+    struct BatchAnalysisResponse {
+        patterns: Vec<PatternResponse>,
+    }
+
+    #[derive(Deserialize)]
+    struct PatternResponse {
         classification: String,
         function_name: String,
         pattern: String,
@@ -485,22 +380,176 @@ All fields are required."#,
         attack_vector: Vec<String>,
     }
 
-    let response: SingleAnalysisResponse = serde_json::from_str(content).map_err(|e| {
+    let response: BatchAnalysisResponse = serde_json::from_str(content).map_err(|e| {
         anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
     })?;
 
-    if response.classification == "none" {
-        return Ok(None);
+    let mut patterns = Vec::new();
+    let mut security_pattern_count = 0;
+
+    for pattern_resp in response.patterns {
+        if pattern_resp.classification != "none" {
+            patterns.push(PatternClassification {
+                function_name: pattern_resp.function_name,
+                pattern_type: Some(pattern_resp.classification),
+                pattern: pattern_resp.pattern,
+                description: pattern_resp.description,
+                reasoning: pattern_resp.reasoning,
+                attack_vector: pattern_resp.attack_vector,
+            });
+            security_pattern_count += 1;
+        }
     }
 
-    Ok(Some(PatternClassification {
-        function_name: response.function_name,
-        pattern_type: Some(response.classification),
-        pattern: response.pattern,
-        description: response.description,
-        reasoning: response.reasoning,
-        attack_vector: response.attack_vector,
-    }))
+    println!(
+        "✅ 完了: 全{}個分析, セキュリティパターン{}個検出",
+        definitions.len(), security_pattern_count
+    );
+
+    Ok(patterns)
+}
+
+async fn analyze_all_references_at_once(
+    model: &str,
+    references: &[&crate::parser::Definition],
+    language: Language,
+    api_base_url: Option<&str>,
+) -> Result<Vec<PatternClassification>> {
+    if references.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Create context for all references
+    let mut references_context = String::new();
+    for (idx, ref_def) in references.iter().enumerate() {
+        references_context.push_str(&format!(
+            "Reference {}: {}\nCode:\n{}\n\n",
+            idx + 1,
+            ref_def.name,
+            ref_def.source
+        ));
+    }
+
+    let prompt = format!(
+        r#"Analyze these function references/calls from a {:?} codebase and determine which represent calls to security-sensitive functions.
+
+{}
+
+For each function reference, determine if it should be classified as:
+- "principals": Calls to functions that act as data entry points and should be treated as tainted/untrusted. This includes:
+  * User input functions (request handlers, form parsers, parameter getters)
+  * External data sources (API responses, file readers, database queries)
+  * Network/communication inputs (socket data, HTTP requests, message queues)
+  * Environment/configuration readers that could be attacker-controlled
+  * Second-order data sources (data previously stored from user input)
+  * Any function that introduces data from outside the application's control boundary
+- "actions": Calls to functions that perform validation, sanitization, authorization, or security operations
+- "resources": Calls to functions that access, modify, or perform operations on files, databases, networks, or system resources
+- "none": Not a security-relevant call
+
+Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
+
+Return a JSON object with this structure:
+
+{{
+  "patterns": [
+    {{
+      "classification": "principals|actions|resources|none",
+      "function_name": "function_name",
+      "pattern": "\\\\bfunction_name\\\\s*\\\\(",
+      "description": "Brief description of what this pattern detects",
+      "reasoning": "Why this function call fits this classification",
+      "attack_vector": ["T1234", "T5678"]
+    }}
+  ]
+}}
+
+All fields are required for each object."#,
+        language,
+        references_context
+    );
+
+    let response_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "patterns": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
+                        "function_name": {"type": "string"},
+                        "pattern": {"type": "string"},
+                        "description": {"type": "string"},
+                        "reasoning": {"type": "string"},
+                        "attack_vector": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        }
+                    },
+                    "required": ["classification", "function_name", "pattern", "description", "reasoning", "attack_vector"]
+                }
+            }
+        },
+        "required": ["patterns"]
+    });
+
+    let client = create_pattern_client(api_base_url, response_schema);
+
+    let chat_req = ChatRequest::new(vec![
+        ChatMessage::system(
+            "You are a security pattern analyzer for function references. Reply with exactly one JSON object containing a 'patterns' array with analysis for all function calls. Focus on calls to security-sensitive functions.",
+        ),
+        ChatMessage::user(&prompt),
+    ]);
+
+    let chat_res = client.exec_chat(model, chat_req, None).await?;
+    let content = chat_res
+        .content_text_as_str()
+        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
+
+    #[derive(Deserialize)]
+    struct BatchAnalysisResponse {
+        patterns: Vec<PatternResponse>,
+    }
+
+    #[derive(Deserialize)]
+    struct PatternResponse {
+        classification: String,
+        function_name: String,
+        pattern: String,
+        description: String,
+        reasoning: String,
+        attack_vector: Vec<String>,
+    }
+
+    let response: BatchAnalysisResponse = serde_json::from_str(content).map_err(|e| {
+        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
+    })?;
+
+    let mut patterns = Vec::new();
+    let mut security_pattern_count = 0;
+
+    for pattern_resp in response.patterns {
+        if pattern_resp.classification != "none" {
+            patterns.push(PatternClassification {
+                function_name: pattern_resp.function_name,
+                pattern_type: Some(pattern_resp.classification),
+                pattern: pattern_resp.pattern,
+                description: pattern_resp.description,
+                reasoning: pattern_resp.reasoning,
+                attack_vector: pattern_resp.attack_vector,
+            });
+            security_pattern_count += 1;
+        }
+    }
+
+    println!(
+        "✅ 完了: 全{}個参照分析, セキュリティパターン{}個検出",
+        references.len(), security_pattern_count
+    );
+
+    Ok(patterns)
 }
 
 
@@ -552,15 +601,15 @@ pub fn write_patterns_to_file(
         for pattern in principals {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
-                pattern.pattern, pattern.description
+                pattern.pattern.replace("\\", "\\\\"), pattern.description
             ));
             yaml_content.push_str("      attack_vector:\n");
-            if pattern.attack_vector.is_empty() {
-                yaml_content.push_str("        []\n");
-            } else {
+            if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
                     yaml_content.push_str(&format!("        - \"{}\"\n", technique));
                 }
+            } else {
+                yaml_content.push_str("        []\n");
             }
         }
     }
@@ -570,15 +619,15 @@ pub fn write_patterns_to_file(
         for pattern in actions {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
-                pattern.pattern, pattern.description
+                pattern.pattern.replace("\\", "\\\\"), pattern.description
             ));
             yaml_content.push_str("      attack_vector:\n");
-            if pattern.attack_vector.is_empty() {
-                yaml_content.push_str("        []\n");
-            } else {
+            if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
                     yaml_content.push_str(&format!("        - \"{}\"\n", technique));
                 }
+            } else {
+                yaml_content.push_str("        []\n");
             }
         }
     }
@@ -588,15 +637,15 @@ pub fn write_patterns_to_file(
         for pattern in resources {
             yaml_content.push_str(&format!(
                 "    - pattern: \"{}\"\n      description: \"{}\"\n",
-                pattern.pattern, pattern.description
+                pattern.pattern.replace("\\", "\\\\"), pattern.description
             ));
             yaml_content.push_str("      attack_vector:\n");
-            if pattern.attack_vector.is_empty() {
-                yaml_content.push_str("        []\n");
-            } else {
+            if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
                     yaml_content.push_str(&format!("        - \"{}\"\n", technique));
                 }
+            } else {
+                yaml_content.push_str("        []\n");
             }
         }
     }

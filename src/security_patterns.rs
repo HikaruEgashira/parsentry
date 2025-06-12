@@ -290,8 +290,6 @@ impl SecurityRiskPatterns {
                                         map.insert(language, patterns);
                                     }
                                 }
-
-                                println!("✅ Loaded custom patterns for {:?} from vuln-patterns.yml", language);
                             }
                         }
                         Err(e) => {
