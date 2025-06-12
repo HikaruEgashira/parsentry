@@ -448,6 +448,7 @@ For each function reference, determine if it should be classified as:
 - "none": Not a security-relevant call
 
 Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
+
 Return a JSON object with this structure:
 
 {{
