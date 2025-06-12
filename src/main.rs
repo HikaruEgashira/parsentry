@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use parsentry::analyzer::analyze_file;
 use parsentry::args::{Args, validate_args};
 use parsentry::file_classifier::FileClassifier;
+use parsentry::language::Language;
+use parsentry::locales;
 use parsentry::parser;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::sarif::SarifReport;
@@ -45,6 +47,10 @@ async fn main() -> Result<()> {
 
     validate_args(&args)?;
 
+    // Create language configuration
+    let language = Language::from_string(&args.language);
+    let messages = locales::get_messages(&language);
+
     // Get API base URL from CLI arg or environment variable
     let env_base_url = std::env::var("API_BASE_URL").ok();
     let api_base_url = args.api_base_url.as_deref()
@@ -54,15 +60,16 @@ async fn main() -> Result<()> {
         let dest = PathBuf::from("repo");
         if dest.exists() {
             std::fs::remove_dir_all(&dest)
-                .map_err(|e| anyhow::anyhow!("クローン先ディレクトリの削除に失敗: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("{}: {}", messages.get("error_clone_failed").map_or("Failed to delete clone directory", |s| s), e))?;
         }
         println!(
-            "🛠️  GitHubリポジトリをクローン中: {} → {}",
+            "🛠️  {}: {} → {}",
+            messages.get("cloning_repo").map_or("Cloning GitHub repository", |s| s),
             repo,
             dest.display()
         );
         clone_github_repo(repo, &dest)
-            .map_err(|e| anyhow::anyhow!("GitHubリポジトリのクローンに失敗: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("{}: {}", messages.get("github_repo_clone_failed").map_or("Failed to clone GitHub repository", |s| s), e))?;
         
         // Extract repository name for output directory
         let repo_name = if repo.contains('/') {
@@ -80,9 +87,9 @@ async fn main() -> Result<()> {
 
     // Handle pattern generation mode
     if args.generate_patterns {
-        println!("🔧 カスタムパターン生成モードを開始します");
+        println!("🔧 {}", messages.get("custom_pattern_generation_start").unwrap_or(&"Starting custom pattern generation mode"));
         generate_custom_patterns(&root_dir, &args.model, api_base_url).await?;
-        println!("✅ パターン生成が完了しました");
+        println!("✅ {}", messages.get("pattern_generation_completed").unwrap_or(&"Pattern generation completed"));
     }
 
 
@@ -90,7 +97,8 @@ async fn main() -> Result<()> {
 
     let files = repo.get_relevant_files();
     println!(
-        "📁 関連するソースファイルを検出しました ({}件)",
+        "📁 {} ({}件)",
+        messages.get("relevant_files_detected").unwrap_or(&"Detected relevant source files"),
         files.len()
     );
 
@@ -108,7 +116,8 @@ async fn main() -> Result<()> {
     }
 
     println!(
-        "🔎 セキュリティパターン該当ファイルを検出しました ({}件)",
+        "🔎 {} ({}件)",
+        messages.get("security_pattern_files_detected").unwrap_or(&"Detected security pattern matching files"),
         pattern_files.len()
     );
     for (i, f) in pattern_files.iter().enumerate() {
@@ -158,12 +167,14 @@ async fn main() -> Result<()> {
             let files = files.clone();
             let progress_bar = progress_bar.clone();
             let debug = debug;
+            let messages = messages.clone();
+            let language = language.clone();
 
             async move {
                 let file_name = file_path.display().to_string();
                 progress_bar.set_message(format!("Analyzing: {}", file_name));
                 if verbosity > 0 {
-                    println!("📄 解析対象: {} ({} / {})", file_name, idx + 1, total);
+                    println!("📄 {}: {} ({} / {})", messages.get("analysis_target").unwrap_or(&"Analysis target"), file_name, idx + 1, total);
                     println!("{}", "=".repeat(80));
                 }
 
@@ -171,7 +182,8 @@ async fn main() -> Result<()> {
                 if let Err(e) = repo.add_file_to_parser(&file_path) {
                     if verbosity > 0 {
                         println!(
-                            "❌ ファイルのパース追加に失敗: {}: {}",
+                            "❌ {}: {}: {}",
+                            messages.get("parse_add_failed").unwrap_or(&"Failed to add file to parser"),
                             file_path.display(),
                             e
                         );
@@ -182,18 +194,18 @@ async fn main() -> Result<()> {
                 let context = match repo.collect_context_for_security_pattern(&file_path) {
                     Ok(ctx) => ctx,
                     Err(e) => {
-                        println!("⚠️  コンテキスト収集に失敗（空のコンテキストで継続）: {}: {}", file_path.display(), e);
+                        println!("⚠️  {}（空のコンテキストで継続）: {}: {}", messages.get("context_collection_failed").unwrap_or(&"Failed to collect context"), file_path.display(), e);
                         // For IaC files and other unsupported file types, continue with empty context
                         parser::Context { definitions: Vec::new(), references: Vec::new() }
                     }
                 };
 
                 let analysis_result =
-                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0, debug, &output_dir, api_base_url).await {
+                    match analyze_file(&file_path, &model, &files, verbosity, &context, 0, debug, &output_dir, api_base_url, &language).await {
                         Ok(res) => res,
                         Err(e) => {
                             if verbosity > 0 {
-                                println!("❌ 解析に失敗: {}: {}", file_path.display(), e);
+                                println!("❌ {}: {}: {}", messages.get("analysis_failed").unwrap_or(&"Analysis failed"), file_path.display(), e);
                             }
                             progress_bar.inc(1);
                             return None;
@@ -211,7 +223,8 @@ async fn main() -> Result<()> {
                     if let Err(e) = std::fs::create_dir_all(output_dir) {
                         if verbosity > 0 {
                             println!(
-                                "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                                "❌ {}: {}: {}",
+                                messages.get("error_directory_creation").map_or("Failed to create directory", |s| s),
                                 output_dir.display(),
                                 e
                             );
@@ -228,7 +241,8 @@ async fn main() -> Result<()> {
                     if let Err(e) = std::fs::write(&out_path, analysis_result.to_markdown()) {
                         if verbosity > 0 {
                             println!(
-                                "❌ Markdownレポート出力に失敗: {}: {}",
+                                "❌ {}: {}: {}",
+                                messages.get("markdown_report_output_failed").map_or("Failed to output Markdown report", |s| s),
                                 out_path.display(),
                                 e
                             );
@@ -237,7 +251,7 @@ async fn main() -> Result<()> {
                         return None;
                     }
                     if verbosity > 0 {
-                        println!("📝 Markdownレポートを出力: {}", out_path.display());
+                        println!("📝 {}: {}", messages.get("markdown_report_output").map_or("Output Markdown report", |s| s), out_path.display());
                     }
                 }
 
@@ -258,7 +272,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    progress_bar.finish_with_message("Analysis completed!");
+    progress_bar.finish_with_message(messages.get("analysis_completed").map_or("Analysis completed!", |s| s));
 
     summary.sort_by_confidence();
 
@@ -291,7 +305,8 @@ async fn main() -> Result<()> {
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
-                    "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                    "❌ {}: {}: {}",
+                    messages.get("error_directory_creation").map_or("Failed to create directory", |s| s),
                     final_output_dir.display(),
                     e
                 );
@@ -301,17 +316,18 @@ async fn main() -> Result<()> {
                     summary_path.push("summary.md");
                     if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
                         println!(
-                            "❌ サマリーレポート出力に失敗: {}: {}",
+                            "❌ {}: {}: {}",
+                            messages.get("summary_report_output_failed").map_or("Failed to output summary report", |s| s),
                             summary_path.display(),
                             e
                         );
                     } else {
-                        println!("📊 サマリーレポートを出力: {}", summary_path.display());
+                        println!("📊 {}: {}", messages.get("summary_report_output").map_or("Output summary report", |s| s), summary_path.display());
                     }
                 }
             }
         } else {
-            println!("⚠ サマリーレポートを出力するには --output-dir オプションが必要です");
+            println!("⚠ {}", messages.get("summary_report_needs_output_dir").map_or("Summary report output requires --output-dir option", |s| s));
         }
     }
 
@@ -322,7 +338,8 @@ async fn main() -> Result<()> {
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
-                    "❌ 出力ディレクトリ作成に失敗: {}: {}",
+                    "❌ {}: {}: {}",
+                    messages.get("error_directory_creation").map_or("Failed to create directory", |s| s),
                     final_output_dir.display(),
                     e
                 );
@@ -331,24 +348,25 @@ async fn main() -> Result<()> {
                 sarif_path.push("parsentry-results.sarif");
                 if let Err(e) = sarif_report.save_to_file(&sarif_path) {
                     println!(
-                        "❌ SARIFレポート出力に失敗: {}: {}",
+                        "❌ {}: {}: {}",
+                        messages.get("sarif_report_output_failed").map_or("Failed to output SARIF report", |s| s),
                         sarif_path.display(),
                         e
                     );
                 } else {
-                    println!("📋 SARIFレポートを出力: {}", sarif_path.display());
+                    println!("📋 {}: {}", messages.get("sarif_report_output").map_or("Output SARIF report", |s| s), sarif_path.display());
                 }
             }
         } else {
             // Output SARIF to stdout if no output directory specified
             match sarif_report.to_json() {
                 Ok(json) => println!("{}", json),
-                Err(e) => println!("❌ SARIF出力に失敗: {}", e),
+                Err(e) => println!("❌ {}: {}", messages.get("sarif_output_failed").map_or("Failed to output SARIF", |s| s), e),
             }
         }
     }
 
-    println!("✅ 解析が完了しました");
+    println!("✅ {}", messages.get("analysis_completed").map_or("Analysis completed", |s| s));
 
     Ok(())
 }

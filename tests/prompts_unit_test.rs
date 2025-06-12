@@ -1,54 +1,60 @@
+use parsentry::locales::*;
+use parsentry::language::Language;
 use parsentry::prompts::{
-    ANALYSIS_APPROACH_TEMPLATE, GUIDELINES_TEMPLATE, INITIAL_ANALYSIS_PROMPT_TEMPLATE,
-    SYS_PROMPT_TEMPLATE, vuln_specific,
+    vuln_specific,
 };
 use parsentry::response::VulnType;
 
 #[test]
 fn test_sys_prompt_template() {
-    assert!(!SYS_PROMPT_TEMPLATE.is_empty());
-    assert!(SYS_PROMPT_TEMPLATE.contains("セキュリティ研究者"));
-    assert!(SYS_PROMPT_TEMPLATE.contains("脆弱性"));
-    assert!(SYS_PROMPT_TEMPLATE.contains("入力値の検証"));
-    assert!(SYS_PROMPT_TEMPLATE.contains("認証・認可"));
+    let template = get_sys_prompt_template(&Language::Japanese);
+    assert!(!template.is_empty());
+    assert!(template.contains("セキュリティ研究者"));
+    assert!(template.contains("脆弱性"));
+    assert!(template.contains("入力値の検証"));
+    assert!(template.contains("認証・認可"));
 }
 
 #[test]
 fn test_initial_analysis_prompt_template() {
-    assert!(!INITIAL_ANALYSIS_PROMPT_TEMPLATE.is_empty());
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("PAR"));
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("Principal"));
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("Action"));
-    assert!(INITIAL_ANALYSIS_PROMPT_TEMPLATE.contains("Resource"));
+    let template = get_initial_analysis_prompt_template(&Language::Japanese);
+    assert!(!template.is_empty());
+    assert!(template.contains("PAR"));
+    assert!(template.contains("Principal"));
+    assert!(template.contains("Action"));
+    assert!(template.contains("Resource"));
 }
 
 #[test]
 fn test_analysis_approach_template() {
-    assert!(!ANALYSIS_APPROACH_TEMPLATE.is_empty());
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("PARモデル"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("Principal識別"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("Resource識別"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("Action評価"));
-    assert!(ANALYSIS_APPROACH_TEMPLATE.contains("ポリシー違反"));
+    let template = get_analysis_approach_template(&Language::Japanese);
+    assert!(!template.is_empty());
+    assert!(template.contains("PARモデル"));
+    assert!(template.contains("Principal識別"));
+    assert!(template.contains("Resource識別"));
+    assert!(template.contains("Action評価"));
+    assert!(template.contains("ポリシー違反"));
 }
 
 #[test]
 fn test_guidelines_template() {
-    assert!(!GUIDELINES_TEMPLATE.is_empty());
-    assert!(GUIDELINES_TEMPLATE.contains("PAR"));
-    assert!(GUIDELINES_TEMPLATE.contains("Principal評価"));
-    assert!(GUIDELINES_TEMPLATE.contains("Resource評価"));
-    assert!(GUIDELINES_TEMPLATE.contains("Action評価"));
-    assert!(GUIDELINES_TEMPLATE.contains("日本語"));
+    let template = get_guidelines_template(&Language::Japanese);
+    assert!(!template.is_empty());
+    assert!(template.contains("PAR"));
+    assert!(template.contains("Principal評価"));
+    assert!(template.contains("Resource評価"));
+    assert!(template.contains("Action評価"));
+    assert!(template.contains("日本語"));
 }
 
 #[test]
 fn test_prompt_templates_are_non_empty() {
+    let language = Language::Japanese;
     let templates = [
-        SYS_PROMPT_TEMPLATE,
-        INITIAL_ANALYSIS_PROMPT_TEMPLATE,
-        ANALYSIS_APPROACH_TEMPLATE,
-        GUIDELINES_TEMPLATE,
+        get_sys_prompt_template(&language),
+        get_initial_analysis_prompt_template(&language),
+        get_analysis_approach_template(&language),
+        get_guidelines_template(&language),
     ];
 
     for template in templates {
@@ -60,12 +66,13 @@ fn test_prompt_templates_are_non_empty() {
 #[test]
 fn test_prompt_templates_contain_analysis_keywords() {
     let analysis_keywords = ["分析", "脆弱性", "セキュリティ", "コード"];
+    let language = Language::Japanese;
 
     let templates = [
-        SYS_PROMPT_TEMPLATE,
-        INITIAL_ANALYSIS_PROMPT_TEMPLATE,
-        ANALYSIS_APPROACH_TEMPLATE,
-        GUIDELINES_TEMPLATE,
+        get_sys_prompt_template(&language),
+        get_initial_analysis_prompt_template(&language),
+        get_analysis_approach_template(&language),
+        get_guidelines_template(&language),
     ];
 
     for template in templates {
@@ -207,11 +214,12 @@ fn test_lfi_specific_prompt() {
 
 #[test]
 fn test_prompt_templates_formatting() {
+    let language = Language::Japanese;
     let templates = [
-        SYS_PROMPT_TEMPLATE,
-        INITIAL_ANALYSIS_PROMPT_TEMPLATE,
-        ANALYSIS_APPROACH_TEMPLATE,
-        GUIDELINES_TEMPLATE,
+        get_sys_prompt_template(&language),
+        get_initial_analysis_prompt_template(&language),
+        get_analysis_approach_template(&language),
+        get_guidelines_template(&language),
     ];
 
     for template in templates {
@@ -225,9 +233,9 @@ fn test_prompt_templates_formatting() {
 
 #[test]
 fn test_evaluator_prompt_template() {
-    use parsentry::prompts::EVALUATOR_PROMPT_TEMPLATE;
+    let template = get_evaluator_prompt_template(&Language::Japanese);
 
-    assert!(!EVALUATOR_PROMPT_TEMPLATE.is_empty());
+    assert!(!template.is_empty());
     // The evaluator prompt should be for evaluation purposes
-    assert!(EVALUATOR_PROMPT_TEMPLATE.len() > 50); // Should be substantial
+    assert!(template.len() > 50); // Should be substantial
 }

@@ -6,6 +6,8 @@ use tempfile::NamedTempFile;
 use parsentry::analyzer::analyze_file;
 #[allow(unused_imports)]
 use parsentry::response::VulnType;
+#[allow(unused_imports)]
+use parsentry::language::Language;
 
 #[cfg(feature = "snapshot-test")]
 #[tokio::test]
@@ -25,6 +27,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
         false,
         &None,
         None,
+        &Language::English,
     )
     .await?;
 
@@ -65,6 +68,7 @@ fn main() {
         false,
         &None,
         None,
+        &Language::English,
     )
     .await?;
 
@@ -117,6 +121,7 @@ fn main() {
         false,
         &None,
         None,
+        &Language::English,
     )
     .await?;
 

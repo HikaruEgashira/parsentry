@@ -13,6 +13,7 @@ use std::fs;
 
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
+use crate::language::Language;
 use crate::response::{Response, response_json_schema};
 use crate::security_patterns::{PatternType, SecurityRiskPatterns};
 
@@ -171,6 +172,7 @@ pub async fn analyze_file(
     debug: bool,
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
+    language: &Language,
 ) -> Result<Response, Error> {
     info!("Performing initial analysis of {}", file_path.display());
 
@@ -222,9 +224,9 @@ pub async fn analyze_file(
         file_path.display(),
         content,
         context_text,
-        prompts::INITIAL_ANALYSIS_PROMPT_TEMPLATE,
-        prompts::ANALYSIS_APPROACH_TEMPLATE,
-        prompts::GUIDELINES_TEMPLATE,
+        prompts::get_initial_analysis_prompt_template(language),
+        prompts::get_analysis_approach_template(language),
+        prompts::get_guidelines_template(language),
     );
     debug!("[PROMPT]\n{}", prompt);
 
@@ -315,8 +317,8 @@ pub async fn analyze_file(
                     vuln_type,
                     vuln_info.bypasses.join("\n"),
                     vuln_info.prompt,
-                    prompts::ANALYSIS_APPROACH_TEMPLATE,
-                    prompts::GUIDELINES_TEMPLATE,
+                    prompts::get_analysis_approach_template(language),
+                    prompts::get_guidelines_template(language),
                 );
 
                 // Save debug input if debug mode is enabled

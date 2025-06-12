@@ -50,6 +50,9 @@ pub struct Args {
 
     #[arg(long)]
     pub api_base_url: Option<String>,
+
+    #[arg(long, default_value = "ja")]
+    pub language: String,
 }
 
 pub fn validate_output_directory(output_dir: &PathBuf) -> Result<()> {

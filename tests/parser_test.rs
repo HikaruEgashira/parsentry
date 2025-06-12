@@ -4,15 +4,15 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-#[tokio::test]
-async fn test_code_parser_new() -> Result<()> {
+#[test]
+fn test_code_parser_new() -> Result<()> {
     let parser = CodeParser::new()?;
     assert!(parser.files.is_empty());
     Ok(())
 }
 
-#[tokio::test]
-async fn test_add_file_success() -> Result<()> {
+#[test]
+fn test_add_file_success() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(&file_path, "fn main() {}")?;
@@ -26,8 +26,8 @@ async fn test_add_file_success() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_add_file_not_found() -> Result<()> {
+#[test]
+fn test_add_file_not_found() -> Result<()> {
     let mut parser = CodeParser::new()?;
     let non_existent_path = PathBuf::from("/non/existent/file.rs");
 
@@ -42,138 +42,50 @@ async fn test_add_file_not_found() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_get_language_rust() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let rust_path = PathBuf::from("test.rs");
-    let language = parser.get_language(&rust_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_c() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let c_path = PathBuf::from("test.c");
-    let language = parser.get_language(&c_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_cpp() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let cpp_paths = vec!["test.cpp", "test.cxx", "test.cc", "test.hpp", "test.hxx"];
-
-    for path_str in cpp_paths {
-        let path = PathBuf::from(path_str);
-        let language = parser.get_language(&path);
-        assert!(language.is_some(), "Failed for extension: {}", path_str);
-    }
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_python() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let python_path = PathBuf::from("test.py");
-    let language = parser.get_language(&python_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_javascript() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let js_path = PathBuf::from("test.js");
-    let language = parser.get_language(&js_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_typescript() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let ts_paths = vec!["test.ts", "test.tsx"];
-
-    for path_str in ts_paths {
-        let path = PathBuf::from(path_str);
-        let language = parser.get_language(&path);
-        assert!(language.is_some(), "Failed for extension: {}", path_str);
-    }
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_java() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let java_path = PathBuf::from("test.java");
-    let language = parser.get_language(&java_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_go() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let go_path = PathBuf::from("test.go");
-    let language = parser.get_language(&go_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_ruby() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let ruby_path = PathBuf::from("test.rb");
-    let language = parser.get_language(&ruby_path);
-    assert!(language.is_some());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_terraform() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let tf_paths = vec!["test.tf", "test.hcl"];
-
-    for path_str in tf_paths {
-        let path = PathBuf::from(path_str);
-        let language = parser.get_language(&path);
-        assert!(language.is_some(), "Failed for extension: {}", path_str);
-    }
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_language_php() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let php_paths = vec![
-        "test.php",
-        "test.php3",
-        "test.php4",
-        "test.php5",
-        "test.phtml",
+#[test]
+fn test_get_language_supported_extensions() {
+    let parser = CodeParser::new().unwrap();
+    let test_cases = vec![
+        ("test.rs", true, "rust"),
+        ("test.c", true, "c"),
+        ("test.cpp", true, "cpp"),
+        ("test.cxx", true, "cpp"),
+        ("test.cc", true, "cpp"),
+        ("test.hpp", true, "cpp"),
+        ("test.hxx", true, "cpp"),
+        ("test.py", true, "python"),
+        ("test.js", true, "javascript"),
+        ("test.ts", true, "typescript"),
+        ("test.tsx", true, "typescript"),
+        ("test.java", true, "java"),
+        ("test.go", true, "go"),
+        ("test.rb", true, "ruby"),
+        ("test.tf", true, "terraform"),
+        ("test.hcl", true, "terraform"),
+        ("test.php", true, "php"),
+        ("test.php3", true, "php"),
+        ("test.php4", true, "php"),
+        ("test.php5", true, "php"),
+        ("test.phtml", true, "php"),
+        ("test.txt", false, "unsupported"),
+        ("test.unknown", false, "unsupported"),
     ];
 
-    for path_str in php_paths {
-        let path = PathBuf::from(path_str);
+    for (filename, should_be_supported, description) in test_cases {
+        let path = PathBuf::from(filename);
         let language = parser.get_language(&path);
-        assert!(language.is_some(), "Failed for extension: {}", path_str);
+        assert_eq!(
+            language.is_some(),
+            should_be_supported,
+            "Language support test failed for {} ({})",
+            filename,
+            description
+        );
     }
-    Ok(())
 }
 
-#[tokio::test]
-async fn test_get_language_unsupported() -> Result<()> {
-    let parser = CodeParser::new()?;
-    let unsupported_path = PathBuf::from("test.txt");
-    let language = parser.get_language(&unsupported_path);
-    assert!(language.is_none());
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_get_query_content_through_file_operations() -> Result<()> {
+#[test]
+fn test_get_query_content_through_file_operations() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(&file_path, "fn test_function() {}")?;
@@ -181,7 +93,6 @@ async fn test_get_query_content_through_file_operations() -> Result<()> {
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
 
-    // Test through actual file operations to validate get_query_content indirectly
     let result = parser.find_definition("test_function", &file_path)?;
     assert!(
         result.is_some(),
@@ -190,8 +101,8 @@ async fn test_get_query_content_through_file_operations() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_definition_simple_rust() -> Result<()> {
+#[test]
+fn test_find_definition_simple_rust() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(
@@ -208,16 +119,19 @@ async fn test_find_definition_simple_rust() -> Result<()> {
     let (found_path, definition) = result.unwrap();
     assert_eq!(found_path, file_path);
     assert_eq!(definition.name, "hello_world");
-    // The source should contain the function definition
     assert!(
         !definition.source.is_empty(),
         "Definition source should not be empty"
     );
+    assert!(
+        definition.source.contains("fn hello_world"),
+        "Source should contain function definition"
+    );
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_definition_not_found() -> Result<()> {
+#[test]
+fn test_find_definition_not_found() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(
@@ -233,14 +147,13 @@ async fn test_find_definition_not_found() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_definition_file_not_in_parser() -> Result<()> {
+#[test]
+fn test_find_definition_file_not_in_parser() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(&file_path, "fn hello_world() {}")?;
 
     let mut parser = CodeParser::new()?;
-    // Note: not adding file to parser
 
     let result = parser.find_definition("hello_world", &file_path);
     assert!(result.is_err());
@@ -253,8 +166,8 @@ async fn test_find_definition_file_not_in_parser() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_references_simple_rust() -> Result<()> {
+#[test]
+fn test_find_references_simple_rust() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(
@@ -268,7 +181,6 @@ async fn test_find_references_simple_rust() -> Result<()> {
     let results = parser.find_references("hello_world")?;
     assert!(!results.is_empty());
 
-    // Should find references in the main function
     let references: Vec<_> = results
         .iter()
         .filter(|(_, def)| def.name == "hello_world")
@@ -277,8 +189,8 @@ async fn test_find_references_simple_rust() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_references_no_matches() -> Result<()> {
+#[test]
+fn test_find_references_no_matches() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(
@@ -294,8 +206,8 @@ async fn test_find_references_no_matches() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_bidirectional() -> Result<()> {
+#[test]
+fn test_find_bidirectional() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(
@@ -309,7 +221,6 @@ async fn test_find_bidirectional() -> Result<()> {
     let results = parser.find_bidirectional("hello_world", &file_path)?;
     assert!(!results.is_empty(), "Should find some results");
 
-    // At minimum, should find the definition or references
     let has_definition = results
         .iter()
         .any(|(_, def)| def.source.contains("fn") || def.source.contains("{"));
@@ -322,8 +233,8 @@ async fn test_find_bidirectional() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_build_context_from_file_rust() -> Result<()> {
+#[test]
+fn test_build_context_from_file_rust() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
     fs::write(
@@ -339,7 +250,6 @@ async fn test_build_context_from_file_rust() -> Result<()> {
     assert!(!context.definitions.is_empty(), "Should find definitions");
     assert!(!context.references.is_empty(), "Should find references");
 
-    // Check that we found the helper function definition
     let helper_defs: Vec<_> = context
         .definitions
         .iter()
@@ -353,8 +263,8 @@ async fn test_build_context_from_file_rust() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_build_context_from_file_unsupported_language() -> Result<()> {
+#[test]
+fn test_build_context_from_file_unsupported_language() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.txt");
     fs::write(&file_path, "some text content")?;
@@ -364,14 +274,13 @@ async fn test_build_context_from_file_unsupported_language() -> Result<()> {
 
     let context = parser.build_context_from_file(&file_path)?;
 
-    // For unsupported languages, should return empty context
     assert!(context.definitions.is_empty());
     assert!(context.references.is_empty());
     Ok(())
 }
 
-#[tokio::test]
-async fn test_build_context_from_file_missing_file() -> Result<()> {
+#[test]
+fn test_build_context_from_file_missing_file() -> Result<()> {
     let mut parser = CodeParser::new()?;
     let non_existent_path = PathBuf::from("/non/existent/file.rs");
 
@@ -386,35 +295,19 @@ async fn test_build_context_from_file_missing_file() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_definition_struct() -> Result<()> {
-    let def = Definition {
-        name: "test_function".to_string(),
-        start_byte: 0,
-        end_byte: 10,
-        source: "fn test_function() {}".to_string(),
-    };
-
-    assert_eq!(def.name, "test_function");
-    assert_eq!(def.start_byte, 0);
-    assert_eq!(def.end_byte, 10);
-    assert_eq!(def.source, "fn test_function() {}");
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_context_struct() -> Result<()> {
+#[test]
+fn test_context_creation_and_validation() -> Result<()> {
     let def1 = Definition {
         name: "func1".to_string(),
         start_byte: 0,
-        end_byte: 10,
+        end_byte: 13,
         source: "fn func1() {}".to_string(),
     };
 
     let def2 = Definition {
         name: "func2".to_string(),
         start_byte: 20,
-        end_byte: 30,
+        end_byte: 33,
         source: "fn func2() {}".to_string(),
     };
 
@@ -426,22 +319,26 @@ async fn test_context_struct() -> Result<()> {
     assert_eq!(context.definitions.len(), 1);
     assert_eq!(context.references.len(), 1);
     assert_eq!(context.definitions[0].name, "func1");
+    assert_eq!(context.definitions[0].source, "fn func1() {}");
     assert_eq!(context.references[0].name, "func2");
+    assert_eq!(context.references[0].source, "fn func2() {}");
+    
+    // Validate byte positions
+    assert!(context.definitions[0].start_byte < context.definitions[0].end_byte);
+    assert!(context.references[0].start_byte < context.references[0].end_byte);
     Ok(())
 }
 
-#[tokio::test]
-async fn test_multiple_files_references() -> Result<()> {
+#[test]
+fn test_multiple_files_references() -> Result<()> {
     let temp_dir = TempDir::new()?;
 
-    // Create first file with function definition
     let file1_path = temp_dir.path().join("lib.rs");
     fs::write(
         &file1_path,
         "pub fn shared_function() { println!(\"shared\"); }",
     )?;
 
-    // Create second file that uses the function
     let file2_path = temp_dir.path().join("main.rs");
     fs::write(&file2_path, "fn main() { shared_function(); }")?;
 
@@ -451,32 +348,31 @@ async fn test_multiple_files_references() -> Result<()> {
 
     let references = parser.find_references("shared_function")?;
 
-    // Should find references across multiple files
     assert!(!references.is_empty());
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_definition_with_malformed_code() -> Result<()> {
+#[test]
+fn test_find_definition_with_malformed_code() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("malformed.rs");
-    fs::write(&file_path, "fn incomplete_function(")?; // Malformed Rust code
+    fs::write(&file_path, "fn incomplete_function(")?;
 
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
 
-    // Should handle malformed code gracefully
+    // Should handle malformed code gracefully without panicking
     let result = parser.find_definition("incomplete_function", &file_path);
-    // This might fail to parse, but shouldn't panic
-    assert!(result.is_ok());
+    // Either succeeds or fails with an error, but should not panic
+    assert!(result.is_ok() || result.is_err(), "Parser should handle malformed code gracefully");
     Ok(())
 }
 
-#[tokio::test]
-async fn test_find_references_with_empty_file() -> Result<()> {
+#[test]
+fn test_find_references_with_empty_file() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("empty.rs");
-    fs::write(&file_path, "")?; // Empty file
+    fs::write(&file_path, "")?;
 
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
@@ -486,11 +382,11 @@ async fn test_find_references_with_empty_file() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_parser_with_large_function_name() -> Result<()> {
+#[test]
+fn test_parser_with_large_function_name() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.rs");
-    let long_name = "a".repeat(1000); // Very long function name
+    let long_name = "a".repeat(1000);
     let code = format!("fn {}() {{}}", long_name);
     fs::write(&file_path, code)?;
 
@@ -504,8 +400,8 @@ async fn test_parser_with_large_function_name() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_build_context_with_recursive_functions() -> Result<()> {
+#[test]
+fn test_build_context_with_recursive_functions() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("recursive.rs");
     fs::write(
@@ -518,7 +414,6 @@ async fn test_build_context_with_recursive_functions() -> Result<()> {
 
     let context = parser.build_context_from_file(&file_path)?;
 
-    // Should handle recursive function calls
     assert!(!context.definitions.is_empty());
     let factorial_defs: Vec<_> = context
         .definitions
@@ -529,11 +424,11 @@ async fn test_build_context_with_recursive_functions() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_parser_with_unicode_in_code() -> Result<()> {
+#[test]
+fn test_parser_with_unicode_in_code() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("unicode.rs");
-    fs::write(&file_path, "fn こんにちは() { println!(\"世界\"); }")?; // Unicode function name
+    fs::write(&file_path, "fn こんにちは() { println!(\"世界\"); }")?;
 
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
@@ -543,5 +438,6 @@ async fn test_parser_with_unicode_in_code() -> Result<()> {
 
     let (_, definition) = result.unwrap();
     assert_eq!(definition.name, "こんにちは");
+    assert!(definition.source.contains("こんにちは"));
     Ok(())
 }

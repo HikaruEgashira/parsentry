@@ -1,12 +1,6 @@
-pub const EVALUATOR_PROMPT_TEMPLATE: &str = r#"あなたは、脆弱性分析レポートを評価するセキュリティ専門家です。
-このレポートは、SQLインジェクション（SQLI）、クロスサイトスクリプティング（XSS）、リモートコード実行（RCE）の脆弱性が含まれていることが知られているPythonウェブアプリケーションの脆弱性を特定することを目的としています。
+use crate::language::Language;
+use crate::locales;
 
-以下の観点からレポートを評価してください：
-1. 正しく特定された脆弱性（SQLI、XSS、RCE）
-2. 誤検知（存在しない脆弱性が報告されている場合）
-3. 分析の質（影響評価、根本原因の説明、緩和策の提案）
-4. 検証用コードの質（明確な手順、例となるリクエスト、期待される結果）
-
-評価対象のレポート：
-{report}
-"#;
+pub fn get_evaluator_prompt_template(lang: &Language) -> &'static str {
+    locales::get_evaluator_prompt_template(lang)
+}
