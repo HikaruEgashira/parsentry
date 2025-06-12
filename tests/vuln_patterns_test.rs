@@ -2,7 +2,6 @@
 mod tests {
     use parsentry::security_patterns::{SecurityRiskPatterns, Language};
     use std::fs;
-    use std::path::Path;
     use tempfile::TempDir;
 
     #[test]

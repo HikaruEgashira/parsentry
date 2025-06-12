@@ -14,6 +14,7 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
     // Create empty context
     let _context = Context {
         definitions: vec![],
+        references: vec![],
     };
 
     // Test with mock model (this would require actual API key in real scenario)
@@ -45,6 +46,7 @@ async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
             start_byte: 0,
             end_byte: 25,
         }],
+        references: vec![],
     };
 
     // Test basic file processing logic (without actual LLM call)
@@ -73,6 +75,7 @@ fn test_context_text_generation() {
                 end_byte: 110,
             },
         ],
+        references: vec![],
     };
 
     let mut context_text = String::new();
