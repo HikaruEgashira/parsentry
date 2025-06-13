@@ -473,6 +473,8 @@ For each function reference, determine if it should be classified as:
 
 Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
 
+Generate tree-sitter queries instead of regex patterns. Use the following format:
+
 Return a JSON object with this structure:
 
 {{
@@ -480,7 +482,8 @@ Return a JSON object with this structure:
     {{
       "classification": "principals|actions|resources|none",
       "function_name": "function_name",
-      "pattern": "\\\\bfunction_name\\\\s*\\\\\\(",
+      "query_type": "reference",
+      "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\"))",
       "description": "Brief description of what this pattern detects",
       "reasoning": "Why this function call fits this classification",
       "attack_vector": ["T1234", "T5678"]
@@ -488,8 +491,8 @@ Return a JSON object with this structure:
   ]
 }}
 
-All fields are required for each object."#,
-        language, references_context
+All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
+        language, references_context, language
     );
 
     let response_schema = serde_json::json!({
