@@ -1,89 +1,145 @@
 principals:
-  - pattern: "HttpURLConnection"
+  # HTTP URL connections
+  - reference: |
+      (type_identifier) @type (#eq? @type "HttpURLConnection")
     description: "HTTP URL connections"
     attack_vector:
       - "T1071"
       - "T1190"
-  - pattern: "\\bDriverManager\\.getConnection"
+  # Database connections
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "DriverManager")
+        name: (identifier) @method (#eq? @method "getConnection"))
     description: "Database connections"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "Scanner\\s*\\("
+  # User input scanning
+  - reference: |
+      (object_creation_expression
+        type: (type_identifier) @type (#eq? @type "Scanner"))
     description: "User input scanning"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "System\\.getProperty"
+  # System properties
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "System")
+        name: (identifier) @method (#eq? @method "getProperty"))
     description: "System properties"
     attack_vector:
       - "T1083"
       - "T1552"
-  - pattern: "ResultSet\\.get(String|Int|Long|Double|Boolean)\\s*\\("
+  # Database result set values
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "ResultSet")
+        name: (identifier) @method (#match? @method "get(String|Int|Long|Double|Boolean)"))
     description: "Database result set values"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\.(findAll|findById|findBy.*?)\\s*\\("
+  # JPA repository queries
+  - reference: |
+      (method_invocation
+        name: (identifier) @method (#match? @method "(findAll|findById|findBy.*)"))
     description: "JPA repository queries"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "jdbcTemplate\\.(query|queryFor.*?)\\s*\\("
+  # JDBC template queries
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "jdbcTemplate")
+        name: (identifier) @method (#match? @method "(query|queryFor.*)"))
     description: "JDBC template queries"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "@Query\\(.*?\\).*?List<.*?>"
+  # JPA custom query results
+  - reference: |
+      (annotation
+        name: (identifier) @name (#eq? @name "Query"))
     description: "JPA custom query results"
     attack_vector:
       - "T1005"
       - "T1213"
 
 actions:
-  - pattern: "\\bPattern\\."
+  # Regex validation
+  - reference: |
+      (field_access
+        object: (identifier) @obj (#eq? @obj "Pattern"))
     description: "Regex validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bValidator\\."
+  # Bean validation
+  - reference: |
+      (field_access
+        object: (identifier) @obj (#eq? @obj "Validator"))
     description: "Bean validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bOWASP\\."
+  # OWASP security
+  - reference: |
+      (field_access
+        object: (identifier) @obj (#eq? @obj "OWASP"))
     description: "OWASP security"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bMessageDigest\\."
+  # Hash functions
+  - reference: |
+      (field_access
+        object: (identifier) @obj (#eq? @obj "MessageDigest"))
     description: "Hash functions"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\bPaths\\.get\\s*\\("
+  # Path validation
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "Paths")
+        name: (identifier) @method (#eq? @method "get"))
     description: "Path validation"
     attack_vector:
       - "T1083"
       - "T1564"
-  - pattern: "\\bStringEscapeUtils\\."
+  # String escaping
+  - reference: |
+      (field_access
+        object: (identifier) @obj (#eq? @obj "StringEscapeUtils"))
     description: "String escaping"
     attack_vector:
       - "T1055"
       - "T1106"
 
 resources:
-  - pattern: "Runtime\\.exec"
+  # Process execution resource
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "Runtime")
+        name: (identifier) @method (#eq? @method "exec"))
     description: "Process execution"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "\\bStatement\\.execute"
+  # SQL execution resource
+  - reference: |
+      (method_invocation
+        object: (identifier) @obj (#eq? @obj "Statement")
+        name: (identifier) @method (#eq? @method "execute"))
     description: "SQL execution"
     attack_vector:
       - "T1190"
       - "T1213"
-  - pattern: "\\bProcessBuilder"
+  # Process building resource
+  - reference: |
+      (type_identifier) @type (#eq? @type "ProcessBuilder")
     description: "Process building"
     attack_vector:
       - "T1059"

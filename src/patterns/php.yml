@@ -1,149 +1,304 @@
 principals:
-  - pattern: '\$_GET\['
+  # HTTP GET parameters
+  - reference: |
+      (subscript_expression
+        object: (variable_name (name) @var (#eq? @var "_GET")))
     description: "HTTP GET parameters - user-controlled input via URL parameters"
     attack_vector: ["T1190", "T1071"]
-  - pattern: '\$_POST\['
+  # HTTP POST parameters
+  - reference: |
+      (subscript_expression
+        object: (variable_name (name) @var (#eq? @var "_POST")))
     description: "HTTP POST parameters - user-controlled input via form submissions"
     attack_vector: ["T1190", "T1071"]
-  - pattern: '\$_REQUEST\['
+  # HTTP REQUEST parameters
+  - reference: |
+      (subscript_expression
+        object: (variable_name (name) @var (#eq? @var "_REQUEST")))
     description: "HTTP request parameters - combined GET, POST, and COOKIE data"
     attack_vector: ["T1190", "T1071"]
-  - pattern: '\$_COOKIE\['
+  # HTTP cookies
+  - reference: |
+      (subscript_expression
+        object: (variable_name (name) @var (#eq? @var "_COOKIE")))
     description: "HTTP cookies - user-controlled data stored in browser"
     attack_vector: ["T1539", "T1071"]
-  - pattern: '\$_FILES\['
+  # File uploads
+  - reference: |
+      (subscript_expression
+        object: (variable_name (name) @var (#eq? @var "_FILES")))
     description: "File upload data - user-controlled file uploads"
     attack_vector: ["T1190", "T1105"]
-  - pattern: '\$_SERVER\[.*(?:HTTP_|REQUEST_URI|QUERY_STRING|PATH_INFO)'
+  # HTTP headers and request data
+  - reference: |
+      (subscript_expression
+        object: (variable_name (name) @var (#eq? @var "_SERVER")))
     description: "HTTP headers and request data"
     attack_vector: ["T1190", "T1071"]
-  - pattern: "file_get_contents\\s*\\(\\s*[\"']php://input"
+  # Raw POST data input
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "file_get_contents")
+        arguments: (arguments
+          (argument (string) @arg (#match? @arg "php://input"))))
     description: "Raw POST data input"
     attack_vector: ["T1190", "T1071"]
-  - pattern: 'stream_get_contents\s*\(\s*STDIN'
+  # Standard input stream
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "stream_get_contents")
+        arguments: (arguments
+          (argument (name) @arg (#eq? @arg "STDIN"))))
     description: "Standard input stream"
     attack_vector: ["T1059", "T1071"]
 
 actions:
-  - pattern: 'htmlspecialchars\s*\('
+  # HTML escaping
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "htmlspecialchars"))
     description: "HTML escaping - converts special characters to HTML entities"
     attack_vector: ["T1055", "T1106"]
-  - pattern: 'htmlentities\s*\('
+  # HTML entity encoding
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "htmlentities"))
     description: "HTML entity encoding - converts all applicable characters"
     attack_vector: ["T1055", "T1106"]
-  - pattern: 'filter_var\s*\('
+  # Input filtering
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "filter_var"))
     description: "Input filtering - validates and sanitizes data"
     attack_vector: ["T1070", "T1027"]
-  - pattern: 'filter_input\s*\('
+  # Input filtering from superglobals
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "filter_input"))
     description: "Input filtering from superglobals"
     attack_vector: ["T1070", "T1027"]
-  - pattern: 'mysqli_real_escape_string\s*\('
+  # MySQL string escaping
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "mysqli_real_escape_string"))
     description: "MySQL string escaping - prevents SQL injection"
     attack_vector: ["T1190", "T1213"]
-  - pattern: 'addslashes\s*\('
+  # Quote escaping
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "addslashes"))
     description: "Quote escaping - adds backslashes before quotes"
     attack_vector: ["T1027", "T1140"]
-  - pattern: 'escapeshellarg\s*\('
+  # Shell argument escaping
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "escapeshellarg"))
     description: "Shell argument escaping"
     attack_vector: ["T1059", "T1140"]
-  - pattern: 'escapeshellcmd\s*\('
+  # Shell command escaping
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "escapeshellcmd"))
     description: "Shell command escaping"
     attack_vector: ["T1059", "T1140"]
-  - pattern: 'strip_tags\s*\('
+  # HTML/PHP tag removal
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "strip_tags"))
     description: "HTML/PHP tag removal"
     attack_vector: ["T1055", "T1140"]
-  - pattern: 'base64_encode\s*\('
+  # Base64 encoding
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "base64_encode"))
     description: "Base64 encoding - data obfuscation"
     attack_vector: ["T1027", "T1140"]
-  - pattern: 'base64_decode\s*\('
+  # Base64 decoding
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "base64_decode"))
     description: "Base64 decoding - reveals obfuscated data"
     attack_vector: ["T1027", "T1140"]
-  - pattern: "preg_replace\\s*\\(\\s*[\"']/.*/e"
+  # PCRE eval modifier
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "preg_replace")
+        arguments: (arguments
+          (argument (string) @pattern (#match? @pattern ".*/e"))))
     description: "PCRE eval modifier - deprecated dangerous feature"
     attack_vector: ["T1059", "T1027"]
 
 resources:
-  - pattern: '\beval\s*\('
+  # Code evaluation
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "eval"))
     description: "Code evaluation - executes arbitrary PHP code"
     attack_vector: ["T1059", "T1027"]
-  - pattern: '\bassert\s*\('
+  # Assertion evaluation
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "assert"))
     description: "Assertion evaluation - can execute code in older PHP versions"
     attack_vector: ["T1059", "T1027"]
-  - pattern: '\bcreate_function\s*\('
+  # Dynamic function creation
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "create_function"))
     description: "Dynamic function creation - deprecated security risk"
     attack_vector: ["T1059", "T1027"]
-  - pattern: '\bexec\s*\('
+  # Command execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "exec"))
     description: "Command execution - runs system commands"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\bsystem\s*\('
+  # System command execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "system"))
     description: "System command execution with output"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\bpassthru\s*\('
+  # Command execution with direct output
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "passthru"))
     description: "Command execution - passes output directly"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\bshell_exec\s*\('
+  # Shell command execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "shell_exec"))
     description: "Shell command execution"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\bpopen\s*\('
+  # Process file pointer
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "popen"))
     description: "Process file pointer - opens process"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\bproc_open\s*\('
+  # Process execution with IO control
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "proc_open"))
     description: "Process execution with IO control"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\bpcntl_exec\s*\('
+  # Program execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "pcntl_exec"))
     description: "Program execution"
     attack_vector: ["T1059", "T1106"]
-  - pattern: '\binclude\s*\('
+  # File inclusion
+  - reference: |
+      (include_expression
+        (name) @func (#eq? @func "include"))
     description: "File inclusion - can execute PHP code"
     attack_vector: ["T1055", "T1083"]
-  - pattern: '\binclude_once\s*\('
+  # File inclusion once
+  - reference: |
+      (include_once_expression
+        (name) @func (#eq? @func "include_once"))
     description: "File inclusion - executes PHP code once"
     attack_vector: ["T1055", "T1083"]
-  - pattern: '\brequire\s*\('
+  # File requirement
+  - reference: |
+      (require_expression
+        (name) @func (#eq? @func "require"))
     description: "File requirement - fatal if fails"
     attack_vector: ["T1055", "T1083"]
-  - pattern: '\brequire_once\s*\('
+  # File requirement once
+  - reference: |
+      (require_once_expression
+        (name) @func (#eq? @func "require_once"))
     description: "File requirement - executes once, fatal if fails"
     attack_vector: ["T1055", "T1083"]
-  - pattern: '\bfopen\s*\('
+  # File opening
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "fopen"))
     description: "File opening - potential file access vulnerability"
     attack_vector: ["T1083", "T1005"]
-  - pattern: '\bfile_get_contents\s*\('
+  # File reading
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "file_get_contents"))
     description: "File reading - reads entire file"
     attack_vector: ["T1083", "T1005"]
-  - pattern: '\bfile_put_contents\s*\('
+  # File writing
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "file_put_contents"))
     description: "File writing - writes data to file"
     attack_vector: ["T1105", "T1074"]
-  - pattern: '\breadfile\s*\('
+  # File reading with output
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "readfile"))
     description: "File reading - outputs file contents"
     attack_vector: ["T1083", "T1005"]
-  - pattern: '\bunserialize\s*\('
+  # Object deserialization
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "unserialize"))
     description: "Object deserialization - can trigger code execution"
     attack_vector: ["T1055", "T1027"]
-  - pattern: 'mysqli?_query\s*\('
+  # SQL query execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#match? @func "mysqli?_query"))
     description: "SQL query execution"
     attack_vector: ["T1190", "T1213"]
-  - pattern: '\$pdo->(?:query|exec|prepare)\s*\('
+  # PDO database operations
+  - reference: |
+      (member_call_expression
+        object: (variable_name (name) @var (#eq? @var "pdo"))
+        name: (name) @method (#match? @method "(query|exec|prepare)"))
     description: "PDO database operations"
     attack_vector: ["T1190", "T1213"]
-  - pattern: 'pg_query\s*\('
+  # PostgreSQL query execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "pg_query"))
     description: "PostgreSQL query execution"
     attack_vector: ["T1190", "T1213"]
-  - pattern: 'ldap_search\s*\('
+  # LDAP query execution
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "ldap_search"))
     description: "LDAP query execution"
     attack_vector: ["T1190", "T1087"]
-  - pattern: "header\\s*\\(\\s*[\"']Location:"
+  # HTTP redirect
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "header")
+        arguments: (arguments
+          (argument (string) @arg (#match? @arg "Location:"))))
     description: "HTTP redirect - potential open redirect"
     attack_vector: ["T1190", "T1204"]
-  - pattern: 'mail\s*\('
+  # Email sending function
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "mail"))
     description: "Email sending function"
     attack_vector: ["T1566", "T1071"]
-  - pattern: 'extract\s*\(\s*\$_(?:GET|POST|REQUEST)'
+  # Variable extraction from user input
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#eq? @func "extract")
+        arguments: (arguments
+          (argument (variable_name (name) @var (#match? @var "_(GET|POST|REQUEST)")))))
     description: "Variable extraction from user input - dangerous"
     attack_vector: ["T1190", "T1027"]
-  - pattern: '\$\$[a-zA-Z_]'
+  # Variable variables
+  - reference: |
+      (variable_name 
+        (variable_name))
     description: "Variable variables - dynamic variable access"
     attack_vector: ["T1027", "T1055"]
-  - pattern: 'call_user_func(?:_array)?\s*\('
+  # Dynamic function calls
+  - reference: |
+      (function_call_expression
+        function: (name) @func (#match? @func "call_user_func(_array)?"))
     description: "Dynamic function calls"
     attack_vector: ["T1059", "T1106"]

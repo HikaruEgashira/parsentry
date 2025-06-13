@@ -1,94 +1,154 @@
 principals:
-  - pattern: "params\\["
+  # Request parameters
+  - reference: |
+      (call
+        receiver: (identifier) @obj (#eq? @obj "params")
+        method: (identifier) @method (#eq? @method "[]" ))
     description: "Request parameters"
     attack_vector:
       - "T1190"
       - "T1071"
-  - pattern: "\\bActiveRecord::"
+  # ActiveRecord ORM
+  - reference: |
+      (scope_resolution
+        scope: (constant) @scope (#eq? @scope "ActiveRecord"))
     description: "ActiveRecord ORM"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "Net::HTTP"
+  # HTTP client
+  - reference: |
+      (scope_resolution
+        scope: (constant) @scope (#eq? @scope "Net")
+        name: (constant) @name (#eq? @name "HTTP"))
     description: "HTTP client"
     attack_vector:
       - "T1071"
       - "T1105"
-  - pattern: "ARGV"
+  # Command line arguments
+  - reference: |
+      (constant) @const (#eq? @const "ARGV")
     description: "Command line arguments"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "\\.(find|find_by|where)\\s*\\(.*?\\)"
+  # ActiveRecord query results
+  - reference: |
+      (call
+        method: (identifier) @method (#match? @method "(find|find_by|where)"))
     description: "ActiveRecord query results"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\.(all|first|last|pluck)\\s*$"
+  # ActiveRecord collection methods
+  - reference: |
+      (call
+        method: (identifier) @method (#match? @method "(all|first|last|pluck)"))
     description: "ActiveRecord collection methods"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\bconnection\\.exec\\s*\\(.*?\\)"
+  # Raw SQL execution results
+  - reference: |
+      (call
+        receiver: (identifier) @obj (#eq? @obj "connection")
+        method: (identifier) @method (#eq? @method "exec"))
     description: "Raw SQL execution results"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\bresult\\.(values|entries|each)"
+  # Database result iteration
+  - reference: |
+      (call
+        receiver: (identifier) @obj (#eq? @obj "result")
+        method: (identifier) @method (#match? @method "(values|entries|each)"))
     description: "Database result iteration"
     attack_vector:
       - "T1005"
       - "T1213"
 
 actions:
-  - pattern: "\\bActiveModel::Validations"
+  # Model validation
+  - reference: |
+      (scope_resolution
+        scope: (constant) @scope (#eq? @scope "ActiveModel")
+        name: (constant) @name (#eq? @name "Validations"))
     description: "Model validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bCGI\\.escapeHTML\\s*\\("
+  # HTML escaping
+  - reference: |
+      (call
+        receiver: (constant) @obj (#eq? @obj "CGI")
+        method: (identifier) @method (#eq? @method "escapeHTML"))
     description: "HTML escaping"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\bRegexp\\."
+  # Regex validation
+  - reference: |
+      (call
+        receiver: (constant) @obj (#eq? @obj "Regexp"))
     description: "Regex validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bBCrypt::"
+  # Password hashing
+  - reference: |
+      (scope_resolution
+        scope: (constant) @scope (#eq? @scope "BCrypt"))
     description: "Password hashing"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\bPathname\\."
+  # Path validation
+  - reference: |
+      (call
+        receiver: (constant) @obj (#eq? @obj "Pathname"))
     description: "Path validation"
     attack_vector:
       - "T1083"
       - "T1564"
-  - pattern: "\\bSanitize\\."
+  # HTML sanitization
+  - reference: |
+      (call
+        receiver: (constant) @obj (#eq? @obj "Sanitize"))
     description: "HTML sanitization"
     attack_vector:
       - "T1055"
       - "T1106"
 
 resources:
-  - pattern: "\\beval\\s*\\("
+  # Code evaluation
+  - reference: |
+      (call
+        method: (identifier) @method (#eq? @method "eval"))
     description: "Code evaluation"
     attack_vector:
       - "T1059"
       - "T1027"
-  - pattern: "\\bsystem\\s*\\("
+  # System commands
+  - reference: |
+      (call
+        method: (identifier) @method (#eq? @method "system"))
     description: "System commands"
     attack_vector:
       - "T1059"
       - "T1106"
-  - pattern: "\\.execute\\s*\\("
+  # Execution operations
+  - reference: |
+      (call
+        method: (identifier) @method (#eq? @method "execute"))
     description: "Execution operations"
     attack_vector:
       - "T1059"
       - "T1106"
-  - pattern: "\\bFile\\.open\\s*\\("
+  # File operations
+  - reference: |
+      (call
+        receiver: (constant) @obj (#eq? @obj "File")
+        method: (identifier) @method (#eq? @method "open"))
     description: "File operations"
     attack_vector:
       - "T1083"

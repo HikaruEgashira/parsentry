@@ -1,84 +1,155 @@
 principals:
-  - pattern: "\\bhttp\\.HandleFunc\\s*\\("
+  # HTTP handlers
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "http")
+          field: (field_identifier) @func (#eq? @func "HandleFunc")))
     description: "HTTP handlers"
     attack_vector:
       - "T1190"
       - "T1071"
-  - pattern: "\\bnet\\.Dial\\s*\\("
+  # Network dialing
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "net")
+          field: (field_identifier) @func (#eq? @func "Dial")))
     description: "Network dialing"
     attack_vector:
       - "T1095"
       - "T1571"
-  - pattern: "\\bsql\\.Open\\s*\\("
+  # Database connections
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "sql")
+          field: (field_identifier) @func (#eq? @func "Open")))
     description: "Database connections"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "os\\.Args"
+  # Command line arguments
+  - reference: |
+      (selector_expression
+        operand: (identifier) @pkg (#eq? @pkg "os")
+        field: (field_identifier) @field (#eq? @field "Args"))
     description: "Command line arguments"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "rows\\.Scan\\s*\\("
+  # Database row scanning
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @var (#eq? @var "rows")
+          field: (field_identifier) @func (#eq? @func "Scan")))
     description: "Database row scanning"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\.(Find|First|Where)\\s*\\(.*?\\)\\.(Scan|Take)"
+  # GORM query results
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          field: (field_identifier) @method (#match? @method "(Find|First|Where)")))
     description: "GORM query results"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\brows\\.Next\\(\\).*?rows\\.Scan"
+  # SQL row iteration
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @var (#eq? @var "rows")
+          field: (field_identifier) @func (#eq? @func "Next")))
     description: "SQL row iteration"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\.(QueryRow|Query)\\s*\\(.*?\\)\\.Scan"
+  # SQL query scanning
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          field: (field_identifier) @method (#match? @method "(QueryRow|Query)")))
     description: "SQL query scanning"
     attack_vector:
       - "T1005"
       - "T1213"
 
 actions:
-  - pattern: "\\bregexp\\."
+  # Regex validation
+  - reference: |
+      (selector_expression
+        operand: (identifier) @pkg (#eq? @pkg "regexp"))
     description: "Regex validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bvalidator\\."
+  # Validation package
+  - reference: |
+      (selector_expression
+        operand: (identifier) @pkg (#eq? @pkg "validator"))
     description: "Validation package"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bfilepaths\\.Clean\\s*\\("
+  # Path cleaning
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "filepath")
+          field: (field_identifier) @func (#eq? @func "Clean")))
     description: "Path cleaning"
     attack_vector:
       - "T1083"
       - "T1564"
-  - pattern: "\\bhtml\\.EscapeString\\s*\\("
+  # HTML escaping
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "html")
+          field: (field_identifier) @func (#eq? @func "EscapeString")))
     description: "HTML escaping"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\bcrypto/"
+  # Cryptographic operations
+  - reference: |
+      (import_spec
+        path: (interpreted_string_literal) @path (#match? @path "crypto/"))
     description: "Cryptographic operations"
     attack_vector:
       - "T1552"
       - "T1078"
 
 resources:
-  - pattern: "\\bexec\\.Command\\s*\\("
+  # Command execution resource
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "exec")
+          field: (field_identifier) @func (#eq? @func "Command")))
     description: "Command execution"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "\\bdb\\.Query\\s*\\("
+  # Database queries resource
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @var (#eq? @var "db")
+          field: (field_identifier) @func (#eq? @func "Query")))
     description: "Database queries"
     attack_vector:
       - "T1190"
       - "T1213"
-  - pattern: "\\bos\\.Open\\s*\\("
+  # File operations resource
+  - reference: |
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @pkg (#eq? @pkg "os")
+          field: (field_identifier) @func (#eq? @func "Open")))
     description: "File operations"
     attack_vector:
       - "T1083"

@@ -1,94 +1,171 @@
 principals:
-  - pattern: "async\\s+fn\\s+\\w+.*?Request"
+  # HTTP request handlers
+  - reference: |
+      (function_item
+        (function_modifiers) @mods (#match? @mods "async")
+        name: (identifier) @name
+        parameters: (parameters
+          (parameter
+            type: (generic_type
+              type: (type_identifier) @type (#match? @type "Request")))))
     description: "HTTP request handlers"
     attack_vector:
       - "T1190"
       - "T1071"
-  - pattern: "#\\[.*?route.*?\\]"
+  # Route attributes
+  - reference: |
+      (attribute_item
+        (attribute
+          (identifier) @attr (#match? @attr "route")))
     description: "Route attributes"
     attack_vector:
       - "T1190"
       - "T1071"
-  - pattern: "reqwest::"
+  # HTTP client library
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "reqwest"))
     description: "HTTP client library"
     attack_vector:
       - "T1071"
       - "T1105"
-  - pattern: "std::env::"
+  # Environment variables
+  - reference: |
+      (scoped_identifier
+        path: (scoped_identifier
+          path: (identifier) @std (#eq? @std "std")
+          name: (identifier) @env (#eq? @env "env")))
     description: "Environment variables"
     attack_vector:
       - "T1083"
       - "T1552"
-  - pattern: "\\.(fetch_all|fetch_one|fetch_optional)\\s*\\("
+  # Database query results
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#match? @method "(fetch_all|fetch_one|fetch_optional)")))
     description: "Database query results"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "sqlx::(query|query_as)\\s*\\("
+  # SQL query execution results
+  - reference: |
+      (call_expression
+        function: (scoped_identifier
+          path: (identifier) @path (#eq? @path "sqlx")
+          name: (identifier) @name (#match? @name "(query|query_as)")))
     description: "SQL query execution results"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "diesel::.*?::load\\s*\\("
+  # Diesel ORM query results
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#eq? @method "load")))
     description: "Diesel ORM query results"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "\\.(get|first|all)\\s*\\(.*?&conn\\)"
+  # Database connection results
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#match? @method "(get|first|all)")))
     description: "Database connection results"
     attack_vector:
       - "T1005"
       - "T1213"
 
 actions:
-  - pattern: "\\bserde\\."
+  # Serialization validation
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "serde"))
     description: "Serialization validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bvalidator\\."
+  # Validation crate
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "validator"))
     description: "Validation crate"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bregex\\."
+  # Regex validation
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "regex"))
     description: "Regex validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bammonia\\."
+  # HTML sanitization
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "ammonia"))
     description: "HTML sanitization"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "\\bsha2::"
+  # Hash functions
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "sha2"))
     description: "Hash functions"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\bbcrypt::"
+  # Password hashing
+  - reference: |
+      (scoped_identifier
+        path: (identifier) @path (#eq? @path "bcrypt"))
     description: "Password hashing"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "\\bpath\\.canonicalize\\s*\\("
+  # Path normalization
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#eq? @method "canonicalize")))
     description: "Path normalization"
     attack_vector:
       - "T1083"
       - "T1564"
 
 resources:
-  - pattern: "std::fs::write"
+  # File writing
+  - reference: |
+      (scoped_identifier
+        path: (scoped_identifier
+          path: (scoped_identifier
+            path: (identifier) @std (#eq? @std "std")
+            name: (identifier) @fs (#eq? @fs "fs"))
+          name: (identifier) @write (#eq? @write "write")))
     description: "File writing"
     attack_vector:
       - "T1083"
       - "T1005"
-  - pattern: "std::process::Command"
+  # Process execution
+  - reference: |
+      (scoped_identifier
+        path: (scoped_identifier
+          path: (scoped_identifier
+            path: (identifier) @std (#eq? @std "std")
+            name: (identifier) @process (#eq? @process "process"))
+          name: (identifier) @command (#eq? @command "Command")))
     description: "Process execution"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "\\.execute\\s*\\("
+  # Database execution
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#eq? @method "execute")))
     description: "Database execution"
     attack_vector:
       - "T1190"

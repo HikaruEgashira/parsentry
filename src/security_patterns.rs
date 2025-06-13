@@ -92,8 +92,6 @@ pub struct PatternConfig {
 pub enum PatternQuery {
     Definition { definition: String },
     Reference { reference: String },
-    // Legacy regex support (will be removed later)
-    Legacy { pattern: String },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -151,9 +149,6 @@ impl SecurityRiskPatterns {
                             principal_reference_queries.push(query);
                         }
                     }
-                    PatternQuery::Legacy { pattern: _ } => {
-                        // Skip legacy patterns for now
-                    }
                 }
             }
         }
@@ -171,9 +166,6 @@ impl SecurityRiskPatterns {
                             action_reference_queries.push(query);
                         }
                     }
-                    PatternQuery::Legacy { pattern: _ } => {
-                        // Skip legacy patterns for now
-                    }
                 }
             }
         }
@@ -190,9 +182,6 @@ impl SecurityRiskPatterns {
                         if let Ok(query) = Query::new(&ts_language, reference) {
                             resource_reference_queries.push(query);
                         }
-                    }
-                    PatternQuery::Legacy { pattern: _ } => {
-                        // Skip legacy patterns for now
                     }
                 }
             }
@@ -335,7 +324,7 @@ impl SecurityRiskPatterns {
 
         let mut map = HashMap::new();
 
-        // Load patterns from individual language files
+        // Load patterns from individual language files (tree-sitter only)
         let languages = [
             (Python, include_str!("patterns/python.yml")),
             (JavaScript, include_str!("patterns/javascript.yml")),
@@ -346,11 +335,12 @@ impl SecurityRiskPatterns {
             (Ruby, include_str!("patterns/ruby.yml")),
             (C, include_str!("patterns/c.yml")),
             (Cpp, include_str!("patterns/cpp.yml")),
-            (Terraform, include_str!("patterns/terraform.yml")),
-            (Kubernetes, include_str!("patterns/kubernetes.yml")),
-            (Yaml, include_str!("patterns/yaml.yml")),
-            (Bash, include_str!("patterns/bash.yml")),
             (Php, include_str!("patterns/php.yml")),
+            // Temporarily disabled regex-based patterns until full migration:
+            // (Terraform, include_str!("patterns/terraform.yml")),
+            // (Kubernetes, include_str!("patterns/kubernetes.yml")),
+            // (Yaml, include_str!("patterns/yaml.yml")),
+            // (Bash, include_str!("patterns/bash.yml")),
         ];
 
         for (lang, content) in languages {

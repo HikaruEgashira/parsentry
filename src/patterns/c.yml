@@ -1,114 +1,180 @@
 principals:
-  - pattern: "\\brecv\\s*\\("
+  # Network receive operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "recv"))
     description: "Network receive operations"
     attack_vector:
       - "T1095"
       - "T1571"
-  - pattern: "\\baccept\\s*\\("
+  # Socket accept operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "accept"))
     description: "Socket accept operations"
     attack_vector:
       - "T1095"
       - "T1571"
-  - pattern: "\\bfgets\\s*\\("
+  # File input operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "fgets"))
     description: "File input operations"
     attack_vector:
       - "T1083"
       - "T1005"
-  - pattern: "\\bgetenv\\s*\\("
+  # Environment variable access
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "getenv"))
     description: "Environment variable access"
     attack_vector:
       - "T1083"
       - "T1552"
-  - pattern: "\\bargv\\["
+  # Command line arguments
+  - reference: |
+      (subscript_expression
+        argument: (identifier) @var (#eq? @var "argv"))
     description: "Command line arguments"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "\\bscanf\\s*\\("
+  # Input scanning
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "scanf"))
     description: "Input scanning"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "\\bgets\\s*\\("
+  # Unsafe string input
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "gets"))
     description: "Unsafe string input"
     attack_vector:
       - "T1059"
       - "T1204"
 
 actions:
-  - pattern: "\\bstrlen\\s*\\("
+  # String length validation
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strlen"))
     description: "String length validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bisdigit\\s*\\("
+  # Character validation - digit
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "isdigit"))
     description: "Character validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bisalpha\\s*\\("
+  # Character validation - alpha
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "isalpha"))
     description: "Character validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bstrnlen\\s*\\("
+  # Safe string length
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strnlen"))
     description: "Safe string length"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bsnprintf\\s*\\("
+  # Safe string formatting
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "snprintf"))
     description: "Safe string formatting"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bstrncat\\s*\\("
+  # Safe string concatenation
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strncat"))
     description: "Safe string concatenation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\bstrncpy\\s*\\("
+  # Safe string copying
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strncpy"))
     description: "Safe string copying"
     attack_vector:
       - "T1070"
       - "T1027"
 
 resources:
-  - pattern: "\\bsystem\\s*\\("
+  # System command execution
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "system"))
     description: "System command execution"
     attack_vector:
       - "T1059"
       - "T1106"
-  - pattern: "\\bexec[lv]p?\\s*\\("
+  # Process execution functions
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#match? @func "exec[lv]p?"))
     description: "Process execution"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "\\bsprintf\\s*\\("
+  # Unsafe string formatting
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "sprintf"))
     description: "Unsafe string formatting"
     attack_vector:
       - "T1055"
       - "T1190"
-  - pattern: "\\bstrcpy\\s*\\("
+  # Unsafe string copying
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strcpy"))
     description: "Unsafe string copying"
     attack_vector:
       - "T1055"
       - "T1190"
-  - pattern: "\\bstrcat\\s*\\("
+  # Unsafe string concatenation
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strcat"))
     description: "Unsafe string concatenation"
     attack_vector:
       - "T1055"
       - "T1190"
-  - pattern: "\\bmalloc\\s*\\("
+  # Memory allocation
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "malloc"))
     description: "Memory allocation"
     attack_vector:
       - "T1055"
       - "T1569"
-  - pattern: "\\bfree\\s*\\("
+  # Memory deallocation
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "free"))
     description: "Memory deallocation"
     attack_vector:
       - "T1055"
       - "T1569"
-  - pattern: "\\bprintf\\s*\\("
+  # Format string operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "printf"))
     description: "Format string operations"
     attack_vector:
       - "T1055"

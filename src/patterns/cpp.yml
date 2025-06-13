@@ -1,114 +1,199 @@
 principals:
-  - pattern: "std::cin"
+  # Standard input operations
+  - reference: |
+      (qualified_identifier
+        scope: (namespace_identifier) @ns (#eq? @ns "std")
+        name: (identifier) @name (#eq? @name "cin"))
     description: "Standard input operations"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "\\bgetline\\s*\\("
+  # Line input operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "getline"))
     description: "Line input operations"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "\\brecv\\s*\\("
+  # Network receive operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "recv"))
     description: "Network receive operations"
     attack_vector:
       - "T1095"
       - "T1571"
-  - pattern: "\\baccept\\s*\\("
+  # Socket accept operations
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "accept"))
     description: "Socket accept operations"
     attack_vector:
       - "T1095"
       - "T1571"
-  - pattern: "std::getenv\\s*\\("
+  # Environment variable access
+  - reference: |
+      (call_expression
+        function: (qualified_identifier
+          scope: (namespace_identifier) @ns (#eq? @ns "std")
+          name: (identifier) @name (#eq? @name "getenv")))
     description: "Environment variable access"
     attack_vector:
       - "T1083"
       - "T1552"
-  - pattern: "argc.*argv"
+  # Command line arguments
+  - reference: |
+      (parameter_declaration
+        declarator: (identifier) @param (#match? @param "(argc|argv)"))
     description: "Command line arguments"
     attack_vector:
       - "T1059"
       - "T1204"
-  - pattern: "boost::asio"
+  # Network I/O operations
+  - reference: |
+      (qualified_identifier
+        scope: (qualified_identifier
+          scope: (namespace_identifier) @boost (#eq? @boost "boost")
+          name: (identifier) @asio (#eq? @asio "asio")))
     description: "Network I/O operations"
     attack_vector:
       - "T1095"
       - "T1571"
 
 actions:
-  - pattern: "std::regex"
+  # Regular expression validation
+  - reference: |
+      (qualified_identifier
+        scope: (namespace_identifier) @ns (#eq? @ns "std")
+        name: (identifier) @name (#eq? @name "regex"))
     description: "Regular expression validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\.empty\\s*\\(\\)"
+  # Container emptiness check
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#eq? @method "empty")))
     description: "Container emptiness check"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "\\.size\\s*\\(\\)"
+  # Container size validation
+  - reference: |
+      (call_expression
+        function: (field_expression
+          field: (field_identifier) @method (#eq? @method "size")))
     description: "Container size validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "std::isdigit\\s*\\("
+  # Character validation - digit
+  - reference: |
+      (call_expression
+        function: (qualified_identifier
+          scope: (namespace_identifier) @ns (#eq? @ns "std")
+          name: (identifier) @name (#eq? @name "isdigit")))
     description: "Character validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "std::isalpha\\s*\\("
+  # Character validation - alpha
+  - reference: |
+      (call_expression
+        function: (qualified_identifier
+          scope: (namespace_identifier) @ns (#eq? @ns "std")
+          name: (identifier) @name (#eq? @name "isalpha")))
     description: "Character validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "boost::algorithm::trim"
+  # String trimming
+  - reference: |
+      (qualified_identifier
+        scope: (qualified_identifier
+          scope: (qualified_identifier
+            scope: (namespace_identifier) @boost (#eq? @boost "boost")
+            name: (identifier) @algo (#eq? @algo "algorithm"))
+          name: (identifier) @trim (#eq? @trim "trim")))
     description: "String trimming"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "std::clamp\\s*\\("
+  # Value clamping
+  - reference: |
+      (call_expression
+        function: (qualified_identifier
+          scope: (namespace_identifier) @ns (#eq? @ns "std")
+          name: (identifier) @name (#eq? @name "clamp")))
     description: "Value clamping"
     attack_vector:
       - "T1070"
       - "T1027"
 
 resources:
-  - pattern: "std::system\\s*\\("
+  # System command execution
+  - reference: |
+      (call_expression
+        function: (qualified_identifier
+          scope: (namespace_identifier) @ns (#eq? @ns "std")
+          name: (identifier) @name (#eq? @name "system")))
     description: "System command execution"
     attack_vector:
       - "T1059"
       - "T1106"
-  - pattern: "\\bexec[lv]p?\\s*\\("
+  # Process execution functions
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#match? @func "exec[lv]p?"))
     description: "Process execution"
     attack_vector:
       - "T1059"
       - "T1055"
-  - pattern: "new\\s+"
+  # Dynamic memory allocation
+  - reference: |
+      (new_expression)
     description: "Dynamic memory allocation"
     attack_vector:
       - "T1055"
       - "T1569"
-  - pattern: "delete\\s+"
+  # Memory deallocation
+  - reference: |
+      (delete_expression)
     description: "Memory deallocation"
     attack_vector:
       - "T1055"
       - "T1569"
-  - pattern: "std::cout"
+  # Standard output operations
+  - reference: |
+      (qualified_identifier
+        scope: (namespace_identifier) @ns (#eq? @ns "std")
+        name: (identifier) @name (#eq? @name "cout"))
     description: "Standard output operations"
     attack_vector:
       - "T1055"
       - "T1106"
-  - pattern: "printf\\s*\\("
+  # C-style formatting
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "printf"))
     description: "C-style formatting"
     attack_vector:
       - "T1055"
       - "T1190"
-  - pattern: "sprintf\\s*\\("
+  # Unsafe string formatting
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "sprintf"))
     description: "Unsafe string formatting"
     attack_vector:
       - "T1055"
       - "T1190"
-  - pattern: "strcpy\\s*\\("
+  # Unsafe string copying
+  - reference: |
+      (call_expression
+        function: (identifier) @func (#eq? @func "strcpy"))
     description: "Unsafe string copying"
     attack_vector:
       - "T1055"
