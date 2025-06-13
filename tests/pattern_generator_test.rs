@@ -97,7 +97,8 @@ fn test_yaml_pattern_format() {
         PatternClassification {
             function_name: "test_resource".to_string(),
             pattern_type: Some("resources".to_string()),
-            pattern: "\\\\btest_resource\\\\s*\\\\(".to_string(),
+            query_type: "reference".to_string(),
+            query: "(call_expression function: (identifier) @func (#eq? @func \"test_resource\"))".to_string(),
             description: "Test resource function".to_string(),
             reasoning: "Test reasoning for resource".to_string(),
             attack_vector: vec!["T1059".to_string()],
@@ -105,7 +106,8 @@ fn test_yaml_pattern_format() {
         PatternClassification {
             function_name: "test_principal".to_string(),
             pattern_type: Some("principals".to_string()),
-            pattern: "\\\\btest_principal\\\\s*\\\\(".to_string(),
+            query_type: "reference".to_string(),
+            query: "(call_expression function: (identifier) @func (#eq? @func \"test_principal\"))".to_string(),
             description: "Test principal function".to_string(),
             reasoning: "Test reasoning for principal".to_string(),
             attack_vector: vec!["T1190".to_string()],
@@ -113,7 +115,8 @@ fn test_yaml_pattern_format() {
         PatternClassification {
             function_name: "test_action".to_string(),
             pattern_type: Some("actions".to_string()),
-            pattern: "\\\\btest_action\\\\s*\\\\(".to_string(),
+            query_type: "reference".to_string(),
+            query: "(call_expression function: (identifier) @func (#eq? @func \"test_action\"))".to_string(),
             description: "Test action function".to_string(),
             reasoning: "Test reasoning for action".to_string(),
             attack_vector: vec!["T1070".to_string()],
@@ -191,7 +194,8 @@ fn test_yaml_append_functionality() {
     let patterns = vec![PatternClassification {
         function_name: "new_function".to_string(),
         pattern_type: Some("resources".to_string()),
-        pattern: "\\\\bnew_function\\\\s*\\\\(".to_string(),
+        query_type: "reference".to_string(),
+        query: "(call_expression function: (identifier) @func (#eq? @func \"new_function\"))".to_string(),
         description: "New function pattern".to_string(),
         reasoning: "Test reasoning".to_string(),
         attack_vector: vec!["T1059".to_string()],
@@ -215,7 +219,8 @@ fn test_empty_patterns_handling() {
     let patterns = vec![PatternClassification {
         function_name: "non_security_function".to_string(),
         pattern_type: None,
-        pattern: "".to_string(),
+        query_type: "reference".to_string(),
+        query: "".to_string(),
         description: "".to_string(),
         reasoning: "Not a security pattern".to_string(),
         attack_vector: vec![],
@@ -239,7 +244,8 @@ fn test_language_filtering() {
     let patterns = vec![PatternClassification {
         function_name: "test_function".to_string(),
         pattern_type: Some("resources".to_string()),
-        pattern: "test_pattern".to_string(),
+        query_type: "reference".to_string(),
+        query: "test_pattern".to_string(),
         description: "Test description".to_string(),
         reasoning: "Test reasoning".to_string(),
         attack_vector: vec!["T1059".to_string()],
@@ -332,7 +338,8 @@ fn test_pattern_classification_structure() {
     let pattern = PatternClassification {
         function_name: "test_auth".to_string(),
         pattern_type: Some("actions".to_string()),
-        pattern: "\\\\btest_auth\\\\s*\\\\(".to_string(),
+        query_type: "reference".to_string(),
+        query: "(call_expression function: (identifier) @func (#eq? @func \"test_auth\"))".to_string(),
         description: "Authentication function".to_string(),
         reasoning: "Handles user authentication".to_string(),
         attack_vector: vec!["T1078".to_string(), "T1110".to_string()],
@@ -352,7 +359,8 @@ fn test_attack_vector_formatting() {
     let patterns = vec![PatternClassification {
         function_name: "multi_attack_function".to_string(),
         pattern_type: Some("resources".to_string()),
-        pattern: "\\\\bmulti_attack_function\\\\s*\\\\(".to_string(),
+        query_type: "reference".to_string(),
+        query: "(call_expression function: (identifier) @func (#eq? @func \"multi_attack_function\"))".to_string(),
         description: "Function with multiple attack vectors".to_string(),
         reasoning: "Can be exploited in multiple ways".to_string(),
         attack_vector: vec![
@@ -427,7 +435,8 @@ fn test_par_pattern_types() {
     let principals_example = PatternClassification {
         function_name: "get_request_data".to_string(),
         pattern_type: Some("principals".to_string()),
-        pattern: "\\\\bget_request_data\\\\s*\\\\(".to_string(),
+        query_type: "reference".to_string(),
+        query: "(call_expression function: (identifier) @func (#eq? @func \"get_request_data\"))".to_string(),
         description: "Retrieves data from HTTP request".to_string(),
         reasoning: "Principal - source of user input".to_string(),
         attack_vector: vec!["T1190".to_string()],
@@ -436,7 +445,8 @@ fn test_par_pattern_types() {
     let actions_example = PatternClassification {
         function_name: "validate_input".to_string(),
         pattern_type: Some("actions".to_string()),
-        pattern: "\\\\bvalidate_input\\\\s*\\\\(".to_string(),
+        query_type: "reference".to_string(),
+        query: "(call_expression function: (identifier) @func (#eq? @func \"validate_input\"))".to_string(),
         description: "Validates user input".to_string(),
         reasoning: "Action - performs security validation".to_string(),
         attack_vector: vec!["T1059".to_string()],
@@ -445,7 +455,8 @@ fn test_par_pattern_types() {
     let resources_example = PatternClassification {
         function_name: "write_file".to_string(),
         pattern_type: Some("resources".to_string()),
-        pattern: "\\\\bwrite_file\\\\s*\\\\(".to_string(),
+        query_type: "reference".to_string(),
+        query: "(call_expression function: (identifier) @func (#eq? @func \"write_file\"))".to_string(),
         description: "Writes data to file".to_string(),
         reasoning: "Resource - accesses file system".to_string(),
         attack_vector: vec!["T1005".to_string()],
