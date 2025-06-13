@@ -158,7 +158,8 @@ resources:
       - "T1190"
   # Process execution resource
   - reference: |
-      (identifier) @obj (#eq? @obj "child_process")
+      (member_expression
+        object: (identifier) @obj (#eq? @obj "child_process"))
     description: "Process execution resource"
     attack_vector:
       - "T1059"

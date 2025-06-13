@@ -238,7 +238,6 @@ impl SecurityRiskPatterns {
         };
 
         let root_node = tree.root_node();
-        let mut cursor = QueryCursor::new();
 
         // Check all query types
         let all_queries = [
@@ -252,8 +251,10 @@ impl SecurityRiskPatterns {
 
         for query_set in all_queries {
             for query in query_set {
+                let mut cursor = QueryCursor::new();
                 let mut matches = cursor.matches(query, root_node, content.as_bytes());
-                if matches.any(|_| true) {
+                // Check if there are any matches (predicates are already evaluated by tree-sitter)
+                if matches.next().is_some() {
                     return true;
                 }
             }
@@ -272,46 +273,51 @@ impl SecurityRiskPatterns {
         };
 
         let root_node = tree.root_node();
-        let mut cursor = QueryCursor::new();
 
         // Check principals first
         for query in &self.principal_definition_queries {
+            let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.any(|_| true) {
+            if matches.next().is_some() {
                 return Some(PatternType::Principal);
             }
         }
         for query in &self.principal_reference_queries {
+            let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.any(|_| true) {
+            if matches.next().is_some() {
                 return Some(PatternType::Principal);
             }
         }
 
         // Check actions
         for query in &self.action_definition_queries {
+            let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.any(|_| true) {
+            if matches.next().is_some() {
                 return Some(PatternType::Action);
             }
         }
         for query in &self.action_reference_queries {
+            let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.any(|_| true) {
+            if matches.next().is_some() {
                 return Some(PatternType::Action);
             }
         }
 
         // Check resources
         for query in &self.resource_definition_queries {
+            let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.any(|_| true) {
+            if matches.next().is_some() {
                 return Some(PatternType::Resource);
             }
         }
         for query in &self.resource_reference_queries {
+            let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.any(|_| true) {
+            if matches.next().is_some() {
                 return Some(PatternType::Resource);
             }
         }

@@ -1,0 +1,2533 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.7.0",
+          "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "short_description": {
+                "text": "Potential remote code execution vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential remote code execution vulnerability detected",
+                "markdown": "**Remote Code Execution**\n\nRemote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "help": {
+                "text": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code.",
+                "markdown": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "execution",
+                  "rce"
+                ],
+                "precision": "medium",
+                "problem_severity": "9.0",
+                "security_severity": "9.0"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SSRF",
+              "name": "Server-Side Request Forgery",
+              "short_description": {
+                "text": "Potential SSRF vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SSRF vulnerability detected",
+                "markdown": "**Server-Side Request Forgery**\n\nSSRF allows attackers to make requests from the server. Validate and restrict URLs."
+              },
+              "help": {
+                "text": "SSRF allows attackers to make requests from the server. Validate and restrict URLs.",
+                "markdown": "SSRF allows attackers to make requests from the server. Validate and restrict URLs."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "network",
+                  "ssrf"
+                ],
+                "precision": "medium",
+                "problem_severity": "7.0",
+                "security_severity": "7.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "short_description": {
+                "text": "Potential arbitrary file operation vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential arbitrary file operation vulnerability detected",
+                "markdown": "**Arbitrary File Operation**\n\nArbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "help": {
+                "text": "Arbitrary file operations can lead to unauthorized file access. Validate file operations.",
+                "markdown": "Arbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "afo"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.0",
+                "security_severity": "6.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "short_description": {
+                "text": "Potential SQL injection vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SQL injection vulnerability detected",
+                "markdown": "**SQL Injection**\n\nSQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "help": {
+                "text": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements.",
+                "markdown": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "sql"
+                ],
+                "precision": "medium",
+                "problem_severity": "8.5",
+                "security_severity": "8.5"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "short_description": {
+                "text": "Potential XSS vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential XSS vulnerability detected",
+                "markdown": "**Cross-Site Scripting**\n\nCross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input."
+              },
+              "help": {
+                "text": "Cross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input.",
+                "markdown": "Cross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "xss"
+                ],
+                "precision": "medium",
+                "problem_severity": "7.5",
+                "security_severity": "7.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "short_description": {
+                "text": "Potential IDOR vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential IDOR vulnerability detected",
+                "markdown": "**Insecure Direct Object Reference**\n\nIDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "help": {
+                "text": "IDOR allows unauthorized access to objects. Implement proper authorization checks.",
+                "markdown": "IDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "idor"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.5",
+                "security_severity": "5.5"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "short_description": {
+                "text": "Potential local file inclusion vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential local file inclusion vulnerability detected",
+                "markdown": "**Local File Inclusion**\n\nLocal file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "help": {
+                "text": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths.",
+                "markdown": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "lfi"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.5",
+                "security_severity": "6.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。",
+            "markdown": "このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-3/code.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "RCE",
+            "parsentry/v1": "88c0dd7626b11c8e"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。",
+            "markdown": "このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-3/code.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "88c0dd7626b11c8e",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。",
+            "markdown": "このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-3/code.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "RCE",
+            "parsentry/v1": "88c0dd7626b11c8e"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。",
+            "markdown": "このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-3/code.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "88c0dd7626b11c8e",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。",
+            "markdown": "このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-3/code.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "88c0dd7626b11c8e",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。",
+            "markdown": "このコードでは、XMLリクエスト中の要素テキストをそのままシェルコマンドとしてexecに渡しています。また、libxmljsのnonetオプションがfalseになっており、外部エンティティ（XXE）による入力改竄が可能です。これにより、認証やサニタイズなしに任意コマンドが実行され、リモートコード実行（RCE）が発生します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-3/code.js",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "88c0dd7626b11c8e",
+            "vulnerability/type": "RCE"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "bff49f89c51006d2"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bff49f89c51006d2",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bff49f89c51006d2",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bff49f89c51006d2",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "bff49f89c51006d2"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "bff49f89c51006d2"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。",
+            "markdown": "このコードでは、ユーザー入力をre.subで\"< > { } [ ]\"のみ削除するサニタイズを行っていますが、シングルクォートやセミコロン、括弧などはそのまま残るため、JavaScript文脈での文字列を閉じて任意コードを注入するXSSが可能です。render_templateでサニタイズ後の入力をエスケープせずに直接テンプレートに渡している点も問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-4/code.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bff49f89c51006d2",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "eeb75b82fa60df79"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "eeb75b82fa60df79"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "eeb75b82fa60df79"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "eeb75b82fa60df79"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eeb75b82fa60df79",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "eeb75b82fa60df79"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE).",
+            "markdown": "The code constructs SQL statements by concatenating untrusted user input directly into the query string and executes it via executescript(), allowing an attacker to inject arbitrary SQL (e.g., DROP TABLE)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/solution.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "eeb75b82fa60df79"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2ae8a474f1ba9d27",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2ae8a474f1ba9d27",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2ae8a474f1ba9d27",
+            "vulnerability/type": "IDOR"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "2ae8a474f1ba9d27"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "2ae8a474f1ba9d27"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "2ae8a474f1ba9d27"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。",
+            "markdown": "レイヤー化された認証・認可チェックが存在せず、任意の user_id を指定して他ユーザの設定変更や管理者権限チェック、ユーザ名取得が可能です。具体的には update_setting／is_admin／username の各 API が user_id の存在チェックしか行わず、呼び出し元のユーザ所有権を検証していないため、水平権限昇格につながる IDOR 脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-2/code.h",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "IDOR",
+            "parsentry/v1": "2ae8a474f1ba9d27"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: get_tax_form_attachmentメソッドではユーザ入力を一切検証せずにopenを呼び出しており、任意のローカルファイルを読み込めます。また、get_prof_pictureメソッドでは先頭が「/」または「..」で始まる入力のみ拒否し、任意の相対パス操作（例: “subdir/../../etc/passwd”）は検出できず、結果としてLFIが成立します。",
+            "markdown": "get_tax_form_attachmentメソッドではユーザ入力を一切検証せずにopenを呼び出しており、任意のローカルファイルを読み込めます。また、get_prof_pictureメソッドでは先頭が「/」または「..」で始まる入力のみ拒否し、任意の相対パス操作（例: “subdir/../../etc/passwd”）は検出できず、結果としてLFIが成立します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/code.py",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e62926bfc83d6a5d",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: get_tax_form_attachmentメソッドではユーザ入力を一切検証せずにopenを呼び出しており、任意のローカルファイルを読み込めます。また、get_prof_pictureメソッドでは先頭が「/」または「..」で始まる入力のみ拒否し、任意の相対パス操作（例: “subdir/../../etc/passwd”）は検出できず、結果としてLFIが成立します。",
+            "markdown": "get_tax_form_attachmentメソッドではユーザ入力を一切検証せずにopenを呼び出しており、任意のローカルファイルを読み込めます。また、get_prof_pictureメソッドでは先頭が「/」または「..」で始まる入力のみ拒否し、任意の相対パス操作（例: “subdir/../../etc/passwd”）は検出できず、結果としてLFIが成立します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/code.py",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e62926bfc83d6a5d",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: get_tax_form_attachmentメソッドではユーザ入力を一切検証せずにopenを呼び出しており、任意のローカルファイルを読み込めます。また、get_prof_pictureメソッドでは先頭が「/」または「..」で始まる入力のみ拒否し、任意の相対パス操作（例: “subdir/../../etc/passwd”）は検出できず、結果としてLFIが成立します。",
+            "markdown": "get_tax_form_attachmentメソッドではユーザ入力を一切検証せずにopenを呼び出しており、任意のローカルファイルを読み込めます。また、get_prof_pictureメソッドでは先頭が「/」または「..」で始まる入力のみ拒否し、任意の相対パス操作（例: “subdir/../../etc/passwd”）は検出できず、結果としてLFIが成立します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/code.py",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e62926bfc83d6a5d",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "LFI",
+            "parsentry/v1": "71ced28f5346c207"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "71ced28f5346c207",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "LFI",
+            "parsentry/v1": "71ced28f5346c207"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "71ced28f5346c207",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "71ced28f5346c207",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "71ced28f5346c207",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "LFI",
+            "parsentry/v1": "71ced28f5346c207"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。",
+            "markdown": "このコードでは、ユーザ入力（request.args[\"input\"]）をパス結合し、os.path.normpathで正規化した後、ベースディレクトリのみを許可するチェックを行っています。しかし、ベースディレクトリ以下の任意のファイルが読み取り可能なため、本来公開すべきでない内部ソースコードや設定ファイルなどを取得できるLFI（Local File Inclusion）の脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/solution.py",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "71ced28f5346c207",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f688bcc6b3224de",
+            "vulnerability/type": "SQLI"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "IDOR: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SSRF: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "LFI: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "XSS: The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL.",
+            "markdown": "The application exposes multiple SQL injection points by concatenating or directly executing user-controlled input without proper parameterization or sanitization. \n\n• get_stock_price: If the input contains a semicolon, executescript() is called, allowing arbitrary statements.\n• update_stock_price: The symbol is inserted via string formatting without validation.\n• exec_multi_query: Splits on semicolons and executes each fragment with cur.execute(), allowing multi-statement injection.\n• exec_user_script: Uses executescript() when semicolons are present, permitting arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-4/code.py",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "1f688bcc6b3224de"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "XSS: このコードはCryptoAPI.sha1.hash関数が引数のオブジェクトに対して暗黙的にtoStringを呼び出す仕様を悪用しており、攻撃者制御下のオブジェクトのtoString内にスクリプトを埋め込むことで任意のコード実行（DOMベースのXSS）を可能にしています。入力の検証やサニタイズが一切行われておらず、JavaScriptのtoString呼び出しをバイパスできるため、深刻なXSS脆弱性です。",
+            "markdown": "このコードはCryptoAPI.sha1.hash関数が引数のオブジェクトに対して暗黙的にtoStringを呼び出す仕様を悪用しており、攻撃者制御下のオブジェクトのtoString内にスクリプトを埋め込むことで任意のコード実行（DOMベースのXSS）を可能にしています。入力の検証やサニタイズが一切行われておらず、JavaScriptのtoString呼び出しをバイパスできるため、深刻なXSS脆弱性です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-5/hack-1.js",
+                  "index": 7
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "816d9182c9c7c6ff"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: このコードはCryptoAPI.sha1.hash関数が引数のオブジェクトに対して暗黙的にtoStringを呼び出す仕様を悪用しており、攻撃者制御下のオブジェクトのtoString内にスクリプトを埋め込むことで任意のコード実行（DOMベースのXSS）を可能にしています。入力の検証やサニタイズが一切行われておらず、JavaScriptのtoString呼び出しをバイパスできるため、深刻なXSS脆弱性です。",
+            "markdown": "このコードはCryptoAPI.sha1.hash関数が引数のオブジェクトに対して暗黙的にtoStringを呼び出す仕様を悪用しており、攻撃者制御下のオブジェクトのtoString内にスクリプトを埋め込むことで任意のコード実行（DOMベースのXSS）を可能にしています。入力の検証やサニタイズが一切行われておらず、JavaScriptのtoString呼び出しをバイパスできるため、深刻なXSS脆弱性です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-5/hack-1.js",
+                  "index": 7
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "XSS",
+            "parsentry/v1": "816d9182c9c7c6ff"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: このコードはCryptoAPI.sha1.hash関数が引数のオブジェクトに対して暗黙的にtoStringを呼び出す仕様を悪用しており、攻撃者制御下のオブジェクトのtoString内にスクリプトを埋め込むことで任意のコード実行（DOMベースのXSS）を可能にしています。入力の検証やサニタイズが一切行われておらず、JavaScriptのtoString呼び出しをバイパスできるため、深刻なXSS脆弱性です。",
+            "markdown": "このコードはCryptoAPI.sha1.hash関数が引数のオブジェクトに対して暗黙的にtoStringを呼び出す仕様を悪用しており、攻撃者制御下のオブジェクトのtoString内にスクリプトを埋め込むことで任意のコード実行（DOMベースのXSS）を可能にしています。入力の検証やサニタイズが一切行われておらず、JavaScriptのtoString呼び出しをバイパスできるため、深刻なXSS脆弱性です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-2/Level-5/hack-1.js",
+                  "index": 7
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "816d9182c9c7c6ff",
+            "vulnerability/type": "XSS"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "LFI: hack.py のテストケースから、TaxPayer クラスの get_prof_picture および get_tax_form_attachment メソッドがユーザー入力を適切に検証せずにファイル操作を行っていることが分かります。このため、\"../../\" を含むパス・トラバーサルシーケンスを使用してシステム上の任意ファイル（例：/etc/passwd）を読み取る LFI 攻撃が可能です。",
+            "markdown": "hack.py のテストケースから、TaxPayer クラスの get_prof_picture および get_tax_form_attachment メソッドがユーザー入力を適切に検証せずにファイル操作を行っていることが分かります。このため、\"../../\" を含むパス・トラバーサルシーケンスを使用してシステム上の任意ファイル（例：/etc/passwd）を読み取る LFI 攻撃が可能です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/Season-1/Level-3/hack.py",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5fe40329b78521e9",
+            "vulnerability/type": "LFI"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "repo/Season-2/Level-3/code.js",
+            "index": 0
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-2/Level-4/code.py",
+            "index": 1
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-1/Level-4/solution.py",
+            "index": 2
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-1/Level-2/code.h",
+            "index": 3
+          },
+          "mime_type": "text/plain"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-1/Level-3/code.py",
+            "index": 4
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-1/Level-3/solution.py",
+            "index": 5
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-1/Level-4/code.py",
+            "index": 6
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-2/Level-5/hack-1.js",
+            "index": 7
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/Season-1/Level-3/hack.py",
+            "index": 8
+          },
+          "mime_type": "text/x-python"
+        }
+      ],
+      "invocation": {
+        "executionSuccessful": true
+      }
+    }
+  ]
+}

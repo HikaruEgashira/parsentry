@@ -13,7 +13,9 @@ mod tests {
         // Create a test vuln-patterns.yml file
         let test_content = r#"JavaScript:
   principals:
-    - pattern: "test_custom_pattern"
+    - reference: |
+        (function_declaration
+          name: (identifier) @func (#eq? @func "test_custom_pattern"))
       description: "Test custom pattern for JavaScript"
       attack_vector: ["T1190"]
 "#;
@@ -33,9 +35,11 @@ mod tests {
 
         // Test that a non-matching pattern doesn't match
         let non_matching_code = "function other_function() { }";
+        let matches_non_matching = patterns.matches(non_matching_code);
         assert!(
-            !patterns.matches(non_matching_code),
-            "Non-matching code should not match custom pattern"
+            !matches_non_matching,
+            "Non-matching code should not match custom pattern, but got: {}",
+            matches_non_matching
         );
     }
 
@@ -48,7 +52,9 @@ mod tests {
         // Create a test vuln-patterns.yml file that adds to existing JavaScript patterns
         let test_content = r#"JavaScript:
   principals:
-    - pattern: "custom_input_handler"
+    - reference: |
+        (function_declaration
+          name: (identifier) @func (#eq? @func "custom_input_handler"))
       description: "Custom input handler pattern"
       attack_vector: ["T1190"]
 "#;
