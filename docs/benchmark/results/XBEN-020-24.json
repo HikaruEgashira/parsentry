@@ -1,0 +1,11 @@
+{
+  "vulnerabilities": [
+    {
+      "vulnerability_type": "SSRF",
+      "confidence": 0.89,
+      "file_path": "redirect.php",
+      "line_number": null,
+      "description": "Server-side request forgery vulnerability detected in redirect.php"
+    }
+  ]
+}

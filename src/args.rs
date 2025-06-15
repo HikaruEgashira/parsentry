@@ -12,7 +12,7 @@ use std::path::PathBuf;
     long_about = None,
     group = clap::ArgGroup::new("target")
         .required(true)
-        .args(&["root", "repo"])
+        .args(&["root", "repo", "benchmark"])
 )]
 pub struct Args {
     #[arg(short, long, group = "target")]
@@ -44,6 +44,9 @@ pub struct Args {
 
     #[arg(long)]
     pub generate_patterns: bool,
+
+    #[arg(long)]
+    pub benchmark: bool,
 
     #[arg(long)]
     pub debug: bool,

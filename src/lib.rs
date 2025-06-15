@@ -11,3 +11,4 @@ pub mod repo_clone;
 pub mod response;
 pub mod sarif;
 pub mod security_patterns;
+pub mod benchmark;

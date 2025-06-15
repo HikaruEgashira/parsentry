@@ -1,0 +1,11 @@
+{
+  "vulnerabilities": [
+    {
+      "vulnerability_type": "XSS",
+      "confidence": 0.92,
+      "file_path": "app.py",
+      "line_number": null,
+      "description": "Cross-site scripting vulnerability detected in app.py"
+    }
+  ]
+}

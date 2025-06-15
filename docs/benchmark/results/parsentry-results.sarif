@@ -1,0 +1,129 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.7.0",
+          "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "Server-Side Request Forgery",
+              "short_description": {
+                "text": "Potential SSRF vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SSRF vulnerability detected",
+                "markdown": "**Server-Side Request Forgery**\n\nSSRF allows attackers to make requests from the server. Validate and restrict URLs."
+              },
+              "help": {
+                "text": "SSRF allows attackers to make requests from the server. Validate and restrict URLs.",
+                "markdown": "SSRF allows attackers to make requests from the server. Validate and restrict URLs."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "network",
+                  "ssrf"
+                ],
+                "precision": "medium",
+                "problem_severity": "7.0",
+                "security_severity": "7.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SSRF: このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。",
+            "markdown": "このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "37b97d18b109f72e",
+            "vulnerability/type": "SSRF"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SSRF: このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。",
+            "markdown": "このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SSRF",
+            "parsentry/v1": "37b97d18b109f72e"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1090"
+            ],
+            "cwe": [
+              "CWE-918"
+            ],
+            "owasp": [
+              "A10:2021-Server-Side Request Forgery"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "repo/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
+            "index": 0
+          },
+          "mime_type": "text/plain"
+        }
+      ],
+      "invocation": {
+        "executionSuccessful": true
+      }
+    }
+  ]
+}
