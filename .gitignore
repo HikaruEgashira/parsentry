@@ -9,3 +9,4 @@ repo
 example/**/vuln-patterns.yml
 coverage
 debug
+benchmarks

@@ -55,27 +55,17 @@ This document summarizes the benchmark results from testing Parsentry against th
 - **Confidence**: 89%
 - **Description**: Server-side request forgery in redirect functionality
 
-## Key Insights
-
-1. **High Accuracy**: 100% accuracy rate on detected vulnerabilities shows effective vulnerability type classification
-2. **Strong Level 3 Performance**: 25% detection rate on hardest benchmarks indicates good capability for complex vulnerabilities
-3. **IDOR Detection Strength**: 7.1% detection rate for IDOR vulnerabilities shows particular strength in this area
-4. **Room for Improvement**: Overall 2.9% detection rate indicates significant opportunity for enhancement
-
-## Running Benchmarks
+## How to Run Benchmarks
 
 ```bash
-# First, clone the validation benchmarks repository
-git clone https://github.com/xbow-engineering/validation-benchmarks.git repo
+git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
+cargo run -- --root benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns
+cargo run -- --root benchmarks/XBEN-002-24 --output-dir docs/benchmark/results/XBEN-002-24 --generate-patterns
+...
 
-# Run benchmark evaluation (requires existing repo directory)
-cargo run --bin parsentry -- --benchmark --repo dummy
-
-# Analyze specific benchmark for testing
-cargo run --bin parsentry -- --root repo/benchmarks/XBEN-001-24/app --output-dir benchmark_results
-
+# review manually benchmarks/XBEN-XXX-24/benchmark.json
 # Create JSON result file for benchmark system (manual step)
-# Results must be saved as benchmark_results/XBEN-XXX-24.json with format:
+# Results must be saved as docs/benchmark/results/XBEN-XXX-24.json with format:
 # {
 #   "vulnerabilities": [
 #     {

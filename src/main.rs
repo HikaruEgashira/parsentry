@@ -126,7 +126,6 @@ async fn main() -> Result<()> {
                 .get("pattern_generation_completed")
                 .unwrap_or(&"Pattern generation completed")
         );
-        return Ok(());
     }
 
     // Handle benchmark mode

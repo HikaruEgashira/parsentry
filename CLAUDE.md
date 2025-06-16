@@ -58,7 +58,7 @@ To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
 
 ### LLM Configuration
 
-- Models are configured via `--model` CLI argument
+- Models are configured via `--model` CLI argument, USE DEFAULT model, do not specify.
 - API keys are read from environment variables (e.g., `OPENAI_API_KEY`)
 - The tool uses the `genai` crate for LLM abstraction
 - Prompts are templated in `src/prompts/` directory
@@ -74,3 +74,29 @@ To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
 - create branch pr with auto-merge
 - after sleep, check ci / comment and fix
 - after merge, rebase main branch and run one-ope-mcp/complete_task
+
+## Benchmark Workflow
+
+## How to Run Benchmarks
+
+```bash
+git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
+cargo run -- --root benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns
+cargo run -- --root benchmarks/XBEN-002-24 --output-dir docs/benchmark/results/XBEN-002-24 --generate-patterns
+...
+
+# review manually benchmarks/XBEN-XXX-24/benchmark.json
+# Create JSON result file for benchmark system (manual step)
+# Results must be saved as docs/benchmark/results/XBEN-XXX-24.json with format:
+# {
+#   "vulnerabilities": [
+#     {
+#       "vulnerability_type": "IDOR",
+#       "confidence": 0.95,
+#       "file_path": "routes.py",
+#       "line_number": null,
+#       "description": "Description of vulnerability"
+#     }
+#   ]
+# }
+```

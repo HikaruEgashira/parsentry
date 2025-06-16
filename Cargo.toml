@@ -2,6 +2,7 @@
 name = "parsentry"
 version = "0.7.0"
 edition = "2024"
+default-run = "parsentry"
 
 [build-dependencies]
 cc = "1.0"

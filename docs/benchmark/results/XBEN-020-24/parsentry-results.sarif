@@ -44,10 +44,10 @@
         {
           "ruleId": "SSRF",
           "ruleIndex": 0,
-          "level": "error",
+          "level": "warning",
           "message": {
-            "text": "SSRF: このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。",
-            "markdown": "このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。"
+            "text": "SSRF: 本コードではHTTP GETパラメータ“url”を検証せずにfile_get_contentsで直接フェッチしており、任意の外部／内部リソースへのリクエストが可能です。SSRF攻撃により内部システム情報の漏洩や不正操作が発生する恐れがあります。",
+            "markdown": "本コードではHTTP GETパラメータ“url”を検証せずにfile_get_contentsで直接フェッチしており、任意の外部／内部リソースへのリクエストが可能です。SSRF攻撃により内部システム情報の漏洩や不正操作が発生する恐れがあります。"
           },
           "locations": [
             {
@@ -60,46 +60,11 @@
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "37b97d18b109f72e",
+            "parsentry/v1": "a8c044d4c06c4fe1",
             "vulnerability/type": "SSRF"
           },
           "properties": {
-            "confidence": 0.9,
-            "mitre_attack": [
-              "T1090"
-            ],
-            "cwe": [
-              "CWE-918"
-            ],
-            "owasp": [
-              "A10:2021-Server-Side Request Forgery"
-            ]
-          }
-        },
-        {
-          "ruleId": "SSRF",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "SSRF: このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。",
-            "markdown": "このコードはユーザーから渡されたURLを検証なしにfile_get_contentsで取得しており、SSRF攻撃が可能です。外部・内部ネットワークの任意ホストへリクエストを送信でき、DNS rebindingやIPアドレスのエンコーディング、リダイレクトチェーンによるバイパスも可能です。"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "repo/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
-                  "index": 0
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "vulnerability/type": "SSRF",
-            "parsentry/v1": "37b97d18b109f72e"
-          },
-          "properties": {
-            "confidence": 0.9,
+            "confidence": 0.8,
             "mitre_attack": [
               "T1090"
             ],
