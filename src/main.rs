@@ -1,12 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
-use parsentry::analyzer::{analyze_file, analyze_pattern};
+use parsentry::analyzer::analyze_pattern;
 use parsentry::args::{Args, validate_args};
 use parsentry::file_classifier::FileClassifier;
 use parsentry::language::Language;
 use parsentry::locales;
-use parsentry::parser;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::sarif::SarifReport;
 use parsentry::security_patterns::SecurityRiskPatterns;
@@ -234,7 +233,7 @@ async fn main() -> Result<()> {
         .map(|(idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
             let pattern_match = pattern_match.clone();
-            let root_dir = Arc::clone(&root_dir);
+            let _root_dir = Arc::clone(&root_dir);
             let output_dir = output_dir.clone();
             let model = model.clone();
             let files = files.clone();

@@ -352,7 +352,7 @@ impl SecurityRiskPatterns {
         let content_bytes = content.as_bytes();
 
         // Helper function to process queries and collect matches
-        let mut process_queries = |queries: &[Query], pattern_type: PatternType, configs: &[PatternConfig], is_definition: bool| {
+        let mut process_queries = |queries: &[Query], pattern_type: PatternType, _configs: &[PatternConfig], is_definition: bool| {
             for (query_idx, query) in queries.iter().enumerate() {
                 let mut cursor = QueryCursor::new();
                 let mut matches = cursor.matches(query, root_node, content_bytes);

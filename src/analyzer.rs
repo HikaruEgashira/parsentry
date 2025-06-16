@@ -517,7 +517,7 @@ pub async fn analyze_pattern(
     pattern_match: &PatternMatch,
     model: &str,
     files: &[PathBuf],
-    verbosity: u8,
+    _verbosity: u8,
     min_confidence: i32,
     debug: bool,
     output_dir: &Option<PathBuf>,
