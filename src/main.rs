@@ -352,7 +352,7 @@ async fn main() -> Result<()> {
                 Some((file_path, analysis_result))
             }
         })
-        .buffer_unordered(10) // API制限を考慮した並列処理
+        .buffer_unordered(50) // パターンベース分析での並列処理強化
         .collect::<Vec<_>>()
         .await;
     for result in results.into_iter() {
