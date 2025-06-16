@@ -10,6 +10,18 @@ principals:
     attack_vector:
       - "T1190"
       - "T1071"
+    vulnerability_types:
+      - "SQLI"
+      - "XSS"
+      - "IDOR"
+      - "LFI"
+    context_focus:
+      - "execute"
+      - "query"
+      - "render"
+      - "template"
+      - "check_permission"
+      - "authorize"
   # Flask route decorators - decorator patterns
   - definition: |
       (decorator
@@ -161,6 +173,14 @@ resources:
     attack_vector:
       - "T1083"
       - "T1005"
+    vulnerability_types:
+      - "LFI"
+      - "AFO"
+    context_focus:
+      - "request"
+      - "path"
+      - "join"
+      - "abspath"
   # Process execution resource
   - reference: |
       (attribute
@@ -170,6 +190,13 @@ resources:
     attack_vector:
       - "T1059"
       - "T1055"
+    vulnerability_types:
+      - "RCE"
+    context_focus:
+      - "request"
+      - "input"
+      - "shell"
+      - "shlex"
   # System command execution resource
   - reference: |
       (call
@@ -205,3 +232,10 @@ resources:
     attack_vector:
       - "T1190"
       - "T1213"
+    vulnerability_types:
+      - "SQLI"
+    context_focus:
+      - "request"
+      - "input"
+      - "sanitize"
+      - "escape"

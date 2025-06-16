@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
-use parsentry::analyzer::analyze_file;
+use parsentry::analyzer::{analyze_file, analyze_pattern};
 use parsentry::args::{Args, validate_args};
 use parsentry::file_classifier::FileClassifier;
 use parsentry::language::Language;
@@ -161,31 +161,42 @@ async fn main() -> Result<()> {
         files.len()
     );
 
-    let mut pattern_files = Vec::new();
+    // Collect all pattern matches across all files
+    let mut all_pattern_matches = Vec::new();
+    
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
             let filename = file_path.to_string_lossy();
             let lang = FileClassifier::classify(&filename, &content);
 
             let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
-            if patterns.matches(&content) {
-                pattern_files.push(file_path.clone());
+            let matches = patterns.get_pattern_matches(&content);
+            
+            for pattern_match in matches {
+                all_pattern_matches.push((file_path.clone(), pattern_match));
             }
         }
     }
 
     println!(
-        "🔎 {} ({}件)",
+        "🔎 {} ({}件のパターンマッチ)",
         messages
             .get("security_pattern_files_detected")
-            .unwrap_or(&"Detected security pattern matching files"),
-        pattern_files.len()
+            .unwrap_or(&"Detected security patterns"),
+        all_pattern_matches.len()
     );
-    for (i, f) in pattern_files.iter().enumerate() {
-        println!("  [P{}] {}", i + 1, f.display());
+    
+    // Group patterns by type for display
+    let mut pattern_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for (_, pattern_match) in &all_pattern_matches {
+        *pattern_types.entry(pattern_match.pattern_config.description.clone()).or_insert(0) += 1;
+    }
+    
+    for (pattern_desc, count) in pattern_types {
+        println!("  [{}] {} matches", count, pattern_desc);
     }
 
-    let total = pattern_files.len();
+    let total = all_pattern_matches.len();
     let root_dir = Arc::new(root_dir);
 
     // Create repository-specific output directory
@@ -218,10 +229,11 @@ async fn main() -> Result<()> {
     );
     progress_bar.set_message("Analyzing files...");
 
-    // 並列度を制御してタスクを実行
-    let results = stream::iter(pattern_files.iter().enumerate())
-        .map(|(idx, file_path)| {
+    // 並列度を制御してタスクを実行 - パターンごとに分析
+    let results = stream::iter(all_pattern_matches.iter().enumerate())
+        .map(|(idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
+            let pattern_match = pattern_match.clone();
             let root_dir = Arc::clone(&root_dir);
             let output_dir = output_dir.clone();
             let model = model.clone();
@@ -233,60 +245,28 @@ async fn main() -> Result<()> {
 
             async move {
                 let file_name = file_path.display().to_string();
-                progress_bar.set_message(format!("Analyzing: {}", file_name));
+                let pattern_desc = &pattern_match.pattern_config.description;
+                progress_bar.set_message(format!("Analyzing pattern '{}' in: {}", pattern_desc, file_name));
                 if verbosity > 0 {
                     println!(
-                        "📄 {}: {} ({} / {})",
+                        "📄 {}: {} - Pattern: {} ({} / {})",
                         messages
                             .get("analysis_target")
                             .unwrap_or(&"Analysis target"),
                         file_name,
+                        pattern_desc,
                         idx + 1,
                         total
                     );
                     println!("{}", "=".repeat(80));
                 }
 
-                let mut repo = RepoOps::new((*root_dir).clone());
-                if let Err(e) = repo.add_file_to_parser(&file_path) {
-                    if verbosity > 0 {
-                        println!(
-                            "❌ {}: {}: {}",
-                            messages
-                                .get("parse_add_failed")
-                                .unwrap_or(&"Failed to add file to parser"),
-                            file_path.display(),
-                            e
-                        );
-                    }
-                    progress_bar.inc(1);
-                    return None;
-                }
-                let context = match repo.collect_context_for_security_pattern(&file_path) {
-                    Ok(ctx) => ctx,
-                    Err(e) => {
-                        println!(
-                            "⚠️  {}（空のコンテキストで継続）: {}: {}",
-                            messages
-                                .get("context_collection_failed")
-                                .unwrap_or(&"Failed to collect context"),
-                            file_path.display(),
-                            e
-                        );
-                        // For IaC files and other unsupported file types, continue with empty context
-                        parser::Context {
-                            definitions: Vec::new(),
-                            references: Vec::new(),
-                        }
-                    }
-                };
-
-                let analysis_result = match analyze_file(
+                let analysis_result = match analyze_pattern(
                     &file_path,
+                    &pattern_match,
                     &model,
                     &files,
                     verbosity,
-                    &context,
                     0,
                     debug,
                     &output_dir,

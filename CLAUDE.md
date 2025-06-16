@@ -77,8 +77,6 @@ To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
 
 ## Benchmark Workflow
 
-## How to Run Benchmarks
-
 ```bash
 git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
 cargo run -- --root benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns

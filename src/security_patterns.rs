@@ -85,6 +85,10 @@ pub struct PatternConfig {
     pub pattern_type: PatternQuery,
     pub description: String,
     pub attack_vector: Vec<String>,
+    #[serde(default)]
+    pub vulnerability_types: Vec<String>,
+    #[serde(default)]
+    pub context_focus: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -109,6 +113,16 @@ pub struct SecurityRiskPatterns {
     resource_definition_queries: Vec<Query>,
     resource_reference_queries: Vec<Query>,
     language: TreeSitterLanguage,
+    pattern_configs: Vec<PatternConfig>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PatternMatch {
+    pub pattern_config: PatternConfig,
+    pub pattern_type: PatternType,
+    pub start_byte: usize,
+    pub end_byte: usize,
+    pub matched_text: String,
 }
 
 impl SecurityRiskPatterns {
@@ -135,9 +149,11 @@ impl SecurityRiskPatterns {
         let mut action_reference_queries = Vec::new();
         let mut resource_definition_queries = Vec::new();
         let mut resource_reference_queries = Vec::new();
+        let mut pattern_configs = Vec::new();
 
         if let Some(principals) = &lang_patterns.principals {
             for config in principals {
+                pattern_configs.push(config.clone());
                 match &config.pattern_type {
                     PatternQuery::Definition { definition } => {
                         if let Ok(query) = Query::new(&ts_language, definition) {
@@ -155,6 +171,7 @@ impl SecurityRiskPatterns {
 
         if let Some(actions) = &lang_patterns.actions {
             for config in actions {
+                pattern_configs.push(config.clone());
                 match &config.pattern_type {
                     PatternQuery::Definition { definition } => {
                         if let Ok(query) = Query::new(&ts_language, definition) {
@@ -172,6 +189,7 @@ impl SecurityRiskPatterns {
 
         if let Some(resources) = &lang_patterns.resources {
             for config in resources {
+                pattern_configs.push(config.clone());
                 match &config.pattern_type {
                     PatternQuery::Definition { definition } => {
                         if let Ok(query) = Query::new(&ts_language, definition) {
@@ -195,6 +213,7 @@ impl SecurityRiskPatterns {
             resource_definition_queries,
             resource_reference_queries,
             language: ts_language,
+            pattern_configs,
         }
     }
 
@@ -317,6 +336,103 @@ impl SecurityRiskPatterns {
     pub fn get_attack_vectors(&self, _content: &str) -> Vec<String> {
         // For now, return empty vector - could be enhanced to map tree-sitter queries to attack vectors
         Vec::new()
+    }
+
+    pub fn get_pattern_matches(&self, content: &str) -> Vec<PatternMatch> {
+        let mut parser = Parser::new();
+        parser.set_language(&self.language).unwrap();
+        
+        let tree = match parser.parse(content, None) {
+            Some(tree) => tree,
+            None => return Vec::new(),
+        };
+
+        let root_node = tree.root_node();
+        let mut pattern_matches = Vec::new();
+        let content_bytes = content.as_bytes();
+
+        // Helper function to process queries and collect matches
+        let mut process_queries = |queries: &[Query], pattern_type: PatternType, configs: &[PatternConfig], is_definition: bool| {
+            for (query_idx, query) in queries.iter().enumerate() {
+                let mut cursor = QueryCursor::new();
+                let mut matches = cursor.matches(query, root_node, content_bytes);
+                
+                while let Some(match_) = matches.next() {
+                    if let Some(capture) = match_.captures.first() {
+                        let node = capture.node;
+                        let start_byte = node.start_byte();
+                        let end_byte = node.end_byte();
+                        let matched_text = content[start_byte..end_byte].to_string();
+                        
+                        // Find the corresponding config based on pattern type and index
+                        let mut config_idx = 0;
+                        for config in &self.pattern_configs {
+                            let matches_type = match (&config.pattern_type, is_definition) {
+                                (PatternQuery::Definition { .. }, true) => true,
+                                (PatternQuery::Reference { .. }, false) => true,
+                                _ => false,
+                            };
+                            
+                            if matches_type {
+                                let current_pattern_type = self.get_pattern_type_for_config(config);
+                                if current_pattern_type == pattern_type {
+                                    if config_idx == query_idx {
+                                        pattern_matches.push(PatternMatch {
+                                            pattern_config: config.clone(),
+                                            pattern_type: pattern_type.clone(),
+                                            start_byte,
+                                            end_byte,
+                                            matched_text: matched_text.clone(),
+                                        });
+                                        break;
+                                    }
+                                    config_idx += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        // Process all pattern types
+        let principals: Vec<PatternConfig> = self.pattern_configs.iter()
+            .filter(|c| self.get_pattern_type_for_config(c) == PatternType::Principal)
+            .cloned()
+            .collect();
+        let actions: Vec<PatternConfig> = self.pattern_configs.iter()
+            .filter(|c| self.get_pattern_type_for_config(c) == PatternType::Action)
+            .cloned()
+            .collect();
+        let resources: Vec<PatternConfig> = self.pattern_configs.iter()
+            .filter(|c| self.get_pattern_type_for_config(c) == PatternType::Resource)
+            .cloned()
+            .collect();
+
+        process_queries(&self.principal_definition_queries, PatternType::Principal, &principals, true);
+        process_queries(&self.principal_reference_queries, PatternType::Principal, &principals, false);
+        process_queries(&self.action_definition_queries, PatternType::Action, &actions, true);
+        process_queries(&self.action_reference_queries, PatternType::Action, &actions, false);
+        process_queries(&self.resource_definition_queries, PatternType::Resource, &resources, true);
+        process_queries(&self.resource_reference_queries, PatternType::Resource, &resources, false);
+
+        pattern_matches
+    }
+
+    fn get_pattern_type_for_config(&self, config: &PatternConfig) -> PatternType {
+        // Determine pattern type based on position in pattern_configs
+        let config_position = self.pattern_configs.iter().position(|c| c.description == config.description).unwrap_or(0);
+        
+        let principals_count = self.principal_definition_queries.len() + self.principal_reference_queries.len();
+        let actions_count = self.action_definition_queries.len() + self.action_reference_queries.len();
+        
+        if config_position < principals_count {
+            PatternType::Principal
+        } else if config_position < principals_count + actions_count {
+            PatternType::Action
+        } else {
+            PatternType::Resource
+        }
     }
 
     fn load_patterns(root_dir: Option<&Path>) -> HashMap<Language, LanguagePatterns> {

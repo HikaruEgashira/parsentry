@@ -15,7 +15,7 @@ use crate::language::Language;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{Response, response_json_schema};
-use crate::security_patterns::{PatternType, SecurityRiskPatterns};
+use crate::security_patterns::{PatternType, SecurityRiskPatterns, PatternMatch};
 
 fn save_debug_file(
     output_dir: &Option<PathBuf>,
@@ -509,5 +509,175 @@ pub async fn analyze_file(
             }
         }
     }
+    Ok(response)
+}
+
+pub async fn analyze_pattern(
+    file_path: &PathBuf,
+    pattern_match: &PatternMatch,
+    model: &str,
+    files: &[PathBuf],
+    verbosity: u8,
+    min_confidence: i32,
+    debug: bool,
+    output_dir: &Option<PathBuf>,
+    api_base_url: Option<&str>,
+    language: &Language,
+) -> Result<Response, Error> {
+    info!(
+        "Analyzing pattern '{}' in file {}",
+        pattern_match.pattern_config.description,
+        file_path.display()
+    );
+
+    let mut parser = CodeParser::new()?;
+
+    // Add files for context parsing
+    for file in files {
+        if let Err(e) = parser.add_file(file) {
+            warn!(
+                "Failed to add file to parser {}: {}. Skipping file.",
+                file.display(),
+                e
+            );
+        }
+    }
+
+    let content = std::fs::read_to_string(file_path)?;
+    
+    // Extract focused context based on pattern's context_focus
+    let mut context = parser.build_context_from_file(file_path)?;
+    
+    // Filter context based on pattern's context_focus
+    if !pattern_match.pattern_config.context_focus.is_empty() {
+        let focus_keywords = &pattern_match.pattern_config.context_focus;
+        context.definitions.retain(|def| {
+            focus_keywords.iter().any(|keyword| {
+                def.name.contains(keyword) || def.source.contains(keyword)
+            })
+        });
+    }
+
+    // Build pattern-specific prompt
+    let pattern_context = format!(
+        "Pattern Type: {:?}\nPattern Description: {}\nMatched Code: {}\nAttack Vectors: {}\nVulnerability Types: {}\nContext Focus: {}",
+        pattern_match.pattern_type,
+        pattern_match.pattern_config.description,
+        pattern_match.matched_text,
+        pattern_match.pattern_config.attack_vector.join(", "),
+        pattern_match.pattern_config.vulnerability_types.join(", "),
+        pattern_match.pattern_config.context_focus.join(", ")
+    );
+
+    let mut context_text = String::new();
+    if !context.definitions.is_empty() {
+        context_text.push_str("\nFocused Context Definitions:\n");
+        for def in &context.definitions {
+            context_text.push_str(&format!(
+                "\nFunction/Definition: {}\nCode:\n{}\n",
+                def.name, def.source
+            ));
+        }
+    }
+
+    let prompt = format!(
+        "File: {}\n\nPattern Analysis:\n{}\n\nFull File Content:\n{}\n{}\n\n{}\n{}\n{}\n\nFocus your analysis specifically on the vulnerabilities related to: {}",
+        file_path.display(),
+        pattern_context,
+        content,
+        context_text,
+        prompts::get_initial_analysis_prompt_template(language),
+        prompts::get_analysis_approach_template(language),
+        prompts::get_guidelines_template(language),
+        pattern_match.pattern_config.vulnerability_types.join(", ")
+    );
+
+    debug!("[PATTERN-BASED PROMPT]\n{}", prompt);
+
+    // Save debug input if debug mode is enabled
+    if debug {
+        let debug_content = format!(
+            "=== PATTERN-BASED ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nPattern: {}\nTimestamp: {}\n\n{}",
+            model,
+            file_path.display(),
+            pattern_match.pattern_config.description,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            prompt
+        );
+        if let Err(e) = save_debug_file(
+            output_dir,
+            file_path,
+            &format!("pattern_{}_prompt", pattern_match.pattern_config.description.replace(" ", "_")),
+            &debug_content,
+        ) {
+            warn!("Failed to save debug input file: {}", e);
+        }
+    }
+
+    let chat_req = ChatRequest::new(vec![
+        ChatMessage::system(
+            "You are a security vulnerability analyzer focusing on specific security patterns. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Focus your analysis on the specific pattern and vulnerability types provided.",
+        ),
+        ChatMessage::user(&prompt),
+    ]);
+
+    let json_client = create_api_client(api_base_url);
+    let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
+    debug!("[PATTERN LLM Response]\n{}", chat_content);
+
+    // Save debug output if debug mode is enabled
+    if debug {
+        let debug_content = format!(
+            "=== PATTERN-BASED ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nPattern: {}\nTimestamp: {}\n\n{}",
+            model,
+            file_path.display(),
+            pattern_match.pattern_config.description,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            chat_content
+        );
+        if let Err(e) = save_debug_file(
+            output_dir,
+            file_path,
+            &format!("pattern_{}_response", pattern_match.pattern_config.description.replace(" ", "_")),
+            &debug_content,
+        ) {
+            warn!("Failed to save debug output file: {}", e);
+        }
+    }
+
+    let mut response: Response = parse_json_response(&chat_content)?;
+
+    response.confidence_score =
+        crate::response::Response::normalize_confidence_score(response.confidence_score);
+
+    // Clean up and validate the response
+    response.sanitize();
+
+    // Add pattern-specific metadata to response
+    if response.confidence_score >= min_confidence {
+        // Enhance response with pattern information
+        response.par_analysis.policy_violations.iter_mut().for_each(|violation| {
+            if !violation.rule_description.contains(&pattern_match.pattern_config.description) {
+                violation.rule_description = format!(
+                    "{} (Pattern: {})",
+                    violation.rule_description,
+                    pattern_match.pattern_config.description
+                );
+            }
+        });
+    }
+
+    info!(
+        "Pattern analysis complete for '{}' with confidence: {}",
+        pattern_match.pattern_config.description,
+        response.confidence_score
+    );
+
     Ok(response)
 }
