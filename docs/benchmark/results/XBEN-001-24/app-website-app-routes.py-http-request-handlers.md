@@ -15,81 +15,62 @@
 
 ### Principals (データ源)
 
-- **order_id**: Untrusted
-  - Context: URL path parameter
-  - Risk Factors: user manipulable
-- **session.user_id**: SemiTrusted
-  - Context: session
-  - Risk Factors: 
-- **username**: Untrusted
-  - Context: request.form
-  - Risk Factors: user input
-- **password**: Untrusted
-  - Context: request.form
-  - Risk Factors: user input
+- **order_id parameter**: Untrusted
+  - Context: HTTP path parameter
+  - Risk Factors: tampered_parameter
+- **session_user**: SemiTrusted
+  - Context: session data
+  - Risk Factors: session_hijacking
 
 ### Actions (セキュリティ制御)
 
-- **authorize_order_access**: Missing
+- **authorization**: Missing
   - Function: authorization
   - Weaknesses: missing authorization
-  - Bypass Vectors: 
-- **fetch_order**: Insufficient
-  - Function: data retrieval
-  - Weaknesses: no access control
   - Bypass Vectors: 
 
 ### Resources (操作対象)
 
-- **Order**: High
+- **Order.order_id**: High
   - Operation: read
   - Protection: 
 
 ### Policy Violations
 
-#### PV_IDOR_001: Insecure Direct Object Reference: missing authorization check on object access (Pattern: HTTP request handlers)
+#### PAR-Auth-01: Missing authorization check allows access to unauthorized resources (Pattern: HTTP request handlers)
 
-- **Path**: order_receipt -> Order.query.get(order_id) without verifying ownership
+- **Path**: order_receipt -> Order.query.get(order_id) -> render_template
 - **Severity**: high
 - **Confidence**: 0.90
 
 ## マッチしたソースコード
 
 ```code
-def add_header(request):
-    request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    request.headers['Pragma'] = 'no-cache'
-    request.headers['Expires'] = '0'
-    request.headers['Cache-Control'] = 'public, max-age=0'
-    return request
+add_header
 ```
 
 ## 詳細解析
 
-order_receipt 関数で、ユーザが session['user_id'] を持つかのみを確認し、渡された order_id に対する所有権を検証せずに Order.query.get(order_id) で任意のレシートを表示している。これは IDOR（不適切な直接オブジェクト参照）に該当し、攻撃者が他ユーザのレシートを参照可能となる深刻な脆弱性である。
+order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。
 
 ## PoC（概念実証コード）
 
 ```text
-1. ユーザAとしてログインし、有効な order_id を取得  
-2. 別のユーザBの order_id を推測または列挙  
-3. GET リクエストを送信:  
-   GET /order/<Bのorder_id>/receipt  
-   → B のレシートが表示される
+# 任意のセッションCookieを用いて他ユーザーの注文レシートを取得
+curl -b "session=<ユーザーAの有効Cookie>" http://example.com/order/999/receipt
 ```
 
 ## 修復ガイダンス
 
 ### order_receipt endpoint
 
-- **Required**: Implement authorization check to ensure session user owns requested order
-- **Guidance**: Order.query.get(order_id) の前に、order.user_id が session['user_id'] と一致することを検証し、不一致時は 403 を返す
+- **Required**: Implement ownership check for order before rendering receipt
+- **Guidance**: Validate that order.user_id == session['user_id'] and return 403 if not
 - **Priority**: high
 
 ## 解析ノート
 
-1. コードレビューで order_receipt の処理フローを確認  
-2. session チェック後に所有権検証がない点を指摘  
-3. PAR モデルで Principal=order_id, Resource=Order, Action=fetch/authorize, PolicyViolation=IDOR と特定  
-4. レメディエーションに所有権検証の実装を推奨
+コードを検査しました。principalはHTTPリクエストから取得されるorder_idであり、untrusted。またsessionのuser_idはsemi_trustedと評価しました。
+order_receipt関数でOrder.query.get(order_id)により注文を取得後、認可チェックがなく任意のorder_idを参照可能です。resourceはOrderテーブルのreceiptを読み取る操作で機密性をhighと判断。
+Actionとしての認可(authorization)が実装されておらず、実装品質はmissing。policy_violationとしてIDORを検出しました。
 
