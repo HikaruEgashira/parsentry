@@ -3,7 +3,7 @@ principals:
   - reference: |
       (qualified_identifier
         scope: (namespace_identifier) @ns (#eq? @ns "std")
-        name: (identifier) @name (#eq? @name "cin"))
+        name: (identifier) @name (#eq? @name "cin")) @attribute
     description: "Standard input operations"
     attack_vector:
       - "T1059"
@@ -11,7 +11,7 @@ principals:
   # Line input operations
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "getline"))
+        function: (identifier) @func (#eq? @func "getline")) @call
     description: "Line input operations"
     attack_vector:
       - "T1059"
@@ -19,7 +19,7 @@ principals:
   # Network receive operations
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "recv"))
+        function: (identifier) @func (#eq? @func "recv")) @call
     description: "Network receive operations"
     attack_vector:
       - "T1095"
@@ -153,7 +153,7 @@ resources:
       - "T1055"
   # Dynamic memory allocation
   - reference: |
-      (new_expression)
+      (new_expression) @expression
     description: "Dynamic memory allocation"
     attack_vector:
       - "T1055"

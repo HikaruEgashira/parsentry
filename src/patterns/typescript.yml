@@ -4,7 +4,7 @@ principals:
       (call_expression
         function: (member_expression
           object: (identifier) @obj (#eq? @obj "app")
-          property: (property_identifier) @prop (#match? @prop "(get|post|put|delete)")))
+          property: (property_identifier) @prop (#match? @prop "(get|post|put|delete)"))) @call
     description: "Express route handlers"
     attack_vector:
       - "T1190"
@@ -12,7 +12,7 @@ principals:
   # Fetch API requests
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "fetch"))
+        function: (identifier) @func (#eq? @func "fetch")) @call
     description: "Fetch API requests"
     attack_vector:
       - "T1071"
@@ -20,7 +20,7 @@ principals:
   # Module imports
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "require"))
+        function: (identifier) @func (#eq? @func "require")) @call
     description: "Module imports"
     attack_vector:
       - "T1105"

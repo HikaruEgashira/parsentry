@@ -7,7 +7,7 @@ principals:
         parameters: (parameters
           (parameter
             type: (generic_type
-              type: (type_identifier) @type (#match? @type "Request")))))
+              type: (type_identifier) @type (#match? @type "Request"))))) @function
     description: "HTTP request handlers"
     attack_vector:
       - "T1190"

@@ -2,7 +2,7 @@ principals:
   # Fetch API requests
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "fetch"))
+        function: (identifier) @func (#eq? @func "fetch")) @call
     description: "Fetch API requests"
     attack_vector:
       - "T1071"
@@ -10,7 +10,7 @@ principals:
   # XMLHttpRequest API
   - reference: |
       (new_expression
-        constructor: (identifier) @const (#eq? @const "XMLHttpRequest"))
+        constructor: (identifier) @const (#eq? @const "XMLHttpRequest")) @expression
     description: "XMLHttpRequest API"
     attack_vector:
       - "T1071"
@@ -18,7 +18,7 @@ principals:
   # Module imports
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "require"))
+        function: (identifier) @func (#eq? @func "require")) @call
     description: "Module imports"
     attack_vector:
       - "T1105"
@@ -27,7 +27,7 @@ principals:
   - reference: |
       (member_expression
         object: (identifier) @obj (#eq? @obj "process")
-        property: (property_identifier) @prop (#eq? @prop "env"))
+        property: (property_identifier) @prop (#eq? @prop "env")) @attribute
     description: "Environment variables"
     attack_vector:
       - "T1083"
@@ -37,7 +37,7 @@ principals:
       (call_expression
         function: (member_expression
           object: (identifier) @obj (#eq? @obj "document")
-          property: (property_identifier) @prop (#match? @prop "(getElementById|querySelector)")))
+          property: (property_identifier) @prop (#match? @prop "(getElementById|querySelector)"))) @call
     description: "DOM access"
     attack_vector:
       - "T1055"

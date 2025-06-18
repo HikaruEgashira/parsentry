@@ -3,7 +3,7 @@ principals:
   - reference: |
       (call
         receiver: (identifier) @obj (#eq? @obj "params")
-        method: (identifier) @method (#eq? @method "[]" ))
+        method: (identifier) @method (#eq? @method "[]" )) @call
     description: "Request parameters"
     attack_vector:
       - "T1190"
@@ -11,7 +11,7 @@ principals:
   # ActiveRecord ORM
   - reference: |
       (scope_resolution
-        scope: (constant) @scope (#eq? @scope "ActiveRecord"))
+        scope: (constant) @scope (#eq? @scope "ActiveRecord")) @attribute
     description: "ActiveRecord ORM"
     attack_vector:
       - "T1005"
@@ -20,7 +20,7 @@ principals:
   - reference: |
       (scope_resolution
         scope: (constant) @scope (#eq? @scope "Net")
-        name: (constant) @name (#eq? @name "HTTP"))
+        name: (constant) @name (#eq? @name "HTTP")) @attribute
     description: "HTTP client"
     attack_vector:
       - "T1071"

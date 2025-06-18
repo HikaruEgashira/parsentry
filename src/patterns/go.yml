@@ -4,7 +4,7 @@ principals:
       (call_expression
         function: (selector_expression
           operand: (identifier) @pkg (#eq? @pkg "http")
-          field: (field_identifier) @func (#eq? @func "HandleFunc")))
+          field: (field_identifier) @func (#eq? @func "HandleFunc"))) @call
     description: "HTTP handlers"
     attack_vector:
       - "T1190"
@@ -14,7 +14,7 @@ principals:
       (call_expression
         function: (selector_expression
           operand: (identifier) @pkg (#eq? @pkg "net")
-          field: (field_identifier) @func (#eq? @func "Dial")))
+          field: (field_identifier) @func (#eq? @func "Dial"))) @call
     description: "Network dialing"
     attack_vector:
       - "T1095"

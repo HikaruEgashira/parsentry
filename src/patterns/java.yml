@@ -10,7 +10,7 @@ principals:
   - reference: |
       (method_invocation
         object: (identifier) @obj (#eq? @obj "DriverManager")
-        name: (identifier) @method (#eq? @method "getConnection"))
+        name: (identifier) @method (#eq? @method "getConnection")) @call
     description: "Database connections"
     attack_vector:
       - "T1005"
@@ -18,7 +18,7 @@ principals:
   # User input scanning
   - reference: |
       (object_creation_expression
-        type: (type_identifier) @type (#eq? @type "Scanner"))
+        type: (type_identifier) @type (#eq? @type "Scanner")) @expression
     description: "User input scanning"
     attack_vector:
       - "T1059"

@@ -2,25 +2,25 @@ principals:
   # HTTP GET parameters
   - reference: |
       (subscript_expression
-        object: (variable_name (name) @var (#eq? @var "_GET")))
+        object: (variable_name (name) @var (#eq? @var "_GET"))) @expression
     description: "HTTP GET parameters - user-controlled input via URL parameters"
     attack_vector: ["T1190", "T1071"]
   # HTTP POST parameters
   - reference: |
       (subscript_expression
-        object: (variable_name (name) @var (#eq? @var "_POST")))
+        object: (variable_name (name) @var (#eq? @var "_POST"))) @expression
     description: "HTTP POST parameters - user-controlled input via form submissions"
     attack_vector: ["T1190", "T1071"]
   # HTTP REQUEST parameters
   - reference: |
       (subscript_expression
-        object: (variable_name (name) @var (#eq? @var "_REQUEST")))
+        object: (variable_name (name) @var (#eq? @var "_REQUEST"))) @expression
     description: "HTTP request parameters - combined GET, POST, and COOKIE data"
     attack_vector: ["T1190", "T1071"]
   # HTTP cookies
   - reference: |
       (subscript_expression
-        object: (variable_name (name) @var (#eq? @var "_COOKIE")))
+        object: (variable_name (name) @var (#eq? @var "_COOKIE"))) @expression
     description: "HTTP cookies - user-controlled data stored in browser"
     attack_vector: ["T1539", "T1071"]
   # File uploads

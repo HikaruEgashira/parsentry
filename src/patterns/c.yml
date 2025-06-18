@@ -2,7 +2,7 @@ principals:
   # Network receive operations
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "recv"))
+        function: (identifier) @func (#eq? @func "recv")) @call
     description: "Network receive operations"
     attack_vector:
       - "T1095"
@@ -10,7 +10,7 @@ principals:
   # Socket accept operations
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "accept"))
+        function: (identifier) @func (#eq? @func "accept")) @call
     description: "Socket accept operations"
     attack_vector:
       - "T1095"
@@ -18,7 +18,7 @@ principals:
   # File input operations
   - reference: |
       (call_expression
-        function: (identifier) @func (#eq? @func "fgets"))
+        function: (identifier) @func (#eq? @func "fgets")) @call
     description: "File input operations"
     attack_vector:
       - "T1083"
