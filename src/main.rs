@@ -9,7 +9,6 @@ use parsentry::locales;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::sarif::SarifReport;
 use parsentry::security_patterns::SecurityRiskPatterns;
-use parsentry::benchmark::BenchmarkRunner;
 use std::path::PathBuf;
 
 use parsentry::repo::RepoOps;
@@ -59,10 +58,7 @@ async fn main() -> Result<()> {
         .as_deref()
         .or_else(|| env_base_url.as_deref());
 
-    let (root_dir, repo_name) = if args.benchmark {
-        // In benchmark mode, use current directory
-        (PathBuf::from("."), None)
-    } else if let Some(repo) = &args.repo {
+    let (root_dir, repo_name) = if let Some(repo) = &args.repo {
         let dest = PathBuf::from("repo");
         if dest.exists() {
             std::fs::remove_dir_all(&dest).map_err(|e| {
@@ -127,27 +123,6 @@ async fn main() -> Result<()> {
         );
     }
 
-    // Handle benchmark mode
-    if args.benchmark {
-        println!("🎯 Starting benchmark mode");
-        
-        let benchmarks_dir = root_dir.join("repo").join("benchmarks");
-        let output_dir = args.output_dir.unwrap_or_else(|| PathBuf::from("benchmark_results"));
-        
-        let runner = BenchmarkRunner::new(benchmarks_dir, output_dir);
-        
-        // Run benchmark scoring
-        let score = runner.run_full_benchmark().await?;
-        
-        // Save results
-        let results_file = PathBuf::from("benchmark_results.json");
-        runner.save_results(&score, &results_file).await?;
-        
-        // Print summary
-        runner.print_summary(&score);
-        
-        return Ok(());
-    }
 
     let repo = RepoOps::new(root_dir.clone());
 

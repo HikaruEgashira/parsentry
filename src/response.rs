@@ -544,15 +544,6 @@ impl Response {
             }
         }
 
-        if let Some(full_code) = &self.full_source_code {
-            if !full_code.trim().is_empty() {
-                md.push_str("## 完全なソースコード\n\n");
-                md.push_str("```code\n");
-                md.push_str(full_code);
-                md.push_str("\n```\n\n");
-            }
-        }
-
         md.push_str("## 詳細解析\n\n");
         md.push_str(&self.analysis);
         md.push_str("\n\n");
