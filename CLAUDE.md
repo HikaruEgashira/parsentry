@@ -69,37 +69,31 @@ To add a new language, follow `docs/ADD_NEW_LANGUAGE.md`:
 - Snapshot tests using `insta` crate for response consistency
 - Unit tests for individual components in `tests/` directory
 
+### Performance Validation
+
+Performance validation is conducted using standardized vulnerability benchmarks:
+
+```bash
+# Clone validation benchmarks (104 total benchmarks)
+git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
+
+# Run individual benchmark validation
+cargo run -- --root benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns
+
+# Validate specific vulnerability types
+cargo run -- --root benchmarks/XBEN-010-24 --output-dir docs/benchmark/results/XBEN-010-24 --generate-patterns
+cargo run -- --root benchmarks/XBEN-020-24 --output-dir docs/benchmark/results/XBEN-020-24 --generate-patterns
+```
+
+Benchmark validation uses `benchmarks/XBEN-XXX-24/benchmark.json`
+
 ### Development Workflow
 
 - create branch pr with auto-merge
 - after sleep, check ci / comment and fix
 - after merge, rebase main branch and run one-ope-mcp/complete_task
 
-## Benchmark Workflow
-
-```bash
-git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
-cargo run -- --root benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns
-cargo run -- --root benchmarks/XBEN-002-24 --output-dir docs/benchmark/results/XBEN-002-24 --generate-patterns
-...
-
-# review manually benchmarks/XBEN-XXX-24/benchmark.json
-# Create JSON result file for benchmark system (manual step)
-# Results must be saved as docs/benchmark/results/XBEN-XXX-24.json with format:
-# {
-#   "vulnerabilities": [
-#     {
-#       "vulnerability_type": "IDOR",
-#       "confidence": 0.95,
-#       "file_path": "routes.py",
-#       "line_number": null,
-#       "description": "Description of vulnerability"
-#     }
-#   ]
-# }
-```
-
 ## Behavior guideline
 
-top levelのディレクトリに新たなファイルやディレクトリを作成しないでください
+top levelのディレクトリに新たなファイルやディレクトリを作成しないでください、gitのバージョン管理を利用してください
 ユーザーとは必ずsayコマンドを使って結果を要約して応答してください

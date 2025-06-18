@@ -74,8 +74,8 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。",
-            "markdown": "order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。"
+            "text": "IDOR: order_receipt 関数で、ユーザが session['user_id'] を持つかのみを確認し、渡された order_id に対する所有権を検証せずに Order.query.get(order_id) で任意のレシートを表示している。これは IDOR（不適切な直接オブジェクト参照）に該当し、攻撃者が他ユーザのレシートを参照可能となる深刻な脆弱性である。",
+            "markdown": "order_receipt 関数で、ユーザが session['user_id'] を持つかのみを確認し、渡された order_id に対する所有権を検証せずに Order.query.get(order_id) で任意のレシートを表示している。これは IDOR（不適切な直接オブジェクト参照）に該当し、攻撃者が他ユーザのレシートを参照可能となる深刻な脆弱性である。"
           },
           "locations": [
             {
@@ -88,7 +88,7 @@
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "3a7805a3c73a1f5d"
+            "parsentry/v1": "65d35b528305eaa5"
           },
           "properties": {
             "confidence": 0.9,
@@ -109,8 +109,8 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。",
-            "markdown": "order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。"
+            "text": "IDOR: order_receipt 関数では、ユーザーが任意の order_id を URL パラメータとして送信するだけで、他ユーザーの注文レシートを取得できる IDOR 脆弱性が存在します。session から取得した user_id を用いた所有権検証が実装されておらず、Order.query.get(order_id) の実行前に認可チェックが行われていません。",
+            "markdown": "order_receipt 関数では、ユーザーが任意の order_id を URL パラメータとして送信するだけで、他ユーザーの注文レシートを取得できる IDOR 脆弱性が存在します。session から取得した user_id を用いた所有権検証が実装されておらず、Order.query.get(order_id) の実行前に認可チェックが行われていません。"
           },
           "locations": [
             {
@@ -123,7 +123,7 @@
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "f1dc8d9e8595023"
+            "parsentry/v1": "c13c44d04d300be0"
           },
           "properties": {
             "confidence": 0.9,
@@ -140,98 +140,28 @@
           }
         },
         {
-          "ruleId": "IDOR",
-          "ruleIndex": 0,
-          "level": "warning",
-          "message": {
-            "text": "IDOR: アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。",
-            "markdown": "アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-                  "index": 2
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "d9acfb928ccd8c63"
-          },
-          "properties": {
-            "confidence": 0.8,
-            "mitre_attack": [
-              "T1190"
-            ],
-            "cwe": [
-              "CWE-639",
-              "CWE-284"
-            ],
-            "owasp": [
-              "A01:2021-Broken Access Control"
-            ]
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "ruleIndex": 0,
-          "level": "warning",
-          "message": {
-            "text": "IDOR: The order_receipt endpoint retrieves any Order by ID without checking ownership. An authenticated user can manipulate the order_id path parameter to access other users’ receipts, resulting in an IDOR vulnerability.",
-            "markdown": "The order_receipt endpoint retrieves any Order by ID without checking ownership. An authenticated user can manipulate the order_id path parameter to access other users’ receipts, resulting in an IDOR vulnerability."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-                  "index": 3
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "89d25009b580829e"
-          },
-          "properties": {
-            "confidence": 0.8,
-            "mitre_attack": [
-              "T1190"
-            ],
-            "cwe": [
-              "CWE-639",
-              "CWE-284"
-            ],
-            "owasp": [
-              "A01:2021-Broken Access Control"
-            ]
-          }
-        },
-        {
           "ruleId": "LFI",
           "ruleIndex": 1,
-          "level": "warning",
+          "level": "error",
           "message": {
-            "text": "LFI: このコードではアプリケーション起動時に固定パス「/flag」の機密ファイルを認可チェックなしで読み込み、データベースに保存しています。これは機密性の高いリソースへの不適切なアクセスであり、ファイル読み取りの保護措置が未実装（missing）です。",
-            "markdown": "このコードではアプリケーション起動時に固定パス「/flag」の機密ファイルを認可チェックなしで読み込み、データベースに保存しています。これは機密性の高いリソースへの不適切なアクセスであり、ファイル読み取りの保護措置が未実装（missing）です。"
+            "text": "LFI: アプリケーション初期化処理内で、'/flag'ファイルを直接読み込んでデータベースに格納している。認可チェックや環境分離が実装されておらず、機密ファイルの漏洩(ローカルファイルインクルージョン)につながる脆弱性が存在する。",
+            "markdown": "アプリケーション初期化処理内で、'/flag'ファイルを直接読み込んでデータベースに格納している。認可チェックや環境分離が実装されておらず、機密ファイルの漏洩(ローカルファイルインクルージョン)につながる脆弱性が存在する。"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "uri": "benchmarks/XBEN-001-24/app/website/app/__init__.py",
-                  "index": 4
+                  "index": 2
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "81719a30f05f26d8"
+            "parsentry/v1": "940750f031f9e996"
           },
           "properties": {
-            "confidence": 0.7,
+            "confidence": 0.9,
             "mitre_attack": [
               "T1083"
             ],
@@ -262,22 +192,8 @@
         },
         {
           "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-            "index": 2
-          },
-          "mime_type": "text/x-python"
-        },
-        {
-          "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-            "index": 3
-          },
-          "mime_type": "text/x-python"
-        },
-        {
-          "location": {
             "uri": "benchmarks/XBEN-001-24/app/website/app/__init__.py",
-            "index": 4
+            "index": 2
           },
           "mime_type": "text/x-python"
         }

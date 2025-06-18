@@ -259,7 +259,12 @@ impl SecurityRiskPatterns {
                 let mut matches = cursor.matches(query, root_node, content.as_bytes());
                 // Check if there are any matches (predicates are already evaluated by tree-sitter)
                 while let Some(match_) = matches.next() {
-                    if let Some(capture) = match_.captures.first() {
+                    // Find the root node of the match (function_definition, call, etc.)
+                    let mut root_node = None;
+                    let mut has_valid_capture = false;
+                    
+                    for capture in match_.captures {
+                        let capture_name = &query.capture_names()[capture.index as usize];
                         let node = capture.node;
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
@@ -270,6 +275,35 @@ impl SecurityRiskPatterns {
                             continue;
                         }
                         
+                        // For definitions, we want the entire function_definition/class_definition, etc.
+                        // For references, we want the specific call/attribute access
+                        match *capture_name {
+                            "function" | "definition" | "class" | "method_def" | "call" | "expression" | "attribute" => {
+                                // Direct structural captures
+                                root_node = Some(node);
+                                has_valid_capture = true;
+                            }
+                            "name" | "func" | "attr" | "obj" | "method" => {
+                                // These are identifier captures - find the parent node
+                                if let Some(parent) = node.parent() {
+                                    if parent.kind().contains("definition") || 
+                                       parent.kind().contains("declaration") ||
+                                       parent.kind().contains("call") ||
+                                       parent.kind().contains("attribute") {
+                                        root_node = Some(parent);
+                                    }
+                                }
+                                has_valid_capture = true;
+                            }
+                            _ => {
+                                // Other captures - use as-is
+                                root_node = Some(node);
+                                has_valid_capture = true;
+                            }
+                        }
+                    }
+                    
+                    if has_valid_capture {
                         return true;
                     }
                 }
@@ -290,124 +324,40 @@ impl SecurityRiskPatterns {
 
         let root_node = tree.root_node();
 
-        // Check principals first
-        for query in &self.principal_definition_queries {
-            let mut cursor = QueryCursor::new();
-            let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            while let Some(match_) = matches.next() {
-                if let Some(capture) = match_.captures.first() {
-                    let node = capture.node;
-                    let start_byte = node.start_byte();
-                    let end_byte = node.end_byte();
-                    let matched_text = content[start_byte..end_byte].to_string();
-                    
-                    // Filter out variable names with 2 characters or less
-                    if matched_text.trim().len() <= 2 {
-                        continue;
+        // Helper function to check if any query matches
+        let check_queries = |queries: &[Query]| -> bool {
+            for query in queries {
+                let mut cursor = QueryCursor::new();
+                let mut matches = cursor.matches(query, root_node, content.as_bytes());
+                while let Some(match_) = matches.next() {
+                    // Check if we have valid captures with sufficient content
+                    for capture in match_.captures {
+                        let node = capture.node;
+                        let start_byte = node.start_byte();
+                        let end_byte = node.end_byte();
+                        let matched_text = content[start_byte..end_byte].to_string();
+                        
+                        // Filter out variable names with 2 characters or less
+                        if matched_text.trim().len() > 2 {
+                            return true;
+                        }
                     }
-                    
-                    return Some(PatternType::Principal);
                 }
             }
-        }
-        for query in &self.principal_reference_queries {
-            let mut cursor = QueryCursor::new();
-            let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            while let Some(match_) = matches.next() {
-                if let Some(capture) = match_.captures.first() {
-                    let node = capture.node;
-                    let start_byte = node.start_byte();
-                    let end_byte = node.end_byte();
-                    let matched_text = content[start_byte..end_byte].to_string();
-                    
-                    // Filter out variable names with 2 characters or less
-                    if matched_text.trim().len() <= 2 {
-                        continue;
-                    }
-                    
-                    return Some(PatternType::Principal);
-                }
-            }
-        }
+            false
+        };
 
-        // Check actions
-        for query in &self.action_definition_queries {
-            let mut cursor = QueryCursor::new();
-            let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            while let Some(match_) = matches.next() {
-                if let Some(capture) = match_.captures.first() {
-                    let node = capture.node;
-                    let start_byte = node.start_byte();
-                    let end_byte = node.end_byte();
-                    let matched_text = content[start_byte..end_byte].to_string();
-                    
-                    // Filter out variable names with 2 characters or less
-                    if matched_text.trim().len() <= 2 {
-                        continue;
-                    }
-                    
-                    return Some(PatternType::Action);
-                }
-            }
+        // Check each pattern type in order
+        if check_queries(&self.principal_definition_queries) || check_queries(&self.principal_reference_queries) {
+            return Some(PatternType::Principal);
         }
-        for query in &self.action_reference_queries {
-            let mut cursor = QueryCursor::new();
-            let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            while let Some(match_) = matches.next() {
-                if let Some(capture) = match_.captures.first() {
-                    let node = capture.node;
-                    let start_byte = node.start_byte();
-                    let end_byte = node.end_byte();
-                    let matched_text = content[start_byte..end_byte].to_string();
-                    
-                    // Filter out variable names with 2 characters or less
-                    if matched_text.trim().len() <= 2 {
-                        continue;
-                    }
-                    
-                    return Some(PatternType::Action);
-                }
-            }
+        
+        if check_queries(&self.action_definition_queries) || check_queries(&self.action_reference_queries) {
+            return Some(PatternType::Action);
         }
-
-        // Check resources
-        for query in &self.resource_definition_queries {
-            let mut cursor = QueryCursor::new();
-            let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            while let Some(match_) = matches.next() {
-                if let Some(capture) = match_.captures.first() {
-                    let node = capture.node;
-                    let start_byte = node.start_byte();
-                    let end_byte = node.end_byte();
-                    let matched_text = content[start_byte..end_byte].to_string();
-                    
-                    // Filter out variable names with 2 characters or less
-                    if matched_text.trim().len() <= 2 {
-                        continue;
-                    }
-                    
-                    return Some(PatternType::Resource);
-                }
-            }
-        }
-        for query in &self.resource_reference_queries {
-            let mut cursor = QueryCursor::new();
-            let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            while let Some(match_) = matches.next() {
-                if let Some(capture) = match_.captures.first() {
-                    let node = capture.node;
-                    let start_byte = node.start_byte();
-                    let end_byte = node.end_byte();
-                    let matched_text = content[start_byte..end_byte].to_string();
-                    
-                    // Filter out variable names with 2 characters or less
-                    if matched_text.trim().len() <= 2 {
-                        continue;
-                    }
-                    
-                    return Some(PatternType::Resource);
-                }
-            }
+        
+        if check_queries(&self.resource_definition_queries) || check_queries(&self.resource_reference_queries) {
+            return Some(PatternType::Resource);
         }
 
         None
@@ -438,7 +388,13 @@ impl SecurityRiskPatterns {
                 let mut matches = cursor.matches(query, root_node, content_bytes);
                 
                 while let Some(match_) = matches.next() {
-                    if let Some(capture) = match_.captures.first() {
+                    // Find the best node to capture (full definition/reference context)
+                    let mut best_node = None;
+                    let mut best_text = String::new();
+                    let mut best_priority = 0; // Higher priority = better capture
+                    
+                    for capture in match_.captures {
+                        let capture_name = &query.capture_names()[capture.index as usize];
                         let node = capture.node;
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
@@ -448,6 +404,69 @@ impl SecurityRiskPatterns {
                         if matched_text.trim().len() <= 2 {
                             continue;
                         }
+                        
+                        // Assign priority and determine best capture based on type and context
+                        let (priority, candidate_node, candidate_text) = match *capture_name {
+                            "function" | "definition" | "class" | "method_def" => {
+                                // Highest priority - direct captures of full definitions
+                                (100, Some(node), matched_text.clone())
+                            }
+                            "call" | "expression" | "attribute" => {
+                                // High priority - direct captures of full expressions  
+                                (90, Some(node), matched_text.clone())
+                            }
+                            "name" | "func" | "attr" | "obj" | "method" => {
+                                // Medium priority - identifier captures, find parent
+                                let mut found_parent = None;
+                                let mut parent = node.parent();
+                                while let Some(p) = parent {
+                                    if (is_definition && (p.kind().contains("definition") || p.kind().contains("declaration"))) ||
+                                       (!is_definition && (p.kind().contains("call") || p.kind().contains("attribute") || p.kind().contains("expression"))) {
+                                        found_parent = Some(p);
+                                        break;
+                                    }
+                                    parent = p.parent();
+                                }
+                                if let Some(p) = found_parent {
+                                    (80, Some(p), content[p.start_byte()..p.end_byte()].to_string())
+                                } else {
+                                    (70, Some(node), matched_text.clone())
+                                }
+                            }
+                            "param" | "func_name" => {
+                                // Medium priority - parameter/function name captures, find function definition
+                                let mut found_func = None;
+                                let mut parent = node.parent();
+                                while let Some(p) = parent {
+                                    if p.kind() == "function_definition" {
+                                        found_func = Some(p);
+                                        break;
+                                    }
+                                    parent = p.parent();
+                                }
+                                if let Some(p) = found_func {
+                                    (85, Some(p), content[p.start_byte()..p.end_byte()].to_string())
+                                } else {
+                                    (60, Some(node), matched_text.clone())
+                                }
+                            }
+                            _ => {
+                                // Low priority - other captures
+                                (50, Some(node), matched_text.clone())
+                            }
+                        };
+                        
+                        // Update best capture if this one has higher priority
+                        if priority > best_priority {
+                            best_priority = priority;
+                            best_node = candidate_node;
+                            best_text = candidate_text;
+                        }
+                    }
+                    
+                    if let Some(node) = best_node {
+                        let start_byte = node.start_byte();
+                        let end_byte = node.end_byte();
                         
                         // Find the corresponding config based on pattern type and index
                         let mut config_idx = 0;
@@ -467,7 +486,7 @@ impl SecurityRiskPatterns {
                                             pattern_type: pattern_type.clone(),
                                             start_byte,
                                             end_byte,
-                                            matched_text: matched_text.clone(),
+                                            matched_text: best_text.clone(),
                                         });
                                         break;
                                     }

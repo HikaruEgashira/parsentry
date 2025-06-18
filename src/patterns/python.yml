@@ -5,7 +5,7 @@ principals:
         name: (identifier) @func_name
         parameters: (parameters
           (identifier) @param
-          (#match? @param "request")))
+          (#match? @param "request"))) @function
     description: "HTTP request handlers"
     attack_vector:
       - "T1190"
@@ -15,7 +15,7 @@ principals:
       (decorator
         (attribute
           object: (identifier) @obj (#eq? @obj "app")
-          attribute: (identifier) @attr (#eq? @attr "route")))
+          attribute: (identifier) @attr (#eq? @attr "route"))) @decorator
     description: "Flask route decorators"
     attack_vector:
       - "T1190"
@@ -23,7 +23,7 @@ principals:
   - reference: |
       (attribute
         object: (identifier) @obj (#eq? @obj "requests")
-        attribute: (identifier))
+        attribute: (identifier)) @attribute
     description: "HTTP requests library"
     attack_vector:
       - "T1071"
@@ -32,7 +32,7 @@ principals:
   - reference: |
       (attribute
         object: (identifier) @obj (#eq? @obj "socket")
-        attribute: (identifier))
+        attribute: (identifier)) @attribute
     description: "Network socket operations"
     attack_vector:
       - "T1095"
@@ -41,7 +41,7 @@ principals:
   - reference: |
       (attribute
         object: (identifier) @obj (#match? @obj "urllib")
-        attribute: (identifier))
+        attribute: (identifier)) @attribute
     description: "URL handling modules"
     attack_vector:
       - "T1071"
@@ -49,7 +49,7 @@ principals:
   # User input function
   - reference: |
       (call
-        function: (identifier) @func (#eq? @func "input"))
+        function: (identifier) @func (#eq? @func "input")) @call
     description: "User input function"
     attack_vector:
       - "T1059"
@@ -57,7 +57,7 @@ principals:
   - reference: |
       (attribute
         object: (identifier) @obj (#eq? @obj "sys")
-        attribute: (identifier) @attr (#eq? @attr "argv"))
+        attribute: (identifier) @attr (#eq? @attr "argv")) @attribute
     description: "Command line arguments"
     attack_vector:
       - "T1059"
@@ -65,7 +65,7 @@ principals:
   - reference: |
       (call
         function: (attribute
-          attribute: (identifier) @method (#match? @method "fetch(all|one|many)")))
+          attribute: (identifier) @method (#match? @method "fetch(all|one|many)"))) @call
     description: "Database result fetching"
     attack_vector:
       - "T1005"

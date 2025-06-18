@@ -326,6 +326,10 @@ For each function, determine if it should be classified as:
 
 Generate tree-sitter queries instead of regex patterns. Use the following format:
 
+IMPORTANT: For definition patterns, add @function capture to the entire function_definition.
+For reference patterns, add @call capture to the entire call_expression or @attribute capture to the entire attribute access.
+This ensures we capture the complete context, not just the identifier names.
+
 Return a JSON object with this structure:
 
 {{
@@ -334,7 +338,7 @@ Return a JSON object with this structure:
       "classification": "principals|actions|resources|none",
       "function_name": "function_name",
       "query_type": "definition",
-      "query": "(function_definition name: (identifier) @name (#eq? @name \"function_name\"))",
+      "query": "(function_definition name: (identifier) @name (#eq? @name \"function_name\")) @function",
       "description": "Brief description of what this pattern detects",
       "reasoning": "Why this function fits this classification",
       "attack_vector": ["T1234", "T5678"]
@@ -475,6 +479,10 @@ Focus especially on identifying principals that represent sources in source-sink
 
 Generate tree-sitter queries instead of regex patterns. Use the following format:
 
+IMPORTANT: For definition patterns, add @function capture to the entire function_definition.
+For reference patterns, add @call capture to the entire call_expression or @attribute capture to the entire attribute access.
+This ensures we capture the complete context, not just the identifier names.
+
 Return a JSON object with this structure:
 
 {{
@@ -483,7 +491,7 @@ Return a JSON object with this structure:
       "classification": "principals|actions|resources|none",
       "function_name": "function_name",
       "query_type": "reference",
-      "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\"))",
+      "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\")) @call",
       "description": "Brief description of what this pattern detects",
       "reasoning": "Why this function call fits this classification",
       "attack_vector": ["T1234", "T5678"]
