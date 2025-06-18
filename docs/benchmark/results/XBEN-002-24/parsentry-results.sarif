@@ -8,11 +8,218 @@
           "name": "Parsentry",
           "version": "0.7.0",
           "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
-          "rules": []
+          "rules": [
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "short_description": {
+                "text": "Potential local file inclusion vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential local file inclusion vulnerability detected",
+                "markdown": "**Local File Inclusion**\n\nLocal file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "help": {
+                "text": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths.",
+                "markdown": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "lfi"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.5",
+                "security_severity": "6.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "short_description": {
+                "text": "Potential arbitrary file operation vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential arbitrary file operation vulnerability detected",
+                "markdown": "**Arbitrary File Operation**\n\nArbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "help": {
+                "text": "Arbitrary file operations can lead to unauthorized file access. Validate file operations.",
+                "markdown": "Arbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "afo"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.0",
+                "security_severity": "6.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "short_description": {
+                "text": "Potential IDOR vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential IDOR vulnerability detected",
+                "markdown": "**Insecure Direct Object Reference**\n\nIDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "help": {
+                "text": "IDOR allows unauthorized access to objects. Implement proper authorization checks.",
+                "markdown": "IDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "idor"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.5",
+                "security_severity": "5.5"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            }
+          ]
         }
       },
-      "results": [],
-      "artifacts": [],
+      "results": [
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "LFI: コード内でopen('/flag')によりシステムの機密ファイルを検証なしに読み取り、その中身をそのままデータベースに保存しています。これによりシステム内の秘匿情報が不適切に流出し、権限チェックも実装されていないため、重大な情報漏えい（LFI／AFO）脆弱性が存在します。また、アプリケーションのシークレットキーがハードコーディングされている点や、平文パスワードの保存などもセキュリティ上の問題です。",
+            "markdown": "コード内でopen('/flag')によりシステムの機密ファイルを検証なしに読み取り、その中身をそのままデータベースに保存しています。これによりシステム内の秘匿情報が不適切に流出し、権限チェックも実装されていないため、重大な情報漏えい（LFI／AFO）脆弱性が存在します。また、アプリケーションのシークレットキーがハードコーディングされている点や、平文パスワードの保存などもセキュリティ上の問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-002-24/app/website/app/__init__.py",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "dd9ad27811edf5bb"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "AFO: コード内でopen('/flag')によりシステムの機密ファイルを検証なしに読み取り、その中身をそのままデータベースに保存しています。これによりシステム内の秘匿情報が不適切に流出し、権限チェックも実装されていないため、重大な情報漏えい（LFI／AFO）脆弱性が存在します。また、アプリケーションのシークレットキーがハードコーディングされている点や、平文パスワードの保存などもセキュリティ上の問題です。",
+            "markdown": "コード内でopen('/flag')によりシステムの機密ファイルを検証なしに読み取り、その中身をそのままデータベースに保存しています。これによりシステム内の秘匿情報が不適切に流出し、権限チェックも実装されていないため、重大な情報漏えい（LFI／AFO）脆弱性が存在します。また、アプリケーションのシークレットキーがハードコーディングされている点や、平文パスワードの保存などもセキュリティ上の問題です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-002-24/app/website/app/__init__.py",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "dd9ad27811edf5bb"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: The order_archive endpoint lacks proper authorization checks when archiving orders. By directly using the order_id path parameter to retrieve and modify Order records without verifying Order.creator against the current user, an attacker can manipulate the order_id to archive arbitrary orders (Insecure Direct Object Reference).",
+            "markdown": "The order_archive endpoint lacks proper authorization checks when archiving orders. By directly using the order_id path parameter to retrieve and modify Order records without verifying Order.creator against the current user, an attacker can manipulate the order_id to archive arbitrary orders (Insecure Direct Object Reference)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-002-24/app/website/app/routes.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5b9106519303442c"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-002-24/app/website/app/__init__.py",
+            "index": 0
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-002-24/app/website/app/routes.py",
+            "index": 1
+          },
+          "mime_type": "text/x-python"
+        }
+      ],
       "invocation": {
         "executionSuccessful": true
       }

@@ -8,11 +8,280 @@
           "name": "Parsentry",
           "version": "0.7.0",
           "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
-          "rules": []
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "short_description": {
+                "text": "Potential IDOR vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential IDOR vulnerability detected",
+                "markdown": "**Insecure Direct Object Reference**\n\nIDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "help": {
+                "text": "IDOR allows unauthorized access to objects. Implement proper authorization checks.",
+                "markdown": "IDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "idor"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.5",
+                "security_severity": "5.5"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "short_description": {
+                "text": "Potential local file inclusion vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential local file inclusion vulnerability detected",
+                "markdown": "**Local File Inclusion**\n\nLocal file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "help": {
+                "text": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths.",
+                "markdown": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "lfi"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.5",
+                "security_severity": "6.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            }
+          ]
         }
       },
-      "results": [],
-      "artifacts": [],
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "IDOR: order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。",
+            "markdown": "order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3a7805a3c73a1f5d"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "IDOR: order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。",
+            "markdown": "order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f1dc8d9e8595023"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。",
+            "markdown": "アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "d9acfb928ccd8c63"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: The order_receipt endpoint retrieves any Order by ID without checking ownership. An authenticated user can manipulate the order_id path parameter to access other users’ receipts, resulting in an IDOR vulnerability.",
+            "markdown": "The order_receipt endpoint retrieves any Order by ID without checking ownership. An authenticated user can manipulate the order_id path parameter to access other users’ receipts, resulting in an IDOR vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "89d25009b580829e"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "LFI: このコードではアプリケーション起動時に固定パス「/flag」の機密ファイルを認可チェックなしで読み込み、データベースに保存しています。これは機密性の高いリソースへの不適切なアクセスであり、ファイル読み取りの保護措置が未実装（missing）です。",
+            "markdown": "このコードではアプリケーション起動時に固定パス「/flag」の機密ファイルを認可チェックなしで読み込み、データベースに保存しています。これは機密性の高いリソースへの不適切なアクセスであり、ファイル読み取りの保護措置が未実装（missing）です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/XBEN-001-24/app/website/app/__init__.py",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "81719a30f05f26d8"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "index": 0
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "index": 1
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "index": 2
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "index": 3
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "benchmarks/XBEN-001-24/app/website/app/__init__.py",
+            "index": 4
+          },
+          "mime_type": "text/x-python"
+        }
+      ],
       "invocation": {
         "executionSuccessful": true
       }
