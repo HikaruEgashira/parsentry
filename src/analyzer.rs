@@ -195,6 +195,31 @@ pub async fn analyze_file(
     }
 
     let content = std::fs::read_to_string(file_path)?;
+    
+    // Skip files with more than 50,000 characters
+    if content.len() > 50_000 {
+        return Ok(Response {
+            scratchpad: String::new(),
+            analysis: String::new(),
+            poc: String::new(),
+            confidence_score: 0,
+            vulnerability_types: vec![],
+            par_analysis: crate::response::ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: crate::response::RemediationGuidance {
+                policy_enforcement: vec![],
+            },
+            file_path: Some(file_path.to_string_lossy().to_string()),
+            pattern_description: Some("File too large for analysis".to_string()),
+            matched_source_code: None,
+            full_source_code: None,
+        });
+    }
+    
     if content.is_empty() {
         return Ok(Response {
             scratchpad: String::new(),
@@ -211,6 +236,10 @@ pub async fn analyze_file(
             remediation_guidance: crate::response::RemediationGuidance {
                 policy_enforcement: vec![],
             },
+            file_path: Some(file_path.to_string_lossy().to_string()),
+            pattern_description: Some("Empty file analysis".to_string()),
+            matched_source_code: None,
+            full_source_code: Some(String::new()),
         });
     }
 
@@ -509,6 +538,14 @@ pub async fn analyze_file(
             }
         }
     }
+    
+    // Add enhanced report information to response
+    response.file_path = Some(file_path.to_string_lossy().to_string());
+    response.full_source_code = Some(content);
+    // For file-based analysis, no specific pattern or matched code
+    response.pattern_description = Some("Full file analysis".to_string());
+    response.matched_source_code = None;
+    
     Ok(response)
 }
 
@@ -523,7 +560,7 @@ pub async fn analyze_pattern(
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
     language: &Language,
-) -> Result<Response, Error> {
+) -> Result<Option<Response>, Error> {
     info!(
         "Analyzing pattern '{}' in file {}",
         pattern_match.pattern_config.description,
@@ -545,33 +582,26 @@ pub async fn analyze_pattern(
 
     let content = std::fs::read_to_string(file_path)?;
     
-    // Extract focused context based on pattern's context_focus
-    let mut context = parser.build_context_from_file(file_path)?;
-    
-    // Filter context based on pattern's context_focus
-    if !pattern_match.pattern_config.context_focus.is_empty() {
-        let focus_keywords = &pattern_match.pattern_config.context_focus;
-        context.definitions.retain(|def| {
-            focus_keywords.iter().any(|keyword| {
-                def.name.contains(keyword) || def.source.contains(keyword)
-            })
-        });
+    // Skip files with more than 50,000 characters
+    if content.len() > 50_000 {
+        return Ok(None);
     }
+    
+    // Extract context from file
+    let context = parser.build_context_from_file(file_path)?;
 
     // Build pattern-specific prompt
     let pattern_context = format!(
-        "Pattern Type: {:?}\nPattern Description: {}\nMatched Code: {}\nAttack Vectors: {}\nVulnerability Types: {}\nContext Focus: {}",
+        "Pattern Type: {:?}\nPattern Description: {}\nMatched Code: {}\nAttack Vectors: {}",
         pattern_match.pattern_type,
         pattern_match.pattern_config.description,
         pattern_match.matched_text,
-        pattern_match.pattern_config.attack_vector.join(", "),
-        pattern_match.pattern_config.vulnerability_types.join(", "),
-        pattern_match.pattern_config.context_focus.join(", ")
+        pattern_match.pattern_config.attack_vector.join(", ")
     );
 
     let mut context_text = String::new();
     if !context.definitions.is_empty() {
-        context_text.push_str("\nFocused Context Definitions:\n");
+        context_text.push_str("\nContext Definitions:\n");
         for def in &context.definitions {
             context_text.push_str(&format!(
                 "\nFunction/Definition: {}\nCode:\n{}\n",
@@ -581,15 +611,14 @@ pub async fn analyze_pattern(
     }
 
     let prompt = format!(
-        "File: {}\n\nPattern Analysis:\n{}\n\nFull File Content:\n{}\n{}\n\n{}\n{}\n{}\n\nFocus your analysis specifically on the vulnerabilities related to: {}",
+        "File: {}\n\nPattern Analysis:\n{}\n\nFull File Content:\n{}\n{}\n\n{}\n{}\n{}",
         file_path.display(),
         pattern_context,
         content,
         context_text,
         prompts::get_initial_analysis_prompt_template(language),
         prompts::get_analysis_approach_template(language),
-        prompts::get_guidelines_template(language),
-        pattern_match.pattern_config.vulnerability_types.join(", ")
+        prompts::get_guidelines_template(language)
     );
 
     debug!("[PATTERN-BASED PROMPT]\n{}", prompt);
@@ -619,7 +648,7 @@ pub async fn analyze_pattern(
 
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(
-            "You are a security vulnerability analyzer focusing on specific security patterns. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Focus your analysis on the specific pattern and vulnerability types provided.",
+            "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Do not include any explanatory text outside the JSON object.",
         ),
         ChatMessage::user(&prompt),
     ]);
@@ -673,11 +702,17 @@ pub async fn analyze_pattern(
         });
     }
 
+    // Add enhanced report information to response
+    response.file_path = Some(file_path.to_string_lossy().to_string());
+    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+    response.matched_source_code = Some(pattern_match.matched_text.clone());
+    response.full_source_code = Some(content);
+
     info!(
         "Pattern analysis complete for '{}' with confidence: {}",
         pattern_match.pattern_config.description,
         response.confidence_score
     );
 
-    Ok(response)
+    Ok(Some(response))
 }

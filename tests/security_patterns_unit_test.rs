@@ -64,8 +64,6 @@ fn test_pattern_config_creation() {
         },
         description: "Dynamic code execution".to_string(),
         attack_vector: vec!["T1059".to_string()],
-        vulnerability_types: vec!["RCE".to_string()],
-        context_focus: vec!["input".to_string()],
     };
 
     match &config.pattern_type {
@@ -86,8 +84,6 @@ fn test_language_patterns_creation() {
             },
             description: "User input".to_string(),
             attack_vector: vec!["T1059".to_string()],
-            vulnerability_types: vec!["SQLI".to_string()],
-            context_focus: vec!["request".to_string()],
         },
         PatternConfig {
             pattern_type: PatternQuery::Reference { 
@@ -95,8 +91,6 @@ fn test_language_patterns_creation() {
             },
             description: "HTTP request parameter".to_string(),
             attack_vector: vec!["T1071".to_string()],
-            vulnerability_types: vec!["XSS".to_string()],
-            context_focus: vec!["escape".to_string()],
         },
     ];
 
@@ -106,8 +100,6 @@ fn test_language_patterns_creation() {
         },
         description: "Code execution".to_string(),
         attack_vector: vec!["T1059".to_string()],
-        vulnerability_types: vec!["RCE".to_string()],
-        context_focus: vec!["input".to_string()],
     }];
 
     let patterns = LanguagePatterns {

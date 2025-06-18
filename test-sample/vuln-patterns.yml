@@ -1,0 +1,41 @@
+Python:
+  principals:
+    - reference: |
+        (call_expression function: (identifier) @name (#eq? @name "user_input"))
+      description: "Detects calls to user_input which gathers external input"
+      attack_vector:
+        - "T1056"
+    - reference: |
+        (call_expression function: (identifier) @name (#eq? @name "input"))
+      description: "Detects calls to input which reads from standard input"
+      attack_vector:
+        - "T1056"
+  resources:
+    - definition: |
+        (function_definition name: (identifier) @name (#eq? @name "unsafe_query"))
+      description: "Detects the definition of an unsafe SQL query function that concatenates user input directly into the query string and executes it"
+      attack_vector:
+        - "T1505"
+    - reference: |
+        (call_expression function: (identifier) @name (#eq? @name "execute_query"))
+      description: "Detects calls to execute_query which performs database queries"
+      attack_vector:
+        - "T1537"
+Python:
+  principals:
+    - reference: |
+        (call_expression function: (identifier) @name (#eq? @name "input")))
+      description: "Detects calls to the built-in input function, a source of untrusted user input"
+      attack_vector:
+        - "T1234"
+  resources:
+    - definition: |
+        (function_definition name: (identifier) @name (#eq? @name "unsafe_query"))
+      description: "Detects definitions of functions named 'unsafe_query', which construct SQL queries via string interpolation"
+      attack_vector:
+        - "T1190"
+    - definition: |
+        (function_definition name: (identifier) @name (#eq? @name "execute_query"))
+      description: "Detects definitions of functions named 'execute_query', which execute raw SQL statements"
+      attack_vector:
+        - "T1190"

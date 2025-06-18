@@ -176,6 +176,15 @@ pub struct Response {
     pub vulnerability_types: Vec<VulnType>,
     pub par_analysis: ParAnalysis,
     pub remediation_guidance: RemediationGuidance,
+    // Report enhancement fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pattern_description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub matched_source_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub full_source_code: Option<String>,
 }
 
 pub fn response_json_schema() -> serde_json::Value {
@@ -410,7 +419,30 @@ impl Response {
 
     pub fn to_markdown(&self) -> String {
         let mut md = String::new();
-        md.push_str("# Analysis Report\n\n");
+        
+        // Enhanced title with file and pattern information
+        let title = if let (Some(file_path), Some(pattern)) = (&self.file_path, &self.pattern_description) {
+            format!("# Security Analysis: {} - {}", 
+                file_path.split('/').last().unwrap_or(file_path), 
+                pattern)
+        } else if let Some(file_path) = &self.file_path {
+            format!("# Security Analysis: {}", 
+                file_path.split('/').last().unwrap_or(file_path))
+        } else {
+            "# Security Analysis Report".to_string()
+        };
+        md.push_str(&title);
+        md.push_str("\n\n");
+
+        // File information section
+        if let Some(file_path) = &self.file_path {
+            md.push_str("## ファイル情報\n\n");
+            md.push_str(&format!("- **ファイルパス**: `{}`\n", file_path));
+            if let Some(pattern) = &self.pattern_description {
+                md.push_str(&format!("- **検出パターン**: {}\n", pattern));
+            }
+            md.push_str("\n");
+        }
 
         let confidence_badge = match self.confidence_score {
             90..=100 => "![高信頼度](https://img.shields.io/badge/信頼度-高-red)",
@@ -502,6 +534,25 @@ impl Response {
             }
         }
 
+        // Source code sections
+        if let Some(matched_code) = &self.matched_source_code {
+            if !matched_code.trim().is_empty() {
+                md.push_str("## マッチしたソースコード\n\n");
+                md.push_str("```code\n");
+                md.push_str(matched_code);
+                md.push_str("\n```\n\n");
+            }
+        }
+
+        if let Some(full_code) = &self.full_source_code {
+            if !full_code.trim().is_empty() {
+                md.push_str("## 完全なソースコード\n\n");
+                md.push_str("```code\n");
+                md.push_str(full_code);
+                md.push_str("\n```\n\n");
+            }
+        }
+
         md.push_str("## 詳細解析\n\n");
         md.push_str(&self.analysis);
         md.push_str("\n\n");
@@ -539,10 +590,42 @@ impl Response {
     }
 }
 
+#[cfg(test)]
+impl Response {
+    /// Create a test response with default optional fields
+    pub fn test_response(
+        analysis: String,
+        confidence_score: i32,
+        vulnerability_types: Vec<VulnType>,
+    ) -> Self {
+        Response {
+            scratchpad: "Test scratchpad".to_string(),
+            analysis,
+            poc: "Test PoC".to_string(),
+            confidence_score,
+            vulnerability_types,
+            par_analysis: ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: RemediationGuidance {
+                policy_enforcement: vec![],
+            },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FileAnalysisResult {
     pub file_path: PathBuf,
     pub response: Response,
+    pub output_filename: String, // The generated filename used for the actual markdown file
 }
 
 #[derive(Debug, Clone, Default)]
@@ -555,10 +638,11 @@ impl AnalysisSummary {
         Self::default()
     }
 
-    pub fn add_result(&mut self, file_path: PathBuf, response: Response) {
+    pub fn add_result(&mut self, file_path: PathBuf, response: Response, output_filename: String) {
         self.results.push(FileAnalysisResult {
             file_path,
             response,
+            output_filename,
         });
     }
 
@@ -632,18 +716,19 @@ impl AnalysisSummary {
                     .collect::<Vec<_>>()
                     .join(", ");
 
+                // Create display name from filename + pattern if available
+                let display_name = if let Some(pattern) = &result.response.pattern_description {
+                    format!("{} ({})", 
+                        result.file_path.file_name().unwrap_or_default().to_string_lossy(),
+                        pattern)
+                } else {
+                    result.file_path.file_name().unwrap_or_default().to_string_lossy().to_string()
+                };
+
                 md.push_str(&format!(
-                    "| [{}]({}.md) | {} | {} | {} |\n",
-                    result
-                        .file_path
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy(),
-                    result
-                        .file_path
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy(),
+                    "| [{}]({}) | {} | {} | {} |\n",
+                    display_name,
+                    result.output_filename,
                     vuln_types,
                     confidence_level,
                     violations

@@ -1,0 +1,142 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.7.0",
+          "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "short_description": {
+                "text": "Potential SQL injection vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SQL injection vulnerability detected",
+                "markdown": "**SQL Injection**\n\nSQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "help": {
+                "text": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements.",
+                "markdown": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "sql"
+                ],
+                "precision": "medium",
+                "problem_severity": "8.5",
+                "security_severity": "8.5"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI: unsafe_query関数はf文字列を用いてユーザー入力を直接SQLクエリに埋め込んでおり、入力の検証・サニタイズが行われていないため、SQLインジェクションの脆弱性があります。",
+            "markdown": "unsafe_query関数はf文字列を用いてユーザー入力を直接SQLクエリに埋め込んでおり、入力の検証・サニタイズが行われていないため、SQLインジェクションの脆弱性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "test-sample/vulnerable.py",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "code/snippet_hash": "08b3e55241cce0b5",
+            "parsentry/v2": "7498349f215b0835",
+            "parsentry/v1": "24c28313361320e4",
+            "parsentry/short_id": "7498349f_08b3e552"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: execute_query関数がユーザー入力を含む生のSQL文をそのまま実行しており、SQLインジェクションが発生する可能性があります。",
+            "markdown": "execute_query関数がユーザー入力を含む生のSQL文をそのまま実行しており、SQLインジェクションが発生する可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "test-sample/vulnerable.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "vulnerability/type": "SQLI",
+            "parsentry/v1": "c4f8c3d4a7cf924c",
+            "parsentry/short_id": "0340e3dd_57b2b7cc",
+            "parsentry/v2": "0340e3dd637cbb1a",
+            "code/snippet_hash": "57b2b7cc09f11d79"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "test-sample/vulnerable.py",
+            "index": 0
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "test-sample/vulnerable.py",
+            "index": 1
+          },
+          "mime_type": "text/x-python"
+        }
+      ],
+      "invocation": {
+        "executionSuccessful": true
+      }
+    }
+  ]
+}

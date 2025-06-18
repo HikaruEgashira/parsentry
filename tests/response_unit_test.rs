@@ -59,6 +59,10 @@ fn test_response_creation() {
         remediation_guidance: RemediationGuidance {
             policy_enforcement: vec![],
         },
+        file_path: None,
+        pattern_description: None,
+        matched_source_code: None,
+        full_source_code: None,
     };
 
     assert_eq!(response.confidence_score, 9);
@@ -84,6 +88,10 @@ fn test_response_serialization() {
         remediation_guidance: RemediationGuidance {
             policy_enforcement: vec![],
         },
+        file_path: None,
+        pattern_description: None,
+        matched_source_code: None,
+        full_source_code: None,
     };
 
     let serialized = serde_json::to_string(&response).unwrap();
@@ -155,12 +163,16 @@ fn test_markdown_generation() {
         remediation_guidance: RemediationGuidance {
             policy_enforcement: vec![],
         },
+        file_path: None,
+        pattern_description: None,
+        matched_source_code: None,
+        full_source_code: None,
     };
 
     let markdown = response.to_markdown();
 
     // Verify markdown contains expected sections
-    assert!(markdown.contains("# Analysis Report"));
+    assert!(markdown.contains("# Security Analysis Report"));
     assert!(markdown.contains("信頼度スコア: 8"));
     assert!(markdown.contains("## 脆弱性タイプ"));
     assert!(markdown.contains("RCE"));
@@ -193,6 +205,10 @@ fn test_confidence_score_validation() {
             remediation_guidance: RemediationGuidance {
                 policy_enforcement: vec![],
             },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
         };
 
         // Confidence score should be stored as-is (validation is handled elsewhere)
@@ -217,6 +233,10 @@ fn test_empty_response() {
         remediation_guidance: RemediationGuidance {
             policy_enforcement: vec![],
         },
+        file_path: None,
+        pattern_description: None,
+        matched_source_code: None,
+        full_source_code: None,
     };
 
     assert!(response.scratchpad.is_empty());

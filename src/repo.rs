@@ -189,6 +189,11 @@ impl RepoOps {
         let mut network_files = Vec::new();
         for file_path in files {
             if let Ok(content) = read_to_string(file_path) {
+                // Skip files with more than 50,000 characters
+                if content.len() > 50_000 {
+                    continue;
+                }
+                
                 let filename = file_path.to_string_lossy();
                 let lang = crate::file_classifier::FileClassifier::classify(&filename, &content);
                 let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&self.repo_path));

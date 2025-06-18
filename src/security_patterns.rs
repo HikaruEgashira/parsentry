@@ -85,10 +85,6 @@ pub struct PatternConfig {
     pub pattern_type: PatternQuery,
     pub description: String,
     pub attack_vector: Vec<String>,
-    #[serde(default)]
-    pub vulnerability_types: Vec<String>,
-    #[serde(default)]
-    pub context_focus: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -262,8 +258,20 @@ impl SecurityRiskPatterns {
                 let mut cursor = QueryCursor::new();
                 let mut matches = cursor.matches(query, root_node, content.as_bytes());
                 // Check if there are any matches (predicates are already evaluated by tree-sitter)
-                if matches.next().is_some() {
-                    return true;
+                while let Some(match_) = matches.next() {
+                    if let Some(capture) = match_.captures.first() {
+                        let node = capture.node;
+                        let start_byte = node.start_byte();
+                        let end_byte = node.end_byte();
+                        let matched_text = content[start_byte..end_byte].to_string();
+                        
+                        // Filter out variable names with 2 characters or less
+                        if matched_text.trim().len() <= 2 {
+                            continue;
+                        }
+                        
+                        return true;
+                    }
                 }
             }
         }
@@ -286,15 +294,39 @@ impl SecurityRiskPatterns {
         for query in &self.principal_definition_queries {
             let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.next().is_some() {
-                return Some(PatternType::Principal);
+            while let Some(match_) = matches.next() {
+                if let Some(capture) = match_.captures.first() {
+                    let node = capture.node;
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let matched_text = content[start_byte..end_byte].to_string();
+                    
+                    // Filter out variable names with 2 characters or less
+                    if matched_text.trim().len() <= 2 {
+                        continue;
+                    }
+                    
+                    return Some(PatternType::Principal);
+                }
             }
         }
         for query in &self.principal_reference_queries {
             let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.next().is_some() {
-                return Some(PatternType::Principal);
+            while let Some(match_) = matches.next() {
+                if let Some(capture) = match_.captures.first() {
+                    let node = capture.node;
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let matched_text = content[start_byte..end_byte].to_string();
+                    
+                    // Filter out variable names with 2 characters or less
+                    if matched_text.trim().len() <= 2 {
+                        continue;
+                    }
+                    
+                    return Some(PatternType::Principal);
+                }
             }
         }
 
@@ -302,15 +334,39 @@ impl SecurityRiskPatterns {
         for query in &self.action_definition_queries {
             let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.next().is_some() {
-                return Some(PatternType::Action);
+            while let Some(match_) = matches.next() {
+                if let Some(capture) = match_.captures.first() {
+                    let node = capture.node;
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let matched_text = content[start_byte..end_byte].to_string();
+                    
+                    // Filter out variable names with 2 characters or less
+                    if matched_text.trim().len() <= 2 {
+                        continue;
+                    }
+                    
+                    return Some(PatternType::Action);
+                }
             }
         }
         for query in &self.action_reference_queries {
             let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.next().is_some() {
-                return Some(PatternType::Action);
+            while let Some(match_) = matches.next() {
+                if let Some(capture) = match_.captures.first() {
+                    let node = capture.node;
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let matched_text = content[start_byte..end_byte].to_string();
+                    
+                    // Filter out variable names with 2 characters or less
+                    if matched_text.trim().len() <= 2 {
+                        continue;
+                    }
+                    
+                    return Some(PatternType::Action);
+                }
             }
         }
 
@@ -318,15 +374,39 @@ impl SecurityRiskPatterns {
         for query in &self.resource_definition_queries {
             let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.next().is_some() {
-                return Some(PatternType::Resource);
+            while let Some(match_) = matches.next() {
+                if let Some(capture) = match_.captures.first() {
+                    let node = capture.node;
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let matched_text = content[start_byte..end_byte].to_string();
+                    
+                    // Filter out variable names with 2 characters or less
+                    if matched_text.trim().len() <= 2 {
+                        continue;
+                    }
+                    
+                    return Some(PatternType::Resource);
+                }
             }
         }
         for query in &self.resource_reference_queries {
             let mut cursor = QueryCursor::new();
             let mut matches = cursor.matches(query, root_node, content.as_bytes());
-            if matches.next().is_some() {
-                return Some(PatternType::Resource);
+            while let Some(match_) = matches.next() {
+                if let Some(capture) = match_.captures.first() {
+                    let node = capture.node;
+                    let start_byte = node.start_byte();
+                    let end_byte = node.end_byte();
+                    let matched_text = content[start_byte..end_byte].to_string();
+                    
+                    // Filter out variable names with 2 characters or less
+                    if matched_text.trim().len() <= 2 {
+                        continue;
+                    }
+                    
+                    return Some(PatternType::Resource);
+                }
             }
         }
 
@@ -363,6 +443,11 @@ impl SecurityRiskPatterns {
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
                         let matched_text = content[start_byte..end_byte].to_string();
+                        
+                        // Filter out variable names with 2 characters or less
+                        if matched_text.trim().len() <= 2 {
+                            continue;
+                        }
                         
                         // Find the corresponding config based on pattern type and index
                         let mut config_idx = 0;

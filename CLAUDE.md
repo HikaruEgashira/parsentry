@@ -98,3 +98,7 @@ cargo run -- --root benchmarks/XBEN-002-24 --output-dir docs/benchmark/results/X
 #   ]
 # }
 ```
+
+## Behavior guideline
+
+ユーザーとは必ずsayコマンドを使って結果を要約して応答してください

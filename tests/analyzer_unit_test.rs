@@ -114,6 +114,10 @@ async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Respons
             remediation_guidance: RemediationGuidance {
                 policy_enforcement: vec![],
             },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
         });
     }
 
@@ -133,6 +137,10 @@ async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Respons
         remediation_guidance: RemediationGuidance {
             policy_enforcement: vec![],
         },
+        file_path: None,
+        pattern_description: None,
+        matched_source_code: None,
+        full_source_code: None,
     })
 }
 

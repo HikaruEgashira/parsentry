@@ -430,24 +430,17 @@ fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
 fn generate_fingerprints(file_path: &Path, response: &Response) -> HashMap<String, String> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-
+    
+    let mut fingerprints = HashMap::new();
+    
+    // Generate a simple fingerprint based on file path and analysis
     let mut hasher = DefaultHasher::new();
     format!("{}:{}", file_path.display(), response.analysis).hash(&mut hasher);
     let fingerprint = format!("{:x}", hasher.finish());
-
-    [
-        ("parsentry/v1".to_string(), fingerprint),
-        (
-            "vulnerability/type".to_string(),
-            response
-                .vulnerability_types
-                .first()
-                .unwrap_or(&VulnType::Other("unknown".to_string()))
-                .to_string(),
-        ),
-    ]
-    .into_iter()
-    .collect()
+    
+    fingerprints.insert("parsentry/v1".to_string(), fingerprint);
+    
+    fingerprints
 }
 
 fn guess_mime_type(file_path: &Path) -> Option<String> {
@@ -492,9 +485,13 @@ mod tests {
             remediation_guidance: crate::response::RemediationGuidance {
                 policy_enforcement: vec![],
             },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
         };
 
-        summary.add_result(PathBuf::from("test.py"), response);
+        summary.add_result(PathBuf::from("test.py"), response, "test.py.md".to_string());
 
         let sarif = SarifReport::from_analysis_summary(&summary);
 
@@ -599,9 +596,13 @@ mod tests {
             remediation_guidance: crate::response::RemediationGuidance {
                 policy_enforcement: vec![],
             },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
         };
 
-        summary.add_result(PathBuf::from("user_service.py"), response);
+        summary.add_result(PathBuf::from("user_service.py"), response, "user_service.py.md".to_string());
         let sarif = SarifReport::from_analysis_summary(&summary);
 
         // Verify SARIF structure
