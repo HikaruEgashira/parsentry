@@ -1,4 +1,4 @@
-use parsentry::language::Language;
+use parsentry::locales::Language;
 use parsentry::locales::*;
 use parsentry::prompts::vuln_specific;
 use parsentry::response::VulnType;

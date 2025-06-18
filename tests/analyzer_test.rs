@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use parsentry::analyzer::analyze_file;
 #[allow(unused_imports)]
-use parsentry::language::Language;
+use parsentry::locales::Language;
 #[allow(unused_imports)]
 use parsentry::response::VulnType;
 #[allow(unused_imports)]

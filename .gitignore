@@ -4,6 +4,7 @@ pkg
 *.sqlite
 reports
 !docs/reports
+!src/reports
 repo
 .claude/settings.local.json
 example/**/vuln-patterns.yml

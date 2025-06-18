@@ -1,8 +1,56 @@
 pub mod en;
 pub mod ja;
 
-use crate::language::Language;
 use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Language {
+    Japanese,
+    English,
+}
+
+impl Language {
+    pub fn from_string(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "ja" | "japanese" => Language::Japanese,
+            "en" | "english" => Language::English,
+            _ => Language::Japanese, // Default to Japanese
+        }
+    }
+
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            Language::Japanese => "ja",
+            Language::English => "en",
+        }
+    }
+}
+
+pub struct LanguageConfig {
+    pub language: Language,
+}
+
+impl LanguageConfig {
+    pub fn new(language: Language) -> Self {
+        Self { language }
+    }
+
+    pub fn get_message(&self, key: &str) -> &str {
+        let messages = get_messages(&self.language);
+        messages.get(key).unwrap_or(&"Message not found")
+    }
+
+    pub fn get_analysis_prompt(&self) -> &str {
+        match self.language {
+            Language::Japanese => "必ず日本語で応答してください",
+            Language::English => "Please respond in English",
+        }
+    }
+
+    pub fn get_response_language_instruction(&self) -> &str {
+        get_response_language_instruction(&self.language)
+    }
+}
 
 pub fn get_messages(lang: &Language) -> HashMap<&'static str, &'static str> {
     match lang {

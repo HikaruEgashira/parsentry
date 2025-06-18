@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::timeout;
 
-use crate::language::Language;
+use crate::locales::Language;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{Response, response_json_schema};

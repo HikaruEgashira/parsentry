@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::response::{AnalysisSummary, Response, VulnType};
+use crate::response::{Response, VulnType};
+use crate::reports::AnalysisSummary;
 
 /// SARIF (Static Analysis Results Interchange Format) v2.1.0 implementation
 /// Spec: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
