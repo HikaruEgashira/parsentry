@@ -8,7 +8,9 @@ default-run = "parsentry"
 cc = "1.0"
 
 [features]
+default = []
 snapshot-test = []
+benchmark = []
 
 [dependencies]
 tree-sitter = "0.25.6"
@@ -45,3 +47,44 @@ exclude = ["tree-sitter-*"]
 
 [workspace.metadata.insta]
 snapshot-path = "tests/snapshots"
+
+# APIを使用するテストの設定
+[[test]]
+name = "accuracy_test_suite"
+path = "tests/accuracy_test_suite.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "analyzer_test"
+path = "tests/analyzer_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "analyzer_unit_test"
+path = "tests/analyzer_unit_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "context_quality_accuracy_test"
+path = "tests/context_quality_accuracy_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "end_to_end_accuracy_test"
+path = "tests/end_to_end_accuracy_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "external_benchmark_integration_test"
+path = "tests/external_benchmark_integration_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "par_classification_accuracy_test"
+path = "tests/par_classification_accuracy_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "prompt_accuracy_unit_test"
+path = "tests/prompt_accuracy_unit_test.rs"
+required-features = ["benchmark"]
