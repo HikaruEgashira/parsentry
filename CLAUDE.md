@@ -13,6 +13,9 @@ cargo test
 # Run tests with snapshot testing
 cargo test --features snapshot-test
 
+# Run benchmarks
+cargo test --features benchmark
+
 # Update test snapshots
 cargo insta test
 cargo insta review

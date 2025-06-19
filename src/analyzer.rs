@@ -66,22 +66,32 @@ fn create_api_client(api_base_url: Option<&str>) -> Client {
 
 fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
     let base_url_owned = base_url.to_string();
+    let disable_v1_path = std::env::var("PARSENTRY_DISABLE_V1_PATH").is_ok();
 
     ServiceTargetResolver::from_resolver_fn(
         move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
             let ServiceTarget { model, .. } = service_target;
 
-            // OpenAI adapter automatically adds /v1/chat/completions, so we need to provide base URL only
-            // The adapter will construct: base_url + /v1/chat/completions
-            // So we provide the base URL without any path to get the desired result
-            println!(
-                "🔍 Debug: Base URL provided to OpenAI adapter: {}",
-                base_url_owned
-            );
-            let endpoint = Endpoint::from_owned(base_url_owned.clone());
+            // Check if we should use a different adapter to avoid /v1 path appending
+            let (adapter_kind, final_endpoint) = if disable_v1_path {
+                // Use Groq adapter which doesn't append /v1/chat/completions
+                // This allows us to use the full URL as-is
+                println!(
+                    "🔍 Debug: Using Groq adapter (PARSENTRY_DISABLE_V1_PATH=true) with URL: {}",
+                    base_url_owned
+                );
+                (AdapterKind::Groq, base_url_owned.clone())
+            } else {
+                // Default behavior: OpenAI adapter automatically adds /v1/chat/completions
+                println!(
+                    "🔍 Debug: Using OpenAI adapter with base URL: {}",
+                    base_url_owned
+                );
+                (AdapterKind::OpenAI, base_url_owned.clone())
+            };
 
-            // Use OpenAI adapter but with custom endpoint that already includes the full path
-            let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
+            let endpoint = Endpoint::from_owned(final_endpoint);
+            let model = ModelIden::new(adapter_kind, model.model_name);
 
             // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
             let auth = AuthData::from_env("OPENAI_API_KEY");
