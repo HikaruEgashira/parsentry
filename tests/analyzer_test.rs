@@ -1,9 +1,11 @@
 #[allow(unused_imports)]
-use parsentry::analyzer::analyze_file;
+use parsentry::analyzer::analyze_pattern;
 #[allow(unused_imports)]
 use parsentry::locales::Language;
 #[allow(unused_imports)]
 use parsentry::response::VulnType;
+#[allow(unused_imports)]
+use parsentry::security_patterns::{SecurityRiskPatterns, Language as PatternLanguage, PatternMatch};
 #[allow(unused_imports)]
 use std::path::PathBuf;
 #[allow(unused_imports)]

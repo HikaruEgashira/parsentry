@@ -5,8 +5,6 @@ use parsentry::analyzer::analyze_pattern;
 use parsentry::args::{Args, validate_args};
 use parsentry::config::{Config, Operation};
 use parsentry::file_classifier::FileClassifier;
-use parsentry::locales::Language;
-use parsentry::locales;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::reports::SarifReport;
 use parsentry::security_patterns::SecurityRiskPatterns;
