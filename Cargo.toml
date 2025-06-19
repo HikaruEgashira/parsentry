@@ -93,3 +93,8 @@ required-features = ["benchmark"]
 name = "prompt_slo_test"
 path = "tests/prompt_slo_test.rs"
 required-features = ["benchmark"]
+
+[[test]]
+name = "real_world_benchmark_test"
+path = "tests/real_world_benchmark_test.rs"
+required-features = ["benchmark"]
