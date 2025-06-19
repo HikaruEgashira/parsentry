@@ -259,8 +259,6 @@ impl SecurityRiskPatterns {
                 let mut matches = cursor.matches(query, root_node, content.as_bytes());
                 // Check if there are any matches (predicates are already evaluated by tree-sitter)
                 while let Some(match_) = matches.next() {
-                    // Find the root node of the match (function_definition, call, etc.)
-                    let mut root_node = None;
                     let mut has_valid_capture = false;
                     
                     for capture in match_.captures {
@@ -280,7 +278,6 @@ impl SecurityRiskPatterns {
                         match *capture_name {
                             "function" | "definition" | "class" | "method_def" | "call" | "expression" | "attribute" => {
                                 // Direct structural captures
-                                root_node = Some(node);
                                 has_valid_capture = true;
                             }
                             "name" | "func" | "attr" | "obj" | "method" => {
@@ -290,14 +287,13 @@ impl SecurityRiskPatterns {
                                        parent.kind().contains("declaration") ||
                                        parent.kind().contains("call") ||
                                        parent.kind().contains("attribute") {
-                                        root_node = Some(parent);
+                                        // Parent node validation passed
                                     }
                                 }
                                 has_valid_capture = true;
                             }
                             _ => {
                                 // Other captures - use as-is
-                                root_node = Some(node);
                                 has_valid_capture = true;
                             }
                         }

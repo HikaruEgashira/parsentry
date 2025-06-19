@@ -1,4 +1,5 @@
-use parsentry::response::{AnalysisSummary, ParAnalysis, RemediationGuidance, Response, VulnType};
+use parsentry::response::{ParAnalysis, RemediationGuidance, Response, VulnType};
+use parsentry::reports::AnalysisSummary;
 use std::path::PathBuf;
 
 #[test]
