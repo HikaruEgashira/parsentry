@@ -88,3 +88,8 @@ required-features = ["benchmark"]
 name = "prompt_accuracy_unit_test"
 path = "tests/prompt_accuracy_unit_test.rs"
 required-features = ["benchmark"]
+
+[[test]]
+name = "prompt_slo_test"
+path = "tests/prompt_slo_test.rs"
+required-features = ["benchmark"]
