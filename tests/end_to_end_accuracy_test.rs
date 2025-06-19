@@ -1,5 +1,5 @@
 use anyhow::Result;
-use parsentry::analyzer::analyze_file;
+use parsentry::analyzer::analyze_pattern;
 use parsentry::locales::Language as LocaleLanguage;
 use parsentry::parser::CodeParser;
 use parsentry::response::VulnType;
@@ -566,25 +566,37 @@ async fn test_end_to_end_case(
         context_quality_scores.iter().sum::<f64>() / context_quality_scores.len() as f64
     };
 
-    // === Stage 3: LLM解析 ===
+    // === Stage 3: LLM解析 (Pattern-based) ===
     let mut detected_findings = Vec::new();
     let mut llm_analysis_success = true;
 
+    // Pattern matching stage - find patterns in each file
     for file_path in &created_files {
-        if let Some(context) = all_contexts.get(file_path) {
-            match analyze_file(
+        let content = std::fs::read_to_string(file_path).expect("Failed to read file");
+        let language = crate::security_patterns::Language::JavaScript; // Default to JavaScript for tests
+        let patterns = SecurityRiskPatterns::new(language);
+        let pattern_matches = patterns.get_pattern_matches(&content);
+
+        // If no patterns found, skip this file
+        if pattern_matches.is_empty() {
+            continue;
+        }
+
+        // Analyze each pattern match
+        for pattern_match in pattern_matches {
+            match analyze_pattern(
                 file_path,
+                &pattern_match,
                 model,
                 &created_files,
                 0,
-                context,
                 0,
                 false,
                 &None,
                 None,
                 &LocaleLanguage::Japanese,
             ).await {
-                Ok(response) => {
+                Ok(Some(response)) => {
                     if !response.vulnerability_types.is_empty() {
                         let analysis_quality = if response.analysis.len() > 100 {
                             85.0
@@ -604,7 +616,11 @@ async fn test_end_to_end_case(
                             analysis_quality,
                         });
                     }
-                },
+                }
+                Ok(None) => {
+                    // Pattern analysis returned None (e.g., low confidence or file too large)
+                    // This is not necessarily an error
+                }
                 Err(_) => {
                     llm_analysis_success = false;
                 }

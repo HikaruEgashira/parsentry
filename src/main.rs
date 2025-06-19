@@ -1,8 +1,9 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use dotenvy::dotenv;
 use parsentry::analyzer::analyze_pattern;
 use parsentry::args::{Args, validate_args};
+use parsentry::config::{Config, Operation};
 use parsentry::file_classifier::FileClassifier;
 use parsentry::locales::Language;
 use parsentry::locales;
@@ -46,6 +47,13 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     validate_args(&args)?;
+
+    // Load and validate configuration from environment variables
+    let config = Config::from_env()
+        .context("Failed to load configuration from environment")?;
+    
+    config.validate()
+        .context("Configuration validation failed. See docs/configuration.md for setup instructions")?;
 
     // Create language configuration
     let language = Language::from_string(&args.language);
@@ -381,8 +389,8 @@ async fn main() -> Result<()> {
         filtered_summary = filtered_summary.filter_by_vuln_types(&vuln_types);
     }
 
-    // Always generate summary report
-    {
+    // Generate summary report if requested
+    if args.summary {
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
                 println!(
@@ -422,7 +430,7 @@ async fn main() -> Result<()> {
                 "⚠ {}",
                 messages
                     .get("summary_report_needs_output_dir")
-                    .map_or("Summary report output requires --output-dir option", |s| s)
+                    .map_or("Summary report output requires --output-dir and --summary options", |s| s)
             );
         }
     }

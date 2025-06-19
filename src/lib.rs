@@ -1,5 +1,7 @@
 pub mod analyzer;
 pub mod args;
+pub mod config;
+pub mod constants;
 pub mod file_classifier;
 pub mod locales;
 pub mod parser;

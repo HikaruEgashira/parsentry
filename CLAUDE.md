@@ -25,15 +25,43 @@ cargo test -- --nocapture
 ```
 
 ### Running the Tool
+
+#### Environment Variables Setup
 ```bash
-# Analyze local directory
+# Required: Set LLM API key
+export OPENAI_API_KEY="sk-your-openai-key"
+
+# Optional: For private repositories
+export GITHUB_TOKEN="ghp_your-github-token"
+
+# Optional: For custom API endpoints
+export API_BASE_URL="https://api.groq.com/openai/v1/chat/completions"
+export PARSENTRY_DISABLE_V1_PATH="1"
+
+# Alternative LLM providers
+export ANTHROPIC_API_KEY="sk-ant-your-anthropic-key"
+export OPENROUTER_API_KEY="sk-or-your-openrouter-key"
+```
+
+#### Basic Usage
+```bash
+# Analyze public repository
 cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript
 
+# Analyze private repository (requires GITHUB_TOKEN)
+export GITHUB_TOKEN="ghp_your-token"
+cargo run -- --repo your-org/private-repo
+
 # Analyze with specific model
-cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript --model gpt-4.1-nano
+cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript --model gpt-4o-mini
 
 # Generate markdown reports
 cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript --output-dir ./reports --summary
+
+# Use custom API endpoint (Groq example)
+export API_BASE_URL="https://api.groq.com/openai/v1/chat/completions"
+export PARSENTRY_DISABLE_V1_PATH="1"
+cargo run -- --repo hikaruegashira/hikae-vulnerable-javascript
 ```
 
 ### Architecture Overview
