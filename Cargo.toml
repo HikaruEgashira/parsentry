@@ -103,3 +103,18 @@ required-features = ["benchmark"]
 name = "performance_benchmark_test"
 path = "tests/performance_benchmark_test.rs"
 required-features = ["benchmark"]
+
+[[test]]
+name = "nodejs_performance_benchmark_test"
+path = "tests/nodejs_performance_benchmark_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "django_performance_benchmark_test"
+path = "tests/django_performance_benchmark_test.rs"
+required-features = ["benchmark"]
+
+[[test]]
+name = "spring_boot_performance_benchmark_test"
+path = "tests/spring_boot_performance_benchmark_test.rs"
+required-features = ["benchmark"]
