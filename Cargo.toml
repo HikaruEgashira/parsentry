@@ -98,3 +98,8 @@ required-features = ["benchmark"]
 name = "real_world_benchmark_test"
 path = "tests/real_world_benchmark_test.rs"
 required-features = ["benchmark"]
+
+[[test]]
+name = "performance_benchmark_test"
+path = "tests/performance_benchmark_test.rs"
+required-features = ["benchmark"]
