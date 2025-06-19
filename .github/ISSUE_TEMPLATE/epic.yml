@@ -1,0 +1,211 @@
+name: 📋 Epic
+description: Large initiative spanning multiple related issues
+title: "[EPIC] "
+labels: ["epic", "planning"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for large initiatives that span multiple related issues or features.
+
+  - type: textarea
+    id: epic-summary
+    attributes:
+      label: Epic Summary
+      description: High-level description of this epic and its goals
+      placeholder: Describe the overall initiative...
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation & Business Value
+      description: Why is this epic important? What value does it deliver?
+      placeholder: |
+        ## Problem Statement
+        - What problem are we solving?
+        - Who is affected by this problem?
+
+        ## Business Value
+        - What value does this deliver?
+        - How does this align with project goals?
+
+        ## Success Metrics
+        - How will we measure success?
+        - What are the key performance indicators?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: epic-type
+    attributes:
+      label: Epic Type
+      description: What type of initiative is this?
+      options:
+        - New major feature
+        - Performance overhaul
+        - Architecture refactor
+        - Security enhancement
+        - Developer experience
+        - Documentation initiative
+        - Integration/API
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: What's the priority of this epic?
+      options:
+        - P1 - Critical (immediate)
+        - P2 - High (this quarter)
+        - P3 - Medium (next quarter)
+        - P4 - Low (future)
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & Requirements
+      description: Detailed scope and requirements for this epic
+      placeholder: |
+        ## In Scope
+        - Feature/component 1
+        - Feature/component 2
+        - Feature/component 3
+
+        ## Out of Scope
+        - What we're explicitly not including
+        - Future considerations
+
+        ## Requirements
+        - Functional requirement 1
+        - Functional requirement 2
+        - Non-functional requirement 1
+        - Non-functional requirement 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: subtasks-parallel
+    attributes:
+      label: Epic Subtasks (Parallel Execution)
+      description: Break down the epic into parallel workstreams
+      placeholder: |
+        ## Workstream 1: [Name]
+        - [ ] Task 1.1: [Issue link when created]
+        - [ ] Task 1.2: [Issue link when created]
+        - [ ] Task 1.3: [Issue link when created]
+
+        ## Workstream 2: [Name]  
+        - [ ] Task 2.1: [Issue link when created]
+        - [ ] Task 2.2: [Issue link when created]
+        - [ ] Task 2.3: [Issue link when created]
+
+        ## Workstream 3: [Name]
+        - [ ] Task 3.1: [Issue link when created]
+        - [ ] Task 3.2: [Issue link when created]
+        - [ ] Task 3.3: [Issue link when created]
+
+        ## Integration & Validation
+        - [ ] Integration testing across workstreams
+        - [ ] End-to-end validation
+        - [ ] Performance validation
+        - [ ] Documentation updates
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline & Milestones
+      description: Expected timeline and key milestones
+      placeholder: |
+        ## Phases
+        - **Phase 1** (Weeks 1-2): Foundation work
+          - Milestone: Basic infrastructure ready
+        - **Phase 2** (Weeks 3-4): Core implementation
+          - Milestone: Core features functional
+        - **Phase 3** (Weeks 5-6): Integration & polish
+          - Milestone: Full integration complete
+
+        ## Key Milestones
+        - [ ] Milestone 1: [Date] - [Description]
+        - [ ] Milestone 2: [Date] - [Description]  
+        - [ ] Milestone 3: [Date] - [Description]
+        - [ ] Final Release: [Date] - Epic complete
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Risks
+      description: Dependencies, blockers, and risk assessment
+      placeholder: |
+        ## Dependencies
+        - External dependency 1
+        - Internal dependency 2
+        - Resource dependency 3
+
+        ## Risks & Mitigation
+        - **Risk 1**: Description
+          - *Mitigation*: Mitigation strategy
+        - **Risk 2**: Description  
+          - *Mitigation*: Mitigation strategy
+
+        ## Assumptions
+        - Assumption 1
+        - Assumption 2
+
+  - type: textarea
+    id: success-criteria
+    attributes:
+      label: Definition of Done
+      description: Clear criteria for when this epic is considered complete
+      placeholder: |
+        ## Functional Criteria
+        - [ ] All core features implemented and tested
+        - [ ] Integration between components working
+        - [ ] Performance targets met
+
+        ## Quality Criteria
+        - [ ] Test coverage >= X%
+        - [ ] No critical bugs remaining
+        - [ ] Security review completed (if applicable)
+
+        ## Documentation Criteria
+        - [ ] User documentation updated
+        - [ ] API documentation updated (if applicable)
+        - [ ] Architecture documentation updated
+
+        ## Release Criteria
+        - [ ] Feature flags configured (if applicable)
+        - [ ] Deployment procedures updated
+        - [ ] Rollback plan documented
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: Related Issues
+      description: Links to related issues, PRs, or discussions
+      placeholder: |
+        ## Child Issues
+        - Issue #XXX: [Title]
+        - Issue #XXX: [Title]
+
+        ## Related Issues
+        - Issue #XXX: [Title]
+        - Issue #XXX: [Title]
+
+        ## Blocked Issues
+        - Issue #XXX: [Title] (blocked by this epic)
+
+        ## References
+        - Discussion #XXX: [Title]
+        - PR #XXX: [Title]

@@ -1,0 +1,120 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please provide details about your request.
+
+  - type: textarea
+    id: feature-summary
+    attributes:
+      label: Feature Summary
+      description: A clear and concise description of the feature you'd like to see
+      placeholder: Brief summary of the feature...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What's the current limitation?
+      placeholder: Describe the problem this feature would solve...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this feature to work?
+      placeholder: Describe your proposed solution...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Specific examples of how this feature would be used
+      placeholder: |
+        1. Use case 1: ...
+        2. Use case 2: ...
+        3. Use case 3: ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New language support
+        - CLI enhancement
+        - Analysis improvement
+        - Performance optimization
+        - Integration/API
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve workflow
+        - High - Critical for adoption
+        - Blocking - Cannot use tool without this
+    validations:
+      required: true
+
+  - type: textarea
+    id: subtasks
+    attributes:
+      label: Implementation Subtasks (Maintainer Use)
+      description: Parallel subtasks for implementing this feature (filled by maintainers)
+      placeholder: |
+        ## Design Subtasks
+        - [ ] Create technical design document
+        - [ ] Define API/interface specifications
+        - [ ] Plan integration points
+
+        ## Implementation Subtasks
+        - [ ] Implement core functionality
+        - [ ] Add CLI interface/options
+        - [ ] Update configuration handling
+
+        ## Documentation Subtasks
+        - [ ] Add usage documentation
+        - [ ] Update README with examples
+        - [ ] Create integration guides
+
+        ## Validation Subtasks
+        - [ ] Write unit tests
+        - [ ] Add integration tests
+        - [ ] Test with real-world examples
+      render: markdown
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: What alternatives have you considered?
+      placeholder: Describe any alternative solutions or features you've considered...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, mockups, examples, or information
+      placeholder: Any additional information...

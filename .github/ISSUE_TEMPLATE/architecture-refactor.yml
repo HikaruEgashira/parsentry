@@ -1,0 +1,178 @@
+name: 🏗️ Architecture/Refactor
+description: Issues related to code architecture, refactoring, or technical debt
+title: "[ARCH] "
+labels: ["refactor", "architecture", "technical-debt"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This template is for architectural improvements, refactoring tasks, and technical debt reduction.
+
+  - type: textarea
+    id: issue-summary
+    attributes:
+      label: Architecture Issue Summary
+      description: Brief description of the architectural problem or technical debt
+      placeholder: Describe the architectural issue...
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current State Analysis
+      description: Detailed analysis of the current implementation and its problems
+      placeholder: |
+        ## Current Architecture
+        - Component structure: ...
+        - Dependencies: ...
+        - Known issues: ...
+
+        ## Problems Identified
+        - Issue 1: ...
+        - Issue 2: ...
+        - Issue 3: ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What type of architectural issue is this?
+      options:
+        - Code organization/structure
+        - Design pattern misuse
+        - Tight coupling/dependencies
+        - Performance architecture
+        - Testing architecture
+        - Configuration management
+        - Error handling patterns
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: What's the priority of this architectural issue?
+      options:
+        - P1 - Critical (blocking development)
+        - P2 - High (significant impact)
+        - P3 - Medium (moderate impact)
+        - P4 - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Detailed architectural approach to resolve the issue
+      placeholder: |
+        ## Target Architecture
+        - New structure: ...
+        - Improved patterns: ...
+        - Dependencies: ...
+
+        ## Migration Strategy
+        - Phase 1: ...
+        - Phase 2: ...
+        - Phase 3: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: subtasks
+    attributes:
+      label: Implementation Subtasks (Parallel Execution)
+      description: Subtasks that can be worked on in parallel
+      placeholder: |
+        ## Analysis Subtasks
+        - [ ] Audit current architecture patterns
+        - [ ] Identify refactoring boundaries
+        - [ ] Create architectural design document
+
+        ## Refactoring Subtasks
+        - [ ] Refactor core module structure
+        - [ ] Update dependency patterns
+        - [ ] Implement new design patterns
+
+        ## Migration Subtasks
+        - [ ] Create migration utilities
+        - [ ] Update existing components
+        - [ ] Maintain backward compatibility
+
+        ## Validation Subtasks
+        - [ ] Update unit tests for new structure
+        - [ ] Test integration points
+        - [ ] Validate performance impact
+
+        ## Documentation Subtasks
+        - [ ] Update architecture documentation
+        - [ ] Create migration guides
+        - [ ] Update developer onboarding docs
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact-assessment
+    attributes:
+      label: Impact Assessment
+      description: Analysis of the impact this change will have
+      placeholder: |
+        ## Benefits
+        - Improved maintainability: ...
+        - Better performance: ...
+        - Reduced complexity: ...
+
+        ## Risks
+        - Breaking changes: ...
+        - Migration complexity: ...
+        - Performance regression: ...
+
+        ## Effort Estimation
+        - Development time: ...
+        - Testing time: ...
+        - Documentation time: ...
+
+  - type: textarea
+    id: success-criteria
+    attributes:
+      label: Success Criteria
+      description: How will we know this refactor is successful?
+      placeholder: |
+        - [ ] Code complexity metrics improved
+        - [ ] Test coverage maintained/improved
+        - [ ] Performance baseline maintained
+        - [ ] Developer onboarding time reduced
+        - [ ] All existing functionality preserved
+
+  - type: textarea
+    id: files-affected
+    attributes:
+      label: Files/Modules Affected
+      description: List of files or modules that will be changed
+      placeholder: |
+        ### Core Modules
+        - src/module1.rs
+        - src/module2.rs
+
+        ### Test Files
+        - tests/integration_test.rs
+        - tests/unit_test.rs
+
+        ### Documentation
+        - README.md
+        - docs/architecture.md
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Blockers
+      description: Any dependencies or blocking issues
+      placeholder: List any dependencies or blockers...

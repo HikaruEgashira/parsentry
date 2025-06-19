@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/HikaruEgashira/vulnhuntrs/blob/main/README.md
+    about: Check the documentation for usage instructions and examples
+  - name: 💬 Discussions
+    url: https://github.com/HikaruEgashira/vulnhuntrs/discussions
+    about: Ask questions, discuss features, and get community help
+  - name: 🔒 Security Issues
+    url: https://github.com/HikaruEgashira/vulnhuntrs/security/advisories/new
+    about: Report security vulnerabilities privately

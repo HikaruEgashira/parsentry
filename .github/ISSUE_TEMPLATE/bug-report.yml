@@ -1,0 +1,100 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the sections below to help us understand and fix the issue.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Run command `cargo run -- --repo example/repo`
+        2. Observe the output
+        3. Error occurs
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should happen instead?
+      placeholder: Describe the expected behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+      placeholder: Describe the actual behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Your environment details
+      placeholder: |
+        - OS: [e.g., macOS 14.0, Ubuntu 22.04, Windows 11]
+        - Rust version: [e.g., 1.75.0]
+        - Tool version: [e.g., commit hash or version]
+        - LLM model: [e.g., gpt-4, claude-3-sonnet]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs-output
+    attributes:
+      label: Logs/Output
+      description: Any relevant logs, error messages, or output
+      render: shell
+      placeholder: Paste logs here...
+
+  - type: textarea
+    id: subtasks
+    attributes:
+      label: Subtasks (Maintainer Use)
+      description: Parallel subtasks for fixing this bug (filled by maintainers)
+      placeholder: |
+        ## Investigation Subtasks
+        - [ ] Reproduce the bug locally
+        - [ ] Identify root cause in codebase
+        - [ ] Analyze impact scope
+
+        ## Implementation Subtasks
+        - [ ] Implement fix for core issue
+        - [ ] Add regression test
+        - [ ] Update error handling
+
+        ## Validation Subtasks
+        - [ ] Test fix with original reproduction case
+        - [ ] Run full test suite
+        - [ ] Validate on different environments
+      render: markdown
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or information about the problem
+      placeholder: Any additional information...
