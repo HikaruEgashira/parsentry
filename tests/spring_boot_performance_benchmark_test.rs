@@ -1063,34 +1063,34 @@ import org.springframework.data.repository.query.Param;
     
     for i in 0..30 {
         jpa_code.push_str(&format!(r#"
-public interface Repository{} extends JpaRepository<Entity{}, Long> {{
+public interface Repository{i} extends JpaRepository<Entity{i}, Long> {{
     
     // Native query with SQL injection risk
-    @Query(value = "SELECT * FROM table_{} WHERE name = ?1 AND status = ?2 ORDER BY ?3", nativeQuery = true)
-    List<Entity{}> findByNameAndStatusWithSort(String name, String status, String sortColumn);
+    @Query(value = "SELECT * FROM table_{i} WHERE name = ?1 AND status = ?2 ORDER BY ?3", nativeQuery = true)
+    List<Entity{i}> findByNameAndStatusWithSort(String name, String status, String sortColumn);
     
     // Dynamic query construction
-    @Query(value = "SELECT * FROM table_{} WHERE ?1 = ?2", nativeQuery = true)
-    List<Entity{}> findByDynamicColumn(String column, String value);
+    @Query(value = "SELECT * FROM table_{i} WHERE ?1 = ?2", nativeQuery = true)
+    List<Entity{i}> findByDynamicColumn(String column, String value);
     
     // Modifying query with injection risk
     @Modifying
-    @Query(value = "UPDATE table_{} SET status = ?2 WHERE user_id IN (?1)", nativeQuery = true)
+    @Query(value = "UPDATE table_{i} SET status = ?2 WHERE user_id IN (?1)", nativeQuery = true)
     void updateStatusForUsers(String userIds, String status);
     
     // JPQL with potential injection
-    @Query("SELECT e FROM Entity{} e WHERE e.data LIKE CONCAT('%', :search, '%') ORDER BY :sortBy")
-    List<Entity{}> searchEntitiesWithSort(@Param("search") String search, @Param("sortBy") String sortBy);
+    @Query("SELECT e FROM Entity{i} e WHERE e.data LIKE CONCAT('%', :search, '%') ORDER BY :sortBy")
+    List<Entity{i}> searchEntitiesWithSort(@Param("search") String search, @Param("sortBy") String sortBy);
     
     // Bulk operation with risk
     @Modifying
-    @Query(value = "DELETE FROM table_{} WHERE created_at < ?1 AND type = ?2", nativeQuery = true)
+    @Query(value = "DELETE FROM table_{i} WHERE created_at < ?1 AND type = ?2", nativeQuery = true)
     int bulkDeleteOldRecords(String date, String type);
 }}
 
 @Entity
-@Table(name = "table_{}")
-public class Entity{} {{
+@Table(name = "table_{i}")
+public class Entity{i} {{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -1101,12 +1101,12 @@ public class Entity{} {{
     private String sensitiveInfo;
 }}
 
-"#, i, i, i, i, i, i, i, i, i, i, i, i, i));
+"#, i=i));
     }
     
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("jpa_repositories.java");
-    std::fs::write(&jpa_code, &jpa_code)?;
+    std::fs::write(&test_file, &jpa_code)?;
     
     let start_time = Instant::now();
     

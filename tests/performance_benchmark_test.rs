@@ -123,7 +123,7 @@ public class VulnerableApp {
     // Generate many methods with vulnerabilities
     for i in 0..50 {
         code.push_str(&format!(r#"
-    public String processRequest_{}(HttpServletRequest request) {{
+    public String processRequest_{i}(HttpServletRequest request) {{
         String param = request.getParameter("input_{i}");
         
         // SQL Injection
