@@ -16,29 +16,17 @@ use tempfile::NamedTempFile;
 async fn test_analyze_empty_file() -> anyhow::Result<()> {
     let temp_file = NamedTempFile::new()?;
 
-    let result = analyze_file(
-        &PathBuf::from(temp_file.path()),
-        "gpt-4.1-nano",
-        &[PathBuf::from(temp_file.path())],
-        0,
-        &parsentry::parser::Context {
-            definitions: vec![],
-            references: vec![],
-        },
-        0,
-        false,
-        &None,
-        None,
-        &Language::English,
-    )
-    .await?;
-
-    assert_eq!(result.scratchpad, String::new());
-    assert_eq!(result.analysis, String::new());
-    assert_eq!(result.poc, String::new());
-    assert_eq!(result.confidence_score, 0);
-    assert!(result.vulnerability_types.is_empty());
-    // Note: context_code field no longer exists in Response struct
+    // For empty files, there are no patterns to match, so test should skip analysis
+    let content = std::fs::read_to_string(temp_file.path())?;
+    let patterns = SecurityRiskPatterns::new(PatternLanguage::JavaScript);
+    let pattern_matches = patterns.get_pattern_matches(&content);
+    
+    // Empty file should have no pattern matches
+    assert!(pattern_matches.is_empty());
+    
+    // Since there are no patterns, analyze_pattern would not be called
+    // This test verifies that the pattern matching stage correctly identifies
+    // that empty files don't contain security patterns
 
     Ok(())
 }

@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::timeout;
 
-use crate::locales::Language;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{Response, response_json_schema};
@@ -188,7 +187,6 @@ pub async fn analyze_file(
     debug: bool,
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
-    language: &Language,
 ) -> Result<Response, Error> {
     info!("Performing initial analysis of {}", file_path.display());
 
@@ -269,9 +267,9 @@ pub async fn analyze_file(
         file_path.display(),
         content,
         context_text,
-        prompts::get_initial_analysis_prompt_template(language),
-        prompts::get_analysis_approach_template(language),
-        prompts::get_guidelines_template(language),
+        prompts::get_initial_analysis_prompt_template(),
+        prompts::get_analysis_approach_template(),
+        prompts::get_guidelines_template(),
     );
     debug!("[PROMPT]\n{}", prompt);
 
@@ -377,8 +375,8 @@ pub async fn analyze_file(
                     vuln_type,
                     vuln_info.bypasses.join("\n"),
                     vuln_info.prompt,
-                    prompts::get_analysis_approach_template(language),
-                    prompts::get_guidelines_template(language),
+                    prompts::get_analysis_approach_template(),
+                    prompts::get_guidelines_template(),
                 );
 
                 // Save debug input if debug mode is enabled
@@ -569,7 +567,6 @@ pub async fn analyze_pattern(
     debug: bool,
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
-    language: &Language,
 ) -> Result<Option<Response>, Error> {
     info!(
         "Analyzing pattern '{}' in file {}",
@@ -626,12 +623,18 @@ pub async fn analyze_pattern(
         pattern_context,
         content,
         context_text,
-        prompts::get_initial_analysis_prompt_template(language),
-        prompts::get_analysis_approach_template(language),
-        prompts::get_guidelines_template(language)
+        prompts::get_initial_analysis_prompt_template(),
+        prompts::get_analysis_approach_template(),
+        prompts::get_guidelines_template()
     );
 
     debug!("[PATTERN-BASED PROMPT]\n{}", prompt);
+
+    // Validate pattern match before proceeding
+    if pattern_match.pattern_config.description.is_empty() {
+        warn!("Pattern description is empty for file: {}", file_path.display());
+        return Ok(None);
+    }
 
     // Save debug input if debug mode is enabled
     if debug {

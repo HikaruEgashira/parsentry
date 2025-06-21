@@ -1,8 +1,8 @@
 use anyhow::Result;
-use parsentry::analyzer::analyze_file;
+use parsentry::analyzer::analyze_pattern;
 use parsentry::locales::Language as LocaleLanguage;
 use parsentry::parser::CodeParser;
-use parsentry::security_patterns::Language;
+use parsentry::security_patterns::{Language, SecurityRiskPatterns};
 use std::time::{Duration, Instant};
 use tempfile::tempdir;
 
