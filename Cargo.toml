@@ -62,7 +62,6 @@ required-features = ["benchmark"]
 [[test]]
 name = "analyzer_unit_test"
 path = "tests/analyzer_unit_test.rs"
-required-features = ["benchmark"]
 
 [[test]]
 name = "context_quality_accuracy_test"
@@ -87,7 +86,6 @@ required-features = ["benchmark"]
 [[test]]
 name = "prompt_accuracy_unit_test"
 path = "tests/prompt_accuracy_unit_test.rs"
-required-features = ["benchmark"]
 
 [[test]]
 name = "prompt_slo_test"
