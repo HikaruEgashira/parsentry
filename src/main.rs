@@ -3,6 +3,7 @@ use clap::Parser;
 use dotenvy::dotenv;
 use parsentry::analyzer::analyze_pattern;
 use parsentry::args::{Args, validate_args};
+use parsentry::config::ParsentryConfig;
 use parsentry::file_classifier::FileClassifier;
 use parsentry::locales::Language;
 use parsentry::locales;
@@ -45,20 +46,33 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    validate_args(&args)?;
+    // Handle config generation mode
+    if args.generate_config {
+        println!("{}", ParsentryConfig::generate_default_config());
+        return Ok(());
+    }
+
+    // Load configuration with precedence: CLI args > env vars > config file
+    let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
+    let config = ParsentryConfig::load_with_precedence(
+        args.config.clone(),
+        &args,
+        &env_vars
+    )?;
+    
+    // Convert config back to args for compatibility with existing code
+    let final_args = config.to_args();
+
+    validate_args(&final_args)?;
 
     // Create language configuration
-    let language = Language::from_string(&args.language);
+    let language = Language::from_string(&final_args.language);
     let messages = locales::get_messages(&language);
 
-    // Get API base URL from CLI arg or environment variable
-    let env_base_url = std::env::var("API_BASE_URL").ok();
-    let api_base_url = args
-        .api_base_url
-        .as_deref()
-        .or_else(|| env_base_url.as_deref());
+    // Get API base URL from configuration
+    let api_base_url = final_args.api_base_url.as_deref();
 
-    let (root_dir, repo_name) = if let Some(repo) = &args.repo {
+    let (root_dir, repo_name) = if let Some(repo) = &final_args.repo {
         let dest = PathBuf::from("repo");
         if dest.exists() {
             std::fs::remove_dir_all(&dest).map_err(|e| {
@@ -100,21 +114,21 @@ async fn main() -> Result<()> {
         };
 
         (dest, Some(repo_name))
-    } else if let Some(root) = &args.root {
+    } else if let Some(root) = &final_args.root {
         (root.clone(), None)
     } else {
-        panic!("root path or repo must be set");
+        return Err(anyhow::anyhow!("Either --root or --repo must be specified, or configured in a config file"));
     };
 
     // Handle pattern generation mode
-    if args.generate_patterns {
+    if final_args.generate_patterns {
         println!(
             "🔧 {}",
             messages
                 .get("custom_pattern_generation_start")
                 .unwrap_or(&"Starting custom pattern generation mode")
         );
-        generate_custom_patterns(&root_dir, &args.model, api_base_url).await?;
+        generate_custom_patterns(&root_dir, &final_args.model, api_base_url).await?;
         println!(
             "✅ {}",
             messages
@@ -179,7 +193,7 @@ async fn main() -> Result<()> {
     let root_dir = Arc::new(root_dir);
 
     // Create repository-specific output directory
-    let output_dir = if let Some(base_output_dir) = args.output_dir.clone() {
+    let output_dir = if let Some(base_output_dir) = final_args.output_dir.clone() {
         if let Some(ref name) = repo_name {
             let mut repo_output_dir = base_output_dir;
             repo_output_dir.push(name);
@@ -191,10 +205,10 @@ async fn main() -> Result<()> {
         None
     };
 
-    let model = args.model.clone();
+    let model = final_args.model.clone();
     let files = files.clone();
-    let verbosity = args.verbosity;
-    let debug = args.debug;
+    let verbosity = final_args.verbosity;
+    let debug = final_args.debug;
 
     let mut summary = AnalysisSummary::new();
 
@@ -357,13 +371,13 @@ async fn main() -> Result<()> {
 
     summary.sort_by_confidence();
 
-    let mut filtered_summary = if args.min_confidence > 0 {
-        summary.filter_by_min_confidence(args.min_confidence)
+    let mut filtered_summary = if final_args.min_confidence > 0 {
+        summary.filter_by_min_confidence(final_args.min_confidence)
     } else {
         summary
     };
 
-    if let Some(types_str) = args.vuln_types {
+    if let Some(types_str) = final_args.vuln_types {
         let vuln_types: Vec<VulnType> = types_str
             .split(',')
             .map(|s| match s.trim() {

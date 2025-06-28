@@ -9,7 +9,7 @@ use std::path::PathBuf;
     about,
     long_about = None,
     group = clap::ArgGroup::new("target")
-        .required(true)
+        .required(false)
         .args(&["root", "repo"])
 )]
 pub struct Args {
@@ -43,7 +43,6 @@ pub struct Args {
     #[arg(long)]
     pub generate_patterns: bool,
 
-
     #[arg(long)]
     pub debug: bool,
 
@@ -52,6 +51,12 @@ pub struct Args {
 
     #[arg(long, default_value = "ja")]
     pub language: String,
+
+    #[arg(short, long)]
+    pub config: Option<PathBuf>,
+
+    #[arg(long)]
+    pub generate_config: bool,
 }
 
 pub fn validate_args(args: &Args) -> Result<()> {

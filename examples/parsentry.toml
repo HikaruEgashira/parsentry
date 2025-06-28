@@ -1,0 +1,27 @@
+# Parsentry Configuration File Example
+# For more information, see documentation
+
+[analysis]
+model = "o4-mini"
+min_confidence = 70
+language = "ja"
+debug = false
+evaluate = false
+verbosity = 1
+
+[paths]
+# root = "src"
+# output_dir = "reports"
+# analyze = "specific-file.rs"
+
+[filtering]
+# vuln_types = ["SQLI", "XSS", "RCE"]
+
+[api]
+# base_url = "https://api.example.com"
+
+[repo]
+# url = "hikaruegashira/hikae-vulnerable-javascript"
+
+[generation]
+generate_patterns = false
