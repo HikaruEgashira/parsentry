@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use dotenvy::dotenv;
 use parsentry::analyzer::analyze_pattern;
-use parsentry::args::{Args, validate_args};
+use parsentry::args::{Args, Commands, ScanArgs, GraphArgs, validate_scan_args, validate_graph_args};
 use parsentry::call_graph::{CallGraphBuilder, CallGraphConfig};
 use parsentry::call_graph_output::{CallGraphRenderer, OutputFormat, CallGraphFilter};
 use parsentry::config::ParsentryConfig;
@@ -49,12 +49,55 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    // Handle config generation mode
-    if args.generate_config {
-        println!("{}", ParsentryConfig::generate_default_config());
-        return Ok(());
+    match &args.command {
+        Some(Commands::Graph { 
+            root, 
+            repo, 
+            format, 
+            output, 
+            start_functions, 
+            max_depth, 
+            include, 
+            exclude, 
+            detect_cycles, 
+            security_focus 
+        }) => {
+            let graph_args = GraphArgs {
+                root: root.clone().or_else(|| args.root.clone()),
+                repo: repo.clone().or_else(|| args.repo.clone()),
+                format: format.clone(),
+                output: output.clone(),
+                start_functions: start_functions.clone(),
+                max_depth: *max_depth,
+                include: include.clone(),
+                exclude: exclude.clone(),
+                detect_cycles: *detect_cycles,
+                security_focus: *security_focus,
+                verbosity: args.verbosity,
+                debug: args.debug,
+                config: args.config.clone(),
+            };
+            
+            validate_graph_args(&graph_args)?;
+            return run_graph_command(graph_args).await;
+        },
+        None => {
+            // Default to scan command for backward compatibility
+            let scan_args = ScanArgs::from(&args);
+            
+            // Handle config generation mode
+            if scan_args.generate_config {
+                println!("{}", ParsentryConfig::generate_default_config());
+                return Ok(());
+            }
+            
+            validate_scan_args(&scan_args)?;
+            return run_scan_command(scan_args).await;
+        }
     }
+}
 
+async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Load configuration with precedence: CLI args > env vars > config file
     let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
     let config = ParsentryConfig::load_with_precedence(
@@ -65,8 +108,8 @@ async fn main() -> Result<()> {
     
     // Convert config back to args for compatibility with existing code
     let final_args = config.to_args();
-
-    validate_args(&final_args)?;
+    
+    validate_scan_args(&final_args)?;
 
     // Create language configuration
     let language = Language::from_string(&final_args.language);
@@ -145,23 +188,7 @@ async fn main() -> Result<()> {
 
     let files = repo.get_relevant_files();
 
-    // Handle call graph generation if requested
-    if final_args.call_graph {
-        println!("📊 Starting call graph generation...");
-        
-        match generate_call_graph(&final_args, &files, &root_dir, &messages).await {
-            Ok(_) => println!("✅ Call graph generation completed"),
-            Err(e) => {
-                println!("❌ Call graph generation failed: {}", e);
-                return Err(e);
-            }
-        }
-        
-        // If only call graph was requested, exit early
-        if !final_args.generate_patterns && final_args.output_dir.is_none() {
-            return Ok(());
-        }
-    }
+    // Call graph generation is now handled by the graph subcommand
     println!(
         "📁 {} ({}件)",
         messages
@@ -523,19 +550,48 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn generate_call_graph(
-    args: &Args,
-    files: &[PathBuf],
-    _root_dir: &PathBuf,
-    _messages: &std::collections::HashMap<&str, &str>,
-) -> Result<()> {
+async fn run_graph_command(args: GraphArgs) -> Result<()> {
+    println!("📊 Starting call graph generation...");
+    
+    // Handle repository cloning or use provided root
+    let (root_dir, _repo_name) = if let Some(repo) = &args.repo {
+        let dest = PathBuf::from("repo");
+        if dest.exists() {
+            std::fs::remove_dir_all(&dest).map_err(|e| {
+                anyhow::anyhow!("Failed to delete clone directory: {}", e)
+            })?;
+        }
+        println!("🛠️  Cloning GitHub repository: {} → {}", repo, dest.display());
+        clone_github_repo(repo, &dest).map_err(|e| {
+            anyhow::anyhow!("Failed to clone GitHub repository: {}", e)
+        })?;
+        
+        let repo_name = if repo.contains('/') {
+            repo.split('/')
+                .last()
+                .unwrap_or("unknown-repo")
+                .replace(".git", "")
+        } else {
+            repo.replace(".git", "")
+        };
+        
+        (dest, Some(repo_name))
+    } else if let Some(root) = &args.root {
+        (root.clone(), None)
+    } else {
+        return Err(anyhow::anyhow!("Either --root or --repo must be specified"));
+    };
+    
+    let repo = RepoOps::new(root_dir.clone());
+    let files = repo.get_relevant_files();
+    
     // Initialize the code parser
     let mut parser = CodeParser::new()?;
     
     // Add all relevant files to the parser
     println!("📂 Loading {} files for call graph analysis...", files.len());
     for file_path in files {
-        if let Err(e) = parser.add_file(file_path) {
+        if let Err(e) = parser.add_file(&file_path) {
             if args.verbosity > 0 {
                 println!("⚠️  Failed to load {}: {}", file_path.display(), e);
             }
@@ -548,33 +604,33 @@ async fn generate_call_graph(
     // Configure call graph generation
     let mut config = CallGraphConfig::default();
     
-    if let Some(max_depth) = args.call_graph_max_depth {
+    if let Some(max_depth) = args.max_depth {
         config.max_depth = Some(max_depth);
     }
 
-    if let Some(start_functions_str) = &args.call_graph_start_functions {
+    if let Some(start_functions_str) = &args.start_functions {
         config.start_functions = start_functions_str
             .split(',')
             .map(|s| s.trim().to_string())
             .collect();
     }
 
-    if let Some(include_patterns_str) = &args.call_graph_include {
+    if let Some(include_patterns_str) = &args.include {
         config.include_patterns = include_patterns_str
             .split(',')
             .map(|s| s.trim().to_string())
             .collect();
     }
 
-    if let Some(exclude_patterns_str) = &args.call_graph_exclude {
+    if let Some(exclude_patterns_str) = &args.exclude {
         config.exclude_patterns = exclude_patterns_str
             .split(',')
             .map(|s| s.trim().to_string())
             .collect();
     }
 
-    config.detect_cycles = args.call_graph_detect_cycles;
-    config.security_focus = args.call_graph_security_focus;
+    config.detect_cycles = args.detect_cycles;
+    config.security_focus = args.security_focus;
 
     // Build the call graph
     println!("🔗 Building call graph...");
@@ -592,13 +648,13 @@ async fn generate_call_graph(
     }
 
     // Parse output format
-    let output_format: OutputFormat = args.call_graph_format.parse()?;
+    let output_format: OutputFormat = args.format.parse()?;
 
     // Generate output
     let output_content = CallGraphRenderer::render(&filtered_graph, &output_format)?;
 
     // Determine output path
-    let output_path = if let Some(explicit_path) = &args.call_graph_output {
+    let output_path = if let Some(explicit_path) = &args.output {
         explicit_path.clone()
     } else {
         let extension = match output_format {
@@ -631,6 +687,8 @@ async fn generate_call_graph(
         "📁 Call graph saved to: {}",
         output_path.display()
     );
+    
+    println!("✅ Call graph generation completed");
 
     Ok(())
 }

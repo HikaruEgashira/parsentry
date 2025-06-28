@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::args::Args;
+use crate::args::ScanArgs;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
@@ -381,7 +381,8 @@ security_focus = false
         Ok(())
     }
 
-    pub fn apply_cli_args(&mut self, args: &Args) -> Result<()> {
+
+    pub fn apply_scan_args(&mut self, args: &ScanArgs) -> Result<()> {
         if !args.model.is_empty() && args.model != default_model() {
             self.analysis.model = args.model.clone();
         }
@@ -434,53 +435,13 @@ security_focus = false
         if args.generate_patterns {
             self.generation.generate_patterns = args.generate_patterns;
         }
-        
-        // Apply call graph CLI arguments
-        if args.call_graph {
-            self.call_graph.call_graph = args.call_graph;
-        }
-        
-        if !args.call_graph_format.is_empty() && args.call_graph_format != default_call_graph_format() {
-            self.call_graph.format = args.call_graph_format.clone();
-        }
-        
-        if let Some(ref output) = args.call_graph_output {
-            self.call_graph.output = Some(output.clone());
-        }
-        
-        if let Some(ref start_functions_str) = args.call_graph_start_functions {
-            let functions: Vec<String> = start_functions_str.split(',').map(|s| s.trim().to_string()).collect();
-            self.call_graph.start_functions = Some(functions);
-        }
-        
-        if let Some(max_depth) = args.call_graph_max_depth {
-            self.call_graph.max_depth = Some(max_depth);
-        }
-        
-        if let Some(ref include_str) = args.call_graph_include {
-            let patterns: Vec<String> = include_str.split(',').map(|s| s.trim().to_string()).collect();
-            self.call_graph.include = Some(patterns);
-        }
-        
-        if let Some(ref exclude_str) = args.call_graph_exclude {
-            let patterns: Vec<String> = exclude_str.split(',').map(|s| s.trim().to_string()).collect();
-            self.call_graph.exclude = Some(patterns);
-        }
-        
-        if args.call_graph_detect_cycles {
-            self.call_graph.detect_cycles = args.call_graph_detect_cycles;
-        }
-        
-        if args.call_graph_security_focus {
-            self.call_graph.security_focus = args.call_graph_security_focus;
-        }
-        
+
         Ok(())
     }
 
     pub fn load_with_precedence(
         config_path: Option<PathBuf>,
-        cli_args: &Args,
+        cli_args: &ScanArgs,
         env_vars: &HashMap<String, String>
     ) -> Result<Self> {
         let mut config = if let Some(path) = config_path {
@@ -492,7 +453,7 @@ security_focus = false
         };
         
         config.apply_env_vars(env_vars)?;
-        config.apply_cli_args(cli_args)?;
+        config.apply_scan_args(cli_args)?;
         config.validate()?;
         
         Ok(config)
@@ -536,8 +497,8 @@ security_focus = false
         Ok(())
     }
     
-    pub fn to_args(&self) -> Args {
-        Args {
+    pub fn to_args(&self) -> ScanArgs {
+        ScanArgs {
             root: self.paths.root.clone(),
             repo: self.repo.url.clone(),
             analyze: self.paths.analyze.clone(),
@@ -553,15 +514,6 @@ security_focus = false
             language: self.analysis.language.clone(),
             config: None,
             generate_config: false,
-            call_graph: self.call_graph.call_graph,
-            call_graph_format: self.call_graph.format.clone(),
-            call_graph_output: self.call_graph.output.clone(),
-            call_graph_start_functions: self.call_graph.start_functions.as_ref().map(|v| v.join(",")),
-            call_graph_max_depth: self.call_graph.max_depth,
-            call_graph_include: self.call_graph.include.as_ref().map(|v| v.join(",")),
-            call_graph_exclude: self.call_graph.exclude.as_ref().map(|v| v.join(",")),
-            call_graph_detect_cycles: self.call_graph.detect_cycles,
-            call_graph_security_focus: self.call_graph.security_focus,
         }
     }
 }

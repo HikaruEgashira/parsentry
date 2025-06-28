@@ -28,7 +28,7 @@ cargo test --features snapshot-test
 cargo test --features benchmark
 ```
 
-現時点でbencmarksのエラーは許容されますが、任されたタスクの範囲で改善が可能であれば修正してください。
+現時点でbencmarksの精度によるエラーは許容されますが、任されたタスクの範囲で改善が可能であれば修正してください。コンパイルエラーは許容されません。
 
 ## Benchmark guide
 
