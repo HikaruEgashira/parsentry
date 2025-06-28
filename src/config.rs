@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::args::ScanArgs;
+use crate::cli::args::ScanArgs;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
