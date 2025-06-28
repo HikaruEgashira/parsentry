@@ -1,0 +1,1302 @@
+{
+  "nodes": {
+    "find_bidirectional": {
+      "function_name": "find_bidirectional",
+      "file_path": "src/parser.rs",
+      "line_number": 22,
+      "node_type": "Method",
+      "start_byte": 14087,
+      "end_byte": 14837
+    },
+    "escape_csv_field": {
+      "function_name": "escape_csv_field",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 7,
+      "node_type": "Method",
+      "start_byte": 9725,
+      "end_byte": 9966
+    },
+    "add_file": {
+      "function_name": "add_file",
+      "file_path": "src/parser.rs",
+      "line_number": 11,
+      "node_type": "Method",
+      "start_byte": 1271,
+      "end_byte": 1646
+    },
+    "save_to_file": {
+      "function_name": "save_to_file",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 5,
+      "node_type": "Method",
+      "start_byte": 9744,
+      "end_byte": 9905
+    },
+    "test_generate_output_filename_uniqueness": {
+      "function_name": "test_generate_output_filename_uniqueness",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 20,
+      "node_type": "Method",
+      "start_byte": 3136,
+      "end_byte": 3921
+    },
+    "read_gitignore": {
+      "function_name": "read_gitignore",
+      "file_path": "src/repo.rs",
+      "line_number": 20,
+      "node_type": "Method",
+      "start_byte": 2306,
+      "end_byte": 2919
+    },
+    "from_str": {
+      "function_name": "from_str",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 7,
+      "node_type": "Lambda",
+      "start_byte": 315,
+      "end_byte": 664
+    },
+    "from_extension": {
+      "function_name": "from_extension",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 18,
+      "node_type": "Lambda",
+      "start_byte": 1132,
+      "end_byte": 1828
+    },
+    "test_sarif_with_enhanced_properties": {
+      "function_name": "test_sarif_with_enhanced_properties",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 50,
+      "node_type": "Method",
+      "start_byte": 21514,
+      "end_byte": 23570
+    },
+    "validate_output_directory": {
+      "function_name": "validate_output_directory",
+      "file_path": "src/reports/validation.rs",
+      "line_number": 2,
+      "node_type": "Lambda",
+      "start_byte": 78,
+      "end_byte": 1026
+    },
+    "parse_json_response": {
+      "function_name": "parse_json_response",
+      "file_path": "src/analyzer.rs",
+      "line_number": 10,
+      "node_type": "Lambda",
+      "start_byte": 5756,
+      "end_byte": 6148
+    },
+    "add_result": {
+      "function_name": "add_result",
+      "file_path": "src/reports/summary.rs",
+      "line_number": 7,
+      "node_type": "Method",
+      "start_byte": 500,
+      "end_byte": 734
+    },
+    "parse_line_number_from_text": {
+      "function_name": "parse_line_number_from_text",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 35,
+      "node_type": "Method",
+      "start_byte": 14816,
+      "end_byte": 16063
+    },
+    "test_vulnerability_mappings": {
+      "function_name": "test_vulnerability_mappings",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 25,
+      "node_type": "Method",
+      "start_byte": 19603,
+      "end_byte": 20564
+    },
+    "build_context_from_file": {
+      "function_name": "build_context_from_file",
+      "file_path": "src/parser.rs",
+      "line_number": 121,
+      "node_type": "Lambda",
+      "start_byte": 14842,
+      "end_byte": 19936
+    },
+    "generate_output_filename": {
+      "function_name": "generate_output_filename",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 14,
+      "node_type": "Lambda",
+      "start_byte": 561,
+      "end_byte": 1668
+    },
+    "analyze_all_definitions_at_once": {
+      "function_name": "analyze_all_definitions_at_once",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 144,
+      "node_type": "Constructor",
+      "start_byte": 10091,
+      "end_byte": 15449
+    },
+    "render": {
+      "function_name": "render",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 8,
+      "node_type": "Lambda",
+      "start_byte": 728,
+      "end_byte": 1084
+    },
+    "analyze_file": {
+      "function_name": "analyze_file",
+      "file_path": "src/analyzer.rs",
+      "line_number": 170,
+      "node_type": "Lambda",
+      "start_byte": 6150,
+      "end_byte": 22751
+    },
+    "to_string": {
+      "function_name": "to_string",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 437,
+      "end_byte": 594
+    },
+    "from_analysis_summary": {
+      "function_name": "from_analysis_summary",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 89,
+      "node_type": "Method",
+      "start_byte": 5644,
+      "end_byte": 9560
+    },
+    "analyze_pattern": {
+      "function_name": "analyze_pattern",
+      "file_path": "src/analyzer.rs",
+      "line_number": 167,
+      "node_type": "Function",
+      "start_byte": 22753,
+      "end_byte": 28669
+    },
+    "get_network_related_files": {
+      "function_name": "get_network_related_files",
+      "file_path": "src/repo.rs",
+      "line_number": 20,
+      "node_type": "Method",
+      "start_byte": 5851,
+      "end_byte": 6670
+    },
+    "get_pattern_matches": {
+      "function_name": "get_pattern_matches",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 154,
+      "node_type": "Lambda",
+      "start_byte": 13846,
+      "end_byte": 22363
+    },
+    "default": {
+      "function_name": "default",
+      "file_path": "src/call_graph.rs",
+      "line_number": 10,
+      "node_type": "Method",
+      "start_byte": 1939,
+      "end_byte": 2230
+    },
+    "build_from_function": {
+      "function_name": "build_from_function",
+      "file_path": "src/call_graph.rs",
+      "line_number": 80,
+      "node_type": "Function",
+      "start_byte": 3577,
+      "end_byte": 6960
+    },
+    "classify": {
+      "function_name": "classify",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 3,
+      "node_type": "Method",
+      "start_byte": 151,
+      "end_byte": 864
+    },
+    "get_evaluator_prompt_template": {
+      "function_name": "get_evaluator_prompt_template",
+      "file_path": "src/prompts/evaluator.rs",
+      "line_number": 1,
+      "node_type": "Method",
+      "start_byte": 51,
+      "end_byte": 173
+    },
+    "test_generate_pattern_specific_filename_consistency": {
+      "function_name": "test_generate_pattern_specific_filename_consistency",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 11,
+      "node_type": "Method",
+      "start_byte": 13448,
+      "end_byte": 14015
+    },
+    "test_generate_pattern_specific_filename_basic": {
+      "function_name": "test_generate_pattern_specific_filename_basic",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 11,
+      "node_type": "Method",
+      "start_byte": 11416,
+      "end_byte": 11951
+    },
+    "find_definition_in_repo": {
+      "function_name": "find_definition_in_repo",
+      "file_path": "src/repo.rs",
+      "line_number": 11,
+      "node_type": "Method",
+      "start_byte": 8212,
+      "end_byte": 8539
+    },
+    "sort_by_confidence": {
+      "function_name": "sort_by_confidence",
+      "file_path": "src/reports/summary.rs",
+      "line_number": 7,
+      "node_type": "Method",
+      "start_byte": 740,
+      "end_byte": 942
+    },
+    "get_tree_sitter_language": {
+      "function_name": "get_tree_sitter_language",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 18,
+      "node_type": "Lambda",
+      "start_byte": 7334,
+      "end_byte": 8160
+    },
+    "tarjan_scc": {
+      "function_name": "tarjan_scc",
+      "file_path": "src/call_graph.rs",
+      "line_number": 56,
+      "node_type": "Method",
+      "start_byte": 12606,
+      "end_byte": 14705
+    },
+    "mitre_attack_ids": {
+      "function_name": "mitre_attack_ids",
+      "file_path": "src/response.rs",
+      "line_number": 12,
+      "node_type": "Lambda",
+      "start_byte": 1671,
+      "end_byte": 2436
+    },
+    "to_json": {
+      "function_name": "to_json",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 3,
+      "node_type": "Method",
+      "start_byte": 9609,
+      "end_byte": 9704
+    },
+    "render_json": {
+      "function_name": "render_json",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 4,
+      "node_type": "Method",
+      "start_byte": 3688,
+      "end_byte": 3821
+    },
+    "execute_chat_request_with_retry": {
+      "function_name": "execute_chat_request_with_retry",
+      "file_path": "src/analyzer.rs",
+      "line_number": 30,
+      "node_type": "Lambda",
+      "start_byte": 4837,
+      "end_byte": 5754
+    },
+    "visit_dirs": {
+      "function_name": "visit_dirs",
+      "file_path": "src/repo.rs",
+      "line_number": 14,
+      "node_type": "Method",
+      "start_byte": 2970,
+      "end_byte": 3402
+    },
+    "generate_call_graph": {
+      "function_name": "generate_call_graph",
+      "file_path": "src/main.rs",
+      "line_number": 111,
+      "node_type": "Lambda",
+      "start_byte": 18071,
+      "end_byte": 21722
+    },
+    "analyze_references_for_security_patterns": {
+      "function_name": "analyze_references_for_security_patterns",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 8,
+      "node_type": "Method",
+      "start_byte": 9780,
+      "end_byte": 10089
+    },
+    "test_generate_output_filename_fallback": {
+      "function_name": "test_generate_output_filename_fallback",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 11,
+      "node_type": "Method",
+      "start_byte": 6782,
+      "end_byte": 7223
+    },
+    "test_sarif_serialization": {
+      "function_name": "test_sarif_serialization",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 8,
+      "node_type": "Method",
+      "start_byte": 18820,
+      "end_byte": 19118
+    },
+    "analyze_definitions_for_security_patterns": {
+      "function_name": "analyze_definitions_for_security_patterns",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 8,
+      "node_type": "Method",
+      "start_byte": 9465,
+      "end_byte": 9778
+    },
+    "generate_pattern_specific_filename": {
+      "function_name": "generate_pattern_specific_filename",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 43,
+      "node_type": "Method",
+      "start_byte": 1670,
+      "end_byte": 3049
+    },
+    "get_initial_analysis_prompt_template": {
+      "function_name": "get_initial_analysis_prompt_template",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 1696,
+      "end_byte": 1934
+    },
+    "filter_by_language": {
+      "function_name": "filter_by_language",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 28,
+      "node_type": "Method",
+      "start_byte": 13259,
+      "end_byte": 14185
+    },
+    "get_analysis_prompt": {
+      "function_name": "get_analysis_prompt",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 930,
+      "end_byte": 1161
+    },
+    "to_markdown": {
+      "function_name": "to_markdown",
+      "file_path": "src/response.rs",
+      "line_number": 3,
+      "node_type": "Method",
+      "start_byte": 15873,
+      "end_byte": 15968
+    },
+    "clone_github_repo": {
+      "function_name": "clone_github_repo",
+      "file_path": "src/repo.rs",
+      "line_number": 38,
+      "node_type": "Method",
+      "start_byte": 9121,
+      "end_byte": 10246
+    },
+    "normalize_confidence_score": {
+      "function_name": "normalize_confidence_score",
+      "file_path": "src/response.rs",
+      "line_number": 7,
+      "node_type": "Method",
+      "start_byte": 11164,
+      "end_byte": 11330
+    },
+    "from_filename": {
+      "function_name": "from_filename",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 11,
+      "node_type": "Method",
+      "start_byte": 1834,
+      "end_byte": 2162
+    },
+    "new_with_root": {
+      "function_name": "new_with_root",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 86,
+      "node_type": "Lambda",
+      "start_byte": 3829,
+      "end_byte": 7328
+    },
+    "analyze_all_references_at_once": {
+      "function_name": "analyze_all_references_at_once",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 152,
+      "node_type": "Constructor",
+      "start_byte": 15451,
+      "end_byte": 21538
+    },
+    "validate_args": {
+      "function_name": "validate_args",
+      "file_path": "src/args.rs",
+      "line_number": 14,
+      "node_type": "Method",
+      "start_byte": 1680,
+      "end_byte": 2097
+    },
+    "update_metadata": {
+      "function_name": "update_metadata",
+      "file_path": "src/call_graph.rs",
+      "line_number": 25,
+      "node_type": "Method",
+      "start_byte": 14711,
+      "end_byte": 15728
+    },
+    "is_github_actions_workflow": {
+      "function_name": "is_github_actions_workflow",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 19,
+      "node_type": "Method",
+      "start_byte": 870,
+      "end_byte": 1501
+    },
+    "create_pattern_client": {
+      "function_name": "create_pattern_client",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 10,
+      "node_type": "Method",
+      "start_byte": 474,
+      "end_byte": 1129
+    },
+    "load_patterns": {
+      "function_name": "load_patterns",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 40,
+      "node_type": "Lambda",
+      "start_byte": 23134,
+      "end_byte": 24799
+    },
+    "get_language": {
+      "function_name": "get_language",
+      "file_path": "src/parser.rs",
+      "line_number": 22,
+      "node_type": "Lambda",
+      "start_byte": 1652,
+      "end_byte": 2818
+    },
+    "get_attack_vectors": {
+      "function_name": "get_attack_vectors",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 4,
+      "node_type": "Method",
+      "start_byte": 13645,
+      "end_byte": 13840
+    },
+    "detect_cycles": {
+      "function_name": "detect_cycles",
+      "file_path": "src/call_graph.rs",
+      "line_number": 26,
+      "node_type": "Method",
+      "start_byte": 11791,
+      "end_byte": 12600
+    },
+    "get_messages": {
+      "function_name": "get_messages",
+      "file_path": "src/locales/ja.rs",
+      "line_number": 1,
+      "node_type": "Method",
+      "start_byte": 32,
+      "end_byte": 2700
+    },
+    "test_generate_pattern_specific_filename_empty_pattern": {
+      "function_name": "test_generate_pattern_specific_filename_empty_pattern",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 13,
+      "node_type": "Method",
+      "start_byte": 12798,
+      "end_byte": 13430
+    },
+    "generate_custom_patterns_impl": {
+      "function_name": "generate_custom_patterns_impl",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 95,
+      "node_type": "Lambda",
+      "start_byte": 3451,
+      "end_byte": 9463
+    },
+    "render_csv": {
+      "function_name": "render_csv",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 74,
+      "node_type": "Lambda",
+      "start_byte": 6380,
+      "end_byte": 9510
+    },
+    "is_terraform": {
+      "function_name": "is_terraform",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 21,
+      "node_type": "Method",
+      "start_byte": 2936,
+      "end_byte": 3505
+    },
+    "extract_function_calls_regex": {
+      "function_name": "extract_function_calls_regex",
+      "file_path": "src/call_graph.rs",
+      "line_number": 25,
+      "node_type": "Function",
+      "start_byte": 10011,
+      "end_byte": 11004
+    },
+    "write_patterns_to_file": {
+      "function_name": "write_patterns_to_file",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 135,
+      "node_type": "Lambda",
+      "start_byte": 21540,
+      "end_byte": 26185
+    },
+    "determine_node_type": {
+      "function_name": "determine_node_type",
+      "file_path": "src/call_graph.rs",
+      "line_number": 14,
+      "node_type": "Constructor",
+      "start_byte": 11010,
+      "end_byte": 11566
+    },
+    "print_readable": {
+      "function_name": "print_readable",
+      "file_path": "src/response.rs",
+      "line_number": 98,
+      "node_type": "Lambda",
+      "start_byte": 12266,
+      "end_byte": 15867
+    },
+    "test_generate_pattern_specific_filename_special_chars": {
+      "function_name": "test_generate_pattern_specific_filename_special_chars",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 13,
+      "node_type": "Method",
+      "start_byte": 11969,
+      "end_byte": 12780
+    },
+    "create_rule_for_vuln_type": {
+      "function_name": "create_rule_for_vuln_type",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 92,
+      "node_type": "Lambda",
+      "start_byte": 9909,
+      "end_byte": 14030
+    },
+    "get_files_to_analyze": {
+      "function_name": "get_files_to_analyze",
+      "file_path": "src/repo.rs",
+      "line_number": 31,
+      "node_type": "Method",
+      "start_byte": 6676,
+      "end_byte": 7910
+    },
+    "get_pattern_type_for_config": {
+      "function_name": "get_pattern_type_for_config",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 15,
+      "node_type": "Method",
+      "start_byte": 22369,
+      "end_byte": 23128
+    },
+    "filter_by_pattern": {
+      "function_name": "filter_by_pattern",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 46,
+      "node_type": "Method",
+      "start_byte": 11671,
+      "end_byte": 13253
+    },
+    "get_analysis_approach_template": {
+      "function_name": "get_analysis_approach_template",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 1936,
+      "end_byte": 2156
+    },
+    "filter_by_vuln_types": {
+      "function_name": "filter_by_vuln_types",
+      "file_path": "src/reports/summary.rs",
+      "line_number": 15,
+      "node_type": "Method",
+      "start_byte": 1248,
+      "end_byte": 1693
+    },
+    "get_iac_prompt": {
+      "function_name": "get_iac_prompt",
+      "file_path": "src/prompts/iac.rs",
+      "line_number": 14,
+      "node_type": "Lambda",
+      "start_byte": 6470,
+      "end_byte": 6908
+    },
+    "byte_to_line_number": {
+      "function_name": "byte_to_line_number",
+      "file_path": "src/call_graph.rs",
+      "line_number": 6,
+      "node_type": "Method",
+      "start_byte": 11572,
+      "end_byte": 11785
+    },
+    "collect_context_for_security_pattern": {
+      "function_name": "collect_context_for_security_pattern",
+      "file_path": "src/repo.rs",
+      "line_number": 6,
+      "node_type": "Method",
+      "start_byte": 2084,
+      "end_byte": 2300
+    },
+    "test_filename_collision_resolution": {
+      "function_name": "test_filename_collision_resolution",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 37,
+      "node_type": "Method",
+      "start_byte": 7245,
+      "end_byte": 8758
+    },
+    "test_generate_output_filename_readability": {
+      "function_name": "test_generate_output_filename_readability",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 13,
+      "node_type": "Method",
+      "start_byte": 3943,
+      "end_byte": 4479
+    },
+    "save_debug_file": {
+      "function_name": "save_debug_file",
+      "file_path": "src/analyzer.rs",
+      "line_number": 22,
+      "node_type": "Method",
+      "start_byte": 678,
+      "end_byte": 1556
+    },
+    "extract_region_from_par_analysis": {
+      "function_name": "extract_region_from_par_analysis",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 14,
+      "node_type": "Method",
+      "start_byte": 14271,
+      "end_byte": 14814
+    },
+    "language_to_extension": {
+      "function_name": "language_to_extension",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 16,
+      "node_type": "Lambda",
+      "start_byte": 14191,
+      "end_byte": 15001
+    },
+    "matches_gitignore_pattern": {
+      "function_name": "matches_gitignore_pattern",
+      "file_path": "src/repo.rs",
+      "line_number": 18,
+      "node_type": "Method",
+      "start_byte": 4420,
+      "end_byte": 5102
+    },
+    "load_custom_patterns": {
+      "function_name": "load_custom_patterns",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 87,
+      "node_type": "Lambda",
+      "start_byte": 24805,
+      "end_byte": 29604
+    },
+    "should_exclude_path": {
+      "function_name": "should_exclude_path",
+      "file_path": "src/repo.rs",
+      "line_number": 24,
+      "node_type": "Method",
+      "start_byte": 3408,
+      "end_byte": 4231
+    },
+    "get_sys_prompt_template": {
+      "function_name": "get_sys_prompt_template",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 1495,
+      "end_byte": 1694
+    },
+    "execute_chat_request": {
+      "function_name": "execute_chat_request",
+      "file_path": "src/analyzer.rs",
+      "line_number": 30,
+      "node_type": "Lambda",
+      "start_byte": 3912,
+      "end_byte": 4835
+    },
+    "guess_mime_type": {
+      "function_name": "guess_mime_type",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 15,
+      "node_type": "Lambda",
+      "start_byte": 16641,
+      "end_byte": 17415
+    },
+    "test_response": {
+      "function_name": "test_response",
+      "file_path": "src/response.rs",
+      "line_number": 26,
+      "node_type": "Method",
+      "start_byte": 16065,
+      "end_byte": 16879
+    },
+    "test_pattern_overwrite_issue": {
+      "function_name": "test_pattern_overwrite_issue",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 18,
+      "node_type": "Method",
+      "start_byte": 10477,
+      "end_byte": 11398
+    },
+    "new": {
+      "function_name": "new",
+      "file_path": "src/reports/summary.rs",
+      "line_number": 3,
+      "node_type": "Method",
+      "start_byte": 442,
+      "end_byte": 494
+    },
+    "test_sarif_file_export": {
+      "function_name": "test_sarif_file_export",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 13,
+      "node_type": "Method",
+      "start_byte": 19136,
+      "end_byte": 19585
+    },
+    "from_string": {
+      "function_name": "from_string",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 4,
+      "node_type": "Lambda",
+      "start_byte": 172,
+      "end_byte": 431
+    },
+    "build": {
+      "function_name": "build",
+      "file_path": "src/call_graph.rs",
+      "line_number": 26,
+      "node_type": "Method",
+      "start_byte": 2780,
+      "end_byte": 3571
+    },
+    "render_dot": {
+      "function_name": "render_dot",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 23,
+      "node_type": "Lambda",
+      "start_byte": 1090,
+      "end_byte": 3682
+    },
+    "create_custom_target_resolver": {
+      "function_name": "create_custom_target_resolver",
+      "file_path": "src/analyzer.rs",
+      "line_number": 40,
+      "node_type": "Method",
+      "start_byte": 2194,
+      "end_byte": 3910
+    },
+    "get_pattern_type": {
+      "function_name": "get_pattern_type",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 49,
+      "node_type": "Lambda",
+      "start_byte": 11653,
+      "end_byte": 13639
+    },
+    "test_pattern_specific_fixes_overwrite_issue": {
+      "function_name": "test_pattern_specific_fixes_overwrite_issue",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 19,
+      "node_type": "Method",
+      "start_byte": 14033,
+      "end_byte": 14996
+    },
+    "main": {
+      "function_name": "main",
+      "file_path": "src/main.rs",
+      "line_number": 36,
+      "node_type": "Lambda",
+      "start_byte": 927,
+      "end_byte": 18069
+    },
+    "test_generate_output_filename_consistency": {
+      "function_name": "test_generate_output_filename_consistency",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 13,
+      "node_type": "Method",
+      "start_byte": 5477,
+      "end_byte": 6008
+    },
+    "create_pattern_target_resolver": {
+      "function_name": "create_pattern_target_resolver",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 23,
+      "node_type": "Method",
+      "start_byte": 1131,
+      "end_byte": 2060
+    },
+    "get_query_content": {
+      "function_name": "get_query_content",
+      "file_path": "src/parser.rs",
+      "line_number": 57,
+      "node_type": "Lambda",
+      "start_byte": 2824,
+      "end_byte": 8655
+    },
+    "find_references": {
+      "function_name": "find_references",
+      "file_path": "src/parser.rs",
+      "line_number": 73,
+      "node_type": "Lambda",
+      "start_byte": 11135,
+      "end_byte": 13842
+    },
+    "test_old_vs_new_filename_generation": {
+      "function_name": "test_old_vs_new_filename_generation",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 44,
+      "node_type": "Method",
+      "start_byte": 8781,
+      "end_byte": 10459
+    },
+    "create_api_client": {
+      "function_name": "create_api_client",
+      "file_path": "src/analyzer.rs",
+      "line_number": 16,
+      "node_type": "Method",
+      "start_byte": 1558,
+      "end_byte": 2192
+    },
+    "test_kubernetes_detection": {
+      "function_name": "test_kubernetes_detection",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 14,
+      "node_type": "Method",
+      "start_byte": 4096,
+      "end_byte": 4355
+    },
+    "find_definition": {
+      "function_name": "find_definition",
+      "file_path": "src/parser.rs",
+      "line_number": 66,
+      "node_type": "Lambda",
+      "start_byte": 8661,
+      "end_byte": 11129
+    },
+    "get_message": {
+      "function_name": "get_message",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 4,
+      "node_type": "Method",
+      "start_byte": 761,
+      "end_byte": 924
+    },
+    "confidence_to_level": {
+      "function_name": "confidence_to_level",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 8,
+      "node_type": "Lambda",
+      "start_byte": 14032,
+      "end_byte": 14269
+    },
+    "get_vuln_specific_info": {
+      "function_name": "get_vuln_specific_info",
+      "file_path": "src/prompts/analysis.rs",
+      "line_number": 19,
+      "node_type": "Method",
+      "start_byte": 748,
+      "end_byte": 4018
+    },
+    "escape_dot_string": {
+      "function_name": "escape_dot_string",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 7,
+      "node_type": "Method",
+      "start_byte": 9516,
+      "end_byte": 9719
+    },
+    "cwe_ids": {
+      "function_name": "cwe_ids",
+      "file_path": "src/response.rs",
+      "line_number": 16,
+      "node_type": "Lambda",
+      "start_byte": 881,
+      "end_byte": 1598
+    },
+    "filter_by_min_confidence": {
+      "function_name": "filter_by_min_confidence",
+      "file_path": "src/reports/summary.rs",
+      "line_number": 10,
+      "node_type": "Method",
+      "start_byte": 948,
+      "end_byte": 1242
+    },
+    "matches": {
+      "function_name": "matches",
+      "file_path": "src/security_patterns.rs",
+      "line_number": 76,
+      "node_type": "Lambda",
+      "start_byte": 8166,
+      "end_byte": 11647
+    },
+    "test_sarif_report_creation": {
+      "function_name": "test_sarif_report_creation",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 32,
+      "node_type": "Method",
+      "start_byte": 17579,
+      "end_byte": 18802
+    },
+    "response_json_schema": {
+      "function_name": "response_json_schema",
+      "file_path": "src/response.rs",
+      "line_number": 98,
+      "node_type": "Method",
+      "start_byte": 6165,
+      "end_byte": 11142
+    },
+    "add_file_to_parser": {
+      "function_name": "add_file_to_parser",
+      "file_path": "src/repo.rs",
+      "line_number": 3,
+      "node_type": "Method",
+      "start_byte": 8832,
+      "end_byte": 8962
+    },
+    "is_docker_compose": {
+      "function_name": "is_docker_compose",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 21,
+      "node_type": "Method",
+      "start_byte": 2255,
+      "end_byte": 2930
+    },
+    "test_generate_output_filename_edge_cases": {
+      "function_name": "test_generate_output_filename_edge_cases",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 18,
+      "node_type": "Method",
+      "start_byte": 6030,
+      "end_byte": 6760
+    },
+    "sanitize": {
+      "function_name": "sanitize",
+      "file_path": "src/response.rs",
+      "line_number": 21,
+      "node_type": "Method",
+      "start_byte": 11384,
+      "end_byte": 12260
+    },
+    "render_mermaid": {
+      "function_name": "render_mermaid",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 62,
+      "node_type": "Lambda",
+      "start_byte": 3827,
+      "end_byte": 6374
+    },
+    "build_full_graph": {
+      "function_name": "build_full_graph",
+      "file_path": "src/call_graph.rs",
+      "line_number": 21,
+      "node_type": "Function",
+      "start_byte": 6966,
+      "end_byte": 7728
+    },
+    "get_response_language_instruction": {
+      "function_name": "get_response_language_instruction",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 3,
+      "node_type": "Method",
+      "start_byte": 1167,
+      "end_byte": 1288
+    },
+    "generate_custom_patterns": {
+      "function_name": "generate_custom_patterns",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 7,
+      "node_type": "Method",
+      "start_byte": 3247,
+      "end_byte": 3449
+    },
+    "get_relevant_files": {
+      "function_name": "get_relevant_files",
+      "file_path": "src/repo.rs",
+      "line_number": 24,
+      "node_type": "Method",
+      "start_byte": 5108,
+      "end_byte": 5845
+    },
+    "test_docker_compose_detection": {
+      "function_name": "test_docker_compose_detection",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 17,
+      "node_type": "Method",
+      "start_byte": 4373,
+      "end_byte": 4725
+    },
+    "owasp_categories": {
+      "function_name": "owasp_categories",
+      "file_path": "src/response.rs",
+      "line_number": 12,
+      "node_type": "Lambda",
+      "start_byte": 2504,
+      "end_byte": 3170
+    },
+    "test_parse_line_number_from_text": {
+      "function_name": "test_parse_line_number_from_text",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 21,
+      "node_type": "Function",
+      "start_byte": 20666,
+      "end_byte": 21496
+    },
+    "is_kubernetes_manifest": {
+      "function_name": "is_kubernetes_manifest",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 22,
+      "node_type": "Method",
+      "start_byte": 1507,
+      "end_byte": 2249
+    },
+    "find_references_in_repo": {
+      "function_name": "find_references_in_repo",
+      "file_path": "src/repo.rs",
+      "line_number": 9,
+      "node_type": "Method",
+      "start_byte": 8545,
+      "end_byte": 8827
+    },
+    "parse_repo_files": {
+      "function_name": "parse_repo_files",
+      "file_path": "src/repo.rs",
+      "line_number": 9,
+      "node_type": "Method",
+      "start_byte": 7916,
+      "end_byte": 8206
+    },
+    "filter_by_depth": {
+      "function_name": "filter_by_depth",
+      "file_path": "src/call_graph_output.rs",
+      "line_number": 49,
+      "node_type": "Method",
+      "start_byte": 10065,
+      "end_byte": 11665
+    },
+    "test_github_actions_detection": {
+      "function_name": "test_github_actions_detection",
+      "file_path": "src/file_classifier.rs",
+      "line_number": 24,
+      "node_type": "Method",
+      "start_byte": 3569,
+      "end_byte": 4078
+    },
+    "extract_function_calls": {
+      "function_name": "extract_function_calls",
+      "file_path": "src/call_graph.rs",
+      "line_number": 57,
+      "node_type": "Lambda",
+      "start_byte": 7734,
+      "end_byte": 10005
+    },
+    "fmt": {
+      "function_name": "fmt",
+      "file_path": "src/response.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 279,
+      "end_byte": 779
+    },
+    "filter_files_by_size": {
+      "function_name": "filter_files_by_size",
+      "file_path": "src/pattern_generator.rs",
+      "line_number": 21,
+      "node_type": "Lambda",
+      "start_byte": 2062,
+      "end_byte": 2753
+    },
+    "test_generate_output_filename_safety": {
+      "function_name": "test_generate_output_filename_safety",
+      "file_path": "src/reports/filename.rs",
+      "line_number": 24,
+      "node_type": "Method",
+      "start_byte": 4501,
+      "end_byte": 5455
+    },
+    "get_guidelines_template": {
+      "function_name": "get_guidelines_template",
+      "file_path": "src/locales/mod.rs",
+      "line_number": 6,
+      "node_type": "Lambda",
+      "start_byte": 2158,
+      "end_byte": 2357
+    },
+    "generate_fingerprints": {
+      "function_name": "generate_fingerprints",
+      "file_path": "src/reports/sarif.rs",
+      "line_number": 15,
+      "node_type": "Method",
+      "start_byte": 16065,
+      "end_byte": 16639
+    }
+  },
+  "edges": [],
+  "metadata": {
+    "total_nodes": 143,
+    "total_edges": 0,
+    "languages": [
+      "rs"
+    ],
+    "root_functions": [
+      "find_bidirectional",
+      "escape_csv_field",
+      "add_file",
+      "save_to_file",
+      "test_generate_output_filename_uniqueness",
+      "read_gitignore",
+      "from_str",
+      "from_extension",
+      "test_sarif_with_enhanced_properties",
+      "validate_output_directory",
+      "parse_json_response",
+      "add_result",
+      "parse_line_number_from_text",
+      "test_vulnerability_mappings",
+      "build_context_from_file",
+      "generate_output_filename",
+      "analyze_all_definitions_at_once",
+      "render",
+      "analyze_file",
+      "to_string",
+      "from_analysis_summary",
+      "analyze_pattern",
+      "get_network_related_files",
+      "get_pattern_matches",
+      "default",
+      "build_from_function",
+      "classify",
+      "get_evaluator_prompt_template",
+      "test_generate_pattern_specific_filename_consistency",
+      "test_generate_pattern_specific_filename_basic",
+      "find_definition_in_repo",
+      "sort_by_confidence",
+      "get_tree_sitter_language",
+      "tarjan_scc",
+      "mitre_attack_ids",
+      "to_json",
+      "render_json",
+      "execute_chat_request_with_retry",
+      "visit_dirs",
+      "generate_call_graph",
+      "analyze_references_for_security_patterns",
+      "test_generate_output_filename_fallback",
+      "test_sarif_serialization",
+      "analyze_definitions_for_security_patterns",
+      "generate_pattern_specific_filename",
+      "get_initial_analysis_prompt_template",
+      "filter_by_language",
+      "get_analysis_prompt",
+      "to_markdown",
+      "clone_github_repo",
+      "normalize_confidence_score",
+      "from_filename",
+      "new_with_root",
+      "analyze_all_references_at_once",
+      "validate_args",
+      "update_metadata",
+      "is_github_actions_workflow",
+      "create_pattern_client",
+      "load_patterns",
+      "get_language",
+      "get_attack_vectors",
+      "detect_cycles",
+      "get_messages",
+      "test_generate_pattern_specific_filename_empty_pattern",
+      "generate_custom_patterns_impl",
+      "render_csv",
+      "is_terraform",
+      "extract_function_calls_regex",
+      "write_patterns_to_file",
+      "determine_node_type",
+      "print_readable",
+      "test_generate_pattern_specific_filename_special_chars",
+      "create_rule_for_vuln_type",
+      "get_files_to_analyze",
+      "get_pattern_type_for_config",
+      "filter_by_pattern",
+      "get_analysis_approach_template",
+      "filter_by_vuln_types",
+      "get_iac_prompt",
+      "byte_to_line_number",
+      "collect_context_for_security_pattern",
+      "test_filename_collision_resolution",
+      "test_generate_output_filename_readability",
+      "save_debug_file",
+      "extract_region_from_par_analysis",
+      "language_to_extension",
+      "matches_gitignore_pattern",
+      "load_custom_patterns",
+      "should_exclude_path",
+      "get_sys_prompt_template",
+      "execute_chat_request",
+      "guess_mime_type",
+      "test_response",
+      "test_pattern_overwrite_issue",
+      "new",
+      "test_sarif_file_export",
+      "from_string",
+      "build",
+      "render_dot",
+      "create_custom_target_resolver",
+      "get_pattern_type",
+      "test_pattern_specific_fixes_overwrite_issue",
+      "main",
+      "test_generate_output_filename_consistency",
+      "create_pattern_target_resolver",
+      "get_query_content",
+      "find_references",
+      "test_old_vs_new_filename_generation",
+      "create_api_client",
+      "test_kubernetes_detection",
+      "find_definition",
+      "get_message",
+      "confidence_to_level",
+      "get_vuln_specific_info",
+      "escape_dot_string",
+      "cwe_ids",
+      "filter_by_min_confidence",
+      "matches",
+      "test_sarif_report_creation",
+      "response_json_schema",
+      "add_file_to_parser",
+      "is_docker_compose",
+      "test_generate_output_filename_edge_cases",
+      "sanitize",
+      "render_mermaid",
+      "build_full_graph",
+      "get_response_language_instruction",
+      "generate_custom_patterns",
+      "get_relevant_files",
+      "test_docker_compose_detection",
+      "owasp_categories",
+      "test_parse_line_number_from_text",
+      "is_kubernetes_manifest",
+      "find_references_in_repo",
+      "parse_repo_files",
+      "filter_by_depth",
+      "test_github_actions_detection",
+      "extract_function_calls",
+      "fmt",
+      "filter_files_by_size",
+      "test_generate_output_filename_safety",
+      "get_guidelines_template",
+      "generate_fingerprints"
+    ],
+    "cycles": []
+  }
+}

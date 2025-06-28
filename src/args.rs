@@ -57,6 +57,34 @@ pub struct Args {
 
     #[arg(long)]
     pub generate_config: bool,
+
+    // Call graph options
+    #[arg(long)]
+    pub call_graph: bool,
+
+    #[arg(long, default_value = "json")]
+    pub call_graph_format: String,
+
+    #[arg(long)]
+    pub call_graph_output: Option<PathBuf>,
+
+    #[arg(long)]
+    pub call_graph_start_functions: Option<String>,
+
+    #[arg(long, default_value = "10")]
+    pub call_graph_max_depth: Option<usize>,
+
+    #[arg(long)]
+    pub call_graph_include: Option<String>,
+
+    #[arg(long)]
+    pub call_graph_exclude: Option<String>,
+
+    #[arg(long)]
+    pub call_graph_detect_cycles: bool,
+
+    #[arg(long)]
+    pub call_graph_security_focus: bool,
 }
 
 pub fn validate_args(args: &Args) -> Result<()> {

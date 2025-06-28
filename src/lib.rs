@@ -1,5 +1,7 @@
 pub mod analyzer;
 pub mod args;
+pub mod call_graph;
+pub mod call_graph_output;
 pub mod config;
 pub mod file_classifier;
 pub mod locales;

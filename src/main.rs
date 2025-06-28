@@ -3,10 +3,13 @@ use clap::Parser;
 use dotenvy::dotenv;
 use parsentry::analyzer::analyze_pattern;
 use parsentry::args::{Args, validate_args};
+use parsentry::call_graph::{CallGraphBuilder, CallGraphConfig};
+use parsentry::call_graph_output::{CallGraphRenderer, OutputFormat, CallGraphFilter};
 use parsentry::config::ParsentryConfig;
 use parsentry::file_classifier::FileClassifier;
 use parsentry::locales::Language;
 use parsentry::locales;
+use parsentry::parser::CodeParser;
 use parsentry::pattern_generator::generate_custom_patterns;
 use parsentry::reports::SarifReport;
 use parsentry::security_patterns::SecurityRiskPatterns;
@@ -141,6 +144,24 @@ async fn main() -> Result<()> {
     let repo = RepoOps::new(root_dir.clone());
 
     let files = repo.get_relevant_files();
+
+    // Handle call graph generation if requested
+    if args.call_graph {
+        println!("📊 Starting call graph generation...");
+        
+        match generate_call_graph(&args, &files, &root_dir, &messages).await {
+            Ok(_) => println!("✅ Call graph generation completed"),
+            Err(e) => {
+                println!("❌ Call graph generation failed: {}", e);
+                return Err(e);
+            }
+        }
+        
+        // If only call graph was requested, exit early
+        if !args.generate_patterns && args.output_dir.is_none() {
+            return Ok(());
+        }
+    }
     println!(
         "📁 {} ({}件)",
         messages
@@ -497,6 +518,118 @@ async fn main() -> Result<()> {
         messages
             .get("analysis_completed")
             .map_or("Analysis completed", |s| s)
+    );
+
+    Ok(())
+}
+
+async fn generate_call_graph(
+    args: &Args,
+    files: &[PathBuf],
+    _root_dir: &PathBuf,
+    _messages: &std::collections::HashMap<&str, &str>,
+) -> Result<()> {
+    // Initialize the code parser
+    let mut parser = CodeParser::new()?;
+    
+    // Add all relevant files to the parser
+    println!("📂 Loading {} files for call graph analysis...", files.len());
+    for file_path in files {
+        if let Err(e) = parser.add_file(file_path) {
+            if args.verbosity > 0 {
+                println!("⚠️  Failed to load {}: {}", file_path.display(), e);
+            }
+        }
+    }
+
+    // Create call graph builder
+    let mut builder = CallGraphBuilder::new(parser);
+
+    // Configure call graph generation
+    let mut config = CallGraphConfig::default();
+    
+    if let Some(max_depth) = args.call_graph_max_depth {
+        config.max_depth = Some(max_depth);
+    }
+
+    if let Some(start_functions_str) = &args.call_graph_start_functions {
+        config.start_functions = start_functions_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect();
+    }
+
+    if let Some(include_patterns_str) = &args.call_graph_include {
+        config.include_patterns = include_patterns_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect();
+    }
+
+    if let Some(exclude_patterns_str) = &args.call_graph_exclude {
+        config.exclude_patterns = exclude_patterns_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect();
+    }
+
+    config.detect_cycles = args.call_graph_detect_cycles;
+    config.security_focus = args.call_graph_security_focus;
+
+    // Build the call graph
+    println!("🔗 Building call graph...");
+    let call_graph = builder.build(&config)?;
+
+    // Apply filters if needed
+    let mut filtered_graph = call_graph.clone();
+    
+    if !config.include_patterns.is_empty() || !config.exclude_patterns.is_empty() {
+        CallGraphFilter::filter_by_pattern(
+            &mut filtered_graph,
+            &config.include_patterns,
+            &config.exclude_patterns,
+        )?;
+    }
+
+    // Parse output format
+    let output_format: OutputFormat = args.call_graph_format.parse()?;
+
+    // Generate output
+    let output_content = CallGraphRenderer::render(&filtered_graph, &output_format)?;
+
+    // Determine output path
+    let output_path = if let Some(explicit_path) = &args.call_graph_output {
+        explicit_path.clone()
+    } else {
+        let extension = match output_format {
+            OutputFormat::Dot => "dot",
+            OutputFormat::Json => "json",
+            OutputFormat::Mermaid => "md",
+            OutputFormat::Csv => "csv",
+        };
+        PathBuf::from(format!("call_graph.{}", extension))
+    };
+
+    // Write output
+    std::fs::write(&output_path, output_content)?;
+
+    // Print summary
+    println!("📊 Call Graph Summary:");
+    println!("  • Total nodes: {}", filtered_graph.metadata.total_nodes);
+    println!("  • Total edges: {}", filtered_graph.metadata.total_edges);
+    println!("  • Languages: {}", filtered_graph.metadata.languages.join(", "));
+    println!("  • Root functions: {}", filtered_graph.metadata.root_functions.len());
+    
+    if !filtered_graph.metadata.cycles.is_empty() {
+        println!("  • Cycles detected: {}", filtered_graph.metadata.cycles.len());
+        for (i, cycle) in filtered_graph.metadata.cycles.iter().enumerate() {
+            println!("    Cycle {}: {}", i + 1, cycle.join(" -> "));
+        }
+    }
+
+    println!(
+        "📁 Call graph saved to: {}",
+        output_path.display()
     );
 
     Ok(())

@@ -19,6 +19,9 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 - **Multi-Language Support**: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
 - **Tree-sitter Parsing**: Semantic code analysis for accurate context understanding
 - **Comprehensive Reports**: Detailed markdown reports with confidence scoring and PoC examples
+- **Call Graph Visualization**: Generate function call relationships in multiple formats (JSON, DOT, Mermaid, CSV)
+- **Cycle Detection**: Identify circular dependencies and potential infinite loops
+- **Security-Focused Analysis**: Track attack vectors through function call chains
 
 ## Usage
 
@@ -34,14 +37,27 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 
 ### Command Line Options
 
+#### Security Analysis
 - `--repo <REPO>`: Analyze GitHub repository (owner/repo)
 - `--root <PATH>`: Analyze local directory
 - `--model <MODEL>`: supports OpenAI, Anthropic, Google, Groq, Ollama, default: o4-mini
 - `--output-dir <DIR>`: Directory for markdown reports
 - `--generate-patterns`: Generate custom patterns from codebase
 
+#### Call Graph Analysis
+- `--call-graph`: Generate call graph for code visualization
+- `--call-graph-format <FORMAT>`: Output format (json, dot, mermaid, csv), default: json
+- `--call-graph-output <FILE>`: Output file path
+- `--call-graph-start-functions <FUNCS>`: Comma-separated list of starting functions
+- `--call-graph-max-depth <DEPTH>`: Maximum analysis depth, default: 10
+- `--call-graph-include <PATTERNS>`: Include patterns (regex)
+- `--call-graph-exclude <PATTERNS>`: Exclude patterns (regex)
+- `--call-graph-detect-cycles`: Enable cycle detection
+- `--call-graph-security-focus`: Focus on security-relevant functions
+
 ## Examples
 
+### Security Analysis
 - [Secure Code Game](docs/reports/skills-secure-code-game/summary.md) - Security challenges across multiple languages
 - [Damn Vulnerable MCP Server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md) - MCP protocol vulnerabilities
 - [TerraGoat](docs/reports/terragoat/summary.md) - Infrastructure as Code security issues
@@ -49,6 +65,22 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - [Broken Crystals](docs/reports/NeuraLegion-brokencrystals/summary.md) - Web application security issues
 - [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js vulnerabilities
 - [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL vulnerabilities
+
+### Call Graph Analysis
+
+```bash
+# Generate a JSON call graph for the entire project
+parsentry --call-graph --root src --call-graph-format json --call-graph-output callgraph.json
+
+# Generate a Mermaid diagram starting from main function
+parsentry --call-graph --root src --call-graph-format mermaid --call-graph-start-functions main --call-graph-output callgraph.md
+
+# Generate a DOT file for Graphviz visualization with cycle detection
+parsentry --call-graph --root src --call-graph-format dot --call-graph-detect-cycles --call-graph-output callgraph.dot
+
+# Focus on security-relevant functions only
+parsentry --call-graph --root src --call-graph-security-focus --call-graph-include ".*auth.*,.*security.*" --call-graph-format mermaid
+```
 
 ## Understand the Concepts
 
