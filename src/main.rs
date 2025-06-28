@@ -146,10 +146,10 @@ async fn main() -> Result<()> {
     let files = repo.get_relevant_files();
 
     // Handle call graph generation if requested
-    if args.call_graph {
+    if final_args.call_graph {
         println!("📊 Starting call graph generation...");
         
-        match generate_call_graph(&args, &files, &root_dir, &messages).await {
+        match generate_call_graph(&final_args, &files, &root_dir, &messages).await {
             Ok(_) => println!("✅ Call graph generation completed"),
             Err(e) => {
                 println!("❌ Call graph generation failed: {}", e);
@@ -158,7 +158,7 @@ async fn main() -> Result<()> {
         }
         
         // If only call graph was requested, exit early
-        if !args.generate_patterns && args.output_dir.is_none() {
+        if !final_args.generate_patterns && final_args.output_dir.is_none() {
             return Ok(());
         }
     }

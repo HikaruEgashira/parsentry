@@ -24,6 +24,9 @@ pub struct ParsentryConfig {
     
     #[serde(default)]
     pub generation: GenerationConfig,
+    
+    #[serde(default)]
+    pub call_graph: CallGraphConfigToml,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -75,6 +78,31 @@ pub struct GenerationConfig {
     pub generate_patterns: bool,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct CallGraphConfigToml {
+    #[serde(default)]
+    pub call_graph: bool,
+    
+    #[serde(default = "default_call_graph_format")]
+    pub format: String,
+    
+    pub output: Option<PathBuf>,
+    
+    pub start_functions: Option<Vec<String>>,
+    
+    #[serde(default = "default_call_graph_max_depth")]
+    pub max_depth: Option<usize>,
+    
+    pub include: Option<Vec<String>>,
+    
+    pub exclude: Option<Vec<String>>,
+    
+    #[serde(default)]
+    pub detect_cycles: bool,
+    
+    #[serde(default)]
+    pub security_focus: bool,
+}
 fn default_model() -> String {
     "o4-mini".to_string()
 }
@@ -87,6 +115,13 @@ fn default_language() -> String {
     "ja".to_string()
 }
 
+fn default_call_graph_format() -> String {
+    "json".to_string()
+}
+
+fn default_call_graph_max_depth() -> Option<usize> {
+    Some(10)
+}
 impl Default for AnalysisConfig {
     fn default() -> Self {
         Self {
@@ -142,6 +177,21 @@ impl Default for GenerationConfig {
     }
 }
 
+impl Default for CallGraphConfigToml {
+    fn default() -> Self {
+        Self {
+            call_graph: false,
+            format: default_call_graph_format(),
+            output: None,
+            start_functions: None,
+            max_depth: default_call_graph_max_depth(),
+            include: None,
+            exclude: None,
+            detect_cycles: false,
+            security_focus: false,
+        }
+    }
+}
 impl Default for ParsentryConfig {
     fn default() -> Self {
         Self {
@@ -151,6 +201,7 @@ impl Default for ParsentryConfig {
             api: ApiConfig::default(),
             repo: RepoConfig::default(),
             generation: GenerationConfig::default(),
+            call_graph: CallGraphConfigToml::default(),
         }
     }
 }
@@ -204,6 +255,17 @@ verbosity = 0
 
 [generation]
 generate_patterns = false
+
+[call_graph]
+call_graph = false
+format = "json"
+# output = "call_graph.json"
+# start_functions = ["main"]
+max_depth = 10
+# include = ["src/**"]
+# exclude = ["test/**"]
+detect_cycles = false
+security_focus = false
 "#.to_string()
         })
     }
@@ -282,6 +344,36 @@ generate_patterns = false
                         self.generation.generate_patterns = value.parse()
                             .map_err(|_| anyhow!("Invalid generate_patterns value: {}", value))?;
                     }
+                    "CALL_GRAPH_ENABLED" => {
+                        self.call_graph.call_graph = value.parse()
+                            .map_err(|_| anyhow!("Invalid call_graph value: {}", value))?;
+                    }
+                    "CALL_GRAPH_FORMAT" => self.call_graph.format = value.clone(),
+                    "CALL_GRAPH_OUTPUT" => self.call_graph.output = Some(PathBuf::from(value)),
+                    "CALL_GRAPH_START_FUNCTIONS" => {
+                        let functions: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
+                        self.call_graph.start_functions = Some(functions);
+                    }
+                    "CALL_GRAPH_MAX_DEPTH" => {
+                        self.call_graph.max_depth = Some(value.parse()
+                            .map_err(|_| anyhow!("Invalid call_graph_max_depth value: {}", value))?);
+                    }
+                    "CALL_GRAPH_INCLUDE" => {
+                        let patterns: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
+                        self.call_graph.include = Some(patterns);
+                    }
+                    "CALL_GRAPH_EXCLUDE" => {
+                        let patterns: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
+                        self.call_graph.exclude = Some(patterns);
+                    }
+                    "CALL_GRAPH_DETECT_CYCLES" => {
+                        self.call_graph.detect_cycles = value.parse()
+                            .map_err(|_| anyhow!("Invalid detect_cycles value: {}", value))?;
+                    }
+                    "CALL_GRAPH_SECURITY_FOCUS" => {
+                        self.call_graph.security_focus = value.parse()
+                            .map_err(|_| anyhow!("Invalid security_focus value: {}", value))?;
+                    }
                     _ => {} // Ignore unknown environment variables
                 }
             }
@@ -341,6 +433,46 @@ generate_patterns = false
         
         if args.generate_patterns {
             self.generation.generate_patterns = args.generate_patterns;
+        }
+        
+        // Apply call graph CLI arguments
+        if args.call_graph {
+            self.call_graph.call_graph = args.call_graph;
+        }
+        
+        if !args.call_graph_format.is_empty() && args.call_graph_format != default_call_graph_format() {
+            self.call_graph.format = args.call_graph_format.clone();
+        }
+        
+        if let Some(ref output) = args.call_graph_output {
+            self.call_graph.output = Some(output.clone());
+        }
+        
+        if let Some(ref start_functions_str) = args.call_graph_start_functions {
+            let functions: Vec<String> = start_functions_str.split(',').map(|s| s.trim().to_string()).collect();
+            self.call_graph.start_functions = Some(functions);
+        }
+        
+        if let Some(max_depth) = args.call_graph_max_depth {
+            self.call_graph.max_depth = Some(max_depth);
+        }
+        
+        if let Some(ref include_str) = args.call_graph_include {
+            let patterns: Vec<String> = include_str.split(',').map(|s| s.trim().to_string()).collect();
+            self.call_graph.include = Some(patterns);
+        }
+        
+        if let Some(ref exclude_str) = args.call_graph_exclude {
+            let patterns: Vec<String> = exclude_str.split(',').map(|s| s.trim().to_string()).collect();
+            self.call_graph.exclude = Some(patterns);
+        }
+        
+        if args.call_graph_detect_cycles {
+            self.call_graph.detect_cycles = args.call_graph_detect_cycles;
+        }
+        
+        if args.call_graph_security_focus {
+            self.call_graph.security_focus = args.call_graph_security_focus;
         }
         
         Ok(())
@@ -421,6 +553,15 @@ generate_patterns = false
             language: self.analysis.language.clone(),
             config: None,
             generate_config: false,
+            call_graph: self.call_graph.call_graph,
+            call_graph_format: self.call_graph.format.clone(),
+            call_graph_output: self.call_graph.output.clone(),
+            call_graph_start_functions: self.call_graph.start_functions.as_ref().map(|v| v.join(",")),
+            call_graph_max_depth: self.call_graph.max_depth,
+            call_graph_include: self.call_graph.include.as_ref().map(|v| v.join(",")),
+            call_graph_exclude: self.call_graph.exclude.as_ref().map(|v| v.join(",")),
+            call_graph_detect_cycles: self.call_graph.detect_cycles,
+            call_graph_security_focus: self.call_graph.security_focus,
         }
     }
 }
