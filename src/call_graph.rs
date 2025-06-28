@@ -31,7 +31,7 @@ pub struct CallEdge {
     pub caller: String,
     pub callee: String,
     pub call_site: Location,
-    pub edge_type: EdgeType,
+    pub relation_type: RelationType,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,11 +43,14 @@ pub struct Location {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EdgeType {
-    Direct,
-    Indirect,
-    Virtual,
-    Dynamic,
+pub enum RelationType {
+    DirectCall,     // foo()
+    MethodCall,     // obj.method()
+    MacroCall,      // macro!()
+    Reference,      // let f = foo;
+    Callback,       // addEventListener(foo)
+    Import,         // use foo; / import foo
+    Assignment,     // foo = bar
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,7 +182,7 @@ impl CallGraphBuilder {
 
                 // Extract function calls from the function definition itself
                 if let Ok(called_functions) = self.extract_function_calls(&def_file, &definition) {
-                    for called_func in called_functions {
+                    for (called_func, relation_type) in called_functions {
                         // Skip self-references to avoid infinite loops
                         if called_func == function_name {
                             continue;
@@ -195,7 +198,7 @@ impl CallGraphBuilder {
                                 start_byte: definition.start_byte,
                                 end_byte: definition.end_byte,
                             },
-                            edge_type: EdgeType::Direct,
+                            relation_type,
                         };
                         self.graph.edges.push(edge);
 
@@ -247,7 +250,7 @@ impl CallGraphBuilder {
         Ok(())
     }
 
-    fn extract_function_calls(&mut self, file_path: &PathBuf, definition: &Definition) -> Result<Vec<String>> {
+    fn extract_function_calls(&mut self, file_path: &PathBuf, definition: &Definition) -> Result<Vec<(String, RelationType)>> {
         let mut calls = Vec::new();
         
         // Get the language for this file
@@ -290,13 +293,23 @@ impl CallGraphBuilder {
 
         while let Some(mat) = matches.next() {
             for cap in mat.captures {
-                if query.capture_names()[cap.index as usize] == "function_call" {
-                    let node = cap.node;
-                    if let Ok(call_name) = node.utf8_text(definition.source.as_bytes()) {
-                        let name = call_name.to_string();
-                        if !name.is_empty() && !calls.contains(&name) {
-                            calls.push(name);
-                        }
+                let capture_name = query.capture_names()[cap.index as usize];
+                let relation_type = match capture_name {
+                    "direct_call" => RelationType::DirectCall,
+                    "method_call" => RelationType::MethodCall,
+                    "macro_call" => RelationType::MacroCall,
+                    "reference" => RelationType::Reference,
+                    "callback" => RelationType::Callback,
+                    "import" => RelationType::Import,
+                    "assignment" => RelationType::Assignment,
+                    _ => continue, // Skip unknown captures
+                };
+                
+                let node = cap.node;
+                if let Ok(call_name) = node.utf8_text(definition.source.as_bytes()) {
+                    let name = call_name.to_string();
+                    if !name.is_empty() && !calls.iter().any(|(n, _)| n == &name) {
+                        calls.push((name, relation_type));
                     }
                 }
             }
@@ -305,7 +318,7 @@ impl CallGraphBuilder {
         Ok(calls)
     }
 
-    fn extract_function_calls_regex(&self, definition: &Definition) -> Result<Vec<String>> {
+    fn extract_function_calls_regex(&self, definition: &Definition) -> Result<Vec<(String, RelationType)>> {
         let mut calls = Vec::new();
         let content = &definition.source;
         
@@ -331,11 +344,12 @@ impl CallGraphBuilder {
                     if let Some(func_name) = capture.get(1) {
                         let name = func_name.as_str().to_string();
                         if !name.is_empty() 
-                            && !calls.contains(&name) 
+                            && !calls.iter().any(|(n, _)| n == &name)
                             && !excluded_names.contains(&name.as_str())
                             && !name.chars().next().unwrap_or('a').is_uppercase() // Skip types/constructors
                         {
-                            calls.push(name);
+                            // Default to DirectCall for regex-based extraction
+                            calls.push((name, RelationType::DirectCall));
                         }
                     }
                 }

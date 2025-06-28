@@ -1,10 +1,22 @@
+; Direct function calls
 (call
-  function: (identifier) @function_call)
+  function: (identifier) @direct_call)
 
 (call
   function: (attribute
-    attribute: (identifier) @function_call))
+    attribute: (identifier) @method_call))
 
-(call
-  function: (subscript
-    value: (identifier) @function_call))
+; Function references
+(assignment
+  value: (identifier) @reference)
+
+; Function as argument (callbacks)
+(argument_list
+  (identifier) @callback)
+
+; Import statements
+(import_statement
+  name: (dotted_name) @import)
+
+(import_from_statement
+  name: (dotted_name) @import)

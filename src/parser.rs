@@ -123,67 +123,56 @@ impl CodeParser {
         let query_content = match lang_name {
             "c" => match query_name {
                 "definitions" => include_str!("queries/c/definitions.scm"),
-                "references" => include_str!("queries/c/references.scm"),
                 "calls" => include_str!("queries/c/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "cpp" => match query_name {
                 "definitions" => include_str!("queries/cpp/definitions.scm"),
-                "references" => include_str!("queries/cpp/references.scm"),
                 "calls" => include_str!("queries/cpp/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "python" => match query_name {
                 "definitions" => include_str!("queries/python/definitions.scm"),
-                "references" => include_str!("queries/python/references.scm"),
                 "calls" => include_str!("queries/python/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "javascript" => match query_name {
                 "definitions" => include_str!("queries/javascript/definitions.scm"),
-                "references" => include_str!("queries/javascript/references.scm"),
                 "calls" => include_str!("queries/javascript/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "typescript" => match query_name {
                 "definitions" => include_str!("queries/typescript/definitions.scm"),
-                "references" => include_str!("queries/typescript/references.scm"),
                 "calls" => include_str!("queries/typescript/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "java" => match query_name {
                 "definitions" => include_str!("queries/java/definitions.scm"),
-                "references" => include_str!("queries/java/references.scm"),
                 "calls" => include_str!("queries/java/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "go" => match query_name {
                 "definitions" => include_str!("queries/go/definitions.scm"),
-                "references" => include_str!("queries/go/references.scm"),
                 "calls" => include_str!("queries/go/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "rust" => match query_name {
                 "definitions" => include_str!("queries/rust/definitions.scm"),
-                "references" => include_str!("queries/rust/references.scm"),
                 "calls" => include_str!("queries/rust/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "ruby" => match query_name {
                 "definitions" => include_str!("queries/ruby/definitions.scm"),
-                "references" => include_str!("queries/ruby/references.scm"),
                 "calls" => include_str!("queries/ruby/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "terraform" => match query_name {
                 "definitions" => include_str!("queries/terraform/definitions.scm"),
-                "references" => include_str!("queries/terraform/references.scm"),
                 "calls" => include_str!("queries/terraform/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
             "php" => match query_name {
                 "definitions" => include_str!("queries/php/definitions.scm"),
-                "references" => include_str!("queries/php/references.scm"),
                 "calls" => include_str!("queries/php/calls.scm"),
                 _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
             },
@@ -260,7 +249,7 @@ impl CodeParser {
         Ok(None)
     }
 
-    pub fn find_references(&mut self, name: &str) -> Result<Vec<(PathBuf, Definition)>> {
+    pub fn find_calls(&mut self, name: &str) -> Result<Vec<(PathBuf, Definition, String)>> {
         let mut results = Vec::new();
 
         for (file_path, content) in &self.files {
@@ -284,11 +273,11 @@ impl CodeParser {
                 }
             };
 
-            let query_str = match self.get_query_content(&language, "references") {
+            let query_str = match self.get_query_content(&language, "calls") {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!(
-                        "警告: 参照クエリの取得に失敗しました: {}: {}",
+                        "警告: callsクエリの取得に失敗しました: {}: {}",
                         file_path.display(),
                         e
                     );
@@ -299,7 +288,7 @@ impl CodeParser {
             let query = match Query::new(&language, &query_str) {
                 Ok(q) => q,
                 Err(e) => {
-                    eprintln!("警告: 参照クエリの生成に失敗しました: {}", e);
+                    eprintln!("警告: callsクエリの生成に失敗しました: {}", e);
                     continue;
                 }
             };
@@ -309,7 +298,10 @@ impl CodeParser {
 
             while let Some(mat) = matches.next() {
                 for cap in mat.captures {
-                    if query.capture_names()[cap.index as usize] == "reference" {
+                    let capture_name = query.capture_names()[cap.index as usize];
+                    let valid_captures = ["direct_call", "method_call", "macro_call", "reference", "callback", "import", "assignment"];
+                    
+                    if valid_captures.contains(&capture_name) {
                         let node = cap.node;
                         if node.utf8_text(content.as_bytes())? == name {
                             let start_byte = node.start_byte();
@@ -324,6 +316,7 @@ impl CodeParser {
                                     end_byte,
                                     source,
                                 },
+                                capture_name.to_string(),
                             ));
                         }
                     }
@@ -349,9 +342,9 @@ impl CodeParser {
             results.push(definition);
         }
 
-        // Then, find all references (forward tracking)
-        let references = self.find_references(name)?;
-        results.extend(references);
+        // Then, find all calls (forward tracking)
+        let calls = self.find_calls(name)?;
+        results.extend(calls.into_iter().map(|(path, def, _)| (path, def)));
 
         // Remove duplicates based on file path and start byte
         results.sort_by_key(|(path, def)| (path.clone(), def.start_byte));
@@ -434,8 +427,26 @@ impl CodeParser {
         }
 
         // Extract references
-        let references_query_str = self.get_query_content(&language, "references")?;
-        let references_query = tree_sitter::Query::new(&language, &references_query_str)?;
+        let references_query_str = match self.get_query_content(&language, "calls") {
+            Ok(s) => s,
+            Err(_) => {
+                // Skip reference extraction if calls query is not available or invalid
+                return Ok(Context {
+                    definitions,
+                    references,
+                });
+            }
+        };
+        let references_query = match tree_sitter::Query::new(&language, &references_query_str) {
+            Ok(q) => q,
+            Err(_) => {
+                // Skip reference extraction if query is invalid
+                return Ok(Context {
+                    definitions,
+                    references,
+                });
+            }
+        };
 
         let mut references_cursor = tree_sitter::QueryCursor::new();
         let mut ref_matches =
@@ -444,7 +455,7 @@ impl CodeParser {
         while let Some(mat) = ref_matches.next() {
             for cap in mat.captures {
                 let capture_name = &references_query.capture_names()[cap.index as usize];
-                if *capture_name == "reference" {
+                if ["direct_call", "method_call", "macro_call", "reference", "callback", "import", "assignment"].contains(&capture_name) {
                     let node = cap.node;
                     let name = node.utf8_text(file_content.as_bytes())?.to_string();
                     let start_byte = node.start_byte();
@@ -463,9 +474,9 @@ impl CodeParser {
 
         while let Some((file_path, func_name)) = to_visit.pop() {
             if let Some((_, def)) = self.find_definition(&func_name, &file_path)? {
-                // referencesクエリで呼び出し先を抽出
-                let refs = self.find_references(&def.name)?;
-                for (ref_file, ref_def) in refs {
+                // callsクエリで呼び出し先を抽出
+                let refs = self.find_calls(&def.name)?;
+                for (ref_file, ref_def, _) in refs {
                     if !collected.contains(&ref_def.name) {
                         definitions.push(ref_def.clone());
                         collected.insert(ref_def.name.clone());

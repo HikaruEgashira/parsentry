@@ -178,12 +178,12 @@ fn test_find_references_simple_rust() -> Result<()> {
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
 
-    let results = parser.find_references("hello_world")?;
+    let results = parser.find_calls("hello_world")?;
     assert!(!results.is_empty());
 
     let references: Vec<_> = results
         .iter()
-        .filter(|(_, def)| def.name == "hello_world")
+        .filter(|(_, def, _)| def.name == "hello_world")
         .collect();
     assert!(!references.is_empty());
     Ok(())
@@ -201,7 +201,7 @@ fn test_find_references_no_matches() -> Result<()> {
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
 
-    let results = parser.find_references("non_existent_function")?;
+    let results = parser.find_calls("non_existent_function")?;
     assert!(results.is_empty());
     Ok(())
 }
@@ -346,7 +346,7 @@ fn test_multiple_files_references() -> Result<()> {
     parser.add_file(&file1_path)?;
     parser.add_file(&file2_path)?;
 
-    let references = parser.find_references("shared_function")?;
+    let references = parser.find_calls("shared_function")?;
 
     assert!(!references.is_empty());
     Ok(())
@@ -380,7 +380,7 @@ fn test_find_references_with_empty_file() -> Result<()> {
     let mut parser = CodeParser::new()?;
     parser.add_file(&file_path)?;
 
-    let results = parser.find_references("any_function")?;
+    let results = parser.find_calls("any_function")?;
     assert!(results.is_empty());
     Ok(())
 }

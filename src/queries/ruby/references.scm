@@ -1,2 +1,0 @@
-(identifier) @reference
-(constant) @reference

@@ -1,10 +1,24 @@
+; Direct function calls
 (call_expression
-  function: (identifier) @function_call)
+  function: (identifier) @direct_call)
 
 (call_expression
   function: (member_expression
-    property: (property_identifier) @function_call))
+    property: (property_identifier) @method_call))
 
-(call_expression
-  function: (member_expression
-    property: (computed_property_name) @function_call))
+; Function references
+(variable_declarator
+  value: (identifier) @reference)
+
+; Function as argument (callbacks)
+(arguments
+  (identifier) @callback)
+
+; Import statements
+(import_statement
+  source: (string) @import)
+
+; Assignment expressions
+(assignment_expression
+  left: (identifier)
+  right: (identifier) @assignment)

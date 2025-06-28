@@ -3,7 +3,7 @@ use serde_json;
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use crate::call_graph::{CallGraph, EdgeType};
+use crate::call_graph::{CallGraph, RelationType};
 
 #[derive(Debug, Clone)]
 pub enum OutputFormat {
@@ -77,11 +77,14 @@ impl CallGraphRenderer {
             let escaped_caller = Self::escape_dot_string(&edge.caller);
             let escaped_callee = Self::escape_dot_string(&edge.callee);
             
-            let style = match edge.edge_type {
-                EdgeType::Direct => "solid",
-                EdgeType::Indirect => "dashed",
-                EdgeType::Virtual => "dotted",
-                EdgeType::Dynamic => "bold",
+            let style = match edge.relation_type {
+                RelationType::DirectCall => "solid",
+                RelationType::MethodCall => "solid",
+                RelationType::MacroCall => "dashed",
+                RelationType::Reference => "dotted",
+                RelationType::Callback => "bold",
+                RelationType::Import => "dashed",
+                RelationType::Assignment => "dotted",
             };
             
             writeln!(output, "  \"{}\" -> \"{}\" [style={}];", 
@@ -144,11 +147,14 @@ impl CallGraphRenderer {
             if let (Some(caller_id), Some(callee_id)) = 
                 (node_id_map.get(&edge.caller), node_id_map.get(&edge.callee)) {
                 
-                let arrow = match edge.edge_type {
-                    EdgeType::Direct => "-->",
-                    EdgeType::Indirect => "-.->",
-                    EdgeType::Virtual => "==>",
-                    EdgeType::Dynamic => "==>",
+                let arrow = match edge.relation_type {
+                    RelationType::DirectCall => "-->",
+                    RelationType::MethodCall => "-->",
+                    RelationType::MacroCall => "-.->",
+                    RelationType::Reference => "==>",
+                    RelationType::Callback => "==>",
+                    RelationType::Import => "-.->",
+                    RelationType::Assignment => "==>",
                 };
                 
                 writeln!(output, "  {} {} {}", caller_id, arrow, callee_id)?;
@@ -201,11 +207,14 @@ impl CallGraphRenderer {
                 .map(|n| n.line_number.to_string())
                 .unwrap_or_default();
             
-            let edge_type = match edge.edge_type {
-                EdgeType::Direct => "Direct",
-                EdgeType::Indirect => "Indirect",
-                EdgeType::Virtual => "Virtual",
-                EdgeType::Dynamic => "Dynamic",
+            let edge_type = match edge.relation_type {
+                RelationType::DirectCall => "DirectCall",
+                RelationType::MethodCall => "MethodCall",
+                RelationType::MacroCall => "MacroCall",
+                RelationType::Reference => "Reference",
+                RelationType::Callback => "Callback",
+                RelationType::Import => "Import",
+                RelationType::Assignment => "Assignment",
             };
             
             writeln!(output, "Edge,{},{},{},{},{},{},{}", 

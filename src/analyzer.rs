@@ -499,9 +499,9 @@ pub async fn analyze_file(
                         match pattern_type {
                             PatternType::Principal => {
                                 // For principals, use find_references to track data flow forward
-                                match parser.find_references(&escaped_name) {
+                                match parser.find_calls(&escaped_name) {
                                     Ok(refs) => {
-                                        stored_code_definitions.extend(refs);
+                                        stored_code_definitions.extend(refs.into_iter().map(|(path, def, _)| (path, def)));
                                     }
                                     Err(e) => {
                                         warn!(
