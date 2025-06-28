@@ -199,8 +199,10 @@ impl CallGraphBuilder {
                         };
                         self.graph.edges.push(edge);
 
-                        // Recursively build from called function
-                        self.build_from_function(&called_func, current_depth + 1, config)?;
+                        // Only recurse if within depth limit
+                        if config.max_depth.is_none() || current_depth + 1 < config.max_depth.unwrap() {
+                            self.build_from_function(&called_func, current_depth + 1, config)?;
+                        }
                     }
                 }
                 break;
@@ -450,6 +452,9 @@ impl CallGraphBuilder {
     }
 
     fn update_metadata(&mut self) {
+        // Remove duplicate edges before updating metadata
+        self.remove_duplicate_edges();
+        
         self.graph.metadata.total_nodes = self.graph.nodes.len();
         self.graph.metadata.total_edges = self.graph.edges.len();
         
@@ -473,5 +478,18 @@ impl CallGraphBuilder {
             .filter(|name| !called_functions.contains(*name))
             .cloned()
             .collect();
+    }
+
+    fn remove_duplicate_edges(&mut self) {
+        let mut seen_edges = HashSet::new();
+        self.graph.edges.retain(|edge| {
+            let edge_key = (edge.caller.clone(), edge.callee.clone());
+            if seen_edges.contains(&edge_key) {
+                false
+            } else {
+                seen_edges.insert(edge_key);
+                true
+            }
+        });
     }
 }

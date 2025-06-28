@@ -152,6 +152,14 @@ impl CallGraphRenderer {
                 };
                 
                 writeln!(output, "  {} {} {}", caller_id, arrow, callee_id)?;
+            } else {
+                // Debug: Log missing nodes
+                if !node_id_map.contains_key(&edge.caller) {
+                    eprintln!("Warning: Missing caller node '{}' in Mermaid output", edge.caller);
+                }
+                if !node_id_map.contains_key(&edge.callee) {
+                    eprintln!("Warning: Missing callee node '{}' in Mermaid output", edge.callee);
+                }
             }
         }
 
