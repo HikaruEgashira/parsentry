@@ -45,15 +45,15 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - `--generate-patterns`: Generate custom patterns from codebase
 
 #### Call Graph Analysis
-- `--call-graph`: Generate call graph for code visualization
-- `--call-graph-format <FORMAT>`: Output format (json, dot, mermaid, csv), default: json
-- `--call-graph-output <FILE>`: Output file path
-- `--call-graph-start-functions <FUNCS>`: Comma-separated list of starting functions
-- `--call-graph-max-depth <DEPTH>`: Maximum analysis depth, default: 10
-- `--call-graph-include <PATTERNS>`: Include patterns (regex)
-- `--call-graph-exclude <PATTERNS>`: Exclude patterns (regex)
-- `--call-graph-detect-cycles`: Enable cycle detection
-- `--call-graph-security-focus`: Focus on security-relevant functions
+- `graph`: Generate call graph for code visualization
+- `--format <FORMAT>`: Output format (json, dot, mermaid, csv), default: json
+- `--output <FILE>`: Output file path
+- `--start-functions <FUNCS>`: Comma-separated list of starting functions
+- `--max-depth <DEPTH>`: Maximum analysis depth, default: 10
+- `--include <PATTERNS>`: Include patterns (regex)
+- `--exclude <PATTERNS>`: Exclude patterns (regex)
+- `--detect-cycles`: Enable cycle detection
+- `--security-focus`: Focus on security-relevant functions
 
 ## Examples
 
@@ -70,16 +70,16 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 
 ```bash
 # Generate a JSON call graph for the entire project
-parsentry --call-graph --root src --call-graph-format json --call-graph-output callgraph.json
+parsentry graph --root src --format json --output callgraph.json
 
 # Generate a Mermaid diagram starting from main function
-parsentry --call-graph --root src --call-graph-format mermaid --call-graph-start-functions main --call-graph-output callgraph.md
+parsentry graph --root src --format mermaid --start-functions main --output callgraph.md
 
 # Generate a DOT file for Graphviz visualization with cycle detection
-parsentry --call-graph --root src --call-graph-format dot --call-graph-detect-cycles --call-graph-output callgraph.dot
+parsentry graph --root src --format dot --detect-cycles --output callgraph.dot
 
 # Focus on security-relevant functions only
-parsentry --call-graph --root src --call-graph-security-focus --call-graph-include ".*auth.*,.*security.*" --call-graph-format mermaid
+parsentry graph --root src --security-focus --include ".*auth.*,.*security.*" --format mermaid
 ```
 
 ## Understand the Concepts
