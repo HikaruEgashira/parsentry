@@ -133,15 +133,15 @@ def product_search_view_{}(request):
         with connection.cursor() as cursor:
             query = f"""
                 SELECT * FROM products 
-                WHERE name LIKE '%{search_term}%' 
-                AND category = '{category}'
-                ORDER BY {sort_by}
+                WHERE name LIKE '%{{search_term}}%' 
+                AND category = '{{category}}'
+                ORDER BY {{sort_by}}
             """
             cursor.execute(query)
             products = cursor.fetchall()
         
         # XSS vulnerability in template rendering
-        search_html = f"<h2>Search results for: {search_term}</h2>"
+        search_html = f"<h2>Search results for: {{search_term}}</h2>"
         
         context = {{
             'products': products,
@@ -164,8 +164,8 @@ def user_profile_view_{}(request, user_id):
         
         # Direct SQL update without validation
         with connection.cursor() as cursor:
-            updates = ', '.join([f"{k} = '{v}'" for k, v in update_data.items()])
-            query = f"UPDATE auth_user SET {updates} WHERE id = {user_id}"
+            updates = ', '.join([f"{{k}} = '{{v}}'" for k, v in update_data.items()])
+            query = f"UPDATE auth_user SET {{updates}} WHERE id = {{user_id}}"
             cursor.execute(query)
     
     # Information disclosure
@@ -196,10 +196,10 @@ def file_upload_view_{}(request):
         # Command injection in file processing
         file_type = request.POST.get('process_type', 'none')
         if file_type == 'image':
-            cmd = f"identify {full_path}"
+            cmd = f"identify {{full_path}}"
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         elif file_type == 'document':
-            cmd = f"file {full_path}"
+            cmd = f"file {{full_path}}"
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
         return JsonResponse({{
@@ -233,7 +233,7 @@ def dynamic_template_view_{}(request):
         return HttpResponse(rendered)
     except Exception as e:
         # Error information disclosure
-        return HttpResponse(f"Template error: {e}, Template: {template_content}")
+        return HttpResponse(f"Template error: {{e}}, Template: {{template_content}}")
 
 def webhook_handler_{}(request):
     if request.method == 'POST':
