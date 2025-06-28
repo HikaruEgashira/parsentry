@@ -125,6 +125,11 @@ def main():
                 to_function: "process_command",
                 flow_type: FlowType::DataPassing,
             },
+            DataFlowExpectation {
+                from_function: "validate_input",
+                to_function: "process_command",
+                flow_type: FlowType::DirectCall,
+            },
         ],
         test_rationale: "基本的なPython関数定義と呼び出しの解析精度",
     },
@@ -514,8 +519,8 @@ fn analyze_context_quality(
                 correct_flows += 1;
             } else {
                 result.failed_data_flows.push(format!(
-                    "{}→{}: データフローが検出されませんでした",
-                    expected_flow.from_function, expected_flow.to_function
+                    "{}→{}: データフローが検出されませんでした (期待タイプ: {:?})",
+                    expected_flow.from_function, expected_flow.to_function, expected_flow.flow_type
                 ));
             }
         } else {
@@ -584,7 +589,7 @@ async fn test_definition_extraction_accuracy() -> Result<()> {
 
     let test_cases = get_context_quality_test_cases();
     for test_case in &test_cases {
-        println!("  テスト中: {} ({:?})", test_case.name, test_case.language);
+        println!("  テスト中: {} ({:?}) - {}", test_case.name, test_case.language, test_case.test_rationale);
         
         let result = test_context_quality_for_case(test_case).await?;
         
@@ -642,7 +647,7 @@ async fn test_reference_tracking_accuracy() -> Result<()> {
             continue; // 参照期待値がないケースはスキップ
         }
 
-        println!("  テスト中: {}", test_case.name);
+        println!("  テスト中: {} - {}", test_case.name, test_case.test_rationale);
         
         let result = test_context_quality_for_case(test_case).await?;
         
@@ -692,7 +697,7 @@ async fn test_data_flow_tracking_accuracy() -> Result<()> {
             continue; // データフロー期待値がないケースはスキップ
         }
 
-        println!("  テスト中: {}", test_case.name);
+        println!("  テスト中: {} - {}", test_case.name, test_case.test_rationale);
         
         let result = test_context_quality_for_case(test_case).await?;
         

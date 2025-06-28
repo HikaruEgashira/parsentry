@@ -471,6 +471,15 @@ fn calculate_benchmark_summary(results: &[BenchmarkResult]) -> BenchmarkSummary 
         0.0
     };
 
+    let avg_analysis_quality = if total_benchmarks > 0 {
+        results.iter().map(|r| r.analysis_quality).sum::<f64>() / total_benchmarks as f64
+    } else {
+        0.0
+    };
+
+    // 分析品質の詳細をログ出力
+    println!("  📊 平均分析品質: {:.1}%", avg_analysis_quality);
+
     BenchmarkSummary {
         total_benchmarks,
         true_positives,

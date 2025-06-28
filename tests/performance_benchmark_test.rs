@@ -285,6 +285,10 @@ async fn run_performance_benchmark(
     
     let duration = start.elapsed();
     
+    // Log benchmark details
+    println!("Benchmark '{}' ({}): {:?} - Code size: {:?}", 
+        benchmark.name, benchmark.description, benchmark.language, benchmark.code_size);
+    
     // Calculate metrics
     let lines_per_second = lines_of_code as f64 / duration.as_secs_f64();
     let passed = duration.as_millis() <= benchmark.max_duration_ms;

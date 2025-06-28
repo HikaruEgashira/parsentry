@@ -3,7 +3,6 @@ mod tests {
     use parsentry::call_graph::{CallGraphBuilder, CallGraphConfig};
     use parsentry::call_graph_output::{CallGraphRenderer, OutputFormat};
     use parsentry::parser::CodeParser;
-    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]

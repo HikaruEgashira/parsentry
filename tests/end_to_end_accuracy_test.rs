@@ -506,6 +506,9 @@ async fn test_end_to_end_case(
         _ => "txt",
     };
 
+    // テストシナリオの詳細をログ出力
+    println!("  テスト中: {} - {}", test_case.name, test_case.test_scenario);
+    
     // ファイル作成
     let mut created_files = Vec::new();
     for file_spec in &test_case.files {
@@ -635,9 +638,52 @@ async fn test_end_to_end_case(
         if !llm_analysis_success { 100.0 } else { 50.0 }
     };
 
+    // === 期待される検出結果の検証 ===
+    for expected in &test_case.expected_findings {
+        let found_in_file = detected_findings.iter().any(|finding| 
+            finding.file_name.contains(expected.file_name)
+        );
+        
+        // should_be_detected フィールドを使用した検証
+        match (expected.should_be_detected, found_in_file) {
+            (true, false) => {
+                println!("    ❌ 検出されるべき脆弱性が未検出: {} (期待タイプ: {:?}, 最小信頼度: {})", 
+                    expected.file_name, expected.vulnerability_types, expected.minimum_confidence);
+            },
+            (false, true) => {
+                println!("    ⚠️  偽陽性検出: {}", expected.file_name);
+            },
+            (true, true) => {
+                // 脆弱性タイプと信頼度の詳細チェック
+                if let Some(detected) = detected_findings.iter().find(|f| f.file_name.contains(expected.file_name)) {
+                    let type_match = expected.vulnerability_types.iter()
+                        .any(|expected_type| detected.vulnerability_types.contains(expected_type));
+                    let confidence_ok = detected.confidence_score >= expected.minimum_confidence;
+                    
+                    if !type_match {
+                        println!("    ⚠️  期待された脆弱性タイプが検出されませんでした: {:?}", expected.vulnerability_types);
+                    }
+                    if !confidence_ok {
+                        println!("    ⚠️  信頼度が基準を下回っています: {} < {}", 
+                            detected.confidence_score, expected.minimum_confidence);
+                    }
+                    if type_match && confidence_ok {
+                        println!("    ✅ 正常検出: {} (分析品質: {:.1}%)", expected.file_name, detected.analysis_quality);
+                    }
+                }
+            },
+            (false, false) => {
+                println!("    ✅ 正常非検出: {}", expected.file_name);
+            }
+        }
+    }
+
     let overall_accuracy = (pattern_stage_accuracy * 0.2) + 
                           (context_stage_accuracy * 0.3) + 
                           (llm_stage_accuracy * 0.5);
+
+    // context_quality_scoreをログ出力
+    println!("    📊 コンテキスト品質スコア: {:.1}%", context_quality_score);
 
     Ok(EndToEndResult {
         pattern_matching_triggered,
@@ -683,7 +729,8 @@ async fn test_single_file_end_to_end() -> Result<()> {
         total_accuracy += result.pipeline_performance.overall_accuracy;
         total_tests += 1;
 
-        println!("    パイプライン精度: {:.1}%", result.pipeline_performance.overall_accuracy);
+        println!("    パイプライン精度: {:.1}% (コンテキスト品質: {:.1}%)", 
+                result.pipeline_performance.overall_accuracy, result.context_quality_score);
         println!("      パターン: {:.1}%, コンテキスト: {:.1}%, LLM: {:.1}%",
                 result.pipeline_performance.pattern_stage_accuracy,
                 result.pipeline_performance.context_stage_accuracy,
@@ -742,7 +789,8 @@ async fn test_multi_file_end_to_end() -> Result<()> {
         total_accuracy += result.pipeline_performance.overall_accuracy;
         total_tests += 1;
 
-        println!("    パイプライン精度: {:.1}%", result.pipeline_performance.overall_accuracy);
+        println!("    パイプライン精度: {:.1}% (コンテキスト品質: {:.1}%)", 
+                result.pipeline_performance.overall_accuracy, result.context_quality_score);
         println!("      検出ファイル数: {}/{}", 
                 result.detected_findings.len(), test_case.expected_findings.len());
         
