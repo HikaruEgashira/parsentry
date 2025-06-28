@@ -177,29 +177,30 @@ impl CallGraphBuilder {
                 self.graph.nodes.insert(function_name.to_string(), node);
                 definition_found = true;
 
-                // Find function calls within this function
-                let references = self.parser.find_references(function_name)?;
-                for (ref_file, ref_def) in references {
-                    // Extract function calls from the reference context
-                    if let Ok(called_functions) = self.extract_function_calls(&ref_file, &ref_def) {
-                        for called_func in called_functions {
-                            // Add edge
-                            let edge = CallEdge {
-                                caller: function_name.to_string(),
-                                callee: called_func.clone(),
-                                call_site: Location {
-                                    file_path: ref_file.clone(),
-                                    line_number: self.byte_to_line_number(&ref_def.source, ref_def.start_byte),
-                                    start_byte: ref_def.start_byte,
-                                    end_byte: ref_def.end_byte,
-                                },
-                                edge_type: EdgeType::Direct,
-                            };
-                            self.graph.edges.push(edge);
-
-                            // Recursively build from called function
-                            self.build_from_function(&called_func, current_depth + 1, config)?;
+                // Extract function calls from the function definition itself
+                if let Ok(called_functions) = self.extract_function_calls(&def_file, &definition) {
+                    for called_func in called_functions {
+                        // Skip self-references to avoid infinite loops
+                        if called_func == function_name {
+                            continue;
                         }
+                        
+                        // Add edge
+                        let edge = CallEdge {
+                            caller: function_name.to_string(),
+                            callee: called_func.clone(),
+                            call_site: Location {
+                                file_path: def_file.clone(),
+                                line_number: self.byte_to_line_number(&definition.source, definition.start_byte),
+                                start_byte: definition.start_byte,
+                                end_byte: definition.end_byte,
+                            },
+                            edge_type: EdgeType::Direct,
+                        };
+                        self.graph.edges.push(edge);
+
+                        // Recursively build from called function
+                        self.build_from_function(&called_func, current_depth + 1, config)?;
                     }
                 }
                 break;
@@ -306,6 +307,16 @@ impl CallGraphBuilder {
         let mut calls = Vec::new();
         let content = &definition.source;
         
+        // Common keywords and built-in functions to exclude
+        let excluded_names = [
+            "if", "for", "while", "match", "loop", "break", "continue", "return",
+            "let", "mut", "const", "static", "fn", "struct", "enum", "impl", "trait",
+            "pub", "use", "mod", "crate", "super", "self", "Self", "where", "type",
+            "println", "print", "eprintln", "eprint", "dbg", "panic", "todo", "unimplemented",
+            "assert", "assert_eq", "assert_ne", "debug_assert", "unreachable",
+            "Some", "None", "Ok", "Err", "Vec", "String", "Option", "Result"
+        ];
+        
         // Basic pattern matching for function calls as fallback
         let patterns = [
             r"(\w+)\s*\(",  // Simple function calls like func()
@@ -317,7 +328,11 @@ impl CallGraphBuilder {
                 for capture in regex.captures_iter(content) {
                     if let Some(func_name) = capture.get(1) {
                         let name = func_name.as_str().to_string();
-                        if !name.is_empty() && !calls.contains(&name) && name != "if" && name != "for" && name != "while" {
+                        if !name.is_empty() 
+                            && !calls.contains(&name) 
+                            && !excluded_names.contains(&name.as_str())
+                            && !name.chars().next().unwrap_or('a').is_uppercase() // Skip types/constructors
+                        {
                             calls.push(name);
                         }
                     }
