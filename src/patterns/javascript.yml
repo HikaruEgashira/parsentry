@@ -15,14 +15,6 @@ principals:
     attack_vector:
       - "T1071"
       - "T1105"
-  # Module imports
-  - reference: |
-      (call_expression
-        function: (identifier) @func (#eq? @func "require")) @call
-    description: "Module imports"
-    attack_vector:
-      - "T1105"
-      - "T1027"
   # Environment variables
   - reference: |
       (member_expression
@@ -32,16 +24,6 @@ principals:
     attack_vector:
       - "T1083"
       - "T1552"
-  # DOM access
-  - reference: |
-      (call_expression
-        function: (member_expression
-          object: (identifier) @obj (#eq? @obj "document")
-          property: (property_identifier) @prop (#match? @prop "(getElementById|querySelector)"))) @call
-    description: "DOM access"
-    attack_vector:
-      - "T1055"
-      - "T1106"
   # Database ORM queries
   - reference: |
       (call_expression
@@ -69,6 +51,16 @@ principals:
     attack_vector:
       - "T1071"
       - "T1005"
+  # Request parameter access
+  - reference: |
+      (member_expression
+        object: (member_expression
+          object: (identifier) @obj (#eq? @obj "request")
+          property: (property_identifier) @prop (#eq? @prop "params")))
+    description: "Request parameter access"
+    attack_vector:
+      - "T1027"
+      - "T1055"
 
 actions:
   # Input validation operations
@@ -127,6 +119,24 @@ actions:
     attack_vector:
       - "T1083"
       - "T1005"
+  # Email validation patterns
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (regex) @regex
+          property: (property_identifier) @prop (#eq? @prop "test")))
+    description: "Email validation patterns"
+    attack_vector:
+      - "T1190"
+      - "T1027"
+  # Validation function patterns
+  - definition: |
+      (function_declaration
+        name: (identifier) @func_name (#match? @func_name "validate"))
+    description: "Validation function patterns"
+    attack_vector:
+      - "T1190"
+      - "T1027"
 
 resources:
   # Code evaluation resource
@@ -147,6 +157,16 @@ resources:
     attack_vector:
       - "T1055"
       - "T1106"
+  # DOM access and manipulation
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "document")
+          property: (property_identifier) @prop (#match? @prop "(getElementById|querySelector)")))
+    description: "DOM access operations"
+    attack_vector:
+      - "T1055"
+      - "T1106"
   # HTML injection resource
   - reference: |
       (assignment_expression
@@ -164,13 +184,23 @@ resources:
     attack_vector:
       - "T1059"
       - "T1055"
-  # File writing resource
+  # File system operations
   - reference: |
       (call_expression
         function: (member_expression
           object: (identifier) @obj (#eq? @obj "fs")
-          property: (property_identifier) @prop (#eq? @prop "writeFile")))
-    description: "File writing resource"
+          property: (property_identifier) @prop (#match? @prop "(writeFile|readFileSync)")))
+    description: "File system operations"
+    attack_vector:
+      - "T1083"
+      - "T1005"
+  # JSON parsing operations
+  - reference: |
+      (call_expression
+        function: (member_expression
+          object: (identifier) @obj (#eq? @obj "JSON")
+          property: (property_identifier) @prop (#eq? @prop "parse")))
+    description: "JSON parsing operations"
     attack_vector:
       - "T1083"
       - "T1005"

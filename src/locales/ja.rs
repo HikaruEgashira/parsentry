@@ -70,21 +70,64 @@ pub const SYS_PROMPT_TEMPLATE: &str = r#"
 "#;
 
 pub const INITIAL_ANALYSIS_PROMPT_TEMPLATE: &str = r#"
-与えられたコードをPAR（Principal-Action-Resource）モデルに基づいて分析し、以下のJSON形式で結果を出力してください：
+与えられたコード（関数定義または関数呼び出し）をPAR（Principal-Action-Resource）モデルに基づいて分析し、以下のどれに分類されるかを一つ決めてください：
 
-**Principal（誰が/データ源）**: データの起点となるエンティティや入力源
-- ユーザー入力、API応答、ファイル読み込み、環境変数など
-- 各Principalの信頼レベル（trusted/semi_trusted/untrusted）を評価
+**Principal（信頼できないソース）**: 攻撃者が制御可能なデータを提供する関数
+- ユーザー入力を取得する関数（request.params, request.body等）
+- 外部データを取得する関数（API応答、ファイル読み込み等）
 
-**Action（何を/検証・処理）**: データ処理や検証操作（脆弱性の可能性を含む）
-- 入力検証、サニタイズ、認証・認可、暗号化など（バイパス可能性要注意）
-- 実装品質（adequate/insufficient/missing/bypassed）を評価
+**Action（セキュリティ処理）**: セキュリティ処理を行う関数
+- バリデーション、サニタイズ、認証・認可処理を行う関数
+- 入力検証、データ変換、権限チェック、暗号化等を行う関数
 
-**Resource（どこで/危険な操作）**: 機密性・完全性・可用性に影響する操作
-- ファイル書き込み、コマンド実行、データベース更新、出力など
-- 機密性レベル（low/medium/high/critical）を評価
+**Resource（攻撃対象）**: 攻撃対象となるリソースを操作する関数
+- ファイルシステム、データベース、システムコマンド、DOM、ネットワークを操作する関数
 
-各コード要素がどのPAR役割を持ち、適切なセキュリティポリシーが実装されているかを評価し、policy_violationsとして報告してください。
+## 関数定義の分類例:
+
+**Resource例:**
+```python
+def get_user_data(user_id):
+    query = f"SELECT * FROM users WHERE id = {user_id}"
+    return execute_query(query)
+```
+→ この関数は最終的にデータベースを操作するため「Resource」に分類
+
+**Action例:**
+```python
+def validate_user_id(user_id):
+    if not isinstance(user_id, int):
+        raise ValueError("Invalid user ID")
+    return user_id
+```
+→ この関数は入力検証を行うため「Action」に分類
+
+## 関数呼び出しの分類例:
+
+**Principal例:**
+```javascript
+request.params.get('user_id')
+```
+→ この呼び出しは信頼できないユーザー入力を取得するため「Principal」
+
+**Action例:**
+```python
+validate_email(user_email)
+```
+→ この呼び出しはバリデーション処理を実行するため「Action」
+
+**Resource例:**
+```python
+db.query("SELECT * FROM users")
+```
+→ この呼び出しはデータベースを操作するため「Resource」
+
+```javascript
+document.getElementById('output').innerHTML = content
+```
+→ この呼び出しはDOMを操作するため「Resource」
+
+**重要:** 関数呼び出しの場合は、呼び出される関数の性質で分類します。引数の内容ではなく、どの関数を呼んでいるかが決定要因です。
 "#;
 
 pub const ANALYSIS_APPROACH_TEMPLATE: &str = r#"

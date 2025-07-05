@@ -76,21 +76,64 @@ As a security researcher, analyze code vulnerabilities with special attention to
 "#;
 
 pub const INITIAL_ANALYSIS_PROMPT_TEMPLATE: &str = r#"
-Analyze the given code based on the PAR (Principal-Action-Resource) model and output the results in the following JSON format:
+Analyze the given code (function definition or function call) based on the PAR (Principal-Action-Resource) model and determine which single category it belongs to:
 
-**Principal (Who/Data Source)**: Entities or input sources that are the origin of data
-- User input, API responses, file reads, environment variables, etc.
-- Evaluate the trust level of each Principal (trusted/semi_trusted/untrusted)
+**Principal (Untrusted Sources)**: Functions that provide attacker-controllable data
+- Functions that retrieve user input (request.params, request.body, etc.)
+- Functions that retrieve external data (API responses, file reads, etc.)
 
-**Action (What/Validation-Processing)**: Data processing or validation operations (including vulnerability possibilities)
-- Input validation, sanitization, authentication/authorization, encryption, etc. (pay attention to bypass possibilities)
-- Evaluate implementation quality (adequate/insufficient/missing/bypassed)
+**Action (Security Processing)**: Functions that perform security processing
+- Functions that perform validation, sanitization, authentication/authorization
+- Functions that perform input validation, data transformation, permission checks, encryption, etc.
 
-**Resource (Where/Dangerous Operations)**: Operations that affect confidentiality, integrity, and availability
-- File writes, command execution, database updates, output, etc.
-- Evaluate confidentiality level (low/medium/high/critical)
+**Resource (Attack Targets)**: Functions that operate on attack target resources
+- Functions that operate on file system, database, system commands, DOM, network
 
-Evaluate what PAR role each code element has, whether appropriate security policies are implemented, and report as policy_violations.
+## Function Definition Classification Examples:
+
+**Resource Example:**
+```python
+def get_user_data(user_id):
+    query = f"SELECT * FROM users WHERE id = {user_id}"
+    return execute_query(query)
+```
+→ This function ultimately operates on a database, so it's classified as "Resource"
+
+**Action Example:**
+```python
+def validate_user_id(user_id):
+    if not isinstance(user_id, int):
+        raise ValueError("Invalid user ID")
+    return user_id
+```
+→ This function performs input validation, so it's classified as "Action"
+
+## Function Call Classification Examples:
+
+**Principal Example:**
+```javascript
+request.params.get('user_id')
+```
+→ This call retrieves untrusted user input, so it's classified as "Principal"
+
+**Action Example:**
+```python
+validate_email(user_email)
+```
+→ This call executes validation processing, so it's classified as "Action"
+
+**Resource Example:**
+```python
+db.query("SELECT * FROM users")
+```
+→ This call operates on a database, so it's classified as "Resource"
+
+```javascript
+document.getElementById('output').innerHTML = content
+```
+→ This call operates on the DOM, so it's classified as "Resource"
+
+**Important:** For function calls, classify based on the nature of the function being called, not the content of the arguments.
 "#;
 
 pub const ANALYSIS_APPROACH_TEMPLATE: &str = r#"

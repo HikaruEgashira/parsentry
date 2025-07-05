@@ -61,6 +61,18 @@ principals:
     description: "Command line arguments"
     attack_vector:
       - "T1059"
+  # Environment variable access
+  - reference: |
+      (call
+        function: (attribute
+          object: (attribute
+            object: (identifier) @obj1 (#eq? @obj1 "os")
+            attribute: (identifier) @obj2 (#eq? @obj2 "environ"))
+          attribute: (identifier) @attr (#match? @attr "(get|getenv)")))
+    description: "Environment variable access"
+    attack_vector:
+      - "T1082"
+      - "T1552"
   # Database result fetching
   - reference: |
       (call
@@ -151,6 +163,14 @@ actions:
     attack_vector:
       - "T1005"
       - "T1552"
+  # Authentication function patterns
+  - definition: |
+      (function_definition
+        name: (identifier) @func_name (#match? @func_name "authenticate"))
+    description: "Authentication function patterns"
+    attack_vector:
+      - "T1078"
+      - "T1556"
 
 resources:
   # File operations resource
@@ -202,6 +222,22 @@ resources:
         function: (attribute
           attribute: (identifier) @attr (#eq? @attr "execute")))
     description: "SQL execution resource"
+    attack_vector:
+      - "T1190"
+      - "T1213"
+  # SQL query execution function calls
+  - reference: |
+      (call
+        function: (identifier) @func (#match? @func "execute_query"))
+    description: "SQL query execution function calls"
+    attack_vector:
+      - "T1190"
+      - "T1213"
+  # SQL injection vulnerable string formatting
+  - reference: |
+      (formatted_string
+        (identifier) @var) @fstring
+    description: "SQL injection vulnerable string formatting"
     attack_vector:
       - "T1190"
       - "T1213"

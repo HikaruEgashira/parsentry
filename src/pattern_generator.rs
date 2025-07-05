@@ -464,16 +464,45 @@ async fn analyze_all_references_at_once(
 {}
 
 For each function reference, determine if it should be classified as:
-- "principals": Calls to functions that act as data entry points and should be treated as tainted/untrusted. This includes:
-  * User input functions (request handlers, form parsers, parameter getters)
-  * External data sources (API responses, file readers, database queries)
-  * Network/communication inputs (socket data, HTTP requests, message queues)
-  * Environment/configuration readers that could be attacker-controlled
-  * Second-order data sources (data previously stored from user input)
+- "principals": Functions that return or provide untrusted data that attackers can control. This includes:
+  * User input functions (request.params, request.body, request.query)
+  * External data sources (API responses, file readers, socket data)
+  * Network/communication inputs (HTTP requests, message queues)
+  * Functions that retrieve attacker-controlled data
   * Any function that introduces data from outside the application's control boundary
-- "actions": Calls to functions that perform validation, sanitization, authorization, or security operations
-- "resources": Calls to functions that access, modify, or perform operations on files, databases, networks, or system resources
+  
+- "actions": Functions that perform security processing (validation, sanitization, authorization). This includes:
+  * Input validation functions (validators, sanitizers)
+  * Authentication/authorization functions (login checks, permission checks)
+  * Cryptographic functions (encryption, hashing, signing)
+  * Security-focused data transformation functions
+  
+- "resources": Functions that operate on attack targets (files, databases, system commands, DOM). This includes:
+  * File system operations (readFile, writeFile, deleteFile)
+  * Database operations (query, insert, update, delete)
+  * System command execution (exec, spawn, system)
+  * DOM manipulation (innerHTML, setAttribute, createElement)
+  * Network operations (HTTP requests, socket connections)
+  
 - "none": Not a security-relevant call
+
+## Classification Examples:
+
+**Principal Examples:**
+- `request.params.get('user_id')` - returns untrusted user input
+- `os.environ.get('USER_INPUT')` - if environment variable contains user data
+- `json.loads(request.body)` - parses untrusted JSON data
+
+**Action Examples:**
+- `validate_email(email)` - validates email format
+- `bcrypt.hash(password)` - hashes password securely
+- `escape_html(content)` - sanitizes HTML content
+
+**Resource Examples:**
+- `fs.readFileSync(filepath)` - reads file from filesystem
+- `db.query(sql, params)` - executes database query
+- `document.getElementById('output').innerHTML` - modifies DOM
+- `os.system(command)` - executes system command
 
 Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
 
