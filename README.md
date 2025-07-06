@@ -58,13 +58,14 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 ## Examples
 
 ### Security Analysis
-- [Secure Code Game](docs/reports/skills-secure-code-game/summary.md) - Security challenges across multiple languages
-- [Damn Vulnerable MCP Server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md) - MCP protocol vulnerabilities
-- [TerraGoat](docs/reports/terragoat/summary.md) - Infrastructure as Code security issues
-- [CloudGoat](docs/reports/cloudgoat/summary.md) - AWS security misconfigurations
-- [Broken Crystals](docs/reports/NeuraLegion-brokencrystals/summary.md) - Web application security issues
+- [skills/secure-code-game](docs/reports/skills-secure-code-game/summary.md) - Security challenges across multiple languages
+- [harishsg993010/damn-vulnerable-MCP-server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md) - MCP protocol vulnerabilities
+- [bridgecrewio/terragoat](docs/reports/terragoat/summary.md) - Infrastructure as Code security issues
+- [RhinoSecurityLabs/cloudgoat](docs/reports/cloudgoat/summary.md) - AWS security misconfigurations
+- [NeuraLegion/brokencrystals](docs/reports/NeuraLegion-brokencrystals/summary.md) - Web application security issues
 - [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js vulnerabilities
-- [Damn Vulnerable GraphQL Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL vulnerabilities
+- [OWASP/railsgoat](docs/reports/railsgoat/summary.md) - Ruby on Rails vulnerabilities
+- [dolevf/Damn-Vulnerable-GraphQL-Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL vulnerabilities
 
 ### Call Graph Analysis
 

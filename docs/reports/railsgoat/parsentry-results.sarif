@@ -1,0 +1,482 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.7.0",
+          "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "short_description": {
+                "text": "Potential remote code execution vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential remote code execution vulnerability detected",
+                "markdown": "**Remote Code Execution**\n\nRemote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "help": {
+                "text": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code.",
+                "markdown": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "execution",
+                  "rce"
+                ],
+                "precision": "medium",
+                "problem_severity": "9.0",
+                "security_severity": "9.0"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "short_description": {
+                "text": "Potential IDOR vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential IDOR vulnerability detected",
+                "markdown": "**Insecure Direct Object Reference**\n\nIDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "help": {
+                "text": "IDOR allows unauthorized access to objects. Implement proper authorization checks.",
+                "markdown": "IDOR allows unauthorized access to objects. Implement proper authorization checks."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "idor"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.5",
+                "security_severity": "5.5"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "short_description": {
+                "text": "Potential arbitrary file operation vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential arbitrary file operation vulnerability detected",
+                "markdown": "**Arbitrary File Operation**\n\nArbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "help": {
+                "text": "Arbitrary file operations can lead to unauthorized file access. Validate file operations.",
+                "markdown": "Arbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "afo"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.0",
+                "security_severity": "6.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "RCE: PasswordResetsControllerのreset_passwordアクションで、HTTPリクエストパラメータparams[:user]をBase64→Marshal.loadでデシリアライズしており、攻撃者が任意のオブジェクトを注入・実行可能です。トークン検証(is_valid?)もMD5ベースで弱く、総合的に重大なRCEリスクがあります。",
+            "markdown": "PasswordResetsControllerのreset_passwordアクションで、HTTPリクエストパラメータparams[:user]をBase64→Marshal.loadでデシリアライズしており、攻撃者が任意のオブジェクトを注入・実行可能です。トークン検証(is_valid?)もMD5ベースで弱く、総合的に重大なRCEリスクがあります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/password_resets_controller.rb",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6859adf7ff37e005"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: このコードは、リクエストパラメータの user_id を使用して任意のユーザー情報にアクセス可能とする一方で、所有権や閲覧権のチェックを行っていないため、IDOR（Insecure Direct Object Reference）の脆弱性に該当します。",
+            "markdown": "このコードは、リクエストパラメータの user_id を使用して任意のユーザー情報にアクセス可能とする一方で、所有権や閲覧権のチェックを行っていないため、IDOR（Insecure Direct Object Reference）の脆弱性に該当します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/work_info_controller.rb",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "38d47888229834c9"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: WorkInfoController#indexでは、params[:user_id]から取得したIDを元に直接User.find_byを呼び出し、取得したユーザーが存在しないか管理者ユーザーかをチェックしているだけで、現在のログインユーザーが指定されたuser_idにアクセス権を持つかどうかの認可チェックが実装されていません。そのため、IDOR（Insecure Direct Object Reference）により他ユーザーの情報を取得されるリスクがあります。",
+            "markdown": "WorkInfoController#indexでは、params[:user_id]から取得したIDを元に直接User.find_byを呼び出し、取得したユーザーが存在しないか管理者ユーザーかをチェックしているだけで、現在のログインユーザーが指定されたuser_idにアクセス権を持つかどうかの認可チェックが実装されていません。そのため、IDOR（Insecure Direct Object Reference）により他ユーザーの情報を取得されるリスクがあります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/work_info_controller.rb",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6209b221f35e3a31"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ダイナミックにメソッドを呼び出す self.try(params[:graph]) が未検証のユーザー入力を直接実行しており、任意のコントローラメソッドを呼び出せる脆弱性（AFO/RCEの可能性）があります。",
+            "markdown": "ダイナミックにメソッドを呼び出す self.try(params[:graph]) が未検証のユーザー入力を直接実行しており、任意のコントローラメソッドを呼び出せる脆弱性（AFO/RCEの可能性）があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/dashboard_controller.rb",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bab0befad9f0d0"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "RCE: ダイナミックにメソッドを呼び出す self.try(params[:graph]) が未検証のユーザー入力を直接実行しており、任意のコントローラメソッドを呼び出せる脆弱性（AFO/RCEの可能性）があります。",
+            "markdown": "ダイナミックにメソッドを呼び出す self.try(params[:graph]) が未検証のユーザー入力を直接実行しており、任意のコントローラメソッドを呼び出せる脆弱性（AFO/RCEの可能性）があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/dashboard_controller.rb",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bab0befad9f0d0"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "RCE: 本コードではchange_graphアクション内でユーザー入力(params[:graph])を検証せずにself.tryメソッドを用いて動的にメソッド呼び出しを行っており、攻撃者が任意のコントローラ内メソッドを実行できる可能性があります。また、homeアクション内のparams[:font]も検証なしにcookieへ設定されており、セキュリティ処理（Action）や入力サニタイズが欠如しています。",
+            "markdown": "本コードではchange_graphアクション内でユーザー入力(params[:graph])を検証せずにself.tryメソッドを用いて動的にメソッド呼び出しを行っており、攻撃者が任意のコントローラ内メソッドを実行できる可能性があります。また、homeアクション内のparams[:font]も検証なしにcookieへ設定されており、セキュリティ処理（Action）や入力サニタイズが欠如しています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/dashboard_controller.rb",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a9e2f0ba308e5fdd"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: 本コードではchange_graphアクション内でユーザー入力(params[:graph])を検証せずにself.tryメソッドを用いて動的にメソッド呼び出しを行っており、攻撃者が任意のコントローラ内メソッドを実行できる可能性があります。また、homeアクション内のparams[:font]も検証なしにcookieへ設定されており、セキュリティ処理（Action）や入力サニタイズが欠如しています。",
+            "markdown": "本コードではchange_graphアクション内でユーザー入力(params[:graph])を検証せずにself.tryメソッドを用いて動的にメソッド呼び出しを行っており、攻撃者が任意のコントローラ内メソッドを実行できる可能性があります。また、homeアクション内のparams[:font]も検証なしにcookieへ設定されており、セキュリティ処理（Action）や入力サニタイズが欠如しています。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/dashboard_controller.rb",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a9e2f0ba308e5fdd"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "RCE: PasswordResetsControllerではskip_before_actionによる認証回避のまま、ユーザーから渡されたBase64化＆Marshal.loadデータをデシリアライズしており、unsafe deserializationによるRCEリスクがあります。さらにMD5によるトークン生成は予測可能・期限設定なしで強度不足です。",
+            "markdown": "PasswordResetsControllerではskip_before_actionによる認証回避のまま、ユーザーから渡されたBase64化＆Marshal.loadデータをデシリアライズしており、unsafe deserializationによるRCEリスクがあります。さらにMD5によるトークン生成は予測可能・期限設定なしで強度不足です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/password_resets_controller.rb",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b9aee503f1190ffd"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "IDOR: WorkInfoController#indexアクションでは、params[:user_id]（信頼できないユーザー入力）がそのままDB参照に使用され、所有者検証やアクセス権限チェックが実装されていません。その結果、他ユーザーの情報を不正に参照できるIDOR脆弱性が存在します。",
+            "markdown": "WorkInfoController#indexアクションでは、params[:user_id]（信頼できないユーザー入力）がそのままDB参照に使用され、所有者検証やアクセス権限チェックが実装されていません。その結果、他ユーザーの情報を不正に参照できるIDOR脆弱性が存在します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/work_info_controller.rb",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "852f8c098145d482"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "repo/app/controllers/password_resets_controller.rb",
+            "index": 0
+          },
+          "mime_type": "text/x-ruby"
+        },
+        {
+          "location": {
+            "uri": "repo/app/controllers/work_info_controller.rb",
+            "index": 1
+          },
+          "mime_type": "text/x-ruby"
+        },
+        {
+          "location": {
+            "uri": "repo/app/controllers/work_info_controller.rb",
+            "index": 2
+          },
+          "mime_type": "text/x-ruby"
+        },
+        {
+          "location": {
+            "uri": "repo/app/controllers/dashboard_controller.rb",
+            "index": 3
+          },
+          "mime_type": "text/x-ruby"
+        },
+        {
+          "location": {
+            "uri": "repo/app/controllers/dashboard_controller.rb",
+            "index": 4
+          },
+          "mime_type": "text/x-ruby"
+        },
+        {
+          "location": {
+            "uri": "repo/app/controllers/password_resets_controller.rb",
+            "index": 5
+          },
+          "mime_type": "text/x-ruby"
+        },
+        {
+          "location": {
+            "uri": "repo/app/controllers/work_info_controller.rb",
+            "index": 6
+          },
+          "mime_type": "text/x-ruby"
+        }
+      ],
+      "invocation": {
+        "executionSuccessful": true
+      }
+    }
+  ]
+}
