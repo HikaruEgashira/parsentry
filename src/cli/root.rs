@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use crate::cli::args::{Args, Commands, ScanArgs, GraphArgs, validate_scan_args, validate_graph_args};
-use crate::cli::commands::{run_scan_command, run_graph_command};
+use crate::cli::commands::{run_scan_command, run_graph_command, run_bench_command};
 use crate::config::ParsentryConfig;
 
 pub struct RootCommand;
@@ -61,6 +61,9 @@ impl RootCommand {
                 
                 validate_graph_args(&graph_args)?;
                 run_graph_command(graph_args).await
+            },
+            Some(Commands::Bench { subcommand }) => {
+                run_bench_command(subcommand).await
             },
             None => {
                 // Default to scan command for backward compatibility

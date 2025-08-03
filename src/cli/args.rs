@@ -94,6 +94,39 @@ pub enum Commands {
         #[arg(long)]
         security_focus: bool,
     },
+    /// Run benchmarks to evaluate security analysis performance
+    Bench {
+        #[command(subcommand)]
+        subcommand: BenchCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum BenchCommands {
+    /// List available benchmark categories
+    List,
+    /// Run specific benchmark suites
+    Run {
+        #[arg(long)]
+        category: Option<String>,
+
+        #[arg(long)]
+        output_dir: Option<PathBuf>,
+
+        #[arg(long)]
+        config: Option<PathBuf>,
+
+        #[arg(long)]
+        parallel: bool,
+
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Generate benchmark configuration file
+    InitConfig {
+        #[arg(short, long)]
+        name: Option<PathBuf>,
+    },
 }
 
 // Backward compatibility struct for existing scan functionality
