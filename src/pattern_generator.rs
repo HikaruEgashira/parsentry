@@ -387,7 +387,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
     let chat_res = client.exec_chat(model, chat_req, None).await?;
     let content = chat_res
-        .content_text_as_str()
+        .first_text()
         .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
 
     #[derive(Deserialize)]
@@ -569,7 +569,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
     let chat_res = client.exec_chat(model, chat_req, None).await?;
     let content = chat_res
-        .content_text_as_str()
+        .first_text()
         .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
 
     #[derive(Deserialize)]

@@ -116,7 +116,7 @@ async fn execute_chat_request(
     .await;
 
     match result {
-        Ok(Ok(chat_res)) => match chat_res.content_text_as_str() {
+        Ok(Ok(chat_res)) => match chat_res.first_text() {
             Some(content) => Ok(content.to_string()),
             None => {
                 error!("Failed to get content text from chat response");
