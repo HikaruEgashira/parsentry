@@ -59,8 +59,8 @@ fn test_pattern_type_equality() {
 #[test]
 fn test_pattern_config_creation() {
     let config = PatternConfig {
-        pattern_type: PatternQuery::Reference { 
-            reference: "(call function: (identifier) @func (#eq? @func \"eval\"))".to_string() 
+        pattern_type: PatternQuery::Reference {
+            reference: "(call function: (identifier) @func (#eq? @func \"eval\"))".to_string(),
         },
         description: "Dynamic code execution".to_string(),
         attack_vector: vec!["T1059".to_string()],
@@ -79,15 +79,15 @@ fn test_pattern_config_creation() {
 fn test_language_patterns_creation() {
     let principals = vec![
         PatternConfig {
-            pattern_type: PatternQuery::Reference { 
-                reference: "(call function: (identifier) @func (#eq? @func \"input\"))".to_string() 
+            pattern_type: PatternQuery::Reference {
+                reference: "(call function: (identifier) @func (#eq? @func \"input\"))".to_string()
             },
             description: "User input".to_string(),
             attack_vector: vec!["T1059".to_string()],
         },
         PatternConfig {
-            pattern_type: PatternQuery::Reference { 
-                reference: "(member_expression object: (identifier) @obj (#eq? @obj \"request\") property: (property_identifier) @prop (#eq? @prop \"get\"))".to_string() 
+            pattern_type: PatternQuery::Reference {
+                reference: "(member_expression object: (identifier) @obj (#eq? @obj \"request\") property: (property_identifier) @prop (#eq? @prop \"get\"))".to_string()
             },
             description: "HTTP request parameter".to_string(),
             attack_vector: vec!["T1071".to_string()],
@@ -95,8 +95,8 @@ fn test_language_patterns_creation() {
     ];
 
     let resources = vec![PatternConfig {
-        pattern_type: PatternQuery::Reference { 
-            reference: "(call function: (identifier) @func (#eq? @func \"eval\"))".to_string() 
+        pattern_type: PatternQuery::Reference {
+            reference: "(call function: (identifier) @func (#eq? @func \"eval\"))".to_string(),
         },
         description: "Code execution".to_string(),
         attack_vector: vec!["T1059".to_string()],
@@ -131,8 +131,8 @@ fn test_language_patterns_empty() {
 fn test_language_patterns_partial() {
     let patterns = LanguagePatterns {
         principals: Some(vec![PatternConfig {
-            pattern_type: PatternQuery::Reference { 
-                reference: "(identifier) @name (#eq? @name \"test\")".to_string() 
+            pattern_type: PatternQuery::Reference {
+                reference: "(identifier) @name (#eq? @name \"test\")".to_string(),
             },
             description: "test description".to_string(),
             attack_vector: vec!["T1000".to_string()],

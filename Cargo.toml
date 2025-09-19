@@ -51,6 +51,9 @@ exclude = ["tree-sitter-*"]
 [workspace.metadata.insta]
 snapshot-path = "tests/snapshots"
 
+[patch.crates-io]
+genai = { git = "https://github.com/HikaruEgashira/rust-genai", rev = "e3944faad32e9682895d7699f060027881b9fd84" }
+
 # APIを使用するテストの設定
 [[test]]
 name = "accuracy_test_suite"
