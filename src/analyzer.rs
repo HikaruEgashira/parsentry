@@ -1,11 +1,17 @@
-use anyhow::{Context as AnyhowContext, Error, Result};
+use anyhow::{Context as AnyhowContext, Error, Result, bail};
+use log::warn;
 use regex::Regex;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::file_classifier::FileClassifier;
-use crate::locales::Language;
+use crate::locales::{self, Language};
 use crate::parser::Context;
+use crate::prompts;
 use crate::response::{
     ActionInfo, ParAnalysis, PolicyViolation, PrincipalInfo, RemediationAction,
     RemediationGuidance, ResourceInfo, Response, SecurityFunctionQuality, SensitivityLevel,
@@ -86,6 +92,285 @@ fn extract_snippet(content: &str, start_byte: usize, end_byte: usize) -> String 
         .chars()
         .take(400)
         .collect()
+}
+
+#[derive(Serialize)]
+struct ChatCompletionRequest {
+    model: String,
+    messages: Vec<ChatCompletionMessage>,
+    temperature: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_tokens: Option<u32>,
+    response_format: ChatResponseFormat,
+}
+
+#[derive(Serialize)]
+struct ChatCompletionMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Serialize)]
+struct ChatResponseFormat {
+    #[serde(rename = "type")]
+    type_field: String,
+}
+
+#[derive(Deserialize)]
+struct ChatCompletionResponse {
+    choices: Vec<ChatChoice>,
+}
+
+#[derive(Deserialize)]
+struct ChatChoice {
+    message: ChatChoiceMessage,
+}
+
+#[derive(Deserialize)]
+struct ChatChoiceMessage {
+    content: Option<String>,
+}
+
+fn truncate_for_prompt(text: &str, max_chars: usize) -> String {
+    if text.len() <= max_chars {
+        return text.to_string();
+    }
+    let mut truncated = text[..max_chars].to_string();
+    truncated.push_str("\n...<truncated>");
+    truncated
+}
+
+fn build_context_section(context: &Context) -> String {
+    if context.definitions.is_empty() && context.references.is_empty() {
+        return String::new();
+    }
+
+    let mut section = String::new();
+
+    if !context.definitions.is_empty() {
+        section.push_str("Definitions (first 5):\n");
+        for definition in context.definitions.iter().take(5) {
+            section.push_str(&format!(
+                "- {}\n{}\n\n",
+                definition.name,
+                truncate_for_prompt(&definition.source, 400)
+            ));
+        }
+    }
+
+    if !context.references.is_empty() {
+        section.push_str("References (first 5):\n");
+        for reference in context.references.iter().take(5) {
+            section.push_str(&format!(
+                "- {}\n{}\n\n",
+                reference.name,
+                truncate_for_prompt(&reference.source, 200)
+            ));
+        }
+    }
+
+    if section.is_empty() {
+        "(no additional context)".to_string()
+    } else {
+        section
+    }
+}
+
+fn build_system_prompt(language: &Language) -> String {
+    let schema_text = serde_json::to_string(&crate::response::response_json_schema())
+        .unwrap_or_else(|_| "{}".to_string());
+    let response_lang_instruction = locales::get_response_language_instruction(language);
+    format!(
+        "You are a security vulnerability analyzer. Respond with exactly one JSON object that strictly matches this JSON Schema: {}. {} Do not include any text before or after the JSON object.",
+        schema_text, response_lang_instruction
+    )
+}
+
+fn build_file_prompt(
+    file_path: &PathBuf,
+    content: &str,
+    context: &Context,
+    language: &Language,
+) -> String {
+    let instructions = prompts::get_initial_analysis_prompt_template(language);
+    let approach = prompts::get_analysis_approach_template(language);
+    let guidelines = prompts::get_guidelines_template(language);
+    let context_section = build_context_section(context);
+    format!(
+        "Target file: {}\nLanguage setting: {}\n\n=== Initial Instructions ===\n{}\n\n=== Analysis Approach ===\n{}\n\n=== Guidelines ===\n{}\n\n=== Additional Context ===\n{}\n\n=== File Content (truncated) ===\n{}\n",
+        file_path.display(),
+        language.to_string(),
+        instructions,
+        approach,
+        guidelines,
+        context_section,
+        truncate_for_prompt(content, 15000)
+    )
+}
+
+fn build_pattern_prompt(
+    file_path: &PathBuf,
+    content: &str,
+    pattern_match: &PatternMatch,
+    language: &Language,
+) -> String {
+    let approach = prompts::get_analysis_approach_template(language);
+    let guidelines = prompts::get_guidelines_template(language);
+    let snippet = if pattern_match.matched_text.is_empty() {
+        extract_snippet(content, pattern_match.start_byte, pattern_match.end_byte)
+    } else {
+        pattern_match.matched_text.clone()
+    };
+
+    format!(
+        "Focus on validating the following potential security pattern.\n\nFile: {}\nPattern Description: {}\nPattern Type: {:?}\nAttack Vectors: {}\n\n=== Matched Snippet ===\n{}\n\n=== Analysis Approach ===\n{}\n\n=== Guidelines ===\n{}\n\n=== Full File Content (truncated) ===\n{}\n",
+        file_path.display(),
+        pattern_match.pattern_config.description,
+        pattern_match.pattern_type,
+        pattern_match.pattern_config.attack_vector.join(", "),
+        truncate_for_prompt(&snippet, 1500),
+        approach,
+        guidelines,
+        truncate_for_prompt(content, 10000)
+    )
+}
+
+async fn call_openai_chat(
+    model: &str,
+    messages: Vec<ChatCompletionMessage>,
+    api_base_url: Option<&str>,
+) -> Result<String> {
+    let api_key = match std::env::var("OPENAI_API_KEY") {
+        Ok(key) => key,
+        Err(_) => bail!("OPENAI_API_KEY environment variable is not set"),
+    };
+
+    let default_base = "https://api.openai.com/v1";
+    let provided_base = api_base_url.unwrap_or(default_base).trim_end_matches('/');
+    let disable_auto_v1 = std::env::var("PARSENTRY_DISABLE_V1_PATH").is_ok();
+
+    let endpoint = if provided_base.ends_with("/chat/completions") {
+        provided_base.to_string()
+    } else if disable_auto_v1 {
+        provided_base.to_string()
+    } else {
+        format!("{}/chat/completions", provided_base)
+    };
+
+    let client = Client::builder()
+        .timeout(Duration::from_secs(240))
+        .build()
+        .context("failed to build HTTP client")?;
+
+    let request_body = ChatCompletionRequest {
+        model: model.to_string(),
+        messages,
+        temperature: 0.1,
+        max_tokens: Some(1800),
+        response_format: ChatResponseFormat {
+            type_field: "json_object".to_string(),
+        },
+    };
+
+    let response = client
+        .post(&endpoint)
+        .bearer_auth(api_key)
+        .json(&request_body)
+        .send()
+        .await
+        .context("failed to send request to OpenAI API")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        bail!("OpenAI API returned error {}: {}", status, body);
+    }
+
+    let completion: ChatCompletionResponse = response
+        .json()
+        .await
+        .context("failed to parse OpenAI API response body")?;
+
+    if let Some(content) = completion
+        .choices
+        .into_iter()
+        .find_map(|choice| choice.message.content)
+    {
+        Ok(content)
+    } else {
+        bail!("OpenAI API response did not contain message content")
+    }
+}
+
+async fn request_llm_file_analysis(
+    file_path: &PathBuf,
+    model: &str,
+    content: &str,
+    context: &Context,
+    language: &Language,
+    api_base_url: Option<&str>,
+) -> Result<Response> {
+    let system_prompt = build_system_prompt(language);
+    let user_prompt = build_file_prompt(file_path, content, context, language);
+
+    let messages = vec![
+        ChatCompletionMessage {
+            role: "system".to_string(),
+            content: system_prompt,
+        },
+        ChatCompletionMessage {
+            role: "user".to_string(),
+            content: user_prompt,
+        },
+    ];
+
+    let raw = call_openai_chat(model, messages, api_base_url).await?;
+    let mut response: Response = serde_json::from_str(&raw)
+        .context("failed to deserialize OpenAI response into parsentry::Response")?;
+    response.confidence_score = Response::normalize_confidence_score(response.confidence_score);
+    response.file_path = Some(file_path.to_string_lossy().to_string());
+    response.full_source_code = Some(content.to_string());
+    response.pattern_description = None;
+    response.sanitize();
+    Ok(response)
+}
+
+async fn request_llm_pattern_analysis(
+    file_path: &PathBuf,
+    model: &str,
+    content: &str,
+    pattern_match: &PatternMatch,
+    language: &Language,
+    api_base_url: Option<&str>,
+) -> Result<Response> {
+    let system_prompt = build_system_prompt(language);
+    let user_prompt = build_pattern_prompt(file_path, content, pattern_match, language);
+
+    let messages = vec![
+        ChatCompletionMessage {
+            role: "system".to_string(),
+            content: system_prompt,
+        },
+        ChatCompletionMessage {
+            role: "user".to_string(),
+            content: user_prompt,
+        },
+    ];
+
+    let raw = call_openai_chat(model, messages, api_base_url).await?;
+    let mut response: Response =
+        serde_json::from_str(&raw).context("failed to deserialize pattern analysis response")?;
+    response.confidence_score = Response::normalize_confidence_score(response.confidence_score);
+    response.file_path = Some(file_path.to_string_lossy().to_string());
+    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+    response.matched_source_code = Some(if pattern_match.matched_text.is_empty() {
+        extract_snippet(content, pattern_match.start_byte, pattern_match.end_byte)
+    } else {
+        pattern_match.matched_text.clone()
+    });
+    response.full_source_code = Some(content.to_string());
+    response.sanitize();
+    Ok(response)
 }
 
 fn infer_vuln_types(description: &str, snippet: &str) -> Vec<VulnType> {
@@ -464,10 +749,39 @@ pub async fn analyze_file(
     let patterns = SecurityRiskPatterns::new_with_root(lang, None);
     let pattern_matches = patterns.get_pattern_matches(&content);
 
-    let mut responses: Vec<Response> = pattern_matches
-        .iter()
-        .map(|pattern| response_from_pattern(file_path, &content, pattern, None))
-        .collect();
+    let mut responses: Vec<Response> = Vec::new();
+
+    if let Ok(result) = timeout(
+        Duration::from_secs(240),
+        request_llm_file_analysis(
+            file_path,
+            _model,
+            &content,
+            context,
+            _language,
+            _api_base_url,
+        ),
+    )
+    .await
+    {
+        match result {
+            Ok(llm_response) => {
+                responses.push(llm_response);
+            }
+            Err(err) => {
+                warn!("LLM analysis failed for {}: {}", file_path.display(), err);
+            }
+        }
+    } else {
+        warn!(
+            "LLM analysis timed out for {} after 240 seconds",
+            file_path.display()
+        );
+    }
+
+    for pattern in &pattern_matches {
+        responses.push(response_from_pattern(file_path, &content, pattern, None));
+    }
 
     responses.extend(heuristic_responses(file_path, &content));
 
@@ -507,11 +821,45 @@ pub async fn analyze_pattern(
     let content = fs::read_to_string(file_path)
         .with_context(|| format!("ファイルの読み込みに失敗しました: {}", file_path.display()))?;
 
-    let mut response = response_from_pattern(file_path, &content, pattern_match, None);
-    if response.confidence_score < min_confidence {
+    let mut responses: Vec<Response> = Vec::new();
+
+    if let Ok(result) = timeout(
+        Duration::from_secs(180),
+        request_llm_pattern_analysis(
+            file_path,
+            _model,
+            &content,
+            pattern_match,
+            _language,
+            _api_base_url,
+        ),
+    )
+    .await
+    {
+        match result {
+            Ok(llm_response) => responses.push(llm_response),
+            Err(err) => {
+                warn!(
+                    "LLM pattern analysis failed for {}: {}",
+                    file_path.display(),
+                    err
+                );
+            }
+        }
+    }
+
+    responses.push(response_from_pattern(
+        file_path,
+        &content,
+        pattern_match,
+        None,
+    ));
+
+    let mut merged = merge_responses(responses, file_path, &content);
+    if merged.confidence_score < min_confidence {
         return Ok(None);
     }
 
-    response.sanitize();
-    Ok(Some(response))
+    merged.sanitize();
+    Ok(Some(merged))
 }
