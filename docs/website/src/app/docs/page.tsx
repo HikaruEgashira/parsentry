@@ -44,7 +44,7 @@ cargo run -- --repo owner/repository
 cargo run -- -r /path/to/project --output-dir ./reports --summary
 
 # Specify LLM model
-cargo run -- -r /path/to/project --model gpt-4
+cargo run -- -r /path/to/project --model gpt-5-mini
 
 # Set minimum confidence threshold
 cargo run -- -r /path/to/project --min-confidence 70`}</code>

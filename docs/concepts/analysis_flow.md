@@ -110,7 +110,7 @@ PAR（Principal-Action-Resource）分類systemにより、context収集が最適
 ### モデル選択
 
 サポートされるモデル：
-- OpenAI: gpt-4、gpt-4-turbo、gpt-3.5-turbo
+- OpenAI: gpt-5、gpt-5-mini、gpt-4.1、gpt-4o、gpt-3.5-turbo
 - Anthropic: claude-3-opus、claude-3-sonnet、claude-3-haiku
 - Google: gemini-pro
 - Groq: llama等の高速推論モデル

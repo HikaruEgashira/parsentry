@@ -164,7 +164,7 @@ cargo build
 cargo test
 
 # Test with a sample file
-parsentry -r ./example/<lang>-vulnerable-app --model gpt-4o-mini
+parsentry -r ./example/<lang>-vulnerable-app --model gpt-5-mini
 ```
 
 ## Implementation Checklist

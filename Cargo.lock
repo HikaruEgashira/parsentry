@@ -577,9 +577,9 @@ dependencies = [
 
 [[package]]
 name = "genai"
-version = "0.3.5"
+version = "0.4.0-alpha.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8957a26f596fad1248e60f6cd4c08eecaf1933168ce92f70a97c0d0773334620"
+checksum = "b0b8f050c3d39d5893c99170c70054cbd7138de9b5a42b371c929b02d082a58d"
 dependencies = [
  "bytes",
  "derive_more 2.0.1",
@@ -1300,7 +1300,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "async-trait",

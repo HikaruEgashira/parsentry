@@ -14,7 +14,9 @@ use crate::security_patterns::Language;
 
 fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default().with_response_format(JsonSpec::new("json_object", response_schema)),
+        ChatOptions::default()
+            .with_normalize_reasoning_content(true)
+            .with_response_format(JsonSpec::new("json_object", response_schema)),
     );
 
     let mut client_builder = Client::builder().with_config(client_config);
@@ -387,7 +389,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
     let chat_res = client.exec_chat(model, chat_req, None).await?;
     let content = chat_res
-        .content_text_as_str()
+        .first_text()
         .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
 
     #[derive(Deserialize)]
@@ -569,7 +571,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
     let chat_res = client.exec_chat(model, chat_req, None).await?;
     let content = chat_res
-        .content_text_as_str()
+        .first_text()
         .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
 
     #[derive(Deserialize)]

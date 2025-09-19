@@ -220,7 +220,7 @@ ls -la benchmarks/
 ACCURACY_TEST_SAMPLE_SIZE=5 cargo test accuracy
 
 # 高速モデルの使用
-ACCURACY_TEST_MODEL="gpt-4.1-mini" cargo test accuracy
+ACCURACY_TEST_MODEL="gpt-5-mini" cargo test accuracy
 ```
 
 ## テスト結果の解釈

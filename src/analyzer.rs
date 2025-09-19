@@ -50,6 +50,7 @@ fn save_debug_file(
 fn create_api_client(api_base_url: Option<&str>) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
         ChatOptions::default()
+            .with_normalize_reasoning_content(true)
             .with_response_format(JsonSpec::new("json_object", response_json_schema())),
     );
 
@@ -116,13 +117,18 @@ async fn execute_chat_request(
     .await;
 
     match result {
-        Ok(Ok(chat_res)) => match chat_res.content_text_as_str() {
-            Some(content) => Ok(content.to_string()),
-            None => {
-                error!("Failed to get content text from chat response");
-                Err(anyhow::anyhow!(
-                    "Failed to get content text from chat response"
-                ))
+        Ok(Ok(chat_res)) => {
+            if let Some(reasoning) = chat_res.reasoning_content.as_ref() {
+                debug!("[LLM Reasoning]\n{}", reasoning);
+            }
+            match chat_res.first_text() {
+                Some(content) => Ok(content.to_string()),
+                None => {
+                    error!("Failed to get content text from chat response");
+                    Err(anyhow::anyhow!(
+                        "Failed to get content text from chat response"
+                    ))
+                }
             }
         },
         Ok(Err(e)) => {
