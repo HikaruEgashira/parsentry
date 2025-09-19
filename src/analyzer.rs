@@ -469,9 +469,7 @@ pub async fn analyze_file(
         .map(|pattern| response_from_pattern(file_path, &content, pattern, None))
         .collect();
 
-    if responses.is_empty() {
-        responses.extend(heuristic_responses(file_path, &content));
-    }
+    responses.extend(heuristic_responses(file_path, &content));
 
     if responses.is_empty() {
         return Ok(empty_response(file_path, content));
