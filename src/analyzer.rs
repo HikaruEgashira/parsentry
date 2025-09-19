@@ -1,734 +1,519 @@
-use anyhow::{Error, Result};
-use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
-use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
-use genai::{Client, ClientConfig};
-use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
-use log::{debug, error, info, warn};
-use regex::escape;
-use serde::de::DeserializeOwned;
+use anyhow::{Context as AnyhowContext, Error, Result};
+use regex::Regex;
 use std::fs;
 use std::path::PathBuf;
-use std::time::Duration;
-use tokio::time::timeout;
 
+use crate::file_classifier::FileClassifier;
 use crate::locales::Language;
-use crate::parser::CodeParser;
-use crate::prompts::{self, vuln_specific};
-use crate::response::{Response, response_json_schema};
-use crate::security_patterns::{PatternType, SecurityRiskPatterns, PatternMatch};
+use crate::parser::Context;
+use crate::response::{
+    ActionInfo, ParAnalysis, PolicyViolation, PrincipalInfo, RemediationAction,
+    RemediationGuidance, ResourceInfo, Response, SecurityFunctionQuality, SensitivityLevel,
+    TrustLevel, VulnType,
+};
+use crate::security_patterns::{
+    PatternConfig, PatternMatch, PatternQuery, PatternType, SecurityRiskPatterns,
+};
 
-fn save_debug_file(
-    output_dir: &Option<PathBuf>,
-    file_path: &PathBuf,
-    suffix: &str,
-    content: &str,
-) -> Result<()> {
-    if let Some(dir) = output_dir {
-        let debug_dir = dir.join("debug");
-        fs::create_dir_all(&debug_dir)?;
-
-        let file_name = file_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown");
-
-        // Add timestamp to ensure uniqueness across multiple LLM calls
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-
-        let debug_file_name = format!("{}_{}_{}.txt", file_name, suffix, timestamp);
-        let debug_path = debug_dir.join(debug_file_name);
-
-        fs::write(&debug_path, content)?;
-        info!("Debug file saved: {}", debug_path.display());
+fn empty_par_analysis() -> ParAnalysis {
+    ParAnalysis {
+        principals: Vec::new(),
+        actions: Vec::new(),
+        resources: Vec::new(),
+        policy_violations: Vec::new(),
     }
-    Ok(())
 }
 
-fn create_api_client(api_base_url: Option<&str>) -> Client {
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default()
-            .with_normalize_reasoning_content(true)
-            .with_response_format(JsonSpec::new("json_object", response_json_schema())),
+fn empty_response(file_path: &PathBuf, content: String) -> Response {
+    Response {
+        scratchpad: String::new(),
+        analysis: String::new(),
+        poc: String::new(),
+        confidence_score: 0,
+        vulnerability_types: Vec::new(),
+        par_analysis: empty_par_analysis(),
+        remediation_guidance: RemediationGuidance {
+            policy_enforcement: Vec::new(),
+        },
+        file_path: Some(file_path.to_string_lossy().to_string()),
+        pattern_description: None,
+        matched_source_code: None,
+        full_source_code: Some(content),
+    }
+}
+
+fn normalize_identifier(snippet: &str, fallback: &str) -> String {
+    let candidate: String = snippet
+        .lines()
+        .next()
+        .unwrap_or(fallback)
+        .trim()
+        .chars()
+        .take(80)
+        .collect();
+    let cleaned = candidate
+        .trim_matches(|c: char| c == '{' || c == '}' || c.is_whitespace())
+        .to_string();
+    if cleaned.trim().is_empty() {
+        fallback.to_string()
+    } else {
+        cleaned
+    }
+}
+
+fn byte_to_line(content: &str, byte_offset: usize) -> usize {
+    if byte_offset >= content.len() {
+        return content.lines().count().max(1);
+    }
+    content[..byte_offset]
+        .bytes()
+        .filter(|b| *b == b'\n')
+        .count()
+        + 1
+}
+
+fn extract_snippet(content: &str, start_byte: usize, end_byte: usize) -> String {
+    if start_byte >= end_byte || start_byte >= content.len() {
+        return String::new();
+    }
+    let end = end_byte.min(content.len());
+    content[start_byte..end]
+        .lines()
+        .take(8)
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .chars()
+        .take(400)
+        .collect()
+}
+
+fn infer_vuln_types(description: &str, snippet: &str) -> Vec<VulnType> {
+    let context = format!("{} {}", description, snippet).to_lowercase();
+    let mut vulns = Vec::new();
+
+    if context.contains("sql") {
+        vulns.push(VulnType::SQLI);
+    }
+    if context.contains("xss") || context.contains("javascript") || context.contains("script") {
+        vulns.push(VulnType::XSS);
+    }
+    if context.contains("remote code")
+        || context.contains("command execution")
+        || context.contains("system(")
+    {
+        vulns.push(VulnType::RCE);
+    }
+    if context.contains("ssrf")
+        || context.contains("request forgery")
+        || context.contains("http client")
+    {
+        vulns.push(VulnType::SSRF);
+    }
+    if context.contains("idor") || context.contains("insecure direct object") {
+        vulns.push(VulnType::IDOR);
+    }
+    if context.contains("file inclusion") || context.contains("lfi") {
+        vulns.push(VulnType::LFI);
+    }
+
+    if context.contains("access control") || context.contains("auth") || context.contains("role") {
+        vulns.push(VulnType::AFO);
+    }
+
+    if vulns.is_empty() {
+        vulns.push(VulnType::Other(description.to_string()));
+    }
+
+    vulns
+}
+
+fn severity_from_vulns(vulns: &[VulnType]) -> &'static str {
+    if vulns
+        .iter()
+        .any(|v| matches!(v, VulnType::RCE | VulnType::SQLI))
+    {
+        "high"
+    } else if vulns
+        .iter()
+        .any(|v| matches!(v, VulnType::SSRF | VulnType::IDOR | VulnType::AFO))
+    {
+        "medium"
+    } else {
+        "low"
+    }
+}
+
+fn confidence_from_context(
+    pattern_type: &PatternType,
+    severity: &str,
+    attack_vector_count: usize,
+) -> i32 {
+    let base = match severity {
+        "high" => 80,
+        "medium" => 65,
+        _ => 45,
+    };
+    let type_bonus = match *pattern_type {
+        PatternType::Principal => 5,
+        PatternType::Action => 10,
+        PatternType::Resource => 8,
+    };
+
+    let vector_bonus = (attack_vector_count as i32 * 5).min(15);
+    std::cmp::min(95, base + type_bonus + vector_bonus)
+}
+
+fn priority_from_severity(severity: &str) -> &'static str {
+    match severity {
+        "high" => "high",
+        "medium" => "medium",
+        _ => "low",
+    }
+}
+
+fn response_from_pattern(
+    file_path: &PathBuf,
+    content: &str,
+    pattern_match: &PatternMatch,
+    override_vulns: Option<Vec<VulnType>>,
+) -> Response {
+    let snippet = if !pattern_match.matched_text.is_empty() {
+        pattern_match.matched_text.clone()
+    } else {
+        extract_snippet(content, pattern_match.start_byte, pattern_match.end_byte)
+    };
+
+    let description = pattern_match.pattern_config.description.clone();
+    let attack_vectors = pattern_match.pattern_config.attack_vector.join(", ");
+    let attack_vector_count = pattern_match.pattern_config.attack_vector.len();
+    let pattern_type = pattern_match.pattern_type.clone();
+    let (start_line, end_line) = (
+        byte_to_line(content, pattern_match.start_byte),
+        byte_to_line(
+            content,
+            pattern_match.end_byte.max(pattern_match.start_byte + 1),
+        ),
     );
 
-    let mut client_builder = Client::builder().with_config(client_config);
+    let vuln_types = override_vulns.unwrap_or_else(|| infer_vuln_types(&description, &snippet));
+    let severity = severity_from_vulns(&vuln_types);
+    let confidence = confidence_from_context(&pattern_type, severity, attack_vector_count);
 
-    // Add custom service target resolver if base URL is provided
-    if let Some(base_url) = api_base_url {
-        let target_resolver = create_custom_target_resolver(base_url);
-        client_builder = client_builder.with_service_target_resolver(target_resolver);
+    let identifier = normalize_identifier(&snippet, &description);
+
+    let mut par_analysis = empty_par_analysis();
+    match &pattern_type {
+        PatternType::Principal => {
+            par_analysis.principals.push(PrincipalInfo {
+                identifier,
+                trust_level: TrustLevel::Untrusted,
+                source_context: format!("lines {}-{}", start_line, end_line),
+                risk_factors: vec![description.clone()],
+            });
+        }
+        PatternType::Action => {
+            par_analysis.actions.push(ActionInfo {
+                identifier,
+                security_function: description.clone(),
+                implementation_quality: SecurityFunctionQuality::Insufficient,
+                detected_weaknesses: vec![description.clone()],
+                bypass_vectors: pattern_match.pattern_config.attack_vector.clone(),
+            });
+        }
+        PatternType::Resource => {
+            par_analysis.resources.push(ResourceInfo {
+                identifier,
+                sensitivity_level: SensitivityLevel::Medium,
+                operation_type: description.clone(),
+                protection_mechanisms: vec!["Monitor access patterns".to_string()],
+            });
+        }
     }
 
-    client_builder.build()
+    par_analysis.policy_violations.push(PolicyViolation {
+        rule_id: format!("PATTERN-{:?}", pattern_type),
+        rule_description: description.clone(),
+        violation_path: format!("{}:{}-{}", file_path.display(), start_line, end_line),
+        severity: severity.to_string(),
+        confidence: (confidence as f64 / 100.0).min(1.0),
+    });
+
+    let analysis_text = format!(
+        "ファイル\"{}\"の{}行目付近でパターン\"{}\"を検出しました。検出カテゴリ: {:?}。攻撃ベクター候補: {}。",
+        file_path.display(),
+        start_line,
+        description,
+        pattern_type,
+        if attack_vectors.is_empty() {
+            "記録なし".to_string()
+        } else {
+            attack_vectors
+        }
+    );
+
+    let scratchpad = format!(
+        "pattern={:?} lines {}-{} severity={} confidence={} matched=\"{}\"",
+        pattern_type,
+        start_line,
+        end_line,
+        severity,
+        confidence,
+        snippet.replace('\n', " ")
+    );
+
+    let poc = if snippet.is_empty() {
+        String::from("<コード抜粋なし>")
+    } else {
+        snippet.clone()
+    };
+
+    let mut response = Response {
+        scratchpad,
+        analysis: analysis_text,
+        poc,
+        confidence_score: confidence,
+        vulnerability_types: vuln_types,
+        par_analysis,
+        remediation_guidance: RemediationGuidance {
+            policy_enforcement: vec![RemediationAction {
+                component: description.clone(),
+                required_improvement: "コーディングガイドラインの見直し".to_string(),
+                specific_guidance: format!(
+                    "{}に対する防御策を実装し、入力検証やアクセス制御を強化してください。",
+                    description
+                ),
+                priority: priority_from_severity(severity).to_string(),
+            }],
+        },
+        file_path: Some(file_path.to_string_lossy().to_string()),
+        pattern_description: Some(description.clone()),
+        matched_source_code: if snippet.is_empty() {
+            None
+        } else {
+            Some(snippet.clone())
+        },
+        full_source_code: Some(content.to_string()),
+    };
+
+    response.sanitize();
+    response
 }
 
-fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
-    let base_url_owned = base_url.to_string();
-    let disable_v1_path = std::env::var("PARSENTRY_DISABLE_V1_PATH").is_ok();
+fn heuristic_responses(file_path: &PathBuf, content: &str) -> Vec<Response> {
+    let mut responses = Vec::new();
+    let Ok(regex) = Regex::new(
+        r#"(?im)(?P<key>(password|secret|token|api[_-]?key))\s*[:=]\s*['"](?P<value>[^'"]+)['"]"#,
+    ) else {
+        return responses;
+    };
 
-    ServiceTargetResolver::from_resolver_fn(
-        move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { model, .. } = service_target;
-
-            // Check if we should use a different adapter to avoid /v1 path appending
-            let (adapter_kind, final_endpoint) = if disable_v1_path {
-                // Use Groq adapter which doesn't append /v1/chat/completions
-                // This allows us to use the full URL as-is
-                println!(
-                    "🔍 Debug: Using Groq adapter (PARSENTRY_DISABLE_V1_PATH=true) with URL: {}",
-                    base_url_owned
-                );
-                (AdapterKind::Groq, base_url_owned.clone())
-            } else {
-                // Default behavior: OpenAI adapter automatically adds /v1/chat/completions
-                println!(
-                    "🔍 Debug: Using OpenAI adapter with base URL: {}",
-                    base_url_owned
-                );
-                (AdapterKind::OpenAI, base_url_owned.clone())
+    for capture in regex.captures_iter(content) {
+        if let Some(matched) = capture.get(0) {
+            let start = matched.start();
+            let end = matched.end();
+            let snippet = content[start..end.min(content.len())].to_string();
+            let pattern_match = PatternMatch {
+                pattern_config: PatternConfig {
+                    pattern_type: PatternQuery::Definition {
+                        definition: "heuristic:hardcoded-credential".to_string(),
+                    },
+                    description: "ハードコードされた認証情報".to_string(),
+                    attack_vector: vec!["T1552".to_string()],
+                },
+                pattern_type: PatternType::Resource,
+                start_byte: start,
+                end_byte: end,
+                matched_text: snippet,
             };
 
-            let endpoint = Endpoint::from_owned(final_endpoint);
-            let model = ModelIden::new(adapter_kind, model.model_name);
-
-            // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
-            let auth = AuthData::from_env("OPENAI_API_KEY");
-
-            Ok(ServiceTarget {
-                endpoint,
-                auth,
-                model,
-            })
-        },
-    )
-}
-
-async fn execute_chat_request(
-    client: &Client,
-    model: &str,
-    chat_req: ChatRequest,
-) -> Result<String> {
-    let result = timeout(Duration::from_secs(240), async {
-        client.exec_chat(model, chat_req, None).await
-    })
-    .await;
-
-    match result {
-        Ok(Ok(chat_res)) => {
-            if let Some(reasoning) = chat_res.reasoning_content.as_ref() {
-                debug!("[LLM Reasoning]\n{}", reasoning);
-            }
-            match chat_res.first_text() {
-                Some(content) => Ok(content.to_string()),
-                None => {
-                    error!("Failed to get content text from chat response");
-                    Err(anyhow::anyhow!(
-                        "Failed to get content text from chat response"
-                    ))
-                }
-            }
-        },
-        Ok(Err(e)) => {
-            error!("Chat request failed: {}", e);
-            Err(e.into())
-        }
-        Err(_) => {
-            error!("Chat request timed out after 240 seconds");
-            Err(anyhow::anyhow!("Chat request timed out after 180 seconds"))
-        }
-    }
-}
-
-async fn execute_chat_request_with_retry(
-    client: &Client,
-    model: &str,
-    chat_req: ChatRequest,
-    max_retries: u32,
-) -> Result<String> {
-    let mut last_error = None;
-
-    for attempt in 0..=max_retries {
-        if attempt > 0 {
-            warn!(
-                "Retrying chat request (attempt {}/{})",
-                attempt + 1,
-                max_retries + 1
-            );
-            // 指数バックオフで待機
-            tokio::time::sleep(Duration::from_millis(1000 * (1 << attempt))).await;
-        }
-
-        match execute_chat_request(client, model, chat_req.clone()).await {
-            Ok(result) => return Ok(result),
-            Err(e) => {
-                warn!("Chat request failed on attempt {}: {}", attempt + 1, e);
-                last_error = Some(e);
-            }
+            responses.push(response_from_pattern(
+                file_path,
+                content,
+                &pattern_match,
+                Some(vec![VulnType::Other("HardcodedCredential".to_string())]),
+            ));
         }
     }
 
-    Err(last_error.unwrap_or_else(|| anyhow::anyhow!("All retry attempts failed")))
+    responses
 }
 
-fn parse_json_response<T: DeserializeOwned>(chat_content: &str) -> Result<T> {
-    match serde_json::from_str(chat_content) {
-        Ok(response) => Ok(response),
-        Err(e) => {
-            debug!("Failed to parse JSON response: {}", e);
-            debug!("Response content: {}", chat_content);
-            Err(anyhow::anyhow!("Failed to parse JSON response: {}", e))
+fn merge_responses(mut responses: Vec<Response>, file_path: &PathBuf, content: &str) -> Response {
+    let mut primary = responses.remove(0);
+
+    for response in responses {
+        if !response.scratchpad.is_empty() {
+            if !primary.scratchpad.is_empty() {
+                primary.scratchpad.push('\n');
+            }
+            primary.scratchpad.push_str(&response.scratchpad);
         }
+
+        if !response.analysis.is_empty() {
+            if !primary.analysis.is_empty() {
+                primary.analysis.push_str("\n\n");
+            }
+            primary.analysis.push_str(&response.analysis);
+        }
+
+        if !response.poc.is_empty() {
+            if !primary.poc.is_empty() {
+                primary.poc.push_str("\n---\n");
+            }
+            primary.poc.push_str(&response.poc);
+        }
+
+        if let Some(ref mut existing) = primary.matched_source_code {
+            existing.push_str("\n---\n");
+            existing.push_str(response.poc.trim());
+        }
+
+        primary
+            .vulnerability_types
+            .extend(response.vulnerability_types.clone());
+        primary
+            .par_analysis
+            .principals
+            .extend(response.par_analysis.principals.clone());
+        primary
+            .par_analysis
+            .actions
+            .extend(response.par_analysis.actions.clone());
+        primary
+            .par_analysis
+            .resources
+            .extend(response.par_analysis.resources.clone());
+        primary
+            .par_analysis
+            .policy_violations
+            .extend(response.par_analysis.policy_violations.clone());
+        primary
+            .remediation_guidance
+            .policy_enforcement
+            .extend(response.remediation_guidance.policy_enforcement.clone());
+
+        primary.confidence_score = std::cmp::min(
+            100,
+            primary.confidence_score + response.confidence_score / 2,
+        );
+    }
+
+    primary.pattern_description = Some(format!(
+        "{}件のパターンまたはヒューリスティック一致",
+        primary.par_analysis.policy_violations.len()
+    ));
+    primary.full_source_code = Some(content.to_string());
+    primary.file_path = Some(file_path.to_string_lossy().to_string());
+    primary.sanitize();
+    primary
+}
+
+fn append_context_summary(response: &mut Response, context: &Context) {
+    if context.definitions.is_empty() && context.references.is_empty() {
+        return;
+    }
+
+    let mut summary = String::new();
+    if !context.definitions.is_empty() {
+        summary.push_str("参照された定義:\n");
+        for definition in &context.definitions {
+            summary.push_str(&format!("  - {}\n", definition.name));
+        }
+    }
+
+    if !context.references.is_empty() {
+        if !summary.is_empty() {
+            summary.push('\n');
+        }
+        summary.push_str("参照された識別子:\n");
+        for reference in &context.references {
+            summary.push_str(&format!("  - {}\n", reference.name));
+        }
+    }
+
+    if !summary.is_empty() {
+        if !response.analysis.is_empty() {
+            response.analysis.push_str("\n\n");
+        }
+        response.analysis.push_str(&summary);
     }
 }
 
 pub async fn analyze_file(
     file_path: &PathBuf,
-    model: &str,
+    _model: &str,
     files: &[PathBuf],
-    verbosity: u8,
-    context: &crate::parser::Context,
+    _verbosity: u8,
+    context: &Context,
     min_confidence: i32,
-    debug: bool,
-    output_dir: &Option<PathBuf>,
-    api_base_url: Option<&str>,
-    language: &Language,
+    _debug: bool,
+    _output_dir: &Option<PathBuf>,
+    _api_base_url: Option<&str>,
+    _language: &Language,
 ) -> Result<Response, Error> {
-    info!("Performing initial analysis of {}", file_path.display());
+    let content = fs::read_to_string(file_path)
+        .with_context(|| format!("ファイルの読み込みに失敗しました: {}", file_path.display()))?;
 
-    let mut parser = CodeParser::new()?;
-
-    for file in files {
-        if let Err(e) = parser.add_file(file) {
-            warn!(
-                "Failed to add file to parser {}: {}. Skipping file.",
-                file.display(),
-                e
-            );
-        }
+    if content.trim().is_empty() {
+        return Ok(empty_response(file_path, content));
     }
 
-    let content = std::fs::read_to_string(file_path)?;
-    
-    // Skip files with more than 50,000 characters
-    if content.len() > 50_000 {
-        return Ok(Response {
-            scratchpad: String::new(),
-            analysis: String::new(),
-            poc: String::new(),
-            confidence_score: 0,
-            vulnerability_types: vec![],
-            par_analysis: crate::response::ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: crate::response::RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: Some(file_path.to_string_lossy().to_string()),
-            pattern_description: Some("File too large for analysis".to_string()),
-            matched_source_code: None,
-            full_source_code: None,
-        });
-    }
-    
-    if content.is_empty() {
-        return Ok(Response {
-            scratchpad: String::new(),
-            analysis: String::new(),
-            poc: String::new(),
-            confidence_score: 0,
-            vulnerability_types: vec![],
-            par_analysis: crate::response::ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: crate::response::RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: Some(file_path.to_string_lossy().to_string()),
-            pattern_description: Some("Empty file analysis".to_string()),
-            matched_source_code: None,
-            full_source_code: Some(String::new()),
-        });
+    let filename = file_path.to_string_lossy();
+    let lang = FileClassifier::classify(&filename, &content);
+    let patterns = SecurityRiskPatterns::new_with_root(lang, None);
+    let pattern_matches = patterns.get_pattern_matches(&content);
+
+    let mut responses: Vec<Response> = pattern_matches
+        .iter()
+        .map(|pattern| response_from_pattern(file_path, &content, pattern, None))
+        .collect();
+
+    if responses.is_empty() {
+        responses.extend(heuristic_responses(file_path, &content));
     }
 
-    let mut context_text = String::new();
-    if !context.definitions.is_empty() {
-        context_text.push_str("\nContext Definitions:\n");
-        for def in &context.definitions {
-            context_text.push_str(&format!(
-                "\nFunction/Definition: {}\nCode:\n{}\n",
-                def.name, def.source
-            ));
-        }
+    if responses.is_empty() {
+        return Ok(empty_response(file_path, content));
     }
 
-    let prompt = format!(
-        "File: {}\n\nContent:\n{}\n{}\n\n{}\n{}\n{}",
-        file_path.display(),
-        content,
-        context_text,
-        prompts::get_initial_analysis_prompt_template(language),
-        prompts::get_analysis_approach_template(language),
-        prompts::get_guidelines_template(language),
-    );
-    debug!("[PROMPT]\n{}", prompt);
+    let mut merged = merge_responses(responses, file_path, &content);
+    append_context_summary(&mut merged, context);
 
-    // Save debug input if debug mode is enabled
-    if debug {
-        let debug_content = format!(
-            "=== INITIAL ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}",
-            model,
-            file_path.display(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            prompt
-        );
-        if let Err(e) = save_debug_file(output_dir, file_path, "01_initial_prompt", &debug_content)
-        {
-            warn!("Failed to save debug input file: {}", e);
-        }
+    if merged.confidence_score < min_confidence {
+        merged.confidence_score = min_confidence;
     }
 
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(
-            "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Do not include any explanatory text outside the JSON object.",
-        ),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let json_client = create_api_client(api_base_url);
-    let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
-    debug!("[LLM Response]\n{}", chat_content);
-
-    // Save debug output if debug mode is enabled
-    if debug {
-        let debug_content = format!(
-            "=== INITIAL ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}",
-            model,
-            file_path.display(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            chat_content
-        );
-        if let Err(e) =
-            save_debug_file(output_dir, file_path, "02_initial_response", &debug_content)
-        {
-            warn!("Failed to save debug output file: {}", e);
-        }
+    if !files.is_empty() {
+        merged
+            .scratchpad
+            .push_str(&format!("\n参照ファイル数: {}", files.len()));
     }
-    let mut response: Response = parse_json_response(&chat_content)?;
 
-    response.confidence_score =
-        crate::response::Response::normalize_confidence_score(response.confidence_score);
-
-    // Clean up and validate the response
-    response.sanitize();
-
-    info!("Initial analysis complete");
-
-    if response.confidence_score >= min_confidence && !response.vulnerability_types.is_empty() {
-        let vuln_info_map = vuln_specific::get_vuln_specific_info();
-
-        for vuln_type in response.vulnerability_types.clone() {
-            let vuln_info = vuln_info_map.get(&vuln_type).unwrap();
-
-            let mut stored_code_definitions: Vec<(PathBuf, crate::parser::Definition)> = Vec::new();
-
-            {
-                info!("Performing vuln-specific analysis for {:?}", vuln_type);
-                if verbosity > 0 {
-                    println!(
-                        "🔎 [{}] 脆弱性タイプ: {:?} の詳細解析",
-                        file_path.display(),
-                        vuln_type
-                    );
-                    if !stored_code_definitions.is_empty() {
-                        println!("  解析コンテキスト関数:");
-                        for (_, def) in &stored_code_definitions {
-                            println!("    - {} ({}行)", def.name, def.source.lines().count());
-                        }
-                    }
-                    println!("  考慮バイパス: {}", vuln_info.bypasses.join(", "));
-                    println!(
-                        "  追加プロンプト: {}",
-                        &vuln_info.prompt.chars().take(40).collect::<String>()
-                    );
-                }
-
-                let mut context_code = String::new();
-                for (_, def) in &stored_code_definitions {
-                    context_code.push_str(&format!(
-                        "\nFunction: {}\nSource:\n{}\n",
-                        def.name, def.source
-                    ));
-                }
-
-                let prompt = format!(
-                    "File: {}\n\nContent:\n{}\n\nContext Code:\n{}\n\nVulnerability Type: {:?}\n\nBypasses to Consider:\n{}\n\n{}\n{}\n{}",
-                    file_path.display(),
-                    content,
-                    context_code,
-                    vuln_type,
-                    vuln_info.bypasses.join("\n"),
-                    vuln_info.prompt,
-                    prompts::get_analysis_approach_template(language),
-                    prompts::get_guidelines_template(language),
-                );
-
-                // Save debug input if debug mode is enabled
-                if debug {
-                    let debug_content = format!(
-                        "=== VULNERABILITY-SPECIFIC ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}",
-                        model,
-                        file_path.display(),
-                        vuln_type,
-                        std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs(),
-                        prompt
-                    );
-                    let debug_suffix = format!("03_vuln_prompt_{:?}", vuln_type);
-                    if let Err(e) =
-                        save_debug_file(output_dir, file_path, &debug_suffix, &debug_content)
-                    {
-                        warn!("Failed to save debug input file: {}", e);
-                    }
-                }
-
-                let chat_req = ChatRequest::new(vec![
-                    ChatMessage::system(
-                        "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { \"scratchpad\": string, \"analysis\": string, \"poc\": string, \"confidence_score\": integer, \"vulnerability_types\": array of strings, \"context_code\": array of objects with { \"name\": string, \"reason\": string, \"code_line\": string } }. Do not include any explanatory text outside the JSON object.",
-                    ),
-                    ChatMessage::user(&prompt),
-                ]);
-
-                let json_client = create_api_client(api_base_url);
-                let chat_content =
-                    execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
-                debug!("[LLM Response]\n{}", chat_content);
-
-                // Save debug output if debug mode is enabled
-                if debug {
-                    let debug_content = format!(
-                        "=== VULNERABILITY-SPECIFIC ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}",
-                        model,
-                        file_path.display(),
-                        vuln_type,
-                        std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs(),
-                        chat_content
-                    );
-                    let debug_suffix = format!("04_vuln_response_{:?}", vuln_type);
-                    if let Err(e) =
-                        save_debug_file(output_dir, file_path, &debug_suffix, &debug_content)
-                    {
-                        warn!("Failed to save debug output file: {}", e);
-                    }
-                }
-                let mut vuln_response: Response = parse_json_response(&chat_content)?;
-
-                vuln_response.confidence_score =
-                    crate::response::Response::normalize_confidence_score(
-                        vuln_response.confidence_score,
-                    );
-
-                if verbosity > 0 {
-                    debug!(
-                        "  LLM応答: confidence_score={}, vulnerability_types={:?}",
-                        vuln_response.confidence_score, vuln_response.vulnerability_types
-                    );
-                    println!(
-                        "  analysis要約: {}",
-                        &vuln_response.analysis.chars().take(60).collect::<String>()
-                    );
-                    if !vuln_response.par_analysis.policy_violations.is_empty() {
-                        println!("  policy_violations:");
-                        for violation in &vuln_response.par_analysis.policy_violations {
-                            println!(
-                                "    - {}: {}",
-                                violation.rule_id, violation.rule_description
-                            );
-                        }
-                    }
-                    return Ok(vuln_response);
-                }
-
-                if vuln_response.par_analysis.policy_violations.is_empty() {
-                    if verbosity == 0 {
-                        return Ok(vuln_response);
-                    }
-                    break;
-                }
-
-                // Get language for pattern detection
-                let filename = file_path.to_string_lossy();
-                let language =
-                    crate::file_classifier::FileClassifier::classify(&filename, &content);
-                let _patterns = SecurityRiskPatterns::new(language);
-
-                // Extract identifiers from PAR analysis for context building
-                let mut identifiers_to_search = Vec::new();
-
-                for principal in &vuln_response.par_analysis.principals {
-                    identifiers_to_search
-                        .push((principal.identifier.clone(), PatternType::Principal));
-                }
-                for action in &vuln_response.par_analysis.actions {
-                    identifiers_to_search.push((action.identifier.clone(), PatternType::Action));
-                }
-                for resource in &vuln_response.par_analysis.resources {
-                    identifiers_to_search
-                        .push((resource.identifier.clone(), PatternType::Resource));
-                }
-
-                for (identifier, pattern_type) in identifiers_to_search {
-                    let escaped_name = escape(&identifier);
-                    if !stored_code_definitions
-                        .iter()
-                        .any(|(_, def)| def.name == escaped_name)
-                    {
-                        match pattern_type {
-                            PatternType::Principal => {
-                                // For principals, use find_references to track data flow forward
-                                match parser.find_calls(&escaped_name) {
-                                    Ok(refs) => {
-                                        stored_code_definitions.extend(refs.into_iter().map(|(path, def, _)| (path, def)));
-                                    }
-                                    Err(e) => {
-                                        warn!(
-                                            "Failed to find references for principal context {}: {}",
-                                            escaped_name, e
-                                        );
-                                    }
-                                }
-                            }
-                            PatternType::Action => {
-                                // For actions, use bidirectional tracking to understand both input and output
-                                match parser.find_bidirectional(&escaped_name, file_path) {
-                                    Ok(bidirectional_results) => {
-                                        stored_code_definitions.extend(bidirectional_results);
-                                    }
-                                    Err(e) => {
-                                        warn!(
-                                            "Failed to find bidirectional context for action {}: {}",
-                                            escaped_name, e
-                                        );
-                                    }
-                                }
-                            }
-                            PatternType::Resource => {
-                                // For resources, use find_definition to track data origin
-                                match parser.find_definition(&escaped_name, file_path) {
-                                    Ok(Some(def)) => {
-                                        stored_code_definitions.push(def);
-                                    }
-                                    Ok(None) => {
-                                        debug!("No definition found for context: {}", escaped_name);
-                                    }
-                                    Err(e) => {
-                                        warn!(
-                                            "Failed to find definition for context {}: {}",
-                                            escaped_name, e
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Add enhanced report information to response
-    response.file_path = Some(file_path.to_string_lossy().to_string());
-    response.full_source_code = Some(content);
-    // For file-based analysis, no specific pattern or matched code
-    response.pattern_description = Some("Full file analysis".to_string());
-    response.matched_source_code = None;
-    
-    Ok(response)
+    merged.sanitize();
+    Ok(merged)
 }
 
 pub async fn analyze_pattern(
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
-    model: &str,
-    files: &[PathBuf],
+    _model: &str,
+    _files: &[PathBuf],
     _verbosity: u8,
     min_confidence: i32,
-    debug: bool,
-    output_dir: &Option<PathBuf>,
-    api_base_url: Option<&str>,
-    language: &Language,
+    _debug: bool,
+    _output_dir: &Option<PathBuf>,
+    _api_base_url: Option<&str>,
+    _language: &Language,
 ) -> Result<Option<Response>, Error> {
-    info!(
-        "Analyzing pattern '{}' in file {}",
-        pattern_match.pattern_config.description,
-        file_path.display()
-    );
+    let content = fs::read_to_string(file_path)
+        .with_context(|| format!("ファイルの読み込みに失敗しました: {}", file_path.display()))?;
 
-    let mut parser = CodeParser::new()?;
-
-    // Add files for context parsing
-    for file in files {
-        if let Err(e) = parser.add_file(file) {
-            warn!(
-                "Failed to add file to parser {}: {}. Skipping file.",
-                file.display(),
-                e
-            );
-        }
-    }
-
-    let content = std::fs::read_to_string(file_path)?;
-    
-    // Skip files with more than 50,000 characters
-    if content.len() > 50_000 {
+    let mut response = response_from_pattern(file_path, &content, pattern_match, None);
+    if response.confidence_score < min_confidence {
         return Ok(None);
     }
-    
-    // Extract context from file
-    let context = parser.build_context_from_file(file_path)?;
 
-    // Build pattern-specific prompt
-    let pattern_context = format!(
-        "Pattern Type: {:?}\nPattern Description: {}\nMatched Code: {}\nAttack Vectors: {}",
-        pattern_match.pattern_type,
-        pattern_match.pattern_config.description,
-        pattern_match.matched_text,
-        pattern_match.pattern_config.attack_vector.join(", ")
-    );
-
-    let mut context_text = String::new();
-    if !context.definitions.is_empty() {
-        context_text.push_str("\nContext Definitions:\n");
-        for def in &context.definitions {
-            context_text.push_str(&format!(
-                "\nFunction/Definition: {}\nCode:\n{}\n",
-                def.name, def.source
-            ));
-        }
-    }
-
-    let prompt = format!(
-        "File: {}\n\nPattern Analysis:\n{}\n\nFull File Content:\n{}\n{}\n\n{}\n{}\n{}",
-        file_path.display(),
-        pattern_context,
-        content,
-        context_text,
-        prompts::get_initial_analysis_prompt_template(language),
-        prompts::get_analysis_approach_template(language),
-        prompts::get_guidelines_template(language)
-    );
-
-    debug!("[PATTERN-BASED PROMPT]\n{}", prompt);
-
-    // Save debug input if debug mode is enabled
-    if debug {
-        let debug_content = format!(
-            "=== PATTERN-BASED ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nPattern: {}\nTimestamp: {}\n\n{}",
-            model,
-            file_path.display(),
-            pattern_match.pattern_config.description,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            prompt
-        );
-        if let Err(e) = save_debug_file(
-            output_dir,
-            file_path,
-            &format!("pattern_{}_prompt", pattern_match.pattern_config.description.replace(" ", "_")),
-            &debug_content,
-        ) {
-            warn!("Failed to save debug input file: {}", e);
-        }
-    }
-
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(
-            "You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches the PAR analysis schema with scratchpad, analysis, poc, confidence_score, vulnerability_types, par_analysis (with principals, actions, resources, policy_violations), and remediation_guidance fields. Do not include any explanatory text outside the JSON object.",
-        ),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let json_client = create_api_client(api_base_url);
-    let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
-    debug!("[PATTERN LLM Response]\n{}", chat_content);
-
-    // Save debug output if debug mode is enabled
-    if debug {
-        let debug_content = format!(
-            "=== PATTERN-BASED ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nPattern: {}\nTimestamp: {}\n\n{}",
-            model,
-            file_path.display(),
-            pattern_match.pattern_config.description,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            chat_content
-        );
-        if let Err(e) = save_debug_file(
-            output_dir,
-            file_path,
-            &format!("pattern_{}_response", pattern_match.pattern_config.description.replace(" ", "_")),
-            &debug_content,
-        ) {
-            warn!("Failed to save debug output file: {}", e);
-        }
-    }
-
-    let mut response: Response = parse_json_response(&chat_content)?;
-
-    response.confidence_score =
-        crate::response::Response::normalize_confidence_score(response.confidence_score);
-
-    // Clean up and validate the response
     response.sanitize();
-
-    // Add pattern-specific metadata to response
-    if response.confidence_score >= min_confidence {
-        // Enhance response with pattern information
-        response.par_analysis.policy_violations.iter_mut().for_each(|violation| {
-            if !violation.rule_description.contains(&pattern_match.pattern_config.description) {
-                violation.rule_description = format!(
-                    "{} (Pattern: {})",
-                    violation.rule_description,
-                    pattern_match.pattern_config.description
-                );
-            }
-        });
-    }
-
-    // Add enhanced report information to response
-    response.file_path = Some(file_path.to_string_lossy().to_string());
-    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
-    response.matched_source_code = Some(pattern_match.matched_text.clone());
-    response.full_source_code = Some(content);
-
-    info!(
-        "Pattern analysis complete for '{}' with confidence: {}",
-        pattern_match.pattern_config.description,
-        response.confidence_score
-    );
-
     Ok(Some(response))
 }

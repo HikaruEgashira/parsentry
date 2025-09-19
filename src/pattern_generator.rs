@@ -1,758 +1,182 @@
 use anyhow::Result;
-use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
-use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
-use genai::{Client, ClientConfig};
-use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-#[allow(unused_imports)]
+use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::parser::Definition;
+use crate::file_classifier::FileClassifier;
+use crate::parser::CodeParser;
 use crate::repo::RepoOps;
 use crate::security_patterns::Language;
 
-fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default()
-            .with_normalize_reasoning_content(true)
-            .with_response_format(JsonSpec::new("json_object", response_schema)),
-    );
-
-    let mut client_builder = Client::builder().with_config(client_config);
-
-    // Add custom service target resolver if base URL is provided
-    if let Some(base_url) = api_base_url {
-        let target_resolver = create_pattern_target_resolver(base_url);
-        client_builder = client_builder.with_service_target_resolver(target_resolver);
-    }
-
-    client_builder.build()
+#[derive(Default)]
+struct LanguageStats {
+    definition_count: usize,
+    reference_count: usize,
+    files: usize,
 }
 
-fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
-    let base_url_owned = base_url.to_string();
-
-    ServiceTargetResolver::from_resolver_fn(
-        move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { model, .. } = service_target;
-
-            // Use the custom base URL and force OpenAI adapter for compatibility
-            let endpoint = Endpoint::from_owned(base_url_owned.clone());
-
-            // When using custom base URL, assume OpenAI-compatible API
-            let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-
-            // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
-            let auth = AuthData::from_env("OPENAI_API_KEY");
-            Ok(ServiceTarget {
-                endpoint,
-                auth,
-                model,
-            })
-        },
-    )
+fn max_lines_allowed() -> usize {
+    1_000
 }
 
-fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
-    let mut filtered_files = Vec::new();
-
-    for file_path in files {
-        match std::fs::read_to_string(file_path) {
-            Ok(content) => {
-                let line_count = content.lines().count();
-                if line_count <= max_lines {
-                    filtered_files.push(file_path.clone());
-                }
-            }
-            Err(e) => {
-                eprintln!("⚠️  ファイル読み込みエラー: {}: {}", file_path.display(), e);
-                // Skip files that can't be read
-                continue;
-            }
-        }
-    }
-
-    Ok(filtered_files)
+fn count_lines(path: &Path) -> usize {
+    fs::read_to_string(path)
+        .map(|content| content.lines().count())
+        .unwrap_or_default()
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PatternClassification {
-    pub function_name: String,
-    pub pattern_type: Option<String>,
-    pub query_type: String, // "definition" or "reference"
-    pub query: String,      // tree-sitter query instead of regex pattern
-    pub description: String,
-    pub reasoning: String,
-    pub attack_vector: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct PatternAnalysisResponse {
-    patterns: Vec<PatternClassification>,
-}
-
-pub async fn generate_custom_patterns(
-    root_dir: &Path,
-    model: &str,
-    api_base_url: Option<&str>,
-) -> Result<()> {
-    generate_custom_patterns_impl(root_dir, model, 4, api_base_url).await
-}
-
-async fn generate_custom_patterns_impl(
-    root_dir: &Path,
-    model: &str,
-    _max_parallel: usize,
-    api_base_url: Option<&str>,
-) -> Result<()> {
-    println!(
-        "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
-        root_dir.display()
-    );
-
-    let repo = RepoOps::new(root_dir.to_path_buf());
-    let files = repo.get_files_to_analyze(None)?;
-
-    println!("📁 検出されたファイル数: {}", files.len());
-
-    let max_lines = 1000;
-    let filtered_files = filter_files_by_size(&files, max_lines)?;
-    let skipped_count = files.len() - filtered_files.len();
-
-    if skipped_count > 0 {
-        println!(
-            "⚠️  {}行を超える大きなファイル{}個をスキップしました",
-            max_lines, skipped_count
-        );
-    }
-
-    println!("📁 解析対象ファイル数: {}", filtered_files.len());
-
-    let mut all_definitions: Vec<(Definition, Language)> = Vec::new();
-    let mut all_references: Vec<(Definition, Language)> = Vec::new();
-    let mut languages_found = HashMap::new();
-    let mut seen_names = std::collections::HashSet::new();
-
-    for file_path in &filtered_files {
-        let mut parser = crate::parser::CodeParser::new()?;
-        if let Err(e) = parser.add_file(file_path) {
-            eprintln!(
-                "⚠️  ファイルのパース追加に失敗: {}: {}",
-                file_path.display(),
-                e
-            );
-            continue;
-        }
-
-        match parser.build_context_from_file(file_path) {
-            Ok(context) => {
-                let filename = file_path.to_string_lossy();
-                let content = std::fs::read_to_string(file_path).unwrap_or_default();
-                let language =
-                    crate::file_classifier::FileClassifier::classify(&filename, &content);
-                languages_found.insert(language, true);
-
-                println!(
-                    "📄 {} (言語: {:?}) から {}個のdefinitions、{}個のreferencesを検出",
-                    file_path.display(),
-                    language,
-                    context.definitions.len(),
-                    context.references.len()
-                );
-                // if !context.definitions.is_empty() {
-                //     for def in &context.definitions {
-                //         print!("{},", def.name);
-                //     }
-                //     println!();
-                // }
-                // if !context.references.is_empty() {
-                //     for ref_def in &context.references {
-                //         print!("{},", ref_def.name);
-                //     }
-                //     println!();
-                // }
-                for def in context.definitions {
-                    seen_names.insert(def.name.clone());
-                    all_definitions.push((def, language));
-                }
-                for ref_def in context.references {
-                    all_references.push((ref_def, language));
-                }
-            }
-            Err(e) => {
-                eprintln!("⚠️  コンテキスト収集に失敗: {}: {}", file_path.display(), e);
-                continue;
-            }
-        }
-    }
-
-    println!(
-        "🔍 総計 {}個のdefinitions、{}個のreferencesを抽出しました",
-        all_definitions.len(),
-        all_references.len()
-    );
-
-    for (language, _) in languages_found {
-        // Combine definitions and references for this language
-        let lang_definitions: Vec<_> = all_definitions
-            .iter()
-            .filter(|(_, lang)| *lang == language)
-            .map(|(def, _)| def)
-            .collect();
-
-        let lang_references: Vec<_> = all_references
-            .iter()
-            .filter(|(_, lang)| *lang == language)
-            .map(|(def, _)| def)
-            .collect();
-
-        let total_items = lang_definitions.len() + lang_references.len();
-        if total_items == 0 {
-            continue;
-        }
-
-        println!(
-            "🧠 {:?}言語の{}個のdefinitions、{}個のreferencesを分析中...",
-            language,
-            lang_definitions.len(),
-            lang_references.len()
-        );
-
-        // Process definitions and references separately to maintain their distinctions
-        let mut definition_patterns = Vec::new();
-        let mut reference_patterns = Vec::new();
-
-        if !lang_definitions.is_empty() {
-            definition_patterns = analyze_definitions_for_security_patterns(
-                model,
-                &lang_definitions,
-                language,
-                api_base_url,
-            )
-            .await?;
-        }
-
-        if !lang_references.is_empty() {
-            reference_patterns = analyze_references_for_security_patterns(
-                model,
-                &lang_references,
-                language,
-                api_base_url,
-            )
-            .await?;
-        }
-
-        // Combine all patterns
-        let mut all_patterns = definition_patterns;
-        all_patterns.extend(reference_patterns);
-
-        // Deduplicate patterns based on function name
-        let mut unique_patterns = Vec::new();
-        let mut seen_functions = std::collections::HashSet::new();
-
-        for pattern in all_patterns {
-            if seen_functions.insert(pattern.function_name.clone()) {
-                unique_patterns.push(pattern);
-            }
-        }
-
-        if !unique_patterns.is_empty() {
-            write_patterns_to_file(root_dir, language, &unique_patterns)?;
-            println!(
-                "✅ {:?}言語用の{}個のパターンを生成しました",
-                language,
-                unique_patterns.len()
-            );
-        } else {
-            println!(
-                "ℹ️  {:?}言語でセキュリティパターンは検出されませんでした",
-                language
-            );
-        }
-    }
-
-    println!("🎉 カスタムパターン生成が完了しました");
-    Ok(())
-}
-
-pub async fn analyze_definitions_for_security_patterns<'a>(
-    model: &str,
-    definitions: &'a [&crate::parser::Definition],
-    language: Language,
-    api_base_url: Option<&str>,
-) -> Result<Vec<PatternClassification>> {
-    analyze_all_definitions_at_once(model, definitions, language, api_base_url).await
-}
-
-pub async fn analyze_references_for_security_patterns<'a>(
-    model: &str,
-    references: &'a [&crate::parser::Definition],
-    language: Language,
-    api_base_url: Option<&str>,
-) -> Result<Vec<PatternClassification>> {
-    analyze_all_references_at_once(model, references, language, api_base_url).await
-}
-
-async fn analyze_all_definitions_at_once(
-    model: &str,
-    definitions: &[&crate::parser::Definition],
-    language: Language,
-    api_base_url: Option<&str>,
-) -> Result<Vec<PatternClassification>> {
-    if definitions.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    // Create context for all definitions
-    let mut definitions_context = String::new();
-    for (idx, def) in definitions.iter().enumerate() {
-        definitions_context.push_str(&format!(
-            "Definition {}: {}\nCode:\n{}\n\n",
-            idx + 1,
-            def.name,
-            def.source
-        ));
-    }
-
-    let prompt = format!(
-        r#"Analyze these function definitions from a {:?} codebase and determine which represent security patterns.
-
-{}
-
-For each function, determine if it should be classified as:
-- "principals": Sources that act as data entry points and should be treated as tainted/untrusted
-- "actions": Functions that perform validation, sanitization, authorization, or security operations  
-- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
-- "none": Not a security pattern
-
-Generate tree-sitter queries instead of regex patterns. Use the following format:
-
-IMPORTANT: For definition patterns, add @function capture to the entire function_definition.
-For reference patterns, add @call capture to the entire call_expression or @attribute capture to the entire attribute access.
-This ensures we capture the complete context, not just the identifier names.
-
-Return a JSON object with this structure:
-
-{{
-  "patterns": [
-    {{
-      "classification": "principals|actions|resources|none",
-      "function_name": "function_name",
-      "query_type": "definition",
-      "query": "(function_definition name: (identifier) @name (#eq? @name \"function_name\")) @function",
-      "description": "Brief description of what this pattern detects",
-      "reasoning": "Why this function fits this classification",
-      "attack_vector": ["T1234", "T5678"]
-    }}
-  ]
-}}
-
-All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
-        language, definitions_context, language
-    );
-
-    let response_schema = serde_json::json!({
-        "type": "object",
-        "properties": {
-            "patterns": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
-                        "function_name": {"type": "string"},
-                        "query_type": {"type": "string", "enum": ["definition", "reference"]},
-                        "query": {"type": "string"},
-                        "description": {"type": "string"},
-                        "reasoning": {"type": "string"},
-                        "attack_vector": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                        }
-                    },
-                    "required": ["classification", "function_name", "query_type", "query", "description", "reasoning", "attack_vector"]
-                }
-            }
-        },
-        "required": ["patterns"]
-    });
-
-    let client = create_pattern_client(api_base_url, response_schema);
-
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(
-            "You are a security pattern analyzer. Reply with exactly one JSON object containing a 'patterns' array with analysis for all functions. Be conservative - only classify as security patterns if clearly relevant.",
-        ),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let chat_res = client.exec_chat(model, chat_req, None).await?;
-    let content = chat_res
-        .first_text()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
-
-    #[derive(Deserialize)]
-    struct BatchAnalysisResponse {
-        patterns: Vec<PatternResponse>,
-    }
-
-    #[derive(Deserialize)]
-    struct PatternResponse {
-        classification: String,
-        function_name: String,
-        query_type: String,
-        query: String,
-        description: String,
-        reasoning: String,
-        attack_vector: Vec<String>,
-    }
-
-    let response: BatchAnalysisResponse = serde_json::from_str(content).map_err(|e| {
-        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
-    })?;
-
-    let mut patterns = Vec::new();
-    let mut security_pattern_count = 0;
-
-    for pattern_resp in response.patterns {
-        if pattern_resp.classification != "none" {
-            patterns.push(PatternClassification {
-                function_name: pattern_resp.function_name,
-                pattern_type: Some(pattern_resp.classification),
-                query_type: pattern_resp.query_type,
-                query: pattern_resp.query,
-                description: pattern_resp.description,
-                reasoning: pattern_resp.reasoning,
-                attack_vector: pattern_resp.attack_vector,
-            });
-            security_pattern_count += 1;
-        }
-    }
-
-    println!(
-        "✅ 完了: 全{}個分析, セキュリティパターン{}個検出",
-        definitions.len(),
-        security_pattern_count
-    );
-
-    Ok(patterns)
-}
-
-async fn analyze_all_references_at_once(
-    model: &str,
-    references: &[&crate::parser::Definition],
-    language: Language,
-    api_base_url: Option<&str>,
-) -> Result<Vec<PatternClassification>> {
-    if references.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    // Create context for all references
-    let mut references_context = String::new();
-    for (idx, ref_def) in references.iter().enumerate() {
-        references_context.push_str(&format!(
-            "Reference {}: {}\nCode:\n{}\n\n",
-            idx + 1,
-            ref_def.name,
-            ref_def.source
-        ));
-    }
-
-    let prompt = format!(
-        r#"Analyze these function references/calls from a {:?} codebase and determine which represent calls to security-sensitive functions.
-
-{}
-
-For each function reference, determine if it should be classified as:
-- "principals": Functions that return or provide untrusted data that attackers can control. This includes:
-  * User input functions (request.params, request.body, request.query)
-  * External data sources (API responses, file readers, socket data)
-  * Network/communication inputs (HTTP requests, message queues)
-  * Functions that retrieve attacker-controlled data
-  * Any function that introduces data from outside the application's control boundary
-  
-- "actions": Functions that perform security processing (validation, sanitization, authorization). This includes:
-  * Input validation functions (validators, sanitizers)
-  * Authentication/authorization functions (login checks, permission checks)
-  * Cryptographic functions (encryption, hashing, signing)
-  * Security-focused data transformation functions
-  
-- "resources": Functions that operate on attack targets (files, databases, system commands, DOM). This includes:
-  * File system operations (readFile, writeFile, deleteFile)
-  * Database operations (query, insert, update, delete)
-  * System command execution (exec, spawn, system)
-  * DOM manipulation (innerHTML, setAttribute, createElement)
-  * Network operations (HTTP requests, socket connections)
-  
-- "none": Not a security-relevant call
-
-## Classification Examples:
-
-**Principal Examples:**
-- `request.params.get('user_id')` - returns untrusted user input
-- `os.environ.get('USER_INPUT')` - if environment variable contains user data
-- `json.loads(request.body)` - parses untrusted JSON data
-
-**Action Examples:**
-- `validate_email(email)` - validates email format
-- `bcrypt.hash(password)` - hashes password securely
-- `escape_html(content)` - sanitizes HTML content
-
-**Resource Examples:**
-- `fs.readFileSync(filepath)` - reads file from filesystem
-- `db.query(sql, params)` - executes database query
-- `document.getElementById('output').innerHTML` - modifies DOM
-- `os.system(command)` - executes system command
-
-Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
-
-Generate tree-sitter queries instead of regex patterns. Use the following format:
-
-IMPORTANT: For definition patterns, add @function capture to the entire function_definition.
-For reference patterns, add @call capture to the entire call_expression or @attribute capture to the entire attribute access.
-This ensures we capture the complete context, not just the identifier names.
-
-Return a JSON object with this structure:
-
-{{
-  "patterns": [
-    {{
-      "classification": "principals|actions|resources|none",
-      "function_name": "function_name",
-      "query_type": "reference",
-      "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\")) @call",
-      "description": "Brief description of what this pattern detects",
-      "reasoning": "Why this function call fits this classification",
-      "attack_vector": ["T1234", "T5678"]
-    }}
-  ]
-}}
-
-All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
-        language, references_context, language
-    );
-
-    let response_schema = serde_json::json!({
-        "type": "object",
-        "properties": {
-            "patterns": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
-                        "function_name": {"type": "string"},
-                        "query_type": {"type": "string", "enum": ["definition", "reference"]},
-                        "query": {"type": "string"},
-                        "description": {"type": "string"},
-                        "reasoning": {"type": "string"},
-                        "attack_vector": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                        }
-                    },
-                    "required": ["classification", "function_name", "query_type", "query", "description", "reasoning", "attack_vector"]
-                }
-            }
-        },
-        "required": ["patterns"]
-    });
-
-    let client = create_pattern_client(api_base_url, response_schema);
-
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(
-            "You are a security pattern analyzer for function references. Reply with exactly one JSON object containing a 'patterns' array with analysis for all function calls. Focus on calls to security-sensitive functions.",
-        ),
-        ChatMessage::user(&prompt),
-    ]);
-
-    let chat_res = client.exec_chat(model, chat_req, None).await?;
-    let content = chat_res
-        .first_text()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get response content"))?;
-
-    #[derive(Deserialize)]
-    struct BatchAnalysisResponse {
-        patterns: Vec<PatternResponse>,
-    }
-
-    #[derive(Deserialize)]
-    struct PatternResponse {
-        classification: String,
-        function_name: String,
-        query_type: String,
-        query: String,
-        description: String,
-        reasoning: String,
-        attack_vector: Vec<String>,
-    }
-
-    let response: BatchAnalysisResponse = serde_json::from_str(content).map_err(|e| {
-        anyhow::anyhow!("Failed to parse LLM response: {}. Content: {}", e, content)
-    })?;
-
-    let mut patterns = Vec::new();
-    let mut security_pattern_count = 0;
-
-    for pattern_resp in response.patterns {
-        if pattern_resp.classification != "none" {
-            patterns.push(PatternClassification {
-                function_name: pattern_resp.function_name,
-                pattern_type: Some(pattern_resp.classification),
-                query_type: pattern_resp.query_type,
-                query: pattern_resp.query,
-                description: pattern_resp.description,
-                reasoning: pattern_resp.reasoning,
-                attack_vector: pattern_resp.attack_vector,
-            });
-            security_pattern_count += 1;
-        }
-    }
-
-    println!(
-        "✅ 完了: 全{}個参照分析, セキュリティパターン{}個検出",
-        references.len(),
-        security_pattern_count
-    );
-
-    Ok(patterns)
-}
-
-pub fn write_patterns_to_file(
-    root_dir: &Path,
-    language: Language,
-    patterns: &[PatternClassification],
-) -> Result<()> {
-    let mut vuln_patterns_path = root_dir.to_path_buf();
-    vuln_patterns_path.push("vuln-patterns.yml");
-
-    let lang_name = match language {
+fn language_label(language: &Language) -> &'static str {
+    match language {
         Language::Python => "Python",
         Language::JavaScript => "JavaScript",
-        Language::TypeScript => "TypeScript",
         Language::Rust => "Rust",
+        Language::TypeScript => "TypeScript",
         Language::Java => "Java",
         Language::Go => "Go",
         Language::Ruby => "Ruby",
         Language::C => "C",
-        Language::Cpp => "Cpp",
+        Language::Cpp => "C++",
         Language::Terraform => "Terraform",
         Language::CloudFormation => "CloudFormation",
         Language::Kubernetes => "Kubernetes",
         Language::Yaml => "YAML",
         Language::Bash => "Bash",
         Language::Shell => "Shell",
-        Language::Php => "Php",
-        Language::Other => return Ok(()),
-    };
+        Language::Php => "PHP",
+        Language::Other => "Other",
+    }
+}
 
-    let mut principals = Vec::new();
-    let mut actions = Vec::new();
-    let mut resources = Vec::new();
+pub async fn generate_custom_patterns(
+    root_dir: &Path,
+    _model: &str,
+    _api_base_url: Option<&str>,
+) -> Result<()> {
+    println!("⚙️  genaiクレート依存の削除に伴い、LLMベースのパターン生成は無効化されています。");
+    println!(
+        "🧭  代替として、コードベースのシグナルを集計し、手動でのパターン定義に役立つ統計を出力します。\n"
+    );
 
-    for pattern in patterns {
-        match pattern.pattern_type.as_deref() {
-            Some("principals") => principals.push(pattern),
-            Some("actions") => actions.push(pattern),
-            Some("resources") => resources.push(pattern),
-            _ => {}
-        }
+    let repo = RepoOps::new(root_dir.to_path_buf());
+    let files = repo.get_files_to_analyze(None)?;
+    if files.is_empty() {
+        println!("📭  対象ファイルが見つかりませんでした。");
+        return Ok(());
     }
 
-    let mut yaml_content = format!("{}:\n", lang_name);
+    let mut language_stats: HashMap<Language, LanguageStats> = HashMap::new();
+    let mut detailed_examples: Vec<(Language, PathBuf, Vec<String>, Vec<String>)> = Vec::new();
 
-    if !principals.is_empty() {
-        yaml_content.push_str("  principals:\n");
-        for pattern in principals {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
-            // Add indented query
-            for line in pattern.query.lines() {
-                yaml_content.push_str(&format!("        {}\n", line));
-            }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
-            yaml_content.push_str("      attack_vector:\n");
-            if !pattern.attack_vector.is_empty() {
-                for technique in &pattern.attack_vector {
-                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
-                }
-            } else {
-                yaml_content.push_str("        []\n");
-            }
+    for file_path in files.iter() {
+        let line_count = count_lines(file_path);
+        if line_count > max_lines_allowed() {
+            println!(
+                "⚠️  {} は{}行を超えるためサマリー対象から除外しました",
+                file_path.display(),
+                max_lines_allowed()
+            );
+            continue;
         }
+
+        let mut parser = CodeParser::new()?;
+        if parser.add_file(file_path).is_err() {
+            continue;
+        }
+
+        let context = match parser.build_context_from_file(file_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        if context.definitions.is_empty() && context.references.is_empty() {
+            continue;
+        }
+
+        let filename = file_path.to_string_lossy();
+        let content = fs::read_to_string(file_path).unwrap_or_default();
+        let language = FileClassifier::classify(&filename, &content);
+
+        let stats = language_stats.entry(language).or_default();
+        stats.files += 1;
+        stats.definition_count += context.definitions.len();
+        stats.reference_count += context.references.len();
+
+        let top_definitions = context
+            .definitions
+            .iter()
+            .take(3)
+            .map(|d| d.name.clone())
+            .collect::<Vec<_>>();
+        let top_references = context
+            .references
+            .iter()
+            .take(3)
+            .map(|r| r.name.clone())
+            .collect::<Vec<_>>();
+
+        detailed_examples.push((language, file_path.clone(), top_definitions, top_references));
     }
 
-    if !actions.is_empty() {
-        yaml_content.push_str("  actions:\n");
-        for pattern in actions {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
-            // Add indented query
-            for line in pattern.query.lines() {
-                yaml_content.push_str(&format!("        {}\n", line));
-            }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
-            yaml_content.push_str("      attack_vector:\n");
-            if !pattern.attack_vector.is_empty() {
-                for technique in &pattern.attack_vector {
-                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
-                }
-            } else {
-                yaml_content.push_str("        []\n");
-            }
-        }
+    if language_stats.is_empty() {
+        println!("📄  解析可能な抽象構造を含むファイルは見つかりませんでした。");
+        return Ok(());
     }
 
-    if !resources.is_empty() {
-        yaml_content.push_str("  resources:\n");
-        for pattern in resources {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
-            // Add indented query
-            for line in pattern.query.lines() {
-                yaml_content.push_str(&format!("        {}\n", line));
-            }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
-            yaml_content.push_str("      attack_vector:\n");
-            if !pattern.attack_vector.is_empty() {
-                for technique in &pattern.attack_vector {
-                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
-                }
-            } else {
-                yaml_content.push_str("        []\n");
-            }
-        }
+    println!("🗂️  言語別の抽出結果サマリー:");
+    for (language, stats) in language_stats
+        .iter()
+        .sorted_by_key(|(lang, _)| language_label(lang))
+    {
+        println!(
+            "  • {:<12} — 対象ファイル {:>3} 件 / 定義 {:>4} 件 / 参照 {:>4} 件",
+            language_label(language),
+            stats.files,
+            stats.definition_count,
+            stats.reference_count
+        );
     }
 
-    if vuln_patterns_path.exists() {
-        let existing_content = std::fs::read_to_string(&vuln_patterns_path)?;
-        let updated_content = format!("{}\n{}", existing_content, yaml_content);
-        std::fs::write(&vuln_patterns_path, updated_content)?;
-    } else {
-        std::fs::write(&vuln_patterns_path, yaml_content)?;
+    println!("\n🔍  サンプル抽出 (最大10件):");
+    for (idx, (language, path, defs, refs)) in detailed_examples.iter().take(10).enumerate() {
+        println!("{}.", idx + 1);
+        println!("   言語: {}", language_label(language));
+        println!("   ファイル: {}", path.display());
+        if !defs.is_empty() {
+            println!("   定義候補: {}", defs.join(", "));
+        }
+        if !refs.is_empty() {
+            println!("   参照候補: {}", refs.join(", "));
+        }
+        println!("   → tree-sitterクエリを手動で作成する際の種にしてください\n");
     }
 
     println!(
-        "📝 パターンファイルに追記: {}",
-        vuln_patterns_path.display()
+        "📌  次のステップ: patterns ディレクトリにある既存YAMLを参考に、上記サマリーから必要なクエリを作成してください。"
     );
+
     Ok(())
+}
+
+trait IteratorSortExt: Iterator {
+    fn sorted_by_key<K, F>(self, f: F) -> Vec<Self::Item>
+    where
+        Self: Sized,
+        K: Ord,
+        F: FnMut(&Self::Item) -> K;
+}
+
+impl<I> IteratorSortExt for I
+where
+    I: Iterator,
+{
+    fn sorted_by_key<K, F>(self, mut f: F) -> Vec<Self::Item>
+    where
+        Self: Sized,
+        K: Ord,
+        F: FnMut(&Self::Item) -> K,
+    {
+        let mut items: Vec<_> = self.collect();
+        items.sort_by_key(|item| f(item));
+        items
+    }
 }
