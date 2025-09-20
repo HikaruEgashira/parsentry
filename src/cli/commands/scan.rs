@@ -5,29 +5,27 @@ use std::sync::Arc;
 use futures::stream::{self, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::analyzer::analyze_pattern;
+use crate::analyzer::{analyze_pattern, initialize_offline_mode};
 use crate::cli::args::{ScanArgs, validate_scan_args};
 use crate::config::ParsentryConfig;
 use crate::file_classifier::FileClassifier;
 use crate::locales::{Language, get_messages};
 use crate::pattern_generator::generate_custom_patterns;
 use crate::repo::{RepoOps, clone_github_repo};
+use crate::reports::{
+    AnalysisSummary, SarifReport, generate_output_filename, generate_pattern_specific_filename,
+};
 use crate::response::VulnType;
-use crate::reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
 use crate::security_patterns::SecurityRiskPatterns;
 
 pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Load configuration with precedence: CLI args > env vars > config file
     let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
-    let config = ParsentryConfig::load_with_precedence(
-        args.config.clone(),
-        &args,
-        &env_vars
-    )?;
-    
+    let config = ParsentryConfig::load_with_precedence(args.config.clone(), &args, &env_vars)?;
+
     // Convert config back to args for compatibility with existing code
     let final_args = config.to_args();
-    
+
     validate_scan_args(&final_args)?;
 
     // Create language configuration
@@ -36,6 +34,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Get API base URL from configuration
     let api_base_url = final_args.api_base_url.as_deref();
+    initialize_offline_mode(api_base_url);
 
     let (root_dir, repo_name) = if let Some(repo) = &final_args.repo {
         let dest = PathBuf::from("repo");
@@ -82,7 +81,9 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     } else if let Some(root) = &final_args.root {
         (root.clone(), None)
     } else {
-        return Err(anyhow::anyhow!("Either --root or --repo must be specified, or configured in a config file"));
+        return Err(anyhow::anyhow!(
+            "Either --root or --repo must be specified, or configured in a config file"
+        ));
     };
 
     // Handle pattern generation mode
@@ -115,20 +116,20 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Collect all pattern matches across all files
     let mut all_pattern_matches = Vec::new();
-    
+
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
             // Skip files with more than 50,000 characters
             if content.len() > 50_000 {
                 continue;
             }
-            
+
             let filename = file_path.to_string_lossy();
             let lang = FileClassifier::classify(&filename, &content);
 
             let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
             let matches = patterns.get_pattern_matches(&content);
-            
+
             for pattern_match in matches {
                 all_pattern_matches.push((file_path.clone(), pattern_match));
             }
@@ -142,13 +143,16 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             .unwrap_or(&"Detected security patterns"),
         all_pattern_matches.len()
     );
-    
+
     // Group patterns by type for display
-    let mut pattern_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut pattern_types: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
     for (_, pattern_match) in &all_pattern_matches {
-        *pattern_types.entry(pattern_match.pattern_config.description.clone()).or_insert(0) += 1;
+        *pattern_types
+            .entry(pattern_match.pattern_config.description.clone())
+            .or_insert(0) += 1;
     }
-    
+
     for (pattern_desc, count) in pattern_types {
         println!("  [{}] {} matches", count, pattern_desc);
     }
@@ -203,7 +207,10 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             async move {
                 let file_name = file_path.display().to_string();
                 let pattern_desc = &pattern_match.pattern_config.description;
-                progress_bar.set_message(format!("Analyzing pattern '{}' in: {}", pattern_desc, file_name));
+                progress_bar.set_message(format!(
+                    "Analyzing pattern '{}' in: {}",
+                    pattern_desc, file_name
+                ));
                 if verbosity > 0 {
                     println!(
                         "📄 {}: {} - Pattern: {} ({} / {})",
@@ -275,7 +282,11 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                         progress_bar.inc(1);
                         return None;
                     }
-                    let fname = generate_pattern_specific_filename(&file_path, &_root_dir, &pattern_match.pattern_config.description);
+                    let fname = generate_pattern_specific_filename(
+                        &file_path,
+                        &_root_dir,
+                        &pattern_match.pattern_config.description,
+                    );
                     let mut out_path = output_dir.clone();
                     out_path.push(fname);
                     if let Err(e) = std::fs::write(&out_path, analysis_result.to_markdown()) {
@@ -322,7 +333,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             } else {
                 generate_output_filename(&file_path, &root_dir)
             };
-            
+
             summary.add_result(file_path, response, output_filename);
         }
     }

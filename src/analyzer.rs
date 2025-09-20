@@ -6,8 +6,10 @@ use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
 use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
+use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -15,7 +17,7 @@ use crate::locales::Language;
 use crate::parser::CodeParser;
 use crate::prompts::{self, vuln_specific};
 use crate::response::{Response, response_json_schema};
-use crate::security_patterns::{PatternType, SecurityRiskPatterns, PatternMatch};
+use crate::security_patterns::{PatternMatch, PatternType, SecurityRiskPatterns};
 
 fn save_debug_file(
     output_dir: &Option<PathBuf>,
@@ -93,9 +95,7 @@ fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
 
             let endpoint = Endpoint::from_owned(final_endpoint);
             let model = ModelIden::new(adapter_kind, model.model_name);
-
-            // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
-            let auth = AuthData::from_env("OPENAI_API_KEY");
+            let auth = resolve_custom_auth_data(&base_url_owned);
 
             Ok(ServiceTarget {
                 endpoint,
@@ -106,11 +106,168 @@ fn create_custom_target_resolver(base_url: &str) -> ServiceTargetResolver {
     )
 }
 
+fn resolve_custom_auth_data(base_url: &str) -> AuthData {
+    if non_empty_env_var("OPENAI_API_KEY").is_some() {
+        return AuthData::from_env("OPENAI_API_KEY");
+    }
+
+    if let Some((value, source)) = first_non_empty_env_value(&CUSTOM_API_KEY_ENV_VARS) {
+        log_once(
+            &CUSTOM_API_KEY_FALLBACK_LOGGED,
+            &format!(
+                "🔍 Debug: カスタムエンドポイント用APIキーとして環境変数{}を使用します。",
+                source
+            ),
+        );
+        return AuthData::Key(value);
+    }
+
+    if is_local_endpoint(base_url) {
+        if let Some((value, source)) = first_non_empty_env_value(&LOCAL_API_KEY_ENV_VARS) {
+            log_once(
+                &CUSTOM_API_KEY_FALLBACK_LOGGED,
+                &format!(
+                    "🔍 Debug: ローカルエンドポイント用APIキーとして環境変数{}を使用します。",
+                    source
+                ),
+            );
+            return AuthData::Key(value);
+        }
+
+        log_once(
+            &CUSTOM_API_KEY_FALLBACK_LOGGED,
+            "🔍 Debug: OPENAI_API_KEYが未設定のためローカル用デフォルトAPIキー'EMPTY'を使用します。",
+        );
+        LOCAL_API_KEY_FALLBACK_ACTIVE.store(true, Ordering::Relaxed);
+        return AuthData::Key("EMPTY".to_string());
+    }
+
+    log_once(
+        &CUSTOM_API_KEY_WARNING_LOGGED,
+        &format!(
+            "⚠️  OPENAI_API_KEYが設定されていません (base URL: {}). カスタムエンドポイントを利用する場合は環境変数OPENAI_API_KEYを設定してください。",
+            base_url
+        ),
+    );
+
+    AuthData::from_env("OPENAI_API_KEY")
+}
+
+fn non_empty_env_var(name: &'static str) -> Option<String> {
+    match std::env::var(name) {
+        Ok(value) if !value.trim().is_empty() => Some(value),
+        _ => None,
+    }
+}
+
+fn first_non_empty_env_value(env_names: &[&'static str]) -> Option<(String, &'static str)> {
+    env_names
+        .iter()
+        .find_map(|&name| non_empty_env_var(name).map(|value| (value, name)))
+}
+
+fn is_local_endpoint(base_url: &str) -> bool {
+    let lower = base_url.to_ascii_lowercase();
+    lower.starts_with("http://localhost")
+        || lower.starts_with("https://localhost")
+        || lower.starts_with("http://127.")
+        || lower.starts_with("https://127.")
+        || lower.starts_with("http://0.0.0.0")
+        || lower.starts_with("https://0.0.0.0")
+        || lower.starts_with("http://[::1]")
+        || lower.starts_with("https://[::1]")
+}
+
+fn log_once(flag: &AtomicBool, message: &str) {
+    if !flag.swap(true, Ordering::Relaxed) {
+        println!("{}", message);
+    }
+}
+
+const CUSTOM_API_KEY_ENV_VARS: [&str; 3] = [
+    "PARSENTRY_CUSTOM_API_KEY",
+    "PARSENTRY_FALLBACK_API_KEY",
+    "LITELLM_API_KEY",
+];
+
+const LOCAL_API_KEY_ENV_VARS: [&str; 1] = ["PARSENTRY_LOCAL_API_KEY"];
+
+static CUSTOM_API_KEY_FALLBACK_LOGGED: AtomicBool = AtomicBool::new(false);
+static CUSTOM_API_KEY_WARNING_LOGGED: AtomicBool = AtomicBool::new(false);
+static LOCAL_API_KEY_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
+static OFFLINE_STUB_NOTICE_LOGGED: AtomicBool = AtomicBool::new(false);
+static OFFLINE_ANALYSIS_SKIP_LOGGED: AtomicBool = AtomicBool::new(false);
+static OFFLINE_ANALYSIS_INIT_LOGGED: AtomicBool = AtomicBool::new(false);
+
+fn should_use_offline_stub() -> bool {
+    LOCAL_API_KEY_FALLBACK_ACTIVE.load(Ordering::Relaxed)
+        && std::env::var("PARSENTRY_DISABLE_OFFLINE_STUB").is_err()
+}
+
+fn offline_stub_chat_content(model: &str) -> String {
+    log_once(
+        &OFFLINE_STUB_NOTICE_LOGGED,
+        "ℹ️  OPENAI_API_KEY未設定のためLLMリクエストをスキップし、スタブレスポンスを返します。",
+    );
+
+    let message = format!(
+        "LLM解析はOPENAI_API_KEY未設定のためスキップしました (model: {}).",
+        model
+    );
+
+    json!({
+        "scratchpad": message,
+        "analysis": "LLM解析はローカルオフラインモードでスキップされました。",
+        "poc": "",
+        "confidence_score": 0,
+        "vulnerability_types": [],
+        "par_analysis": {
+            "principals": [],
+            "actions": [],
+            "resources": [],
+            "policy_violations": []
+        },
+        "remediation_guidance": {
+            "policy_enforcement": []
+        }
+    })
+    .to_string()
+}
+
+pub(crate) fn initialize_offline_mode(api_base_url: Option<&str>) {
+    if LOCAL_API_KEY_FALLBACK_ACTIVE.load(Ordering::Relaxed) {
+        return;
+    }
+
+    if non_empty_env_var("OPENAI_API_KEY").is_some() {
+        return;
+    }
+
+    if let Some(base_url) = api_base_url {
+        if is_local_endpoint(base_url)
+            && non_empty_env_var("PARSENTRY_LOCAL_API_KEY").is_none()
+            && non_empty_env_var("PARSENTRY_CUSTOM_API_KEY").is_none()
+            && non_empty_env_var("PARSENTRY_FALLBACK_API_KEY").is_none()
+            && non_empty_env_var("LITELLM_API_KEY").is_none()
+        {
+            LOCAL_API_KEY_FALLBACK_ACTIVE.store(true, Ordering::Relaxed);
+            log_once(
+                &OFFLINE_ANALYSIS_INIT_LOGGED,
+                "ℹ️  OPENAI_API_KEY未設定のためオフライン解析モードを有効化します。",
+            );
+        }
+    }
+}
+
 async fn execute_chat_request(
     client: &Client,
     model: &str,
     chat_req: ChatRequest,
 ) -> Result<String> {
+    if should_use_offline_stub() {
+        return Ok(offline_stub_chat_content(model));
+    }
+
     let result = timeout(Duration::from_secs(240), async {
         client.exec_chat(model, chat_req, None).await
     })
@@ -130,7 +287,7 @@ async fn execute_chat_request(
                     ))
                 }
             }
-        },
+        }
         Ok(Err(e)) => {
             error!("Chat request failed: {}", e);
             Err(e.into())
@@ -211,7 +368,7 @@ pub async fn analyze_file(
     }
 
     let content = std::fs::read_to_string(file_path)?;
-    
+
     // Skip files with more than 50,000 characters
     if content.len() > 50_000 {
         return Ok(Response {
@@ -235,7 +392,7 @@ pub async fn analyze_file(
             full_source_code: None,
         });
     }
-    
+
     if content.is_empty() {
         return Ok(Response {
             scratchpad: String::new(),
@@ -507,7 +664,9 @@ pub async fn analyze_file(
                                 // For principals, use find_references to track data flow forward
                                 match parser.find_calls(&escaped_name) {
                                     Ok(refs) => {
-                                        stored_code_definitions.extend(refs.into_iter().map(|(path, def, _)| (path, def)));
+                                        stored_code_definitions.extend(
+                                            refs.into_iter().map(|(path, def, _)| (path, def)),
+                                        );
                                     }
                                     Err(e) => {
                                         warn!(
@@ -554,14 +713,14 @@ pub async fn analyze_file(
             }
         }
     }
-    
+
     // Add enhanced report information to response
     response.file_path = Some(file_path.to_string_lossy().to_string());
     response.full_source_code = Some(content);
     // For file-based analysis, no specific pattern or matched code
     response.pattern_description = Some("Full file analysis".to_string());
     response.matched_source_code = None;
-    
+
     Ok(response)
 }
 
@@ -577,6 +736,14 @@ pub async fn analyze_pattern(
     api_base_url: Option<&str>,
     language: &Language,
 ) -> Result<Option<Response>, Error> {
+    if should_use_offline_stub() {
+        log_once(
+            &OFFLINE_ANALYSIS_SKIP_LOGGED,
+            "ℹ️  OPENAI_API_KEY未設定のためパターン解析をスキップします。",
+        );
+        return Ok(None);
+    }
+
     info!(
         "Analyzing pattern '{}' in file {}",
         pattern_match.pattern_config.description,
@@ -597,12 +764,12 @@ pub async fn analyze_pattern(
     }
 
     let content = std::fs::read_to_string(file_path)?;
-    
+
     // Skip files with more than 50,000 characters
     if content.len() > 50_000 {
         return Ok(None);
     }
-    
+
     // Extract context from file
     let context = parser.build_context_from_file(file_path)?;
 
@@ -655,7 +822,10 @@ pub async fn analyze_pattern(
         if let Err(e) = save_debug_file(
             output_dir,
             file_path,
-            &format!("pattern_{}_prompt", pattern_match.pattern_config.description.replace(" ", "_")),
+            &format!(
+                "pattern_{}_prompt",
+                pattern_match.pattern_config.description.replace(" ", "_")
+            ),
             &debug_content,
         ) {
             warn!("Failed to save debug input file: {}", e);
@@ -689,7 +859,10 @@ pub async fn analyze_pattern(
         if let Err(e) = save_debug_file(
             output_dir,
             file_path,
-            &format!("pattern_{}_response", pattern_match.pattern_config.description.replace(" ", "_")),
+            &format!(
+                "pattern_{}_response",
+                pattern_match.pattern_config.description.replace(" ", "_")
+            ),
             &debug_content,
         ) {
             warn!("Failed to save debug output file: {}", e);
@@ -707,15 +880,21 @@ pub async fn analyze_pattern(
     // Add pattern-specific metadata to response
     if response.confidence_score >= min_confidence {
         // Enhance response with pattern information
-        response.par_analysis.policy_violations.iter_mut().for_each(|violation| {
-            if !violation.rule_description.contains(&pattern_match.pattern_config.description) {
-                violation.rule_description = format!(
-                    "{} (Pattern: {})",
-                    violation.rule_description,
-                    pattern_match.pattern_config.description
-                );
-            }
-        });
+        response
+            .par_analysis
+            .policy_violations
+            .iter_mut()
+            .for_each(|violation| {
+                if !violation
+                    .rule_description
+                    .contains(&pattern_match.pattern_config.description)
+                {
+                    violation.rule_description = format!(
+                        "{} (Pattern: {})",
+                        violation.rule_description, pattern_match.pattern_config.description
+                    );
+                }
+            });
     }
 
     // Add enhanced report information to response
@@ -726,8 +905,7 @@ pub async fn analyze_pattern(
 
     info!(
         "Pattern analysis complete for '{}' with confidence: {}",
-        pattern_match.pattern_config.description,
-        response.confidence_score
+        pattern_match.pattern_config.description, response.confidence_score
     );
 
     Ok(Some(response))

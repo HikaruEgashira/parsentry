@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::parser::Definition;
 use crate::repo::RepoOps;
@@ -43,8 +44,8 @@ fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
             // When using custom base URL, assume OpenAI-compatible API
             let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
 
-            // Use the OPENAI_API_KEY environment variable as the new key when using custom URL
-            let auth = AuthData::from_env("OPENAI_API_KEY");
+            let auth = resolve_pattern_auth_data(&base_url_owned);
+
             Ok(ServiceTarget {
                 endpoint,
                 auth,
@@ -53,6 +54,94 @@ fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
         },
     )
 }
+
+fn resolve_pattern_auth_data(base_url: &str) -> AuthData {
+    if non_empty_env_var("OPENAI_API_KEY").is_some() {
+        return AuthData::from_env("OPENAI_API_KEY");
+    }
+
+    if let Some((value, source)) = first_non_empty_env_value(&CUSTOM_API_KEY_ENV_VARS) {
+        log_once(
+            &PATTERN_API_KEY_FALLBACK_LOGGED,
+            &format!(
+                "🔍 Debug: パターン生成用APIキーとして環境変数{}を使用します。",
+                source
+            ),
+        );
+        return AuthData::Key(value);
+    }
+
+    if is_local_endpoint(base_url) {
+        if let Some((value, source)) = first_non_empty_env_value(&LOCAL_API_KEY_ENV_VARS) {
+            log_once(
+                &PATTERN_API_KEY_FALLBACK_LOGGED,
+                &format!(
+                    "🔍 Debug: ローカルエンドポイント用APIキーとして環境変数{}を使用します。",
+                    source
+                ),
+            );
+            return AuthData::Key(value);
+        }
+
+        log_once(
+            &PATTERN_API_KEY_FALLBACK_LOGGED,
+            "🔍 Debug: OPENAI_API_KEYが未設定のためローカル用デフォルトAPIキー'EMPTY'を使用します。",
+        );
+        return AuthData::Key("EMPTY".to_string());
+    }
+
+    log_once(
+        &PATTERN_API_KEY_WARNING_LOGGED,
+        &format!(
+            "⚠️  OPENAI_API_KEYが設定されていません (base URL: {}). カスタムエンドポイントを利用する場合は環境変数OPENAI_API_KEYを設定してください。",
+            base_url
+        ),
+    );
+
+    AuthData::from_env("OPENAI_API_KEY")
+}
+
+fn non_empty_env_var(name: &'static str) -> Option<String> {
+    match std::env::var(name) {
+        Ok(value) if !value.trim().is_empty() => Some(value),
+        _ => None,
+    }
+}
+
+fn first_non_empty_env_value(env_names: &[&'static str]) -> Option<(String, &'static str)> {
+    env_names
+        .iter()
+        .find_map(|&name| non_empty_env_var(name).map(|value| (value, name)))
+}
+
+fn is_local_endpoint(base_url: &str) -> bool {
+    let lower = base_url.to_ascii_lowercase();
+    lower.starts_with("http://localhost")
+        || lower.starts_with("https://localhost")
+        || lower.starts_with("http://127.")
+        || lower.starts_with("https://127.")
+        || lower.starts_with("http://0.0.0.0")
+        || lower.starts_with("https://0.0.0.0")
+        || lower.starts_with("http://[::1]")
+        || lower.starts_with("https://[::1]")
+}
+
+fn log_once(flag: &AtomicBool, message: &str) {
+    if !flag.swap(true, Ordering::Relaxed) {
+        println!("{}", message);
+    }
+}
+
+const CUSTOM_API_KEY_ENV_VARS: [&str; 3] = [
+    "PARSENTRY_CUSTOM_API_KEY",
+    "PARSENTRY_FALLBACK_API_KEY",
+    "LITELLM_API_KEY",
+];
+
+const LOCAL_API_KEY_ENV_VARS: [&str; 1] = ["PARSENTRY_LOCAL_API_KEY"];
+
+static PATTERN_API_KEY_FALLBACK_LOGGED: AtomicBool = AtomicBool::new(false);
+static PATTERN_API_KEY_WARNING_LOGGED: AtomicBool = AtomicBool::new(false);
 
 fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
     let mut filtered_files = Vec::new();
@@ -667,18 +756,12 @@ pub fn write_patterns_to_file(
     if !principals.is_empty() {
         yaml_content.push_str("  principals:\n");
         for pattern in principals {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
+            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
             // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
+            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
@@ -693,18 +776,12 @@ pub fn write_patterns_to_file(
     if !actions.is_empty() {
         yaml_content.push_str("  actions:\n");
         for pattern in actions {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
+            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
             // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
+            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
@@ -719,18 +796,12 @@ pub fn write_patterns_to_file(
     if !resources.is_empty() {
         yaml_content.push_str("  resources:\n");
         for pattern in resources {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
+            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
             // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
+            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
