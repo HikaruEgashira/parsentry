@@ -6,7 +6,6 @@ use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
 use log::{debug, error, info, warn};
 use regex::escape;
 use serde::de::DeserializeOwned;
-use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -138,7 +137,6 @@ fn resolve_custom_auth_data(base_url: &str) -> AuthData {
             &CUSTOM_API_KEY_FALLBACK_LOGGED,
             "🔍 Debug: OPENAI_API_KEYが未設定のためローカル用デフォルトAPIキー'EMPTY'を使用します。",
         );
-        LOCAL_API_KEY_FALLBACK_ACTIVE.store(true, Ordering::Relaxed);
         return AuthData::Key("EMPTY".to_string());
     }
 
@@ -194,80 +192,12 @@ const LOCAL_API_KEY_ENV_VARS: [&str; 1] = ["PARSENTRY_LOCAL_API_KEY"];
 
 static CUSTOM_API_KEY_FALLBACK_LOGGED: AtomicBool = AtomicBool::new(false);
 static CUSTOM_API_KEY_WARNING_LOGGED: AtomicBool = AtomicBool::new(false);
-static LOCAL_API_KEY_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
-static OFFLINE_STUB_NOTICE_LOGGED: AtomicBool = AtomicBool::new(false);
-static OFFLINE_ANALYSIS_SKIP_LOGGED: AtomicBool = AtomicBool::new(false);
-static OFFLINE_ANALYSIS_INIT_LOGGED: AtomicBool = AtomicBool::new(false);
-
-fn should_use_offline_stub() -> bool {
-    LOCAL_API_KEY_FALLBACK_ACTIVE.load(Ordering::Relaxed)
-        && std::env::var("PARSENTRY_DISABLE_OFFLINE_STUB").is_err()
-}
-
-fn offline_stub_chat_content(model: &str) -> String {
-    log_once(
-        &OFFLINE_STUB_NOTICE_LOGGED,
-        "ℹ️  OPENAI_API_KEY未設定のためLLMリクエストをスキップし、スタブレスポンスを返します。",
-    );
-
-    let message = format!(
-        "LLM解析はOPENAI_API_KEY未設定のためスキップしました (model: {}).",
-        model
-    );
-
-    json!({
-        "scratchpad": message,
-        "analysis": "LLM解析はローカルオフラインモードでスキップされました。",
-        "poc": "",
-        "confidence_score": 0,
-        "vulnerability_types": [],
-        "par_analysis": {
-            "principals": [],
-            "actions": [],
-            "resources": [],
-            "policy_violations": []
-        },
-        "remediation_guidance": {
-            "policy_enforcement": []
-        }
-    })
-    .to_string()
-}
-
-pub(crate) fn initialize_offline_mode(api_base_url: Option<&str>) {
-    if LOCAL_API_KEY_FALLBACK_ACTIVE.load(Ordering::Relaxed) {
-        return;
-    }
-
-    if non_empty_env_var("OPENAI_API_KEY").is_some() {
-        return;
-    }
-
-    if let Some(base_url) = api_base_url {
-        if is_local_endpoint(base_url)
-            && non_empty_env_var("PARSENTRY_LOCAL_API_KEY").is_none()
-            && non_empty_env_var("PARSENTRY_CUSTOM_API_KEY").is_none()
-            && non_empty_env_var("PARSENTRY_FALLBACK_API_KEY").is_none()
-            && non_empty_env_var("LITELLM_API_KEY").is_none()
-        {
-            LOCAL_API_KEY_FALLBACK_ACTIVE.store(true, Ordering::Relaxed);
-            log_once(
-                &OFFLINE_ANALYSIS_INIT_LOGGED,
-                "ℹ️  OPENAI_API_KEY未設定のためオフライン解析モードを有効化します。",
-            );
-        }
-    }
-}
 
 async fn execute_chat_request(
     client: &Client,
     model: &str,
     chat_req: ChatRequest,
 ) -> Result<String> {
-    if should_use_offline_stub() {
-        return Ok(offline_stub_chat_content(model));
-    }
-
     let result = timeout(Duration::from_secs(240), async {
         client.exec_chat(model, chat_req, None).await
     })
@@ -736,14 +666,6 @@ pub async fn analyze_pattern(
     api_base_url: Option<&str>,
     language: &Language,
 ) -> Result<Option<Response>, Error> {
-    if should_use_offline_stub() {
-        log_once(
-            &OFFLINE_ANALYSIS_SKIP_LOGGED,
-            "ℹ️  OPENAI_API_KEY未設定のためパターン解析をスキップします。",
-        );
-        return Ok(None);
-    }
-
     info!(
         "Analyzing pattern '{}' in file {}",
         pattern_match.pattern_config.description,

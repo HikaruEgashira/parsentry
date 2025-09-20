@@ -5,7 +5,7 @@ use std::sync::Arc;
 use futures::stream::{self, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::analyzer::{analyze_pattern, initialize_offline_mode};
+use crate::analyzer::analyze_pattern;
 use crate::cli::args::{ScanArgs, validate_scan_args};
 use crate::config::ParsentryConfig;
 use crate::file_classifier::FileClassifier;
@@ -34,7 +34,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Get API base URL from configuration
     let api_base_url = final_args.api_base_url.as_deref();
-    initialize_offline_mode(api_base_url);
 
     let (root_dir, repo_name) = if let Some(repo) = &final_args.repo {
         let dest = PathBuf::from("repo");
