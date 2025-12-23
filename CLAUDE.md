@@ -3,8 +3,22 @@
 Parsentry is a PAR (Principal-Action-Resource) based security scanner that combines static code analysis with LLMs to detect vulnerabilities across multiple languages including IaC. It provides comprehensive multi-language security analysis.
 
 - Principals: 信頼できないソース（攻撃者の入力源）
-- Actions: セキュリティ関連の動作（バリデーションや権限制御） 
+- Actions: セキュリティ関連の動作（バリデーションや権限制御）
 - Resources: 攻撃対象となるリソース（ファイル、データベース、APIに対する操作）
+
+## Development Environment
+
+devenvを使用して開発環境をセットアップします。
+
+```bash
+# 開発シェルに入る
+devenv shell
+
+# または direnv を使用（推奨）
+direnv allow
+```
+
+提供されるツール: Rust stable, pkg-config, openssl, bun
 
 ## After Code Changes
 
