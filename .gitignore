@@ -11,3 +11,5 @@ example/**/vuln-patterns.yml
 coverage
 debug
 benchmarks
+.devenv
+.devenv.flake.nix
