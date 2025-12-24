@@ -3,24 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use streaming_iterator::StreamingIterator;
-unsafe extern "C" {
-    fn tree_sitter_rust() -> tree_sitter::Language;
-}
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
-
-unsafe extern "C" {
-    fn tree_sitter_c() -> Language;
-    fn tree_sitter_cpp() -> Language;
-    fn tree_sitter_python() -> Language;
-    fn tree_sitter_javascript() -> Language;
-    fn tree_sitter_typescript() -> Language;
-    fn tree_sitter_tsx() -> Language;
-    fn tree_sitter_java() -> Language;
-    fn tree_sitter_go() -> Language;
-    fn tree_sitter_ruby() -> Language;
-    fn tree_sitter_hcl() -> Language;
-    fn tree_sitter_php() -> Language;
-}
 
 #[derive(Debug, Clone)]
 pub struct Definition {
@@ -64,50 +47,61 @@ impl CodeParser {
     pub fn get_language(&self, path: &Path) -> Option<Language> {
         let extension = path.extension().and_then(|ext| ext.to_str());
         match extension {
-            Some("c") | Some("h") => Some(unsafe { tree_sitter_c() }),
+            Some("c") | Some("h") => Some(tree_sitter_c::LANGUAGE.into()),
             Some("cpp") | Some("cxx") | Some("cc") | Some("hpp") | Some("hxx") => {
-                Some(unsafe { tree_sitter_cpp() })
+                Some(tree_sitter_cpp::LANGUAGE.into())
             }
-            Some("py") => Some(unsafe { tree_sitter_python() }),
-            Some("js") => Some(unsafe { tree_sitter_javascript() }),
-            Some("ts") => Some(unsafe { tree_sitter_typescript() }),
-            Some("tsx") => Some(unsafe { tree_sitter_tsx() }),
-            Some("java") => Some(unsafe { tree_sitter_java() }),
-            Some("rs") => Some(unsafe { tree_sitter_rust() }),
-            Some("go") => Some(unsafe { tree_sitter_go() }),
-            Some("rb") => Some(unsafe { tree_sitter_ruby() }),
-            Some("tf") | Some("hcl") => Some(unsafe { tree_sitter_hcl() }),
+            Some("py") => Some(tree_sitter_python::LANGUAGE.into()),
+            Some("js") => Some(tree_sitter_javascript::LANGUAGE.into()),
+            Some("ts") => Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
+            Some("tsx") => Some(tree_sitter_typescript::LANGUAGE_TSX.into()),
+            Some("java") => Some(tree_sitter_java::LANGUAGE.into()),
+            Some("rs") => Some(tree_sitter_rust::LANGUAGE.into()),
+            Some("go") => Some(tree_sitter_go::LANGUAGE.into()),
+            Some("rb") => Some(tree_sitter_ruby::LANGUAGE.into()),
+            Some("tf") | Some("hcl") => Some(tree_sitter_hcl::LANGUAGE.into()),
             Some("php") | Some("php3") | Some("php4") | Some("php5") | Some("phtml") => {
-                Some(unsafe { tree_sitter_php() })
+                Some(tree_sitter_php::LANGUAGE_PHP.into())
             }
             _ => None,
         }
     }
 
     pub fn get_query_content(&self, language: &Language, query_name: &str) -> Result<&'static str> {
-        let lang_name = if language == &unsafe { tree_sitter_c() } {
+        let ts_c: Language = tree_sitter_c::LANGUAGE.into();
+        let ts_cpp: Language = tree_sitter_cpp::LANGUAGE.into();
+        let ts_python: Language = tree_sitter_python::LANGUAGE.into();
+        let ts_javascript: Language = tree_sitter_javascript::LANGUAGE.into();
+        let ts_typescript: Language = tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into();
+        let ts_tsx: Language = tree_sitter_typescript::LANGUAGE_TSX.into();
+        let ts_java: Language = tree_sitter_java::LANGUAGE.into();
+        let ts_go: Language = tree_sitter_go::LANGUAGE.into();
+        let ts_rust: Language = tree_sitter_rust::LANGUAGE.into();
+        let ts_ruby: Language = tree_sitter_ruby::LANGUAGE.into();
+        let ts_hcl: Language = tree_sitter_hcl::LANGUAGE.into();
+        let ts_php: Language = tree_sitter_php::LANGUAGE_PHP.into();
+
+        let lang_name = if language == &ts_c {
             "c"
-        } else if language == &unsafe { tree_sitter_cpp() } {
+        } else if language == &ts_cpp {
             "cpp"
-        } else if language == &unsafe { tree_sitter_python() } {
+        } else if language == &ts_python {
             "python"
-        } else if language == &unsafe { tree_sitter_javascript() } {
+        } else if language == &ts_javascript {
             "javascript"
-        } else if language == &unsafe { tree_sitter_typescript() }
-            || language == &unsafe { tree_sitter_tsx() }
-        {
+        } else if language == &ts_typescript || language == &ts_tsx {
             "typescript"
-        } else if language == &unsafe { tree_sitter_java() } {
+        } else if language == &ts_java {
             "java"
-        } else if language == &unsafe { tree_sitter_go() } {
+        } else if language == &ts_go {
             "go"
-        } else if language == &unsafe { tree_sitter_rust() } {
+        } else if language == &ts_rust {
             "rust"
-        } else if language == &unsafe { tree_sitter_ruby() } {
+        } else if language == &ts_ruby {
             "ruby"
-        } else if language == &unsafe { tree_sitter_hcl() } {
+        } else if language == &ts_hcl {
             "terraform"
-        } else if language == &unsafe { tree_sitter_php() } {
+        } else if language == &ts_php {
             "php"
         } else {
             return Err(anyhow!("クエリに対応していない言語です"));

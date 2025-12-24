@@ -4,20 +4,6 @@ use std::path::Path;
 use tree_sitter::{Language as TreeSitterLanguage, Query, QueryCursor, Parser};
 use streaming_iterator::StreamingIterator;
 
-unsafe extern "C" {
-    fn tree_sitter_c() -> tree_sitter::Language;
-    fn tree_sitter_cpp() -> tree_sitter::Language;
-    fn tree_sitter_python() -> tree_sitter::Language;
-    fn tree_sitter_javascript() -> tree_sitter::Language;
-    fn tree_sitter_typescript() -> tree_sitter::Language;
-    fn tree_sitter_java() -> tree_sitter::Language;
-    fn tree_sitter_go() -> tree_sitter::Language;
-    fn tree_sitter_ruby() -> tree_sitter::Language;
-    fn tree_sitter_rust() -> tree_sitter::Language;
-    fn tree_sitter_hcl() -> tree_sitter::Language;
-    fn tree_sitter_php() -> tree_sitter::Language;
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Language {
     Python,
@@ -214,21 +200,19 @@ impl SecurityRiskPatterns {
     }
 
     fn get_tree_sitter_language(language: Language) -> TreeSitterLanguage {
-        unsafe {
-            match language {
-                Language::Python => tree_sitter_python(),
-                Language::JavaScript => tree_sitter_javascript(),
-                Language::TypeScript => tree_sitter_typescript(),
-                Language::Rust => tree_sitter_rust(),
-                Language::Java => tree_sitter_java(),
-                Language::Go => tree_sitter_go(),
-                Language::Ruby => tree_sitter_ruby(),
-                Language::C => tree_sitter_c(),
-                Language::Cpp => tree_sitter_cpp(),
-                Language::Terraform => tree_sitter_hcl(),
-                Language::Php => tree_sitter_php(),
-                _ => tree_sitter_javascript(), // Default fallback
-            }
+        match language {
+            Language::Python => tree_sitter_python::LANGUAGE.into(),
+            Language::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
+            Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            Language::Rust => tree_sitter_rust::LANGUAGE.into(),
+            Language::Java => tree_sitter_java::LANGUAGE.into(),
+            Language::Go => tree_sitter_go::LANGUAGE.into(),
+            Language::Ruby => tree_sitter_ruby::LANGUAGE.into(),
+            Language::C => tree_sitter_c::LANGUAGE.into(),
+            Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+            Language::Terraform => tree_sitter_hcl::LANGUAGE.into(),
+            Language::Php => tree_sitter_php::LANGUAGE_PHP.into(),
+            _ => tree_sitter_javascript::LANGUAGE.into(), // Default fallback
         }
     }
 
