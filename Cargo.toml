@@ -4,8 +4,6 @@ version = "0.8.0"
 edition = "2024"
 default-run = "parsentry"
 
-[build-dependencies]
-cc = "1.0"
 
 [features]
 default = []
@@ -16,7 +14,17 @@ benchmark = []
 tree-sitter = "0.25.6"
 git2 = "0.18"
 streaming-iterator = "0.1"
-tree-sitter-typescript = { version = "0.20" }
+tree-sitter-c = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-rust = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-hcl = "1.1"
+tree-sitter-php = "0.23"
 tokio = { version = "1.43", features = ["full", "test-util", "macros"] }
 clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -34,7 +42,6 @@ quick-xml = { version = "0.31", features = ["serialize"] }
 dotenvy = "0.15"
 genai = "0.4.0-alpha.15"
 futures = { version = "0.3", features = ["thread-pool"] }
-tree-sitter-ruby = "0.20"
 indicatif = "0.17"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
