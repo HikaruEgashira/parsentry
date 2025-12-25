@@ -13,16 +13,6 @@ export default function Home() {
     });
   };
 
-  const copyToClipboard = async () => {
-    const command = 'docker run -e OPENAI_API_KEY=$OPENAI_API_KEY ghcr.io/hikaruegashira/parsentry:latest --repo your-org/your-repo';
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  };
 
   return (
     <div className="min-h-screen">
@@ -105,86 +95,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Start Section */}
-      <section id="quick-start" className="py-24 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Quick Start
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Get started with Parsentry in seconds. Just run this single Docker command:
-            </p>
-          </div>
-
-          {/* Docker Command */}
-          <div className="relative group max-w-4xl mx-auto">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-            <div className="relative bg-white dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="ml-4 text-gray-500 dark:text-gray-400 text-sm font-mono">terminal</span>
-                </div>
-                <button
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600 transition-colors"
-                >
-                  {copied ? (
-                    <>
-                      <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      Copy
-                    </>
-                  )}
-                </button>
-              </div>
-              <pre className="text-left text-blue-600 dark:text-green-400 font-mono text-sm md:text-base leading-relaxed overflow-x-auto">
-                <code>{`docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \\
-  ghcr.io/hikaruegashira/parsentry:latest \\
-  --repo your-org/your-repo`}</code>
-              </pre>
-            </div>
-          </div>
-
-          {/* Additional info */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-            <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-md">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-white font-bold">1</span>
-              </div>
-              <h3 className="text-gray-900 dark:text-white font-semibold mb-2">Set API Key</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Export your OpenAI API key as an environment variable</p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-md">
-              <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-white font-bold">2</span>
-              </div>
-              <h3 className="text-gray-900 dark:text-white font-semibold mb-2">Run Scanner</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Execute the Docker command with your target repository</p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-md">
-              <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-white font-bold">3</span>
-              </div>
-              <h3 className="text-gray-900 dark:text-white font-semibold mb-2">Get Results</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Review detailed vulnerability reports with remediation guidance</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Features Section */}
       <section className="py-24 sm:py-32 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950">

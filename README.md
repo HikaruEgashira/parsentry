@@ -30,19 +30,21 @@ Download the latest release for your platform from [GitHub Releases](https://git
 
 ```bash
 # Analyze a GitHub repository
-parsentry --repo owner/repository --output-dir ./reports --generate-patterns
+parsentry owner/repository --output-dir ./reports --generate-patterns
 
 # Analyze a local directory
-parsentry --root /path/to/code --output-dir ./reports
+parsentry /path/to/code --output-dir ./reports
 ```
 
 ### Command Line Options
 
-- `--repo <REPO>`: Analyze GitHub repository (owner/repo)
-- `--root <PATH>`: Analyze local directory
-- `--model <MODEL>`: supports OpenAI, Anthropic, Google, Groq, Ollama, default: o4-mini
+- `<TARGET>`: Target to analyze (local path or GitHub repository owner/repo)
+- `-m, --model <MODEL>`: LLM model to use, supports OpenAI, Anthropic, Google, Groq, Ollama (default: o4-mini)
 - `--output-dir <DIR>`: Directory for markdown reports
+- `--min-confidence <CONFIDENCE>`: Minimum confidence threshold (default: 70)
 - `--generate-patterns`: Generate custom patterns from codebase
+- `-v, --verbosity`: Increase verbosity level (can be repeated)
+- `--language <LANG>`: Output language (default: ja)
 
 ### Example Reports
 

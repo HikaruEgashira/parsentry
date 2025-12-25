@@ -23,10 +23,7 @@ export default function DocsPage() {
           
           <h3>Installation</h3>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
-            <code>{`# Using Docker (recommended)
-docker pull ghcr.io/hikaruegashira/parsentry:latest
-
-# Or build from source
+            <code>{`# Build from source
 git clone https://github.com/HikaruEgashira/parsentry
 cd parsentry
 cargo build --release`}</code>
@@ -34,20 +31,29 @@ cargo build --release`}</code>
 
           <h3>Basic Usage</h3>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
-            <code>{`# Analyze a local directory
-cargo run -- -r /path/to/project
+            <code>{`# Build the release version
+cargo build --release
+
+# Analyze a local directory
+./target/release/parsentry /path/to/project
 
 # Analyze a GitHub repository
-cargo run -- --repo owner/repository
+./target/release/parsentry owner/repo
 
-# Generate summary report with markdown output
-cargo run -- -r /path/to/project --output-dir ./reports --summary
+# Save results to output directory
+./target/release/parsentry /path/to/project --output-dir ./reports
 
 # Specify LLM model
-cargo run -- -r /path/to/project --model gpt-5-mini
+./target/release/parsentry /path/to/project --model claude-3-5-sonnet
 
 # Set minimum confidence threshold
-cargo run -- -r /path/to/project --min-confidence 70`}</code>
+./target/release/parsentry /path/to/project --min-confidence 80
+
+# Enable verbose logging
+./target/release/parsentry /path/to/project -vv
+
+# Generate additional analysis patterns
+./target/release/parsentry /path/to/project --generate-patterns`}</code>
           </pre>
 
           <h2>Supported Vulnerability Types</h2>
@@ -85,7 +91,6 @@ cargo run -- -r /path/to/project --min-confidence 70`}</code>
           <h2>Links</h2>
           <ul>
             <li><a href="https://github.com/HikaruEgashira/parsentry" className="text-blue-600 hover:underline">GitHub Repository</a></li>
-            <li><a href="https://hub.docker.com/r/hikaruegashira/parsentry" className="text-blue-600 hover:underline">Docker Hub</a></li>
           </ul>
         </div>
       </div>
