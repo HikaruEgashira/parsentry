@@ -37,52 +37,50 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Get API base URL from configuration
     let api_base_url = final_args.api_base_url.as_deref();
 
-    let (root_dir, repo_name) = if let Some(repo) = &final_args.repo {
-        let dest = PathBuf::from("repo");
-        if dest.exists() {
-            std::fs::remove_dir_all(&dest).map_err(|e| {
+    let (root_dir, repo_name) = if let Some(target) = &final_args.target {
+        if target.contains('/') && !std::path::Path::new(target).exists() {
+            let dest = PathBuf::from("repo");
+            if dest.exists() {
+                std::fs::remove_dir_all(&dest).map_err(|e| {
+                    anyhow::anyhow!(
+                        "{}: {}",
+                        messages
+                            .get("error_clone_failed")
+                            .map_or("Failed to delete clone directory", |s| s),
+                        e
+                    )
+                })?;
+            }
+            println!(
+                "🛠️  {}: {} → {}",
+                messages
+                    .get("cloning_repo")
+                    .map_or("Cloning GitHub repository", |s| s),
+                target,
+                dest.display()
+            );
+            clone_github_repo(target, &dest).map_err(|e| {
                 anyhow::anyhow!(
                     "{}: {}",
                     messages
-                        .get("error_clone_failed")
-                        .map_or("Failed to delete clone directory", |s| s),
+                        .get("github_repo_clone_failed")
+                        .map_or("Failed to clone GitHub repository", |s| s),
                     e
                 )
             })?;
-        }
-        println!(
-            "🛠️  {}: {} → {}",
-            messages
-                .get("cloning_repo")
-                .map_or("Cloning GitHub repository", |s| s),
-            repo,
-            dest.display()
-        );
-        clone_github_repo(repo, &dest).map_err(|e| {
-            anyhow::anyhow!(
-                "{}: {}",
-                messages
-                    .get("github_repo_clone_failed")
-                    .map_or("Failed to clone GitHub repository", |s| s),
-                e
-            )
-        })?;
 
-        // Extract repository name for output directory
-        let repo_name = if repo.contains('/') {
-            repo.split('/')
+            let repo_name = target
+                .split('/')
                 .last()
                 .unwrap_or("unknown-repo")
-                .replace(".git", "")
-        } else {
-            repo.replace(".git", "")
-        };
+                .replace(".git", "");
 
-        (dest, Some(repo_name))
-    } else if let Some(root) = &final_args.root {
-        (root.clone(), None)
+            (dest, Some(repo_name))
+        } else {
+            (PathBuf::from(target), None)
+        }
     } else {
-        return Err(anyhow::anyhow!("Either --root or --repo must be specified, or configured in a config file"));
+        return Err(anyhow::anyhow!("Target must be specified, or configured in a config file"));
     };
 
     // Handle pattern generation mode

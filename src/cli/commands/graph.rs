@@ -9,34 +9,32 @@ use crate::repo::{RepoOps, clone_github_repo};
 
 pub async fn run_graph_command(args: GraphArgs) -> Result<()> {
     println!("📊 Starting call graph generation...");
-    
-    // Handle repository cloning or use provided root
-    let (root_dir, _repo_name) = if let Some(repo) = &args.repo {
-        let dest = PathBuf::from("repo");
-        if dest.exists() {
-            std::fs::remove_dir_all(&dest).map_err(|e| {
-                anyhow::anyhow!("Failed to delete clone directory: {}", e)
+
+    let (root_dir, _repo_name) = if let Some(target) = &args.target {
+        if target.contains('/') && !std::path::Path::new(target).exists() {
+            let dest = PathBuf::from("repo");
+            if dest.exists() {
+                std::fs::remove_dir_all(&dest).map_err(|e| {
+                    anyhow::anyhow!("Failed to delete clone directory: {}", e)
+                })?;
+            }
+            println!("🛠️  Cloning GitHub repository: {} → {}", target, dest.display());
+            clone_github_repo(target, &dest).map_err(|e| {
+                anyhow::anyhow!("Failed to clone GitHub repository: {}", e)
             })?;
-        }
-        println!("🛠️  Cloning GitHub repository: {} → {}", repo, dest.display());
-        clone_github_repo(repo, &dest).map_err(|e| {
-            anyhow::anyhow!("Failed to clone GitHub repository: {}", e)
-        })?;
-        
-        let repo_name = if repo.contains('/') {
-            repo.split('/')
+
+            let repo_name = target
+                .split('/')
                 .last()
                 .unwrap_or("unknown-repo")
-                .replace(".git", "")
+                .replace(".git", "");
+
+            (dest, Some(repo_name))
         } else {
-            repo.replace(".git", "")
-        };
-        
-        (dest, Some(repo_name))
-    } else if let Some(root) = &args.root {
-        (root.clone(), None)
+            (PathBuf::from(target), None)
+        }
     } else {
-        return Err(anyhow::anyhow!("Either --root or --repo must be specified"));
+        return Err(anyhow::anyhow!("Target must be specified"));
     };
     
     let repo = RepoOps::new(root_dir.clone());
