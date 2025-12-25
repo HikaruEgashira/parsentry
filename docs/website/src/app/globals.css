@@ -3,11 +3,51 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* shadcn/ui inspired slate colors */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Primary color - changed from purple to slate gray */
+  --color-primary-50: var(--color-slate-50);
+  --color-primary-100: var(--color-slate-100);
+  --color-primary-200: var(--color-slate-200);
+  --color-primary-300: var(--color-slate-300);
+  --color-primary-400: var(--color-slate-400);
+  --color-primary-500: var(--color-slate-500);
+  --color-primary-600: var(--color-slate-600);
+  --color-primary-700: var(--color-slate-700);
+  --color-primary-800: var(--color-slate-800);
+  --color-primary-900: var(--color-slate-900);
+  --color-primary-950: var(--color-slate-950);
+
+  /* Accent color - also gray for consistency */
+  --color-accent-50: var(--color-slate-50);
+  --color-accent-100: var(--color-slate-100);
+  --color-accent-200: var(--color-slate-200);
+  --color-accent-300: var(--color-slate-300);
+  --color-accent-400: var(--color-slate-400);
+  --color-accent-500: var(--color-slate-500);
+  --color-accent-600: var(--color-slate-600);
+  --color-accent-700: var(--color-slate-700);
+  --color-accent-800: var(--color-slate-800);
+  --color-accent-900: var(--color-slate-900);
+  --color-accent-950: var(--color-slate-950);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,6 +56,19 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    /* Dark mode slate colors */
+    --color-slate-50: #020617;
+    --color-slate-100: #0f172a;
+    --color-slate-200: #1e293b;
+    --color-slate-300: #334155;
+    --color-slate-400: #475569;
+    --color-slate-500: #64748b;
+    --color-slate-600: #94a3b8;
+    --color-slate-700: #cbd5e1;
+    --color-slate-800: #e2e8f0;
+    --color-slate-900: #f1f5f9;
+    --color-slate-950: #f8fafc;
   }
 }
 
