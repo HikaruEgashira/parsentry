@@ -10,15 +10,11 @@ use std::path::PathBuf;
     long_about = None
 )]
 pub struct Args {
+    /// Target to analyze: local path or GitHub repository (owner/repo)
+    pub target: Option<String>,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
-
-    // Global options for backward compatibility and scan command
-    #[arg(short, long, global = true)]
-    pub root: Option<PathBuf>,
-
-    #[arg(long, global = true)]
-    pub repo: Option<String>,
 
     #[arg(short, long)]
     pub analyze: Option<PathBuf>,
@@ -64,11 +60,8 @@ pub struct Args {
 pub enum Commands {
     /// Generate call graphs from source code
     Graph {
-        #[arg(short, long)]
-        root: Option<PathBuf>,
-
-        #[arg(long)]
-        repo: Option<String>,
+        /// Target to analyze: local path or GitHub repository (owner/repo)
+        target: Option<String>,
 
         #[arg(short, long, default_value = "json")]
         format: String,
@@ -96,11 +89,9 @@ pub enum Commands {
     },
 }
 
-// Backward compatibility struct for existing scan functionality
 #[derive(Debug, Clone)]
 pub struct ScanArgs {
-    pub root: Option<PathBuf>,
-    pub repo: Option<String>,
+    pub target: Option<String>,
     pub analyze: Option<PathBuf>,
     pub model: String,
     pub verbosity: u8,
@@ -119,8 +110,7 @@ pub struct ScanArgs {
 impl From<&Args> for ScanArgs {
     fn from(args: &Args) -> Self {
         ScanArgs {
-            root: args.root.clone(),
-            repo: args.repo.clone(),
+            target: args.target.clone(),
             analyze: args.analyze.clone(),
             model: args.model.clone(),
             verbosity: args.verbosity,
@@ -140,8 +130,7 @@ impl From<&Args> for ScanArgs {
 
 #[derive(Debug, Clone)]
 pub struct GraphArgs {
-    pub root: Option<PathBuf>,
-    pub repo: Option<String>,
+    pub target: Option<String>,
     pub format: String,
     pub output: Option<PathBuf>,
     pub start_functions: Option<String>,
@@ -171,9 +160,9 @@ pub fn validate_scan_args(args: &ScanArgs) -> Result<()> {
 }
 
 pub fn validate_graph_args(args: &GraphArgs) -> Result<()> {
-    // Validate root/repo requirement
-    if args.root.is_none() && args.repo.is_none() {
-        return Err(anyhow::anyhow!("Either --root or --repo must be specified"));
+    // Validate target requirement
+    if args.target.is_none() {
+        return Err(anyhow::anyhow!("Target must be specified"));
     }
 
     // Validate output format

@@ -52,7 +52,7 @@ pub struct AnalysisConfig {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PathsConfig {
-    pub root: Option<PathBuf>,
+    pub target: Option<String>,
     pub output_dir: Option<PathBuf>,
     pub analyze: Option<PathBuf>,
 }
@@ -138,7 +138,7 @@ impl Default for AnalysisConfig {
 impl Default for PathsConfig {
     fn default() -> Self {
         Self {
-            root: None,
+            target: None,
             output_dir: None,
             analyze: None,
         }
@@ -240,7 +240,7 @@ evaluate = false
 verbosity = 0
 
 [paths]
-# root = "src"
+# target = "src" or "owner/repo"
 # output_dir = "reports"
 # analyze = "specific-file.rs"
 
@@ -249,9 +249,6 @@ verbosity = 0
 
 [api]
 # base_url = "https://api.example.com"
-
-[repo]
-# url = "hikaruegashira/hikae-vulnerable-javascript"
 
 [generation]
 generate_patterns = false
@@ -331,7 +328,7 @@ security_focus = false
                         self.analysis.verbosity = value.parse()
                             .map_err(|_| anyhow!("Invalid verbosity value: {}", value))?;
                     }
-                    "PATHS_ROOT" => self.paths.root = Some(PathBuf::from(value)),
+                    "PATHS_TARGET" => self.paths.target = Some(value.clone()),
                     "PATHS_OUTPUT_DIR" => self.paths.output_dir = Some(PathBuf::from(value)),
                     "PATHS_ANALYZE" => self.paths.analyze = Some(PathBuf::from(value)),
                     "FILTERING_VULN_TYPES" => {
@@ -339,7 +336,6 @@ security_focus = false
                         self.filtering.vuln_types = Some(types);
                     }
                     "API_BASE_URL" => self.api.base_url = Some(value.clone()),
-                    "REPO_URL" => self.repo.url = Some(value.clone()),
                     "GENERATION_GENERATE_PATTERNS" => {
                         self.generation.generate_patterns = value.parse()
                             .map_err(|_| anyhow!("Invalid generate_patterns value: {}", value))?;
@@ -386,52 +382,48 @@ security_focus = false
         if !args.model.is_empty() && args.model != default_model() {
             self.analysis.model = args.model.clone();
         }
-        
+
         if args.min_confidence != default_min_confidence() {
             self.analysis.min_confidence = args.min_confidence;
         }
-        
+
         if !args.language.is_empty() && args.language != default_language() {
             self.analysis.language = args.language.clone();
         }
-        
+
         if args.debug {
             self.analysis.debug = args.debug;
         }
-        
+
         if args.evaluate {
             self.analysis.evaluate = args.evaluate;
         }
-        
+
         if args.verbosity > 0 {
             self.analysis.verbosity = args.verbosity;
         }
-        
-        if let Some(ref root) = args.root {
-            self.paths.root = Some(root.clone());
+
+        if let Some(ref target) = args.target {
+            self.paths.target = Some(target.clone());
         }
-        
+
         if let Some(ref output_dir) = args.output_dir {
             self.paths.output_dir = Some(output_dir.clone());
         }
-        
+
         if let Some(ref analyze) = args.analyze {
             self.paths.analyze = Some(analyze.clone());
         }
-        
+
         if let Some(ref vuln_types_str) = args.vuln_types {
             let types: Vec<String> = vuln_types_str.split(',').map(|s| s.trim().to_string()).collect();
             self.filtering.vuln_types = Some(types);
         }
-        
+
         if let Some(ref base_url) = args.api_base_url {
             self.api.base_url = Some(base_url.clone());
         }
-        
-        if let Some(ref repo) = args.repo {
-            self.repo.url = Some(repo.clone());
-        }
-        
+
         if args.generate_patterns {
             self.generation.generate_patterns = args.generate_patterns;
         }
@@ -460,15 +452,18 @@ security_focus = false
     }
 
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if let Some(ref root) = self.paths.root {
-            if !root.exists() {
-                return Err(ConfigError::InvalidPath {
-                    field: "paths.root".to_string(),
-                    path: root.clone(),
-                });
+        if let Some(ref target) = self.paths.target {
+            if !target.contains('/') || std::path::Path::new(target).exists() {
+                let path = PathBuf::from(target);
+                if !path.exists() {
+                    return Err(ConfigError::InvalidPath {
+                        field: "paths.target".to_string(),
+                        path,
+                    });
+                }
             }
         }
-        
+
         if let Some(ref analyze) = self.paths.analyze {
             if !analyze.exists() {
                 return Err(ConfigError::InvalidPath {
@@ -499,8 +494,7 @@ security_focus = false
     
     pub fn to_args(&self) -> ScanArgs {
         ScanArgs {
-            root: self.paths.root.clone(),
-            repo: self.repo.url.clone(),
+            target: self.paths.target.clone(),
             analyze: self.paths.analyze.clone(),
             model: self.analysis.model.clone(),
             verbosity: self.analysis.verbosity,
@@ -545,19 +539,19 @@ language = "en"
 debug = true
 
 [paths]
-root = "src"
+target = "src"
 output_dir = "reports"
 
 [filtering]
 vuln_types = ["SQLI", "XSS"]
 "#;
-        
+
         let config: ParsentryConfig = toml::from_str(toml_content).unwrap();
         assert_eq!(config.analysis.model, "gpt-4");
         assert_eq!(config.analysis.min_confidence, 80);
         assert_eq!(config.analysis.language, "en");
         assert!(config.analysis.debug);
-        assert_eq!(config.paths.root, Some(PathBuf::from("src")));
+        assert_eq!(config.paths.target, Some("src".to_string()));
         assert_eq!(config.paths.output_dir, Some(PathBuf::from("reports")));
         assert_eq!(config.filtering.vuln_types, Some(vec!["SQLI".to_string(), "XSS".to_string()]));
     }
@@ -586,13 +580,13 @@ model = "claude-3"
 min_confidence = 85
 
 [paths]
-root = "test"
+target = "test"
 "#).unwrap();
-        
+
         let config = ParsentryConfig::load_from_file(temp_file.path()).unwrap();
         assert_eq!(config.analysis.model, "claude-3");
         assert_eq!(config.analysis.min_confidence, 85);
-        assert_eq!(config.paths.root, Some(PathBuf::from("test")));
+        assert_eq!(config.paths.target, Some("test".to_string()));
     }
 
     #[test]

@@ -31,21 +31,19 @@ impl RootCommand {
         let args = Args::parse();
 
         match &args.command {
-            Some(Commands::Graph { 
-                root, 
-                repo, 
-                format, 
-                output, 
-                start_functions, 
-                max_depth, 
-                include, 
-                exclude, 
-                detect_cycles, 
-                security_focus 
+            Some(Commands::Graph {
+                target,
+                format,
+                output,
+                start_functions,
+                max_depth,
+                include,
+                exclude,
+                detect_cycles,
+                security_focus
             }) => {
                 let graph_args = GraphArgs {
-                    root: root.clone().or_else(|| args.root.clone()),
-                    repo: repo.clone().or_else(|| args.repo.clone()),
+                    target: target.clone().or_else(|| args.target.clone()),
                     format: format.clone(),
                     output: output.clone(),
                     start_functions: start_functions.clone(),
@@ -58,7 +56,7 @@ impl RootCommand {
                     debug: args.debug,
                     config: args.config.clone(),
                 };
-                
+
                 validate_graph_args(&graph_args)?;
                 run_graph_command(graph_args).await
             },
