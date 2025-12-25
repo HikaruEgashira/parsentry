@@ -156,6 +156,3 @@ fi
 # Final summary
 log_section "検証完了"
 log_success "PR #$PR_NUMBER の動作確認が完了しました"
-echo "次のステップ:"
-echo "1. git checkout main で main ブランチに戻す"
-echo "2. PR をマージする場合は gh pr merge $PR_NUMBER を実行"
