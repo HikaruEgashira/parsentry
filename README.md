@@ -14,18 +14,11 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 
 ## Features
 
-- AI-Powered Analysis: Uses Large Language Models for advanced vulnerability detection
 - PAR Classification: Principal-Action-Resource framework for security issue discovery
-- Multi-Language Support: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
-- Tree-sitter Parsing: Semantic code analysis for accurate context understanding
-- Comprehensive Reports: Detailed markdown reports with confidence scoring and PoC examples
-- Call Graph Visualization: Generate function call relationships in multiple formats (JSON, DOT, Mermaid, CSV)
-- Cycle Detection: Identify circular dependencies and potential infinite loops
-- Security-Focused Analysis: Track attack vectors through function call chains
+- AI for Security: Uses Large Language Models for advanced vulnerability detection
+- Multi-Language Support: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform powered by Tree-sitter
 
 ## Installation
-
-### Using mise (recommended)
 
 ```bash
 mise use -g github:HikaruEgashira/parsentry
@@ -34,8 +27,6 @@ mise use -g github:HikaruEgashira/parsentry
 Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases):
 
 ## Usage
-
-### Security Analysis
 
 ```bash
 # Analyze a GitHub repository
@@ -47,23 +38,11 @@ parsentry --root /path/to/code --output-dir ./reports
 
 ### Command Line Options
 
-#### Security Analysis
 - `--repo <REPO>`: Analyze GitHub repository (owner/repo)
 - `--root <PATH>`: Analyze local directory
 - `--model <MODEL>`: supports OpenAI, Anthropic, Google, Groq, Ollama, default: o4-mini
 - `--output-dir <DIR>`: Directory for markdown reports
 - `--generate-patterns`: Generate custom patterns from codebase
-
-#### Call Graph Analysis
-- `graph`: Generate call graph for code visualization
-- `--format <FORMAT>`: Output format (json, dot, mermaid, csv), default: json
-- `--output <FILE>`: Output file path
-- `--start-functions <FUNCS>`: Comma-separated list of starting functions
-- `--max-depth <DEPTH>`: Maximum analysis depth, default: 10
-- `--include <PATTERNS>`: Include patterns (regex)
-- `--exclude <PATTERNS>`: Exclude patterns (regex)
-- `--detect-cycles`: Enable cycle detection
-- `--security-focus`: Focus on security-relevant functions
 
 ### Example Reports
 
