@@ -28,7 +28,7 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 ### Using mise (recommended)
 
 ```bash
-mise use -g ubi:HikaruEgashira/parsentry
+mise use -g github:HikaruEgashira/parsentry
 ```
 
 ### Download pre-built binaries
