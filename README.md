@@ -23,12 +23,50 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 - **Cycle Detection**: Identify circular dependencies and potential infinite loops
 - **Security-Focused Analysis**: Track attack vectors through function call chains
 
-## Usage
+## Installation
+
+### Using mise (recommended)
+
+```bash
+mise use -g ubi:HikaruEgashira/parsentry
+```
+
+### Download pre-built binaries
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases):
+
+```bash
+# Linux (x86_64)
+curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv parsentry /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-x86_64-apple-darwin.tar.gz | tar xz
+sudo mv parsentry /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv parsentry /usr/local/bin/
+```
+
+### Using Docker
 
 ```bash
 docker pull ghcr.io/hikaruegashira/parsentry:latest
+```
 
-# replace owner/repository
+## Usage
+
+### Security Analysis
+
+```bash
+# Analyze a GitHub repository
+parsentry --repo owner/repository --output-dir ./reports --generate-patterns
+
+# Analyze a local directory
+parsentry --root /path/to/code --output-dir ./reports
+
+# Using Docker
 docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v $(pwd)/reports:/reports \
   ghcr.io/hikaruegashira/parsentry:latest \
