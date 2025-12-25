@@ -40,13 +40,12 @@ Download the latest release for your platform from [GitHub Releases](https://git
 curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-x86_64-unknown-linux-gnu.tar.gz | tar xz
 sudo mv parsentry /usr/local/bin/
 
-# macOS (Intel)
-curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-x86_64-apple-darwin.tar.gz | tar xz
-sudo mv parsentry /usr/local/bin/
-
 # macOS (Apple Silicon)
 curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-aarch64-apple-darwin.tar.gz | tar xz
 sudo mv parsentry /usr/local/bin/
+
+# Windows (x86_64)
+# Download parsentry-x86_64-pc-windows-msvc.zip from releases and extract
 ```
 
 ### Using Docker
