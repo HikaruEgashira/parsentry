@@ -1,9 +1,0 @@
-target/
-.git/
-.github/
-.vscode/
-*.sqlite
-*.png
-*.md
-*.rs.bk
-.DS_Store
