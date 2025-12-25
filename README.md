@@ -14,14 +14,14 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 
 ## Features
 
-- **AI-Powered Analysis**: Uses Large Language Models for advanced vulnerability detection
-- **PAR Classification**: Principal-Action-Resource framework for security issue discovery
-- **Multi-Language Support**: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
-- **Tree-sitter Parsing**: Semantic code analysis for accurate context understanding
-- **Comprehensive Reports**: Detailed markdown reports with confidence scoring and PoC examples
-- **Call Graph Visualization**: Generate function call relationships in multiple formats (JSON, DOT, Mermaid, CSV)
-- **Cycle Detection**: Identify circular dependencies and potential infinite loops
-- **Security-Focused Analysis**: Track attack vectors through function call chains
+- AI-Powered Analysis: Uses Large Language Models for advanced vulnerability detection
+- PAR Classification: Principal-Action-Resource framework for security issue discovery
+- Multi-Language Support: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
+- Tree-sitter Parsing: Semantic code analysis for accurate context understanding
+- Comprehensive Reports: Detailed markdown reports with confidence scoring and PoC examples
+- Call Graph Visualization: Generate function call relationships in multiple formats (JSON, DOT, Mermaid, CSV)
+- Cycle Detection: Identify circular dependencies and potential infinite loops
+- Security-Focused Analysis: Track attack vectors through function call chains
 
 ## Installation
 
@@ -31,28 +31,7 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 mise use -g github:HikaruEgashira/parsentry
 ```
 
-### Download pre-built binaries
-
 Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases):
-
-```bash
-# Linux (x86_64)
-curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-x86_64-unknown-linux-gnu.tar.gz | tar xz
-sudo mv parsentry /usr/local/bin/
-
-# macOS (Apple Silicon)
-curl -L https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry-aarch64-apple-darwin.tar.gz | tar xz
-sudo mv parsentry /usr/local/bin/
-
-# Windows (x86_64)
-# Download parsentry-x86_64-pc-windows-msvc.zip from releases and extract
-```
-
-### Using Docker
-
-```bash
-docker pull ghcr.io/hikaruegashira/parsentry:latest
-```
 
 ## Usage
 
@@ -64,12 +43,6 @@ parsentry --repo owner/repository --output-dir ./reports --generate-patterns
 
 # Analyze a local directory
 parsentry --root /path/to/code --output-dir ./reports
-
-# Using Docker
-docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  -v $(pwd)/reports:/reports \
-  ghcr.io/hikaruegashira/parsentry:latest \
-  --repo owner/repository --output-dir /reports --generate-patterns
 ```
 
 ### Command Line Options
@@ -92,9 +65,8 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - `--detect-cycles`: Enable cycle detection
 - `--security-focus`: Focus on security-relevant functions
 
-## Examples
+### Example Reports
 
-### Security Analysis
 - [skills/secure-code-game](docs/reports/skills-secure-code-game/summary.md) - Security challenges across multiple languages
 - [harishsg993010/damn-vulnerable-MCP-server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md) - MCP Server
 - [bridgecrewio/terragoat](docs/reports/terragoat/summary.md) - Terraform
@@ -103,31 +75,6 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
 - [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js
 - [OWASP/railsgoat](docs/reports/railsgoat/summary.md) - Ruby on Rails
 - [dolevf/Damn-Vulnerable-GraphQL-Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL
-
-### Call Graph Analysis
-
-```bash
-# Generate a JSON call graph for the entire project
-parsentry graph --root src --format json --output callgraph.json
-
-# Generate a Mermaid diagram starting from main function
-parsentry graph --root src --format mermaid --start-functions main --output callgraph.md
-
-# Generate a DOT file for Graphviz visualization with cycle detection
-parsentry graph --root src --format dot --detect-cycles --output callgraph.dot
-
-# Focus on security-relevant functions only
-parsentry graph --root src --security-focus --include ".*auth.*,.*security.*" --format mermaid
-```
-
-## Understand the Concepts
-
-- [PAR Framework](docs/concepts/par_framework.md) - Principal-Action-Resource security analysis model
-- [Analysis Flow](docs/concepts/analysis_flow.md) - How the analysis process works
-- [Context Building](docs/concepts/context.md) - Code context generation
-- [Prompts](docs/concepts/prompts.md) - LLM prompt templates
-- [Response Schema](docs/concepts/response_schema.md) - Output format specification
-- [Security Patterns](docs/concepts/security_patterns.md) - PAR pattern matching details
 
 ## Security
 
