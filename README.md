@@ -39,7 +39,7 @@ parsentry /path/to/code
 ### Command Line Options
 
 - `<TARGET>`: Target to analyze (local path or GitHub repository owner/repo)
-- `-m, --model <MODEL>`: LLM model to use, supports OpenAI, Anthropic, Google, Groq, Ollama (default: o4-mini)
+- `-m, --model <MODEL>`: LLM model to use, supports OpenAI, Anthropic, Google, Groq, Ollama (default: gpt-5.1-codex)
 - `--output-dir <DIR>`: Directory for markdown reports
 - `--min-confidence <CONFIDENCE>`: Minimum confidence threshold (default: 70)
 - `--generate-patterns`: Generate custom patterns from codebase
