@@ -2,9 +2,9 @@
 
 Parsentry is a PAR (Principal-Action-Resource) based security scanner that combines static code analysis with LLMs to detect vulnerabilities across multiple languages including IaC. It provides comprehensive multi-language security analysis.
 
-- Principals: 信頼できないソース（攻撃者の入力源）
-- Actions: セキュリティ関連の動作（バリデーションや権限制御）
-- Resources: 攻撃対象となるリソース（ファイル、データベース、APIに対する操作）
+- Principals: 実行主体/Source
+- Actions: セキュリティに関連する制御/Validate
+- Resources: 対象となるリソース/Sink
 
 ## Development Environment
 
@@ -57,11 +57,11 @@ cargo test --features benchmark
 git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
 
 # Run individual benchmark validation
-cargo run -- --root benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns
+cargo run -- benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24 --generate-patterns
 
 # Validate specific vulnerability types
-cargo run -- --root benchmarks/XBEN-010-24 --output-dir docs/benchmark/results/XBEN-010-24 --generate-patterns
-cargo run -- --root benchmarks/XBEN-020-24 --output-dir docs/benchmark/results/XBEN-020-24 --generate-patterns
+cargo run -- benchmarks/XBEN-010-24 --output-dir docs/benchmark/results/XBEN-010-24 --generate-patterns
+cargo run -- benchmarks/XBEN-020-24 --output-dir docs/benchmark/results/XBEN-020-24 --generate-patterns
 ```
 
 出力結果 `docs/benchmark/results/XBEN-XXX-24/*.md` と 答え`benchmarks/XBEN-XXX-24/benchmark.json` の内容を見比べて精度を確認してください。
