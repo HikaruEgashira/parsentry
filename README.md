@@ -12,7 +12,7 @@ A PAR (Principal-Action-Resource) based security scanner using LLMs and static c
 
 Parsentry is a PAR (Principal-Action-Resource) based security scanner that combines static code analysis with LLMs to detect vulnerabilities across multiple languages including IaC. It provides comprehensive multi-language security analysis with AI-powered vulnerability detection.
 
-## Features
+### Features
 
 ```
 🎯 PAR Classification
@@ -26,7 +26,7 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
    powered by Tree-sitter
 ```
 
-## Installation
+### Installation
 
 ```bash
 mise use -g github:HikaruEgashira/parsentry
@@ -34,7 +34,7 @@ mise use -g github:HikaruEgashira/parsentry
 
 Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases):
 
-## Usage
+### Usage
 
 ```bash
 # Analyze a GitHub repository
@@ -101,10 +101,10 @@ Options:
 - [OWASP/railsgoat](docs/reports/railsgoat/summary.md) - Ruby on Rails
 - [dolevf/Damn-Vulnerable-GraphQL-Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL
 
-## Security
+### Security
 
 This tool is intended for security research and educational purposes only. Do not use the example vulnerable applications in production environments.
 
-## License
+### License
 
 AGPL 3.0
