@@ -28,7 +28,7 @@ pub struct Args {
     #[arg(short, long)]
     pub evaluate: bool,
 
-    #[arg(long, global = true)]
+    #[arg(long, global = true, default_value = "./reports")]
     pub output_dir: Option<PathBuf>,
 
     #[arg(long, default_value = "70")]
