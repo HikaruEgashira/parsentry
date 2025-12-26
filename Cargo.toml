@@ -1,6 +1,6 @@
 [package]
 name = "parsentry"
-version = "0.9.1"
+version = "0.9.2"
 edition = "2024"
 default-run = "parsentry"
 
@@ -46,10 +46,10 @@ indicatif = "0.17"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3.10"
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }
-tempfile = "3.10"
 tokio-test = "0.4"
 
 [workspace]
