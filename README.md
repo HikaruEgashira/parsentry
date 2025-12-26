@@ -50,7 +50,7 @@ parsentry owner/repository --generate-patterns
 ### Command Line Options
 
 ```
-$ parsentry --help
+❯ parsentry --help
 
                 ▲
                ╱ ╲
@@ -64,17 +64,18 @@ $ parsentry --help
                 │
         P A R S E N T R Y
                 │
-             v0.8.1
+             v0.9.1
 
-Usage: parsentry [OPTIONS] [COMMAND]
+Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
 
 Commands:
   graph  Generate call graphs from source code
   help   Print this message or the help of the given subcommand(s)
 
+Arguments:
+  [TARGET]  Target to analyze: local path or GitHub repository (owner/repo)
+
 Options:
-  -r, --root <ROOT>                      
-      --repo <REPO>                      
   -a, --analyze <ANALYZE>                
   -m, --model <MODEL>                    [default: o4-mini]
   -v, --verbosity...                     
