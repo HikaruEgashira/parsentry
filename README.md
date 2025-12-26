@@ -14,9 +14,17 @@ Parsentry is a PAR (Principal-Action-Resource) based security scanner that combi
 
 ## Features
 
-- PAR Classification: Principal-Action-Resource framework for security issue discovery
-- AI for Security: Uses Large Language Models for advanced vulnerability detection
-- Multi-Language Support: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform powered by Tree-sitter
+```
+🎯 PAR Classification
+   Principal-Action-Resource framework for security issue discovery
+
+🤖 AI for Security
+   Uses Large Language Models for advanced vulnerability detection
+
+🌐 Multi-Language Support
+   C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
+   powered by Tree-sitter
+```
 
 ## Installation
 
@@ -30,21 +38,57 @@ Download the latest release for your platform from [GitHub Releases](https://git
 
 ```bash
 # Analyze a GitHub repository
-parsentry owner/repository --generate-patterns
+parsentry owner/repository
 
 # Analyze a local directory
 parsentry /path/to/code
+
+# generate pattern
+parsentry owner/repository --generate-patterns
 ```
 
 ### Command Line Options
 
-- `<TARGET>`: Target to analyze (local path or GitHub repository owner/repo)
-- `-m, --model <MODEL>`: LLM model to use, supports OpenAI, Anthropic, Google, Groq, Ollama (default: gpt-5.1-codex)
-- `--output-dir <DIR>`: Directory for markdown reports
-- `--min-confidence <CONFIDENCE>`: Minimum confidence threshold (default: 70)
-- `--generate-patterns`: Generate custom patterns from codebase
-- `-v, --verbosity`: Increase verbosity level (can be repeated)
-- `--language <LANG>`: Output language (default: ja)
+```
+$ parsentry --help
+
+                ▲
+               ╱ ╲
+              ╱   ╲
+             ╱ ░░░ ╲
+            ╱ ░▓▓▓░ ╲
+           ╱ ░▓███▓░ ╲
+          ╱ ░▓█████▓░ ╲
+         ╱_░▓███████▓░_╲
+           ─────┬─────
+                │
+        P A R S E N T R Y
+                │
+             v0.8.1
+
+Usage: parsentry [OPTIONS] [COMMAND]
+
+Commands:
+  graph  Generate call graphs from source code
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+  -r, --root <ROOT>                      
+      --repo <REPO>                      
+  -a, --analyze <ANALYZE>                
+  -m, --model <MODEL>                    [default: o4-mini]
+  -v, --verbosity...                     
+  -e, --evaluate                         
+      --output-dir <OUTPUT_DIR>          
+      --min-confidence <MIN_CONFIDENCE>  [default: 70]
+      --vuln-types <VULN_TYPES>          
+      --generate-patterns                
+      --debug                            
+      --api-base-url <API_BASE_URL>      
+      --language <LANGUAGE>              [default: ja]
+  -c, --config <CONFIG>                  
+      --generate-config
+```
 
 ### Example Reports
 
