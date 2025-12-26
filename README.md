@@ -30,10 +30,10 @@ Download the latest release for your platform from [GitHub Releases](https://git
 
 ```bash
 # Analyze a GitHub repository
-parsentry owner/repository --output-dir ./reports --generate-patterns
+parsentry owner/repository --generate-patterns
 
 # Analyze a local directory
-parsentry /path/to/code --output-dir ./reports
+parsentry /path/to/code
 ```
 
 ### Command Line Options
