@@ -175,6 +175,18 @@ impl ClaudeCodeExecutor {
         }
 
         let raw_output = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr_output = String::from_utf8_lossy(&output.stderr).to_string();
+        debug!("Claude Code raw output length: {} bytes", raw_output.len());
+
+        if !stderr_output.is_empty() {
+            warn!("Claude Code stderr: {}", stderr_output);
+        }
+
+        if raw_output.is_empty() {
+            debug!("Claude Code returned empty output");
+            return Err(ClaudeCodeError::ParseError("Empty output from Claude Code".to_string()));
+        }
+
         debug!("Claude Code raw output length: {} bytes", raw_output.len());
 
         // Parse the output
@@ -189,7 +201,7 @@ impl ClaudeCodeExecutor {
             .map_err(|e| ClaudeCodeError::ParseError(format!("JSON parse error: {}", e)))?;
 
         // Extract metadata if available
-        let cost_usd = parsed.get("cost_usd").and_then(|v| v.as_f64());
+        let cost_usd = parsed.get("total_cost_usd").and_then(|v| v.as_f64());
         let duration_ms = parsed.get("duration_ms").and_then(|v| v.as_u64());
         let session_id = parsed
             .get("session_id")
@@ -208,9 +220,14 @@ impl ClaudeCodeExecutor {
             raw_output.to_string()
         };
 
+        // Claude Code may return markdown with embedded JSON
+        // Try to extract JSON from code blocks first
+        let json_str = Self::extract_json_from_markdown(&result_str)
+            .unwrap_or_else(|| result_str.clone());
+
         // Parse the response
-        let response: ClaudeCodeResponse = serde_json::from_str(&result_str)
-            .map_err(|e| ClaudeCodeError::ParseError(format!("Response parse error: {}", e)))?;
+        let response: ClaudeCodeResponse = serde_json::from_str(&json_str)
+            .map_err(|e| ClaudeCodeError::ParseError(format!("Response parse error: {} - Content: {}", e, &json_str.chars().take(200).collect::<String>())))?;
 
         Ok(ClaudeCodeOutput {
             response,
@@ -219,6 +236,27 @@ impl ClaudeCodeExecutor {
             session_id,
             raw_output: raw_output.to_string(),
         })
+    }
+
+    /// Extract JSON from markdown code blocks.
+    fn extract_json_from_markdown(text: &str) -> Option<String> {
+        // Look for ```json ... ``` blocks
+        let json_start = text.find("```json")?;
+        let content_start = json_start + 7; // length of "```json"
+        let remaining = &text[content_start..];
+
+        // Skip whitespace/newline after ```json
+        let remaining = remaining.trim_start();
+
+        // Find the closing ```
+        let json_end = remaining.find("```")?;
+        let json_content = &remaining[..json_end].trim();
+
+        if json_content.is_empty() {
+            return None;
+        }
+
+        Some(json_content.to_string())
     }
 
     /// Get the number of available permits.

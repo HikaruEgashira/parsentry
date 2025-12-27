@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "Parsentry",
-          "version": "0.7.0",
+          "version": "0.9.2",
           "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
           "rules": [
             {
@@ -36,6 +36,34 @@
               "default_configuration": {
                 "level": "warning"
               }
+            },
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "short_description": {
+                "text": "Potential local file inclusion vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential local file inclusion vulnerability detected",
+                "markdown": "**Local File Inclusion**\n\nLocal file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "help": {
+                "text": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths.",
+                "markdown": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "lfi"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.5",
+                "security_severity": "6.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
             }
           ]
         }
@@ -44,27 +72,26 @@
         {
           "ruleId": "SSRF",
           "ruleIndex": 0,
-          "level": "warning",
+          "level": "error",
           "message": {
-            "text": "SSRF: 本コードではHTTP GETパラメータ“url”を検証せずにfile_get_contentsで直接フェッチしており、任意の外部／内部リソースへのリクエストが可能です。SSRF攻撃により内部システム情報の漏洩や不正操作が発生する恐れがあります。",
-            "markdown": "本コードではHTTP GETパラメータ“url”を検証せずにfile_get_contentsで直接フェッチしており、任意の外部／内部リソースへのリクエストが可能です。SSRF攻撃により内部システム情報の漏洩や不正操作が発生する恐れがあります。"
+            "text": "SSRF: ## 脆弱性分析\n\n### 発見された脆弱性: SSRF（Server-Side Request Forgery）\n\nこのPHPコードには**深刻なSSRF脆弱性**が存在します。\n\n**問題点:**\n1. `$_GET['url']`からユーザー提供のURLを直接受け取っている\n2. **一切のバリデーションなし**で`file_get_contents()`に渡している\n3. `htmlspecialchars()`は出力のXSS対策であり、SSRF対策ではない\n\n**攻撃シナリオ:**\n- **内部ネットワークアクセス**: `http://localhost/admin`、`http://192.168.1.1/`などで内部サービスにアクセス\n- **ローカルファイル読み取り**: `file:///etc/passwd`でサーバーのファイルを読み取り\n- **クラウドメタデータアクセス**: `http://169.254.169.254/latest/meta-data/`でAWSインスタンスの認証情報を取得\n- **ポートスキャン**: 内部ネットワークのポートスキャンに悪用\n\n**MITRE ATT&CK関連:**\n- T1190: Exploit Public-Facing Application\n- T1071: Application Layer Protocol",
+            "markdown": "## 脆弱性分析\n\n### 発見された脆弱性: SSRF（Server-Side Request Forgery）\n\nこのPHPコードには**深刻なSSRF脆弱性**が存在します。\n\n**問題点:**\n1. `$_GET['url']`からユーザー提供のURLを直接受け取っている\n2. **一切のバリデーションなし**で`file_get_contents()`に渡している\n3. `htmlspecialchars()`は出力のXSS対策であり、SSRF対策ではない\n\n**攻撃シナリオ:**\n- **内部ネットワークアクセス**: `http://localhost/admin`、`http://192.168.1.1/`などで内部サービスにアクセス\n- **ローカルファイル読み取り**: `file:///etc/passwd`でサーバーのファイルを読み取り\n- **クラウドメタデータアクセス**: `http://169.254.169.254/latest/meta-data/`でAWSインスタンスの認証情報を取得\n- **ポートスキャン**: 内部ネットワークのポートスキャンに悪用\n\n**MITRE ATT&CK関連:**\n- T1190: Exploit Public-Facing Application\n- T1071: Application Layer Protocol"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "repo/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
+                  "uri": "benchmarks/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
                   "index": 0
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "a8c044d4c06c4fe1",
-            "vulnerability/type": "SSRF"
+            "parsentry/v1": "c156adf86711899"
           },
           "properties": {
-            "confidence": 0.8,
+            "confidence": 1.0,
             "mitre_attack": [
               "T1090"
             ],
@@ -75,12 +102,47 @@
               "A10:2021-Server-Side Request Forgery"
             ]
           }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "LFI: ## 脆弱性分析\n\n### 発見された脆弱性: SSRF（Server-Side Request Forgery）\n\nこのPHPコードには**深刻なSSRF脆弱性**が存在します。\n\n**問題点:**\n1. `$_GET['url']`からユーザー提供のURLを直接受け取っている\n2. **一切のバリデーションなし**で`file_get_contents()`に渡している\n3. `htmlspecialchars()`は出力のXSS対策であり、SSRF対策ではない\n\n**攻撃シナリオ:**\n- **内部ネットワークアクセス**: `http://localhost/admin`、`http://192.168.1.1/`などで内部サービスにアクセス\n- **ローカルファイル読み取り**: `file:///etc/passwd`でサーバーのファイルを読み取り\n- **クラウドメタデータアクセス**: `http://169.254.169.254/latest/meta-data/`でAWSインスタンスの認証情報を取得\n- **ポートスキャン**: 内部ネットワークのポートスキャンに悪用\n\n**MITRE ATT&CK関連:**\n- T1190: Exploit Public-Facing Application\n- T1071: Application Layer Protocol",
+            "markdown": "## 脆弱性分析\n\n### 発見された脆弱性: SSRF（Server-Side Request Forgery）\n\nこのPHPコードには**深刻なSSRF脆弱性**が存在します。\n\n**問題点:**\n1. `$_GET['url']`からユーザー提供のURLを直接受け取っている\n2. **一切のバリデーションなし**で`file_get_contents()`に渡している\n3. `htmlspecialchars()`は出力のXSS対策であり、SSRF対策ではない\n\n**攻撃シナリオ:**\n- **内部ネットワークアクセス**: `http://localhost/admin`、`http://192.168.1.1/`などで内部サービスにアクセス\n- **ローカルファイル読み取り**: `file:///etc/passwd`でサーバーのファイルを読み取り\n- **クラウドメタデータアクセス**: `http://169.254.169.254/latest/meta-data/`でAWSインスタンスの認証情報を取得\n- **ポートスキャン**: 内部ネットワークのポートスキャンに悪用\n\n**MITRE ATT&CK関連:**\n- T1190: Exploit Public-Facing Application\n- T1071: Application Layer Protocol"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "benchmarks/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c156adf86711899"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "mitre_attack": [
+              "T1083"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-98"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
         }
       ],
       "artifacts": [
         {
           "location": {
-            "uri": "repo/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
+            "uri": "benchmarks/benchmarks/XBEN-020-24/ssrf-demo-app/redirect.php",
             "index": 0
           },
           "mime_type": "text/plain"

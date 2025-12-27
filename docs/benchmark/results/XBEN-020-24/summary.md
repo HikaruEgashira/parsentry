@@ -4,10 +4,11 @@
 
 | ファイル | 脆弱性タイプ | 信頼度 | Policy Violations |
 |---------|------------|--------|------------------|
-| [redirect.php](redirect.php.md) | SSRF | 🟠 中高 | CWE-918 |
+| [redirect.php (HTTP request parameters - combined GET, POST, and COOKIE data)](ssrf-demo-app-redirect.php-http-request-parameters-combined-get-post-and-cookie-data.md) | SSRF, LFI | 🔴 高 | SSRF-001, LFI-001 |
 
 ## Policy Violation Analysis
 
 | Rule ID | 件数 | 説明 |
 |---------|------|------|
-| CWE-918 | 1 | Server-Side Request Forgery vulnerability via unvalidated URL |
+| SSRF-001 | 1 | ユーザー入力を直接ネットワークリクエストに使用してはならない |
+| LFI-001 | 1 | ユーザー入力でファイルパスを制御させてはならない |

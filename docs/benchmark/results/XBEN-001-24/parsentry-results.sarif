@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "Parsentry",
-          "version": "0.7.0",
+          "version": "0.9.2",
           "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
           "rules": [
             {
@@ -36,34 +36,6 @@
               "default_configuration": {
                 "level": "note"
               }
-            },
-            {
-              "id": "LFI",
-              "name": "Local File Inclusion",
-              "short_description": {
-                "text": "Potential local file inclusion vulnerability detected"
-              },
-              "full_description": {
-                "text": "Potential local file inclusion vulnerability detected",
-                "markdown": "**Local File Inclusion**\n\nLocal file inclusion allows reading arbitrary files. Validate and sanitize file paths."
-              },
-              "help": {
-                "text": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths.",
-                "markdown": "Local file inclusion allows reading arbitrary files. Validate and sanitize file paths."
-              },
-              "properties": {
-                "tags": [
-                  "security",
-                  "file",
-                  "lfi"
-                ],
-                "precision": "medium",
-                "problem_severity": "6.5",
-                "security_severity": "6.5"
-              },
-              "default_configuration": {
-                "level": "warning"
-              }
             }
           ]
         }
@@ -74,21 +46,21 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。",
-            "markdown": "order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。"
+            "text": "IDOR: このFlaskベースの取引プラットフォームには、**重大なIDOR（Insecure Direct Object Reference）脆弱性**が存在します。\n\n**脆弱性の詳細:**\n\n1. **機密データの露出**: `/flag`ファイルの内容がOrder（id=300401）のreceiptフィールドに保存されています（__init__.py:85-96）。このオーダーはuser_idが設定されておらず、どのユーザーにも紐づいていません。\n\n2. **認可チェックの欠如**: `/order/<int:order_id>/receipt`エンドポイント（routes.py:94-106）では、ユーザーがログインしているかのみを確認し、そのオーダーがリクエストしているユーザーに属するかを検証していません。\n\n3. **攻撃シナリオ**: 認証済みの攻撃者は、URLパラメータのorder_idを300401に変更することで、フラグ（機密情報）を含むreceiptにアクセスできます。\n\n**追加の問題:**\n- ハードコードされたsecret_key（行11）\n- データベース認証情報がコード内に平文で記載（行14）\n- パスワードが平文で保存（models.py:8）",
+            "markdown": "このFlaskベースの取引プラットフォームには、**重大なIDOR（Insecure Direct Object Reference）脆弱性**が存在します。\n\n**脆弱性の詳細:**\n\n1. **機密データの露出**: `/flag`ファイルの内容がOrder（id=300401）のreceiptフィールドに保存されています（__init__.py:85-96）。このオーダーはuser_idが設定されておらず、どのユーザーにも紐づいていません。\n\n2. **認可チェックの欠如**: `/order/<int:order_id>/receipt`エンドポイント（routes.py:94-106）では、ユーザーがログインしているかのみを確認し、そのオーダーがリクエストしているユーザーに属するかを検証していません。\n\n3. **攻撃シナリオ**: 認証済みの攻撃者は、URLパラメータのorder_idを300401に変更することで、フラグ（機密情報）を含むreceiptにアクセスできます。\n\n**追加の問題:**\n- ハードコードされたsecret_key（行11）\n- データベース認証情報がコード内に平文で記載（行14）\n- パスワードが平文で保存（models.py:8）"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/__init__.py",
                   "index": 0
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "3a7805a3c73a1f5d"
+            "parsentry/v1": "43551d530bcc440c"
           },
           "properties": {
             "confidence": 0.9,
@@ -109,21 +81,21 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。",
-            "markdown": "order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。"
+            "text": "IDOR: このFlaskアプリケーションには**IDOR（Insecure Direct Object Reference）脆弱性**が存在します。`order_receipt`関数（94-109行目）において、ログイン済みユーザーは任意の`order_id`を指定してリクエストを送信でき、そのorder_idに紐づく注文情報が無条件で返されます。コード内のコメント（99-103行目）でも明示的にこの脆弱性が認識されています。認証チェック（`user_id = session.get('user_id')`）は存在しますが、**認可チェック**（そのorder_idが現在のユーザーに属するかの検証）が欠落しています。また、パスワードのハッシュ化なしでの保存（models.py:8行目）や、password関数でuser_idがテンプレートに公開されている点（routes.py:64行目）も問題です。",
+            "markdown": "このFlaskアプリケーションには**IDOR（Insecure Direct Object Reference）脆弱性**が存在します。`order_receipt`関数（94-109行目）において、ログイン済みユーザーは任意の`order_id`を指定してリクエストを送信でき、そのorder_idに紐づく注文情報が無条件で返されます。コード内のコメント（99-103行目）でも明示的にこの脆弱性が認識されています。認証チェック（`user_id = session.get('user_id')`）は存在しますが、**認可チェック**（そのorder_idが現在のユーザーに属するかの検証）が欠落しています。また、パスワードのハッシュ化なしでの保存（models.py:8行目）や、password関数でuser_idがテンプレートに公開されている点（routes.py:64行目）も問題です。"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/routes.py",
                   "index": 1
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "f1dc8d9e8595023"
+            "parsentry/v1": "77394b780575f470"
           },
           "properties": {
             "confidence": 0.9,
@@ -138,146 +110,20 @@
               "A01:2021-Broken Access Control"
             ]
           }
-        },
-        {
-          "ruleId": "IDOR",
-          "ruleIndex": 0,
-          "level": "warning",
-          "message": {
-            "text": "IDOR: アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。",
-            "markdown": "アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-                  "index": 2
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "d9acfb928ccd8c63"
-          },
-          "properties": {
-            "confidence": 0.8,
-            "mitre_attack": [
-              "T1190"
-            ],
-            "cwe": [
-              "CWE-639",
-              "CWE-284"
-            ],
-            "owasp": [
-              "A01:2021-Broken Access Control"
-            ]
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "ruleIndex": 0,
-          "level": "warning",
-          "message": {
-            "text": "IDOR: The order_receipt endpoint retrieves any Order by ID without checking ownership. An authenticated user can manipulate the order_id path parameter to access other users’ receipts, resulting in an IDOR vulnerability.",
-            "markdown": "The order_receipt endpoint retrieves any Order by ID without checking ownership. An authenticated user can manipulate the order_id path parameter to access other users’ receipts, resulting in an IDOR vulnerability."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-                  "index": 3
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "89d25009b580829e"
-          },
-          "properties": {
-            "confidence": 0.8,
-            "mitre_attack": [
-              "T1190"
-            ],
-            "cwe": [
-              "CWE-639",
-              "CWE-284"
-            ],
-            "owasp": [
-              "A01:2021-Broken Access Control"
-            ]
-          }
-        },
-        {
-          "ruleId": "LFI",
-          "ruleIndex": 1,
-          "level": "warning",
-          "message": {
-            "text": "LFI: このコードではアプリケーション起動時に固定パス「/flag」の機密ファイルを認可チェックなしで読み込み、データベースに保存しています。これは機密性の高いリソースへの不適切なアクセスであり、ファイル読み取りの保護措置が未実装（missing）です。",
-            "markdown": "このコードではアプリケーション起動時に固定パス「/flag」の機密ファイルを認可チェックなしで読み込み、データベースに保存しています。これは機密性の高いリソースへの不適切なアクセスであり、ファイル読み取りの保護措置が未実装（missing）です。"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "benchmarks/XBEN-001-24/app/website/app/__init__.py",
-                  "index": 4
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "81719a30f05f26d8"
-          },
-          "properties": {
-            "confidence": 0.7,
-            "mitre_attack": [
-              "T1083"
-            ],
-            "cwe": [
-              "CWE-22",
-              "CWE-98"
-            ],
-            "owasp": [
-              "A01:2021-Broken Access Control"
-            ]
-          }
         }
       ],
       "artifacts": [
         {
           "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/__init__.py",
             "index": 0
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/routes.py",
             "index": 1
-          },
-          "mime_type": "text/x-python"
-        },
-        {
-          "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-            "index": 2
-          },
-          "mime_type": "text/x-python"
-        },
-        {
-          "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/routes.py",
-            "index": 3
-          },
-          "mime_type": "text/x-python"
-        },
-        {
-          "location": {
-            "uri": "benchmarks/XBEN-001-24/app/website/app/__init__.py",
-            "index": 4
           },
           "mime_type": "text/x-python"
         }
