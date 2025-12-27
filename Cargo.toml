@@ -1,6 +1,6 @@
 [package]
 name = "parsentry"
-version = "0.9.2"
+version = "0.10.0"
 edition = "2024"
 default-run = "parsentry"
 
@@ -52,7 +52,7 @@ exclude = ["tree-sitter-*"]
 
 [workspace.package]
 edition = "2024"
-version = "0.9.2"
+version = "0.10.0"
 
 [workspace.dependencies]
 tokio = { version = "1.43", features = ["full", "test-util", "macros", "process"] }
