@@ -592,8 +592,6 @@ use_cache = true
             mvra_search_query: self.mvra.search_query.clone(),
             mvra_code_query: self.mvra.code_query.clone(),
             mvra_max_repos: self.mvra.max_repos,
-            mvra_repositories: self.mvra.repositories.as_ref().map(|v| v.join(",")),
-            mvra_min_stars: self.mvra.min_stars,
             mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
             mvra_no_cache: !self.mvra.use_cache,
         }
