@@ -3,7 +3,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Deserialize a string that may be null as an empty string.
-fn deserialize_null_as_empty_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn null_to_empty_string<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -15,15 +15,15 @@ where
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ClaudeCodeResponse {
     /// Analysis reasoning and notes.
-    #[serde(default, deserialize_with = "deserialize_null_as_empty_string")]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub scratchpad: String,
 
     /// Comprehensive security assessment.
-    #[serde(default, deserialize_with = "deserialize_null_as_empty_string")]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub analysis: String,
 
     /// Proof of concept code.
-    #[serde(default, deserialize_with = "deserialize_null_as_empty_string")]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub poc: String,
 
     /// Confidence score (0-100).
@@ -101,17 +101,18 @@ pub struct ParAnalysis {
 }
 
 /// Information about a principal (data source).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PrincipalInfo {
     /// Identifier for the principal.
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub identifier: String,
 
     /// Trust level: trusted, semi_trusted, or untrusted.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub trust_level: String,
 
     /// Source context description.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub source_context: String,
 
     /// Risk factors associated with this principal.
@@ -120,17 +121,18 @@ pub struct PrincipalInfo {
 }
 
 /// Information about an action (security control).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ActionInfo {
     /// Identifier for the action.
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub identifier: String,
 
     /// Security function description.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub security_function: String,
 
     /// Implementation quality: adequate, insufficient, missing, or bypassed.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub implementation_quality: String,
 
     /// Detected weaknesses in the action.
@@ -143,17 +145,18 @@ pub struct ActionInfo {
 }
 
 /// Information about a resource (sensitive operation target).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResourceInfo {
     /// Identifier for the resource.
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub identifier: String,
 
     /// Sensitivity level: low, medium, high, or critical.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub sensitivity_level: String,
 
     /// Type of operation performed.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub operation_type: String,
 
     /// Protection mechanisms in place.
@@ -162,21 +165,22 @@ pub struct ResourceInfo {
 }
 
 /// Information about a policy violation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PolicyViolation {
     /// Rule identifier.
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub rule_id: String,
 
     /// Rule description.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub rule_description: String,
 
     /// Path showing the violation flow.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub violation_path: String,
 
     /// Severity level.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub severity: String,
 
     /// Confidence in this violation.
@@ -193,21 +197,22 @@ pub struct RemediationGuidance {
 }
 
 /// Policy enforcement recommendation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PolicyEnforcement {
     /// Component that needs improvement.
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub component: String,
 
     /// Required improvement description.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub required_improvement: String,
 
     /// Specific guidance for implementation.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub specific_guidance: String,
 
     /// Priority level.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_to_empty_string")]
     pub priority: String,
 }
 
@@ -245,6 +250,29 @@ mod tests {
         let response: ClaudeCodeResponse = serde_json::from_str(json).unwrap();
         assert_eq!(response.confidence_score, 85);
         assert_eq!(response.vulnerability_types, vec!["SQLI"]);
+    }
+
+    #[test]
+    fn test_response_with_null_values() {
+        let json = r#"{
+            "scratchpad": "test",
+            "analysis": null,
+            "poc": null,
+            "confidence_score": 80,
+            "vulnerability_types": ["XSS"],
+            "par_analysis": {
+                "principals": [{"identifier": null, "trust_level": "untrusted"}],
+                "actions": [],
+                "resources": [],
+                "policy_violations": []
+            }
+        }"#;
+
+        let response: ClaudeCodeResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.scratchpad, "test");
+        assert_eq!(response.analysis, "");
+        assert_eq!(response.poc, "");
+        assert_eq!(response.par_analysis.principals[0].identifier, "");
     }
 
     #[test]
