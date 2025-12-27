@@ -7,9 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use log::warn;
 use parsentry_core::Language;
 use parsentry_parser::{CodeParser, Definition};
-use parsentry_utils::FileClassifier;
+use parsentry_utils::{FileClassifier, FileDiscovery};
 
 fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -65,8 +66,7 @@ fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathB
                 }
             }
             Err(e) => {
-                eprintln!("⚠️  ファイル読み込みエラー: {}: {}", file_path.display(), e);
-                // Skip files that can't be read
+                warn!("ファイル読み込みエラー: {}: {}", file_path.display(), e);
                 continue;
             }
         }
@@ -91,71 +91,6 @@ struct PatternAnalysisResponse {
     patterns: Vec<PatternClassification>,
 }
 
-/// A simplified RepoOps for pattern generation
-struct PatternRepoOps {
-    repo_path: PathBuf,
-    supported_extensions: Vec<String>,
-}
-
-impl PatternRepoOps {
-    fn new(repo_path: PathBuf) -> Self {
-        let supported_extensions = vec![
-            "py".to_string(),
-            "js".to_string(),
-            "jsx".to_string(),
-            "ts".to_string(),
-            "tsx".to_string(),
-            "rs".to_string(),
-            "go".to_string(),
-            "java".to_string(),
-            "rb".to_string(),
-            "c".to_string(),
-            "h".to_string(),
-            "cpp".to_string(),
-            "tf".to_string(),
-            "hcl".to_string(),
-            "yml".to_string(),
-            "yaml".to_string(),
-            "sh".to_string(),
-            "bash".to_string(),
-            "php".to_string(),
-        ];
-
-        Self {
-            repo_path,
-            supported_extensions,
-        }
-    }
-
-    fn get_files_to_analyze(&self, _analyze_path: Option<PathBuf>) -> Result<Vec<PathBuf>> {
-        let mut files = Vec::new();
-        self.visit_dirs(&self.repo_path, &mut |path: &Path| {
-            if let Some(ext) = path.extension() {
-                let ext_str = ext.to_string_lossy().to_lowercase();
-                if self.supported_extensions.contains(&ext_str) {
-                    files.push(path.to_path_buf());
-                }
-            }
-        })?;
-        Ok(files)
-    }
-
-    fn visit_dirs(&self, dir: &Path, cb: &mut dyn FnMut(&Path)) -> std::io::Result<()> {
-        if dir.is_dir() {
-            for entry in std::fs::read_dir(dir)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_dir() {
-                    self.visit_dirs(&path, cb)?;
-                } else {
-                    cb(&path);
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
 pub async fn generate_custom_patterns(
     root_dir: &Path,
     model: &str,
@@ -175,8 +110,8 @@ async fn generate_custom_patterns_impl(
         root_dir.display()
     );
 
-    let repo = PatternRepoOps::new(root_dir.to_path_buf());
-    let files = repo.get_files_to_analyze(None)?;
+    let file_discovery = FileDiscovery::new(root_dir.to_path_buf());
+    let files = file_discovery.get_files()?;
 
     println!("📁 検出されたファイル数: {}", files.len());
 

@@ -2,23 +2,23 @@ use anyhow::Result;
 use git2::{Cred, Error, FetchOptions, RemoteCallbacks, Repository};
 use std::{
     env,
-    fs::{File, read_dir, read_to_string},
+    fs::{File, read_to_string},
     io::{BufRead, BufReader, Result as IoResult},
     path::{Path, PathBuf},
 };
 
 use parsentry_parser::SecurityRiskPatterns;
-use parsentry_utils::FileClassifier;
+use parsentry_utils::{FileClassifier, FileDiscovery};
+
 #[derive(Default)]
 pub struct LanguageExclusions {
     pub file_patterns: Vec<String>,
 }
 
 pub struct RepoOps {
-    repo_path: PathBuf,
+    file_discovery: FileDiscovery,
     gitignore_patterns: Vec<String>,
     language_exclusions: LanguageExclusions,
-    supported_extensions: Vec<String>,
     code_parser: crate::parser::CodeParser,
     parser_initialized: bool,
 }
@@ -32,44 +32,20 @@ impl RepoOps {
         };
 
         let code_parser = crate::parser::CodeParser::new().unwrap();
-        let supported_extensions = vec![
-            "py".to_string(),
-            "js".to_string(),
-            "jsx".to_string(),
-            "ts".to_string(),
-            "tsx".to_string(),
-            "rs".to_string(),
-            "go".to_string(),
-            "java".to_string(),
-            "rb".to_string(),
-            "c".to_string(),
-            "h".to_string(),
-            "cpp".to_string(),
-            "cxx".to_string(),
-            "cc".to_string(),
-            "hpp".to_string(),
-            "hxx".to_string(),
-            "tf".to_string(),
-            "hcl".to_string(),
-            "yml".to_string(),
-            "yaml".to_string(),
-            "sh".to_string(),
-            "bash".to_string(),
-            "php".to_string(),
-            "php3".to_string(),
-            "php4".to_string(),
-            "php5".to_string(),
-            "phtml".to_string(),
-        ];
+        let file_discovery = FileDiscovery::new(repo_path);
 
         Self {
-            repo_path,
+            file_discovery,
             gitignore_patterns,
             language_exclusions,
-            supported_extensions,
             code_parser,
             parser_initialized: false,
         }
+    }
+
+    /// Get the repository root path
+    pub fn repo_path(&self) -> &Path {
+        self.file_discovery.root_path()
     }
 
     pub fn collect_context_for_security_pattern(
@@ -100,24 +76,8 @@ impl RepoOps {
         Ok(patterns)
     }
 
-    #[allow(clippy::only_used_in_recursion)]
-    fn visit_dirs(&self, dir: &Path, cb: &mut dyn FnMut(&Path)) -> std::io::Result<()> {
-        if dir.is_dir() {
-            for entry in read_dir(dir)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_dir() {
-                    self.visit_dirs(&path, cb)?;
-                } else {
-                    cb(&path);
-                }
-            }
-        }
-        Ok(())
-    }
-
     fn should_exclude_path(&self, path: &Path) -> bool {
-        if let Ok(relative_path) = path.strip_prefix(&self.repo_path) {
+        if let Ok(relative_path) = path.strip_prefix(self.repo_path()) {
             let relative_str = relative_path.to_string_lossy();
 
             for pattern in &self.gitignore_patterns {
@@ -165,28 +125,16 @@ impl RepoOps {
     }
 
     pub fn get_relevant_files(&self) -> Vec<PathBuf> {
-        let mut files = Vec::new();
-
-        let mut callback = |path: &Path| {
-            if let Some(ext) = path.extension() {
-                let ext_str = ext.to_string_lossy().to_lowercase();
-                if !self.supported_extensions.contains(&ext_str) {
-                    return;
-                }
-
-                if self.should_exclude_path(path) {
-                    return;
-                }
-
-                files.push(path.to_path_buf());
+        match self.file_discovery.get_files() {
+            Ok(files) => files
+                .into_iter()
+                .filter(|path| !self.should_exclude_path(path))
+                .collect(),
+            Err(e) => {
+                eprintln!("ディレクトリの走査中にエラーが発生しました: {}", e);
+                Vec::new()
             }
-        };
-
-        if let Err(e) = self.visit_dirs(&self.repo_path, &mut callback) {
-            eprintln!("ディレクトリの走査中にエラーが発生しました: {}", e);
         }
-
-        files
     }
 
     pub fn get_network_related_files(&self, files: &[PathBuf]) -> Vec<PathBuf> {
@@ -200,7 +148,7 @@ impl RepoOps {
                 
                 let filename = file_path.to_string_lossy();
                 let lang = FileClassifier::classify(&filename, &content);
-                let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&self.repo_path));
+                let patterns = SecurityRiskPatterns::new_with_root(lang, Some(self.repo_path()));
                 if patterns.matches(&content) {
                     network_files.push(file_path.clone());
                 }
@@ -211,35 +159,8 @@ impl RepoOps {
     }
 
     pub fn get_files_to_analyze(&self, analyze_path: Option<PathBuf>) -> Result<Vec<PathBuf>> {
-        let path_to_analyze = analyze_path.unwrap_or_else(|| self.repo_path.clone());
-
-        if path_to_analyze.is_file() {
-            if let Some(ext) = path_to_analyze.extension() {
-                let ext_str = ext.to_string_lossy().to_lowercase();
-                if self.supported_extensions.contains(&ext_str) {
-                    return Ok(vec![path_to_analyze]);
-                }
-            }
-            Ok(vec![])
-        } else if path_to_analyze.is_dir() {
-            let mut files = Vec::new();
-            let mut callback = |path: &Path| {
-                if let Some(ext) = path.extension() {
-                    let ext_str = ext.to_string_lossy().to_lowercase();
-                    if self.supported_extensions.contains(&ext_str) {
-                        files.push(path.to_path_buf());
-                    }
-                }
-            };
-
-            self.visit_dirs(&path_to_analyze, &mut callback)?;
-            Ok(files)
-        } else {
-            anyhow::bail!(
-                "指定された解析パスが存在しません: {}",
-                path_to_analyze.display()
-            )
-        }
+        let path_to_analyze = analyze_path.unwrap_or_else(|| self.repo_path().to_path_buf());
+        self.file_discovery.get_files_in_path(&path_to_analyze)
     }
 
     pub fn parse_repo_files(&mut self, analyze_path: Option<PathBuf>) -> Result<()> {
