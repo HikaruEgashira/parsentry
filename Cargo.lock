@@ -1274,6 +1274,7 @@ dependencies = [
  "insta",
  "log",
  "parsentry-claude-code",
+ "parsentry-core",
  "quick-xml",
  "regex",
  "serde",
@@ -1314,6 +1315,15 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+]
+
+[[package]]
+name = "parsentry-core"
+version = "0.9.2"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

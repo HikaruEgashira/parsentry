@@ -13,7 +13,7 @@ use crate::file_classifier::FileClassifier;
 use crate::locales::{Language, get_messages};
 use crate::pattern_generator::generate_custom_patterns;
 use crate::repo::{RepoOps, clone_github_repo};
-use crate::response::{Response, VulnType};
+use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
 use crate::reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
 use crate::security_patterns::{PatternMatch, SecurityRiskPatterns};
 
@@ -89,7 +89,7 @@ async fn analyze_with_claude_code(
             eprintln!("  📄 ログ: {}", log_path);
 
             info!("Claude Code succeeded for {}", file_path.display());
-            let mut response = Response::from_claude_code_response(
+            let mut response = from_claude_code_response(
                 output.response,
                 file_path.to_string_lossy().to_string(),
             );

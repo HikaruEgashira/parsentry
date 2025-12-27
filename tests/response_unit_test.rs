@@ -1,5 +1,5 @@
 use parsentry::response::{
-    ParAnalysis, RemediationGuidance, Response, VulnType, response_json_schema,
+    ParAnalysis, RemediationGuidance, Response, ResponseExt, VulnType, response_json_schema,
 };
 use parsentry::reports::AnalysisSummary;
 use serde_json::json;
