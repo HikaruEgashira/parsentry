@@ -136,7 +136,6 @@ impl ClaudeCodeExecutor {
         cmd.arg("--print")
             .arg("--output-format")
             .arg("json")
-            .arg("--dangerously-skip-permissions")
             .current_dir(&self.working_dir)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
@@ -263,7 +262,7 @@ mod tests {
 
         let json_output = r#"{
             "result": "{\"analysis\": \"Test analysis\", \"confidence_score\": 80, \"vulnerability_types\": [\"XSS\"], \"par_analysis\": {\"principals\": [], \"actions\": [], \"resources\": [], \"policy_violations\": []}}",
-            "cost_usd": 0.01,
+            "total_cost_usd": 0.01,
             "duration_ms": 1500,
             "session_id": "test-session"
         }"#;

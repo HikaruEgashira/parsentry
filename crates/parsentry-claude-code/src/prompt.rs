@@ -2,6 +2,14 @@
 
 use std::path::Path;
 
+/// Sanitize input to prevent prompt injection attacks.
+fn sanitize_for_prompt(text: &str) -> String {
+    text.replace("```", "\\`\\`\\`")
+        .chars()
+        .filter(|c| !c.is_control() || c.is_whitespace())
+        .collect()
+}
+
 /// Builder for constructing Claude Code security analysis prompts.
 #[derive(Debug, Clone)]
 pub struct PromptBuilder {
@@ -117,6 +125,9 @@ Do NOT execute the PoC - only generate the code."#
             "Respond in English."
         };
 
+        let safe_file_path = sanitize_for_prompt(&file_path.display().to_string());
+        let safe_content = sanitize_for_prompt(content);
+
         format!(
             r#"You are a security vulnerability analyzer with access to code execution and file operations.
 
@@ -217,8 +228,8 @@ Respond with a JSON object containing:
 - Only report vulnerabilities with high confidence (>= 70)
 - Include full attack path in violation_path
 "#,
-            file_path = file_path.display(),
-            content = content,
+            file_path = safe_file_path,
+            content = safe_content,
             pattern_section = pattern_section,
             file_ops_instruction = file_ops_instruction,
             poc_instruction = poc_instruction,
