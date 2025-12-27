@@ -2,6 +2,9 @@ use anyhow::{anyhow, Result};
 use octocrab::Octocrab;
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::io::Write;
+use std::process::{Command, Stdio};
+use tracing::debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
@@ -20,19 +23,55 @@ pub struct GitHubSearchClient {
 
 impl GitHubSearchClient {
     /// Create a new GitHub search client
-    /// Uses GITHUB_TOKEN environment variable for authentication if available
+    /// Uses git credential helper for authentication, falling back to GITHUB_TOKEN env var
     pub fn new() -> Result<Self> {
         let mut builder = Octocrab::builder();
 
-        // Try to use GitHub token from environment
-        if let Ok(token) = env::var("GITHUB_TOKEN") {
-            builder = builder.personal_token(token);
+        // Try to get token from git credential helper first, then fall back to env var
+        if let Some(token) = Self::get_token_from_credential_helper()
+            .or_else(|| env::var("GITHUB_TOKEN").ok())
+        {
+            if !token.is_empty() {
+                builder = builder.personal_token(token);
+            }
         }
 
         let client = builder.build()
             .map_err(|e| anyhow!("Failed to create GitHub client: {}", e))?;
 
         Ok(Self { client })
+    }
+
+    /// Get GitHub token from git credential helper
+    fn get_token_from_credential_helper() -> Option<String> {
+        let mut child = Command::new("git")
+            .args(["credential", "fill"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .ok()?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(b"protocol=https\nhost=github.com\n\n");
+        }
+
+        let output = child.wait_with_output().ok()?;
+
+        if !output.status.success() {
+            debug!("git credential helper failed");
+            return None;
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if let Some(password) = line.strip_prefix("password=") {
+                debug!("Retrieved token from git credential helper");
+                return Some(password.to_string());
+            }
+        }
+
+        None
     }
 
     /// Search for repositories using GitHub Search API
