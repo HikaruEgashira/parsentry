@@ -477,7 +477,6 @@ enable_poc = false
             self.generation.generate_patterns = args.generate_patterns;
         }
 
-        // Claude Code settings
         if args.claude_code {
             self.claude_code.enabled = true;
         }
