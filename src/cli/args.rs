@@ -78,23 +78,23 @@ pub struct Args {
     pub mvra: bool,
 
     /// GitHub search query for MVRA (e.g., "language:python stars:>100")
-    #[arg(long)]
+    #[arg(long = "search-query")]
     pub mvra_search_query: Option<String>,
 
     /// Code search query for MVRA (e.g., "path:*.py import flask")
-    #[arg(long)]
+    #[arg(long = "code-query")]
     pub mvra_code_query: Option<String>,
 
     /// Maximum number of repositories to analyze in MVRA
-    #[arg(long, default_value = "10")]
+    #[arg(long = "max-repos", default_value = "10")]
     pub mvra_max_repos: usize,
 
     /// Cache directory for cloned repositories in MVRA
-    #[arg(long, default_value = ".parsentry-cache")]
+    #[arg(long = "cache-dir", default_value = ".parsentry-cache")]
     pub mvra_cache_dir: Option<PathBuf>,
 
     /// Disable cache in MVRA (always clone fresh)
-    #[arg(long)]
+    #[arg(long = "no-cache")]
     pub mvra_no_cache: bool,
 }
 

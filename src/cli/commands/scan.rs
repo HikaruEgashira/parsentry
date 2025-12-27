@@ -634,7 +634,7 @@ async fn run_mvra_scan(args: ScanArgs) -> Result<()> {
         && mvra_config.code_query.is_none()
     {
         return Err(anyhow::anyhow!(
-            "MVRA requires at least one of: --mvra-search-query or --mvra-code-query"
+            "MVRA requires at least one of: --search-query or --code-query"
         ));
     }
 
