@@ -299,15 +299,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             log_dir: log_dir.clone(),
         };
 
-        // Log Claude Code configuration
         println!("🤖 Claude Code モード有効");
-        println!("  バイナリ: {}", claude_path.display());
-        println!("  並列数: {}", claude_config.max_concurrent);
-        println!("  タイムアウト: {}秒", claude_config.timeout_secs);
-        println!("  PoC実行: {}", if claude_config.enable_poc { "有効" } else { "無効" });
-        if let Some(ref ld) = log_dir {
-            println!("  ログ出力: {}", ld.display());
-        }
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
     } else {
