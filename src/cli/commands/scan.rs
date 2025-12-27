@@ -95,6 +95,15 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         }
     }
 
+    // Auto-enable MVRA mode if any MVRA-specific options are provided
+    if !args.mvra && (
+        args.mvra_search_query.is_some() ||
+        args.mvra_code_query.is_some() ||
+        args.mvra_repositories.is_some()
+    ) {
+        args.mvra = true;
+    }
+
     // Check if MVRA mode is enabled
     if args.mvra {
         return run_mvra_scan(args).await;
