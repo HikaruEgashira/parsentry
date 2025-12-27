@@ -127,7 +127,7 @@ pub fn from_claude_code_response(
     let vulnerability_types: Vec<VulnType> = cc_response
         .vulnerability_types
         .iter()
-        .map(|s| VulnType::from_str(s))
+        .map(|s| s.parse().unwrap())
         .collect();
 
     let par_analysis = ParAnalysis {

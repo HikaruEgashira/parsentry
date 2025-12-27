@@ -176,7 +176,6 @@ impl SecurityRiskPatterns {
 
         let root_node = tree.root_node();
 
-        // Check all query types
         let all_queries = [
             &self.principal_definition_queries,
             &self.principal_reference_queries,
@@ -190,7 +189,6 @@ impl SecurityRiskPatterns {
             for query in query_set {
                 let mut cursor = QueryCursor::new();
                 let mut matches = cursor.matches(query, root_node, content.as_bytes());
-                // Check if there are any matches (predicates are already evaluated by tree-sitter)
                 while let Some(match_) = matches.next() {
                     let mut has_valid_capture = false;
                     
@@ -200,33 +198,26 @@ impl SecurityRiskPatterns {
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
                         let matched_text = content[start_byte..end_byte].to_string();
-                        
-                        // Filter out variable names with 2 characters or less
+
                         if matched_text.trim().len() <= 2 {
                             continue;
                         }
-                        
-                        // For definitions, we want the entire function_definition/class_definition, etc.
-                        // For references, we want the specific call/attribute access
+
                         match *capture_name {
                             "function" | "definition" | "class" | "method_def" | "call" | "expression" | "attribute" => {
-                                // Direct structural captures
                                 has_valid_capture = true;
                             }
                             "name" | "func" | "attr" | "obj" | "method" => {
-                                // These are identifier captures - find the parent node
                                 if let Some(parent) = node.parent() {
-                                    if parent.kind().contains("definition") || 
+                                    if parent.kind().contains("definition") ||
                                        parent.kind().contains("declaration") ||
                                        parent.kind().contains("call") ||
                                        parent.kind().contains("attribute") {
-                                        // Parent node validation passed
                                     }
                                 }
                                 has_valid_capture = true;
                             }
                             _ => {
-                                // Other captures - use as-is
                                 has_valid_capture = true;
                             }
                         }
@@ -253,20 +244,17 @@ impl SecurityRiskPatterns {
 
         let root_node = tree.root_node();
 
-        // Helper function to check if any query matches
         let check_queries = |queries: &[Query]| -> bool {
             for query in queries {
                 let mut cursor = QueryCursor::new();
                 let mut matches = cursor.matches(query, root_node, content.as_bytes());
                 while let Some(match_) = matches.next() {
-                    // Check if we have valid captures with sufficient content
                     for capture in match_.captures {
                         let node = capture.node;
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
                         let matched_text = content[start_byte..end_byte].to_string();
-                        
-                        // Filter out variable names with 2 characters or less
+
                         if matched_text.trim().len() > 2 {
                             return true;
                         }
@@ -276,7 +264,6 @@ impl SecurityRiskPatterns {
             false
         };
 
-        // Check each pattern type in order
         if check_queries(&self.principal_definition_queries) || check_queries(&self.principal_reference_queries) {
             return Some(PatternType::Principal);
         }
@@ -293,7 +280,6 @@ impl SecurityRiskPatterns {
     }
 
     pub fn get_attack_vectors(&self, _content: &str) -> Vec<String> {
-        // For now, return empty vector - could be enhanced to map tree-sitter queries to attack vectors
         Vec::new()
     }
 
@@ -310,42 +296,35 @@ impl SecurityRiskPatterns {
         let mut pattern_matches = Vec::new();
         let content_bytes = content.as_bytes();
 
-        // Helper function to process queries and collect matches
         let mut process_queries = |queries: &[Query], pattern_type: PatternType, _configs: &[PatternConfig], is_definition: bool| {
             for (query_idx, query) in queries.iter().enumerate() {
                 let mut cursor = QueryCursor::new();
                 let mut matches = cursor.matches(query, root_node, content_bytes);
-                
+
                 while let Some(match_) = matches.next() {
-                    // Find the best node to capture (full definition/reference context)
                     let mut best_node = None;
                     let mut best_text = String::new();
-                    let mut best_priority = 0; // Higher priority = better capture
-                    
+                    let mut best_priority = 0;
+
                     for capture in match_.captures {
                         let capture_name = &query.capture_names()[capture.index as usize];
                         let node = capture.node;
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
                         let matched_text = content[start_byte..end_byte].to_string();
-                        
-                        // Filter out variable names with 2 characters or less
+
                         if matched_text.trim().len() <= 2 {
                             continue;
                         }
-                        
-                        // Assign priority and determine best capture based on type and context
+
                         let (priority, candidate_node, candidate_text) = match *capture_name {
                             "function" | "definition" | "class" | "method_def" => {
-                                // Highest priority - direct captures of full definitions
                                 (100, Some(node), matched_text.clone())
                             }
                             "call" | "expression" | "attribute" => {
-                                // High priority - direct captures of full expressions  
                                 (90, Some(node), matched_text.clone())
                             }
                             "name" | "func" | "attr" | "obj" | "method" => {
-                                // Medium priority - identifier captures, find parent
                                 let mut found_parent = None;
                                 let mut parent = node.parent();
                                 while let Some(p) = parent {
@@ -363,7 +342,6 @@ impl SecurityRiskPatterns {
                                 }
                             }
                             "param" | "func_name" => {
-                                // Medium priority - parameter/function name captures, find function definition
                                 let mut found_func = None;
                                 let mut parent = node.parent();
                                 while let Some(p) = parent {
@@ -380,24 +358,21 @@ impl SecurityRiskPatterns {
                                 }
                             }
                             _ => {
-                                // Low priority - other captures
                                 (50, Some(node), matched_text.clone())
                             }
                         };
-                        
-                        // Update best capture if this one has higher priority
+
                         if priority > best_priority {
                             best_priority = priority;
                             best_node = candidate_node;
                             best_text = candidate_text;
                         }
                     }
-                    
+
                     if let Some(node) = best_node {
                         let start_byte = node.start_byte();
                         let end_byte = node.end_byte();
-                        
-                        // Find the corresponding config based on pattern type and index
+
                         let mut config_idx = 0;
                         for config in &self.pattern_configs {
                             let matches_type = match (&config.pattern_type, is_definition) {
@@ -405,7 +380,7 @@ impl SecurityRiskPatterns {
                                 (PatternQuery::Reference { .. }, false) => true,
                                 _ => false,
                             };
-                            
+
                             if matches_type {
                                 let current_pattern_type = self.get_pattern_type_for_config(config);
                                 if current_pattern_type == pattern_type {
@@ -428,7 +403,6 @@ impl SecurityRiskPatterns {
             }
         };
 
-        // Process all pattern types
         let principals: Vec<PatternConfig> = self.pattern_configs.iter()
             .filter(|c| self.get_pattern_type_for_config(c) == PatternType::Principal)
             .cloned()
@@ -453,12 +427,11 @@ impl SecurityRiskPatterns {
     }
 
     fn get_pattern_type_for_config(&self, config: &PatternConfig) -> PatternType {
-        // Determine pattern type based on position in pattern_configs
         let config_position = self.pattern_configs.iter().position(|c| c.description == config.description).unwrap_or(0);
-        
+
         let principals_count = self.principal_definition_queries.len() + self.principal_reference_queries.len();
         let actions_count = self.action_definition_queries.len() + self.action_reference_queries.len();
-        
+
         if config_position < principals_count {
             PatternType::Principal
         } else if config_position < principals_count + actions_count {
@@ -473,7 +446,6 @@ impl SecurityRiskPatterns {
 
         let mut map = HashMap::new();
 
-        // Load patterns from individual language files (tree-sitter only)
         let languages = [
             (Python, include_str!("patterns/python.yml")),
             (JavaScript, include_str!("patterns/javascript.yml")),
@@ -485,11 +457,6 @@ impl SecurityRiskPatterns {
             (C, include_str!("patterns/c.yml")),
             (Cpp, include_str!("patterns/cpp.yml")),
             (Php, include_str!("patterns/php.yml")),
-            // Temporarily disabled regex-based patterns until full migration:
-            // (Terraform, include_str!("patterns/terraform.yml")),
-            // (Kubernetes, include_str!("patterns/kubernetes.yml")),
-            // (Yaml, include_str!("patterns/yaml.yml")),
-            // (Bash, include_str!("patterns/bash.yml")),
         ];
 
         for (lang, content) in languages {
@@ -503,7 +470,6 @@ impl SecurityRiskPatterns {
             }
         }
 
-        // Load custom patterns from vuln-patterns.yml if it exists
         Self::load_custom_patterns(&mut map, root_dir);
 
         map
@@ -522,11 +488,9 @@ impl SecurityRiskPatterns {
         if vuln_patterns_path.exists() {
             match std::fs::read_to_string(&vuln_patterns_path) {
                 Ok(content) => {
-                    // Parse the entire file as a map of language names to patterns
                     match serde_yaml::from_str::<HashMap<String, LanguagePatterns>>(&content) {
                         Ok(custom_patterns) => {
                             for (lang_name, patterns) in custom_patterns {
-                                // Convert language name to Language enum
                                 let language = match lang_name.as_str() {
                                     "Python" => Language::Python,
                                     "JavaScript" => Language::JavaScript,
@@ -547,10 +511,8 @@ impl SecurityRiskPatterns {
                                     _ => continue,
                                 };
 
-                                // Merge custom patterns with existing patterns
                                 match map.get_mut(&language) {
                                     Some(existing) => {
-                                        // Merge principals
                                         if let Some(custom_principals) = patterns.principals {
                                             match &mut existing.principals {
                                                 Some(principals) => {
@@ -561,14 +523,12 @@ impl SecurityRiskPatterns {
                                                 }
                                             }
                                         }
-                                        // Merge actions
                                         if let Some(custom_actions) = patterns.actions {
                                             match &mut existing.actions {
                                                 Some(actions) => actions.extend(custom_actions),
                                                 None => existing.actions = Some(custom_actions),
                                             }
                                         }
-                                        // Merge resources
                                         if let Some(custom_resources) = patterns.resources {
                                             match &mut existing.resources {
                                                 Some(resources) => {
@@ -579,7 +539,6 @@ impl SecurityRiskPatterns {
                                         }
                                     }
                                     None => {
-                                        // Insert new language patterns
                                         map.insert(language, patterns);
                                     }
                                 }
