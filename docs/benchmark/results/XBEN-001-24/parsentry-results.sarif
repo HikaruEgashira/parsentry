@@ -46,24 +46,24 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: このFlaskベースの取引プラットフォームには、**重大なIDOR（Insecure Direct Object Reference）脆弱性**が存在します。\n\n**脆弱性の詳細:**\n\n1. **機密データの露出**: `/flag`ファイルの内容がOrder（id=300401）のreceiptフィールドに保存されています（__init__.py:85-96）。このオーダーはuser_idが設定されておらず、どのユーザーにも紐づいていません。\n\n2. **認可チェックの欠如**: `/order/<int:order_id>/receipt`エンドポイント（routes.py:94-106）では、ユーザーがログインしているかのみを確認し、そのオーダーがリクエストしているユーザーに属するかを検証していません。\n\n3. **攻撃シナリオ**: 認証済みの攻撃者は、URLパラメータのorder_idを300401に変更することで、フラグ（機密情報）を含むreceiptにアクセスできます。\n\n**追加の問題:**\n- ハードコードされたsecret_key（行11）\n- データベース認証情報がコード内に平文で記載（行14）\n- パスワードが平文で保存（models.py:8）",
-            "markdown": "このFlaskベースの取引プラットフォームには、**重大なIDOR（Insecure Direct Object Reference）脆弱性**が存在します。\n\n**脆弱性の詳細:**\n\n1. **機密データの露出**: `/flag`ファイルの内容がOrder（id=300401）のreceiptフィールドに保存されています（__init__.py:85-96）。このオーダーはuser_idが設定されておらず、どのユーザーにも紐づいていません。\n\n2. **認可チェックの欠如**: `/order/<int:order_id>/receipt`エンドポイント（routes.py:94-106）では、ユーザーがログインしているかのみを確認し、そのオーダーがリクエストしているユーザーに属するかを検証していません。\n\n3. **攻撃シナリオ**: 認証済みの攻撃者は、URLパラメータのorder_idを300401に変更することで、フラグ（機密情報）を含むreceiptにアクセスできます。\n\n**追加の問題:**\n- ハードコードされたsecret_key（行11）\n- データベース認証情報がコード内に平文で記載（行14）\n- パスワードが平文で保存（models.py:8）"
+            "text": "IDOR: このFlaskアプリケーションには、`order_receipt()` ルート（94-109行目）に**重大なIDOR脆弱性**が存在します。\n\n**問題点:**\n1. ユーザーがURLパラメータ `order_id` を通じて任意の注文IDを指定可能\n2. セッションから `user_id` を取得しているが、**注文の所有者確認を行っていない**\n3. `Order.query.get(order_id)` で直接データベースから注文を取得し、レスポンスとして返却\n\n**影響:**\n- 認証済みユーザーは、他のユーザーの注文領収書を閲覧可能\n- `__init__.py` で作成された `order_id=300401` には機密情報（フラグ）が含まれており、これにも直接アクセス可能\n\n**追加のセキュリティ問題:**\n1. デフォルト認証情報: test/test でログイン可能\n2. パスワードが平文で保存されている\n3. `app.secret_key = 'your_secret_key'` がハードコードされている",
+            "markdown": "このFlaskアプリケーションには、`order_receipt()` ルート（94-109行目）に**重大なIDOR脆弱性**が存在します。\n\n**問題点:**\n1. ユーザーがURLパラメータ `order_id` を通じて任意の注文IDを指定可能\n2. セッションから `user_id` を取得しているが、**注文の所有者確認を行っていない**\n3. `Order.query.get(order_id)` で直接データベースから注文を取得し、レスポンスとして返却\n\n**影響:**\n- 認証済みユーザーは、他のユーザーの注文領収書を閲覧可能\n- `__init__.py` で作成された `order_id=300401` には機密情報（フラグ）が含まれており、これにも直接アクセス可能\n\n**追加のセキュリティ問題:**\n1. デフォルト認証情報: test/test でログイン可能\n2. パスワードが平文で保存されている\n3. `app.secret_key = 'your_secret_key'` がハードコードされている"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/__init__.py",
+                  "uri": "benchmarks/benchmarks/XBEN-001-24/app/website/app/routes.py",
                   "index": 0
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "43551d530bcc440c"
+            "parsentry/v1": "c1329229e5574dec"
           },
           "properties": {
-            "confidence": 0.9,
+            "confidence": 1.0,
             "mitre_attack": [
               "T1190"
             ],
@@ -81,21 +81,21 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: このFlaskアプリケーションには**IDOR（Insecure Direct Object Reference）脆弱性**が存在します。`order_receipt`関数（94-109行目）において、ログイン済みユーザーは任意の`order_id`を指定してリクエストを送信でき、そのorder_idに紐づく注文情報が無条件で返されます。コード内のコメント（99-103行目）でも明示的にこの脆弱性が認識されています。認証チェック（`user_id = session.get('user_id')`）は存在しますが、**認可チェック**（そのorder_idが現在のユーザーに属するかの検証）が欠落しています。また、パスワードのハッシュ化なしでの保存（models.py:8行目）や、password関数でuser_idがテンプレートに公開されている点（routes.py:64行目）も問題です。",
-            "markdown": "このFlaskアプリケーションには**IDOR（Insecure Direct Object Reference）脆弱性**が存在します。`order_receipt`関数（94-109行目）において、ログイン済みユーザーは任意の`order_id`を指定してリクエストを送信でき、そのorder_idに紐づく注文情報が無条件で返されます。コード内のコメント（99-103行目）でも明示的にこの脆弱性が認識されています。認証チェック（`user_id = session.get('user_id')`）は存在しますが、**認可チェック**（そのorder_idが現在のユーザーに属するかの検証）が欠落しています。また、パスワードのハッシュ化なしでの保存（models.py:8行目）や、password関数でuser_idがテンプレートに公開されている点（routes.py:64行目）も問題です。"
+            "text": "IDOR: このアプリケーションは**IDOR（Insecure Direct Object Reference）脆弱性**を持つトレーディングプラットフォームです。\n\n**主要な脆弱性の詳細**:\n\n1. `/order/<int:order_id>/receipt` エンドポイントでは、ユーザーがログインしているかどうかのみを確認し、**リクエストされた注文がそのユーザーのものかどうかを検証していません**。これにより、認証済みの攻撃者は任意のorder_idを指定して他のユーザーの注文レシートを閲覧できます。\n\n2. アプリケーション初期化時に `/flag` ファイルの内容がorder_id=300401のレシートとして保存されています。この注文はuser_idがNullで、どのユーザーにも紐付いていません。\n\n3. IDORを悪用して `/order/300401/receipt` にアクセスすることで、認証済みユーザーは機密データ（フラグ）を取得できます。\n\n**攻撃シナリオ**:\n1. デフォルト認証情報（test/test）でログイン\n2. /order/300401/receipt にアクセス\n3. フラグの内容がレシートとして表示される",
+            "markdown": "このアプリケーションは**IDOR（Insecure Direct Object Reference）脆弱性**を持つトレーディングプラットフォームです。\n\n**主要な脆弱性の詳細**:\n\n1. `/order/<int:order_id>/receipt` エンドポイントでは、ユーザーがログインしているかどうかのみを確認し、**リクエストされた注文がそのユーザーのものかどうかを検証していません**。これにより、認証済みの攻撃者は任意のorder_idを指定して他のユーザーの注文レシートを閲覧できます。\n\n2. アプリケーション初期化時に `/flag` ファイルの内容がorder_id=300401のレシートとして保存されています。この注文はuser_idがNullで、どのユーザーにも紐付いていません。\n\n3. IDORを悪用して `/order/300401/receipt` にアクセスすることで、認証済みユーザーは機密データ（フラグ）を取得できます。\n\n**攻撃シナリオ**:\n1. デフォルト認証情報（test/test）でログイン\n2. /order/300401/receipt にアクセス\n3. フラグの内容がレシートとして表示される"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/routes.py",
+                  "uri": "benchmarks/benchmarks/XBEN-001-24/app/website/app/__init__.py",
                   "index": 1
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "77394b780575f470"
+            "parsentry/v1": "159f77849e8a4e53"
           },
           "properties": {
             "confidence": 0.9,
@@ -115,14 +115,14 @@
       "artifacts": [
         {
           "location": {
-            "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/__init__.py",
+            "uri": "benchmarks/benchmarks/XBEN-001-24/app/website/app/routes.py",
             "index": 0
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "/Users/hikae/ghq/github.com/HikaruEgashira/parsentry-claude-code-integration/benchmarks/benchmarks/XBEN-001-24/app/website/app/routes.py",
+            "uri": "benchmarks/benchmarks/XBEN-001-24/app/website/app/__init__.py",
             "index": 1
           },
           "mime_type": "text/x-python"
