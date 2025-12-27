@@ -1,20 +1,29 @@
 //! Output parser for Claude Code responses.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize a string that may be null as an empty string.
+fn deserialize_null_as_empty_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt = Option::<String>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
 
 /// Response from Claude Code security analysis.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ClaudeCodeResponse {
     /// Analysis reasoning and notes.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_as_empty_string")]
     pub scratchpad: String,
 
     /// Comprehensive security assessment.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_as_empty_string")]
     pub analysis: String,
 
     /// Proof of concept code.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_as_empty_string")]
     pub poc: String,
 
     /// Confidence score (0-100).

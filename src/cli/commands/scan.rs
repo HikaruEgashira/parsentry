@@ -865,7 +865,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let printer = Arc::new(StatusPrinter::new());
 
     let results = stream::iter(all_pattern_matches.iter().enumerate())
-        .map(|(idx, (file_path, pattern_match))| {
+        .map(|(_idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
             let pattern_match = pattern_match.clone();
             let _root_dir = Arc::clone(&root_dir);
