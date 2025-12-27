@@ -612,7 +612,6 @@ pub fn write_patterns_to_file(
         yaml_content.push_str("  principals:\n");
         for pattern in principals {
             yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
-            // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
@@ -632,7 +631,6 @@ pub fn write_patterns_to_file(
         yaml_content.push_str("  actions:\n");
         for pattern in actions {
             yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
-            // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
@@ -652,7 +650,6 @@ pub fn write_patterns_to_file(
         yaml_content.push_str("  resources:\n");
         for pattern in resources {
             yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
-            // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
