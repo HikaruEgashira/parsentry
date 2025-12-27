@@ -1,0 +1,20 @@
+[package]
+name = "parsentry-analyzer"
+version.workspace = true
+edition.workspace = true
+description = "LLM-based security analysis for Parsentry"
+
+[dependencies]
+parsentry-core = { path = "../parsentry-core" }
+parsentry-parser = { path = "../parsentry-parser" }
+parsentry-i18n = { path = "../parsentry-i18n" }
+parsentry-reports = { path = "../parsentry-reports" }
+parsentry-utils = { path = "../parsentry-utils" }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+genai = "0.4.0-alpha.15"
+log = "0.4"
+regex = "1.10"

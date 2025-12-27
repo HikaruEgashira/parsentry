@@ -1,5 +1,5 @@
-use parsentry::pattern_generator::{PatternClassification, write_patterns_to_file};
-use parsentry::security_patterns::Language;
+use parsentry_analyzer::{PatternClassification, write_patterns_to_file};
+use parsentry_core::Language;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;

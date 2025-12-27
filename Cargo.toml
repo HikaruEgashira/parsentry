@@ -13,7 +13,13 @@ benchmark = []
 [dependencies]
 git2 = "0.18"
 tokio.workspace = true
+parsentry-core = { path = "crates/parsentry-core" }
 parsentry-parser = { path = "crates/parsentry-parser" }
+parsentry-i18n = { path = "crates/parsentry-i18n" }
+parsentry-utils = { path = "crates/parsentry-utils" }
+parsentry-reports = { path = "crates/parsentry-reports" }
+parsentry-analyzer = { path = "crates/parsentry-analyzer" }
+parsentry-claude-code = { path = "crates/parsentry-claude-code" }
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true
 serde_json.workspace = true
@@ -34,8 +40,6 @@ chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3.10"
-parsentry-claude-code = { path = "crates/parsentry-claude-code" }
-parsentry-core = { path = "crates/parsentry-core" }
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }

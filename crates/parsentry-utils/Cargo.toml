@@ -1,0 +1,8 @@
+[package]
+name = "parsentry-utils"
+version.workspace = true
+edition.workspace = true
+description = "Utility functions for Parsentry security scanner"
+
+[dependencies]
+parsentry-core = { path = "../parsentry-core" }

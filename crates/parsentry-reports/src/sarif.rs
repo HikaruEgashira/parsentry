@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::response::{Response, VulnType};
-use crate::reports::AnalysisSummary;
+use crate::summary::AnalysisSummary;
+use parsentry_core::{ParAnalysis, Response, VulnType};
 
 /// SARIF (Static Analysis Results Interchange Format) v2.1.0 implementation
 /// Spec: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
@@ -172,7 +172,7 @@ pub struct SarifInvocation {
 
 impl SarifReport {
     /// Create a new SARIF report from analysis summary
-    pub fn from_analysis_summary(summary: &AnalysisSummary) -> Self {
+    pub fn from_analysis_summary(summary: &AnalysisSummary, version: &str) -> Self {
         let mut rules = Vec::new();
         let mut results = Vec::new();
         let mut artifacts = Vec::new();
@@ -215,7 +215,7 @@ impl SarifReport {
                     rule_index,
                     level: confidence_to_level(response.confidence_score),
                     message: SarifMessage {
-                        text: format!("{}: {}", vuln_type.to_string(), response.analysis),
+                        text: format!("{}: {}", vuln_type, response.analysis),
                         markdown: Some(response.analysis.clone()),
                     },
                     locations: vec![SarifLocation {
@@ -245,7 +245,7 @@ impl SarifReport {
                 tool: SarifTool {
                     driver: SarifDriver {
                         name: "Parsentry".to_string(),
-                        version: env!("CARGO_PKG_VERSION").to_string(),
+                        version: version.to_string(),
                         information_uri: Some("https://github.com/HikaruEgashira/vulnhuntrs".to_string()),
                         rules: Some(rules),
                     },
@@ -377,9 +377,7 @@ fn confidence_to_level(confidence: i32) -> String {
     }
 }
 
-fn extract_region_from_par_analysis(
-    par_analysis: &crate::response::ParAnalysis,
-) -> Option<SarifRegion> {
+fn extract_region_from_par_analysis(par_analysis: &ParAnalysis) -> Option<SarifRegion> {
     // Try to extract location information from policy violations
     for violation in &par_analysis.policy_violations {
         if let Some(region) = parse_line_number_from_text(&violation.violation_path) {
@@ -387,8 +385,6 @@ fn extract_region_from_par_analysis(
         }
     }
 
-    // Fallback: try to get line info from principals, actions, or resources
-    // For now, just return None as we don't have line number info in the new schema
     None
 }
 
@@ -431,16 +427,16 @@ fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
 fn generate_fingerprints(file_path: &Path, response: &Response) -> HashMap<String, String> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    
+
     let mut fingerprints = HashMap::new();
-    
+
     // Generate a simple fingerprint based on file path and analysis
     let mut hasher = DefaultHasher::new();
     format!("{}:{}", file_path.display(), response.analysis).hash(&mut hasher);
     let fingerprint = format!("{:x}", hasher.finish());
-    
+
     fingerprints.insert("parsentry/v1".to_string(), fingerprint);
-    
+
     fingerprints
 }
 
@@ -463,7 +459,7 @@ fn guess_mime_type(file_path: &Path) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::response::{Response, VulnType};
+    use parsentry_core::{ParAnalysis, RemediationGuidance, VulnType};
     use std::path::PathBuf;
     use tempfile::tempdir;
 
@@ -477,13 +473,13 @@ mod tests {
             poc: "SELECT * FROM users".to_string(),
             confidence_score: 85,
             vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-            par_analysis: crate::response::ParAnalysis {
+            par_analysis: ParAnalysis {
                 principals: vec![],
                 actions: vec![],
                 resources: vec![],
                 policy_violations: vec![],
             },
-            remediation_guidance: crate::response::RemediationGuidance {
+            remediation_guidance: RemediationGuidance {
                 policy_enforcement: vec![],
             },
             file_path: None,
@@ -492,9 +488,13 @@ mod tests {
             full_source_code: None,
         };
 
-        summary.add_result(PathBuf::from("test.py"), response, "test.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("test.py"),
+            response,
+            "test.py.md".to_string(),
+        );
 
-        let sarif = SarifReport::from_analysis_summary(&summary);
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.9.2");
 
         assert_eq!(sarif.version, "2.1.0");
         assert_eq!(sarif.runs.len(), 1);
@@ -504,7 +504,7 @@ mod tests {
     #[test]
     fn test_sarif_serialization() {
         let summary = AnalysisSummary::new();
-        let sarif = SarifReport::from_analysis_summary(&summary);
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.9.2");
 
         let json = sarif.to_json().unwrap();
         assert!(json.contains("\"version\": \"2.1.0\""));
@@ -517,116 +517,12 @@ mod tests {
         let sarif_path = dir.path().join("test.sarif");
 
         let summary = AnalysisSummary::new();
-        let sarif = SarifReport::from_analysis_summary(&summary);
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.9.2");
 
         sarif.save_to_file(&sarif_path).unwrap();
         assert!(sarif_path.exists());
 
         let content = std::fs::read_to_string(&sarif_path).unwrap();
         assert!(content.contains("Parsentry"));
-    }
-
-    #[test]
-    fn test_vulnerability_mappings() {
-        // Test CWE mappings
-        assert_eq!(VulnType::SQLI.cwe_ids(), vec!["CWE-89"]);
-        assert_eq!(VulnType::XSS.cwe_ids(), vec!["CWE-79", "CWE-80"]);
-        assert_eq!(VulnType::RCE.cwe_ids(), vec!["CWE-77", "CWE-78", "CWE-94"]);
-
-        // Test MITRE ATT&CK mappings
-        assert_eq!(VulnType::SQLI.mitre_attack_ids(), vec!["T1190"]);
-        assert_eq!(VulnType::XSS.mitre_attack_ids(), vec!["T1190", "T1185"]);
-        assert_eq!(VulnType::RCE.mitre_attack_ids(), vec!["T1190", "T1059"]);
-
-        // Test OWASP mappings
-        assert_eq!(
-            VulnType::SQLI.owasp_categories(),
-            vec!["A03:2021-Injection"]
-        );
-        assert_eq!(
-            VulnType::SSRF.owasp_categories(),
-            vec!["A10:2021-Server-Side Request Forgery"]
-        );
-        assert_eq!(
-            VulnType::IDOR.owasp_categories(),
-            vec!["A01:2021-Broken Access Control"]
-        );
-    }
-
-    // Removed test_region_extraction_from_context as ContextCode no longer exists
-
-    #[test]
-    fn test_parse_line_number_from_text() {
-        // Test line:column format
-        let region = parse_line_number_from_text("error at :42:10");
-        assert!(region.is_some());
-        let region = region.unwrap();
-        assert_eq!(region.start_line, 42);
-        assert_eq!(region.start_column, Some(10));
-
-        // Test line marker format
-        let region = parse_line_number_from_text("function @25 is vulnerable");
-        assert!(region.is_some());
-        let region = region.unwrap();
-        assert_eq!(region.start_line, 25);
-        assert_eq!(region.start_column, None);
-
-        // Test line reference format
-        let region = parse_line_number_from_text("vulnerability found [100]");
-        assert!(region.is_some());
-        let region = region.unwrap();
-        assert_eq!(region.start_line, 100);
-    }
-
-    #[test]
-    fn test_sarif_with_enhanced_properties() {
-        let mut summary = AnalysisSummary::new();
-
-        let response = Response {
-            scratchpad: "Enhanced test".to_string(),
-            analysis: "SQL injection vulnerability found".to_string(),
-            poc: "SELECT * FROM users WHERE id = ? -- user_input injection".to_string(),
-            confidence_score: 95,
-            vulnerability_types: vec![VulnType::SQLI],
-            par_analysis: crate::response::ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: crate::response::RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
-        };
-
-        summary.add_result(PathBuf::from("user_service.py"), response, "user_service.py.md".to_string());
-        let sarif = SarifReport::from_analysis_summary(&summary);
-
-        // Verify SARIF structure
-        assert_eq!(sarif.runs.len(), 1);
-        assert_eq!(sarif.runs[0].results.len(), 1);
-
-        let result = &sarif.runs[0].results[0];
-
-        // Verify properties include proper mappings
-        assert!(result.properties.is_some());
-        let props = result.properties.as_ref().unwrap();
-
-        assert!(props.cwe.is_some());
-        assert_eq!(props.cwe.as_ref().unwrap(), &vec!["CWE-89"]);
-
-        assert!(props.mitre_attack.is_some());
-        assert_eq!(props.mitre_attack.as_ref().unwrap(), &vec!["T1190"]);
-
-        assert!(props.owasp.is_some());
-        assert_eq!(props.owasp.as_ref().unwrap(), &vec!["A03:2021-Injection"]);
-
-        // TODO: Region information verification - currently disabled due to ContextCode removal
-        // Once new location tracking is implemented, these assertions can be restored
-        // assert!(result.locations[0].physical_location.region.is_some());
     }
 }

@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+use parsentry_reports::validate_output_directory;
+
 #[derive(Parser, Debug)]
 #[command(
     author,
@@ -170,7 +172,7 @@ pub struct GraphArgs {
 
 pub fn validate_scan_args(args: &ScanArgs) -> Result<()> {
     if let Some(output_dir) = &args.output_dir {
-        if let Err(e) = crate::reports::validate_output_directory(output_dir) {
+        if let Err(e) = validate_output_directory(output_dir) {
             eprintln!(
                 "❌ 出力ディレクトリのチェックに失敗: {}: {}",
                 output_dir.display(),

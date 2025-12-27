@@ -11,11 +11,11 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::timeout;
 
-use crate::locales::Language;
-use crate::parser::CodeParser;
-use crate::prompts::{self, vuln_specific};
-use crate::response::{Response, response_json_schema};
-use crate::security_patterns::{PatternType, SecurityRiskPatterns, PatternMatch};
+use parsentry_core::{response_json_schema, ParAnalysis, RemediationGuidance, Response};
+use parsentry_i18n::Language;
+use parsentry_parser::{CodeParser, Context, PatternMatch, PatternType, SecurityRiskPatterns};
+use parsentry_reports::prompts::{self, vuln_specific};
+use parsentry_utils::FileClassifier;
 
 fn save_debug_file(
     output_dir: &Option<PathBuf>,
@@ -130,7 +130,7 @@ async fn execute_chat_request(
                     ))
                 }
             }
-        },
+        }
         Ok(Err(e)) => {
             error!("Chat request failed: {}", e);
             Err(e.into())
@@ -157,7 +157,7 @@ async fn execute_chat_request_with_retry(
                 attempt + 1,
                 max_retries + 1
             );
-            // 指数バックオフで待機
+            // Exponential backoff
             tokio::time::sleep(Duration::from_millis(1000 * (1 << attempt))).await;
         }
 
@@ -189,7 +189,7 @@ pub async fn analyze_file(
     model: &str,
     files: &[PathBuf],
     verbosity: u8,
-    context: &crate::parser::Context,
+    context: &Context,
     min_confidence: i32,
     debug: bool,
     output_dir: &Option<PathBuf>,
@@ -211,7 +211,7 @@ pub async fn analyze_file(
     }
 
     let content = std::fs::read_to_string(file_path)?;
-    
+
     // Skip files with more than 50,000 characters
     if content.len() > 50_000 {
         return Ok(Response {
@@ -220,13 +220,13 @@ pub async fn analyze_file(
             poc: String::new(),
             confidence_score: 0,
             vulnerability_types: vec![],
-            par_analysis: crate::response::ParAnalysis {
+            par_analysis: ParAnalysis {
                 principals: vec![],
                 actions: vec![],
                 resources: vec![],
                 policy_violations: vec![],
             },
-            remediation_guidance: crate::response::RemediationGuidance {
+            remediation_guidance: RemediationGuidance {
                 policy_enforcement: vec![],
             },
             file_path: Some(file_path.to_string_lossy().to_string()),
@@ -235,7 +235,7 @@ pub async fn analyze_file(
             full_source_code: None,
         });
     }
-    
+
     if content.is_empty() {
         return Ok(Response {
             scratchpad: String::new(),
@@ -243,13 +243,13 @@ pub async fn analyze_file(
             poc: String::new(),
             confidence_score: 0,
             vulnerability_types: vec![],
-            par_analysis: crate::response::ParAnalysis {
+            par_analysis: ParAnalysis {
                 principals: vec![],
                 actions: vec![],
                 resources: vec![],
                 policy_violations: vec![],
             },
-            remediation_guidance: crate::response::RemediationGuidance {
+            remediation_guidance: RemediationGuidance {
                 policy_enforcement: vec![],
             },
             file_path: Some(file_path.to_string_lossy().to_string()),
@@ -330,8 +330,7 @@ pub async fn analyze_file(
     }
     let mut response: Response = parse_json_response(&chat_content)?;
 
-    response.confidence_score =
-        crate::response::Response::normalize_confidence_score(response.confidence_score);
+    response.confidence_score = Response::normalize_confidence_score(response.confidence_score);
 
     // Clean up and validate the response
     response.sanitize();
@@ -344,7 +343,8 @@ pub async fn analyze_file(
         for vuln_type in response.vulnerability_types.clone() {
             let vuln_info = vuln_info_map.get(&vuln_type).unwrap();
 
-            let mut stored_code_definitions: Vec<(PathBuf, crate::parser::Definition)> = Vec::new();
+            let mut stored_code_definitions: Vec<(PathBuf, parsentry_parser::Definition)> =
+                Vec::new();
 
             {
                 info!("Performing vuln-specific analysis for {:?}", vuln_type);
@@ -443,9 +443,7 @@ pub async fn analyze_file(
                 let mut vuln_response: Response = parse_json_response(&chat_content)?;
 
                 vuln_response.confidence_score =
-                    crate::response::Response::normalize_confidence_score(
-                        vuln_response.confidence_score,
-                    );
+                    Response::normalize_confidence_score(vuln_response.confidence_score);
 
                 if verbosity > 0 {
                     debug!(
@@ -477,9 +475,8 @@ pub async fn analyze_file(
 
                 // Get language for pattern detection
                 let filename = file_path.to_string_lossy();
-                let language =
-                    crate::file_classifier::FileClassifier::classify(&filename, &content);
-                let _patterns = SecurityRiskPatterns::new(language);
+                let lang = FileClassifier::classify(&filename, &content);
+                let _patterns = SecurityRiskPatterns::new(lang);
 
                 // Extract identifiers from PAR analysis for context building
                 let mut identifiers_to_search = Vec::new();
@@ -507,7 +504,9 @@ pub async fn analyze_file(
                                 // For principals, use find_references to track data flow forward
                                 match parser.find_calls(&escaped_name) {
                                     Ok(refs) => {
-                                        stored_code_definitions.extend(refs.into_iter().map(|(path, def, _)| (path, def)));
+                                        stored_code_definitions.extend(
+                                            refs.into_iter().map(|(path, def, _)| (path, def)),
+                                        );
                                     }
                                     Err(e) => {
                                         warn!(
@@ -554,14 +553,14 @@ pub async fn analyze_file(
             }
         }
     }
-    
+
     // Add enhanced report information to response
     response.file_path = Some(file_path.to_string_lossy().to_string());
     response.full_source_code = Some(content);
     // For file-based analysis, no specific pattern or matched code
     response.pattern_description = Some("Full file analysis".to_string());
     response.matched_source_code = None;
-    
+
     Ok(response)
 }
 
@@ -597,12 +596,12 @@ pub async fn analyze_pattern(
     }
 
     let content = std::fs::read_to_string(file_path)?;
-    
+
     // Skip files with more than 50,000 characters
     if content.len() > 50_000 {
         return Ok(None);
     }
-    
+
     // Extract context from file
     let context = parser.build_context_from_file(file_path)?;
 
@@ -655,7 +654,10 @@ pub async fn analyze_pattern(
         if let Err(e) = save_debug_file(
             output_dir,
             file_path,
-            &format!("pattern_{}_prompt", pattern_match.pattern_config.description.replace(" ", "_")),
+            &format!(
+                "pattern_{}_prompt",
+                pattern_match.pattern_config.description.replace(" ", "_")
+            ),
             &debug_content,
         ) {
             warn!("Failed to save debug input file: {}", e);
@@ -689,7 +691,10 @@ pub async fn analyze_pattern(
         if let Err(e) = save_debug_file(
             output_dir,
             file_path,
-            &format!("pattern_{}_response", pattern_match.pattern_config.description.replace(" ", "_")),
+            &format!(
+                "pattern_{}_response",
+                pattern_match.pattern_config.description.replace(" ", "_")
+            ),
             &debug_content,
         ) {
             warn!("Failed to save debug output file: {}", e);
@@ -698,8 +703,7 @@ pub async fn analyze_pattern(
 
     let mut response: Response = parse_json_response(&chat_content)?;
 
-    response.confidence_score =
-        crate::response::Response::normalize_confidence_score(response.confidence_score);
+    response.confidence_score = Response::normalize_confidence_score(response.confidence_score);
 
     // Clean up and validate the response
     response.sanitize();
@@ -707,15 +711,21 @@ pub async fn analyze_pattern(
     // Add pattern-specific metadata to response
     if response.confidence_score >= min_confidence {
         // Enhance response with pattern information
-        response.par_analysis.policy_violations.iter_mut().for_each(|violation| {
-            if !violation.rule_description.contains(&pattern_match.pattern_config.description) {
-                violation.rule_description = format!(
-                    "{} (Pattern: {})",
-                    violation.rule_description,
-                    pattern_match.pattern_config.description
-                );
-            }
-        });
+        response
+            .par_analysis
+            .policy_violations
+            .iter_mut()
+            .for_each(|violation| {
+                if !violation
+                    .rule_description
+                    .contains(&pattern_match.pattern_config.description)
+                {
+                    violation.rule_description = format!(
+                        "{} (Pattern: {})",
+                        violation.rule_description, pattern_match.pattern_config.description
+                    );
+                }
+            });
     }
 
     // Add enhanced report information to response
@@ -726,8 +736,7 @@ pub async fn analyze_pattern(
 
     info!(
         "Pattern analysis complete for '{}' with confidence: {}",
-        pattern_match.pattern_config.description,
-        response.confidence_score
+        pattern_match.pattern_config.description, response.confidence_score
     );
 
     Ok(Some(response))

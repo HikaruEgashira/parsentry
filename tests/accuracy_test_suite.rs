@@ -215,9 +215,9 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
     println!("{}", "=".repeat(50));
 
     // 注意: 実際のテスト実行は個別のテスト関数で行われます
-    // ここではダミーの結果を作成します（実際の統合では各テストの結果を収集）
-    
-    // 1. PAR分類精度テスト結果（サンプル）
+    // ここではダミーの結果を作成します。実際の統合では各テストの結果を収集する
+
+    // 1. PAR分類精度テスト結果
     suite.add_result(TestCategoryResult {
         category: TestCategory::PARClassification,
         passed: 18,
@@ -227,7 +227,7 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
         execution_time_ms: 1500,
     });
 
-    // 2. コンテキスト品質テスト結果（サンプル）
+    // 2. コンテキスト品質テスト結果
     suite.add_result(TestCategoryResult {
         category: TestCategory::ContextQuality,
         passed: 9,
@@ -237,7 +237,7 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
         execution_time_ms: 800,
     });
 
-    // 3. 実世界ベンチマークテスト結果（サンプル）
+    // 3. 実世界ベンチマークテスト結果
     suite.add_result(TestCategoryResult {
         category: TestCategory::RealWorldBenchmark,
         passed: 14,
@@ -249,7 +249,7 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
         execution_time_ms: 3200,
     });
 
-    // 4. 外部ベンチマークテスト結果（サンプル）
+    // 4. 外部ベンチマークテスト結果
     suite.add_result(TestCategoryResult {
         category: TestCategory::ExternalBenchmark,
         passed: 8,
@@ -259,7 +259,7 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
         execution_time_ms: 5000,
     });
 
-    // 5. E2Eパイプラインテスト結果（サンプル）
+    // 5. E2Eパイプラインテスト結果
     suite.add_result(TestCategoryResult {
         category: TestCategory::EndToEndPipeline,
         passed: 7,

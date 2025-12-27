@@ -1,22 +1,21 @@
-use crate::locales::Language;
-use crate::locales;
-use crate::response::VulnType;
+use parsentry_core::VulnType;
+use parsentry_i18n::Language;
 use std::collections::HashMap;
 
 pub fn get_sys_prompt_template(lang: &Language) -> &'static str {
-    locales::get_sys_prompt_template(lang)
+    parsentry_i18n::get_sys_prompt_template(lang)
 }
 
 pub fn get_initial_analysis_prompt_template(lang: &Language) -> &'static str {
-    locales::get_initial_analysis_prompt_template(lang)
+    parsentry_i18n::get_initial_analysis_prompt_template(lang)
 }
 
 pub fn get_analysis_approach_template(lang: &Language) -> &'static str {
-    locales::get_analysis_approach_template(lang)
+    parsentry_i18n::get_analysis_approach_template(lang)
 }
 
 pub fn get_guidelines_template(lang: &Language) -> &'static str {
-    locales::get_guidelines_template(lang)
+    parsentry_i18n::get_guidelines_template(lang)
 }
 
 pub mod vuln_specific {
@@ -118,4 +117,3 @@ pub mod vuln_specific {
         map
     }
 }
-

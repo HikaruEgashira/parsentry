@@ -115,7 +115,7 @@ impl ResponseExt for Response {
     }
 
     fn to_markdown(&self) -> String {
-        crate::reports::markdown::to_markdown(self)
+        parsentry_reports::to_markdown(self)
     }
 }
 

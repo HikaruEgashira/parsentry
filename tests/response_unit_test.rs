@@ -1,7 +1,6 @@
-use parsentry::response::{
-    ParAnalysis, RemediationGuidance, Response, ResponseExt, VulnType, response_json_schema,
-};
-use parsentry::reports::AnalysisSummary;
+use parsentry::response::{ParAnalysis, RemediationGuidance, Response, ResponseExt, VulnType};
+use parsentry_core::response_json_schema;
+use parsentry_reports::AnalysisSummary;
 use serde_json::json;
 
 #[test]
@@ -180,7 +179,7 @@ fn test_markdown_generation() {
     assert!(markdown.contains("SQLI"));
     assert!(markdown.contains("## 詳細解析"));
     assert!(markdown.contains("This is a test analysis"));
-    assert!(markdown.contains("## PoC（概念実証コード）"));
+    assert!(markdown.contains("## PoC"));
     assert!(markdown.contains("echo 'test'"));
     // Note: context_code related sections no longer exist
 }

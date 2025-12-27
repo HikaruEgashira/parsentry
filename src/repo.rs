@@ -1,4 +1,3 @@
-use crate::security_patterns::SecurityRiskPatterns;
 use anyhow::Result;
 use git2::{Cred, Error, FetchOptions, RemoteCallbacks, Repository};
 use std::{
@@ -7,6 +6,9 @@ use std::{
     io::{BufRead, BufReader, Result as IoResult},
     path::{Path, PathBuf},
 };
+
+use parsentry_parser::SecurityRiskPatterns;
+use parsentry_utils::FileClassifier;
 #[derive(Default)]
 pub struct LanguageExclusions {
     pub file_patterns: Vec<String>,
@@ -197,7 +199,7 @@ impl RepoOps {
                 }
                 
                 let filename = file_path.to_string_lossy();
-                let lang = crate::file_classifier::FileClassifier::classify(&filename, &content);
+                let lang = FileClassifier::classify(&filename, &content);
                 let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&self.repo_path));
                 if patterns.matches(&content) {
                     network_files.push(file_path.clone());
