@@ -424,7 +424,6 @@ impl Response {
         cc_response: parsentry_claude_code::ClaudeCodeResponse,
         file_path: String,
     ) -> Self {
-        // Convert vulnerability types
         let vulnerability_types: Vec<VulnType> = cc_response
             .vulnerability_types
             .iter()
@@ -440,7 +439,6 @@ impl Response {
             })
             .collect();
 
-        // Convert PAR analysis
         let par_analysis = ParAnalysis {
             principals: cc_response
                 .par_analysis
@@ -504,7 +502,6 @@ impl Response {
                 .collect(),
         };
 
-        // Convert remediation guidance
         let remediation_guidance = RemediationGuidance {
             policy_enforcement: cc_response
                 .remediation_guidance

@@ -78,7 +78,6 @@ impl ClaudeCodeExecutor {
 
     /// Execute a prompt and return the parsed output.
     pub async fn execute(&self, prompt: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        // Acquire semaphore permit
         let _permit = self
             .semaphore
             .acquire()
@@ -87,7 +86,6 @@ impl ClaudeCodeExecutor {
 
         debug!("Acquired semaphore permit, executing Claude Code");
 
-        // Execute with timeout
         let result = timeout(
             Duration::from_secs(self.timeout_secs),
             self.spawn_claude_process(prompt),
@@ -154,7 +152,6 @@ impl ClaudeCodeExecutor {
             }
         })?;
 
-        // Write prompt to stdin
         if let Some(mut stdin) = child.stdin.take() {
             stdin
                 .write_all(prompt.as_bytes())
@@ -163,7 +160,6 @@ impl ClaudeCodeExecutor {
             stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
         }
 
-        // Wait for output
         let output = child.wait_with_output().await.map_err(ClaudeCodeError::SpawnError)?;
 
         if !output.status.success() {
@@ -176,7 +172,6 @@ impl ClaudeCodeExecutor {
 
         let raw_output = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr_output = String::from_utf8_lossy(&output.stderr).to_string();
-        debug!("Claude Code raw output length: {} bytes", raw_output.len());
 
         if !stderr_output.is_empty() {
             warn!("Claude Code stderr: {}", stderr_output);
@@ -187,20 +182,14 @@ impl ClaudeCodeExecutor {
             return Err(ClaudeCodeError::ParseError("Empty output from Claude Code".to_string()));
         }
 
-        debug!("Claude Code raw output length: {} bytes", raw_output.len());
-
-        // Parse the output
         self.parse_output(&raw_output)
     }
 
     /// Parse the JSON output from Claude Code.
     fn parse_output(&self, raw_output: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        // Claude Code output format with --output-format json
-        // Try to extract the result from the JSON structure
         let parsed: serde_json::Value = serde_json::from_str(raw_output)
             .map_err(|e| ClaudeCodeError::ParseError(format!("JSON parse error: {}", e)))?;
 
-        // Extract metadata if available
         let cost_usd = parsed.get("total_cost_usd").and_then(|v| v.as_f64());
         let duration_ms = parsed.get("duration_ms").and_then(|v| v.as_u64());
         let session_id = parsed
@@ -208,7 +197,6 @@ impl ClaudeCodeExecutor {
             .and_then(|v| v.as_str())
             .map(String::from);
 
-        // Get the result content
         let result_str = if let Some(result) = parsed.get("result") {
             if let Some(s) = result.as_str() {
                 s.to_string()
@@ -216,16 +204,12 @@ impl ClaudeCodeExecutor {
                 result.to_string()
             }
         } else {
-            // If no "result" field, treat the whole output as the result
             raw_output.to_string()
         };
 
-        // Claude Code may return markdown with embedded JSON
-        // Try to extract JSON from code blocks first
         let json_str = Self::extract_json_from_markdown(&result_str)
             .unwrap_or_else(|| result_str.clone());
 
-        // Parse the response
         let response: ClaudeCodeResponse = serde_json::from_str(&json_str)
             .map_err(|e| ClaudeCodeError::ParseError(format!("Response parse error: {} - Content: {}", e, &json_str.chars().take(200).collect::<String>())))?;
 
@@ -240,15 +224,12 @@ impl ClaudeCodeExecutor {
 
     /// Extract JSON from markdown code blocks.
     fn extract_json_from_markdown(text: &str) -> Option<String> {
-        // Look for ```json ... ``` blocks
         let json_start = text.find("```json")?;
-        let content_start = json_start + 7; // length of "```json"
+        let content_start = json_start + 7;
         let remaining = &text[content_start..];
 
-        // Skip whitespace/newline after ```json
         let remaining = remaining.trim_start();
 
-        // Find the closing ```
         let json_end = remaining.find("```")?;
         let json_content = &remaining[..json_end].trim();
 
