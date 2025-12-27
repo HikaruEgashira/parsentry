@@ -31,7 +31,7 @@ async fn analyze_with_claude_code(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    println!("[CLAUDE CODE] START: {} (pattern: {})",
+    println!("🤖 Claude Code 分析開始: {} (pattern: {})",
         file_name,
         pattern_match.pattern_config.description
     );
@@ -71,7 +71,7 @@ async fn analyze_with_claude_code(
                 .map(|s| s.chars().take(8).collect::<String>())
                 .unwrap_or_else(|| "N/A".to_string());
 
-            println!("[CLAUDE CODE] SUCCESS: {} | duration: {} | cost: {} | session: {}",
+            println!("✅ Claude Code 成功: {} ({}、コスト: {}、セッション: {})",
                 file_name,
                 duration_str,
                 cost_str,
@@ -88,7 +88,7 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
-            println!("[CLAUDE CODE] FAILED: {} | duration: {:.1}s | error: {}",
+            println!("❌ Claude Code 失敗: {} ({:.1}s): {}",
                 file_name,
                 elapsed.as_secs_f64(),
                 e
@@ -288,15 +288,11 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         };
 
         // Log Claude Code configuration
-        println!("╔══════════════════════════════════════════════════════════════════╗");
-        println!("║                    CLAUDE CODE MODE ENABLED                      ║");
-        println!("╠══════════════════════════════════════════════════════════════════╣");
-        println!("║ Binary Path:    {:50} ║", claude_path.display());
-        println!("║ Max Concurrent: {:50} ║", claude_config.max_concurrent);
-        println!("║ Timeout:        {:48}s ║", claude_config.timeout_secs);
-        println!("║ PoC Enabled:    {:50} ║", claude_config.enable_poc);
-        println!("║ Working Dir:    {:50} ║", claude_config.working_dir.display().to_string().chars().take(50).collect::<String>());
-        println!("╚══════════════════════════════════════════════════════════════════╝");
+        println!("🤖 Claude Code モード有効");
+        println!("  バイナリ: {}", claude_path.display());
+        println!("  並列数: {}", claude_config.max_concurrent);
+        println!("  タイムアウト: {}秒", claude_config.timeout_secs);
+        println!("  PoC実行: {}", if claude_config.enable_poc { "有効" } else { "無効" });
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
     } else {
@@ -622,13 +618,10 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     if use_claude_code {
         let success_count = filtered_summary.results.len();
         let high_confidence_count = filtered_summary.results.iter().filter(|r| r.response.confidence_score >= 70).count();
-        println!("╔══════════════════════════════════════════════════════════════════╗");
-        println!("║                  CLAUDE CODE ANALYSIS SUMMARY                    ║");
-        println!("╠══════════════════════════════════════════════════════════════════╣");
-        println!("║ Total Patterns Analyzed: {:42} ║", all_pattern_matches.len());
-        println!("║ Successful Analyses:     {:42} ║", success_count);
-        println!("║ Vulnerabilities Found:   {:42} ║", high_confidence_count);
-        println!("╚══════════════════════════════════════════════════════════════════╝");
+        println!("🤖 Claude Code 分析サマリー");
+        println!("  分析パターン数: {}", all_pattern_matches.len());
+        println!("  成功: {}", success_count);
+        println!("  検出脆弱性: {}", high_confidence_count);
     }
 
     println!(
