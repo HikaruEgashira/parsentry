@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::cli::args::ScanArgs;
+use crate::mvra::MvraConfig;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
@@ -30,6 +31,9 @@ pub struct ParsentryConfig {
 
     #[serde(default)]
     pub claude_code: ClaudeCodeConfigToml,
+
+    #[serde(default)]
+    pub mvra: MvraConfig,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -244,6 +248,7 @@ impl Default for ParsentryConfig {
             generation: GenerationConfig::default(),
             call_graph: CallGraphConfigToml::default(),
             claude_code: ClaudeCodeConfigToml::default(),
+            mvra: MvraConfig::default(),
         }
     }
 }
@@ -312,6 +317,15 @@ enabled = false
 max_concurrent = 10
 timeout_secs = 300
 enable_poc = false
+
+[mvra]
+# search_query = "language:python stars:>100"
+# code_query = "path:*.py import flask"
+max_repos = 10
+cache_dir = ".parsentry-cache"
+use_cache = true
+# min_stars = 100
+# repositories = ["owner/repo1", "owner/repo2"]
 "#.to_string()
         })
     }
@@ -574,6 +588,14 @@ enable_poc = false
             claude_code_path: self.claude_code.path.clone(),
             claude_code_concurrency: self.claude_code.max_concurrent,
             claude_code_poc: self.claude_code.enable_poc,
+            mvra: false,
+            mvra_search_query: self.mvra.search_query.clone(),
+            mvra_code_query: self.mvra.code_query.clone(),
+            mvra_max_repos: self.mvra.max_repos,
+            mvra_repositories: self.mvra.repositories.as_ref().map(|v| v.join(",")),
+            mvra_min_stars: self.mvra.min_stars,
+            mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
+            mvra_no_cache: !self.mvra.use_cache,
         }
     }
 }

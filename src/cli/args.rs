@@ -72,6 +72,38 @@ pub struct Args {
     /// Enable PoC execution in Claude Code
     #[arg(long)]
     pub claude_code_poc: bool,
+
+    /// Enable multi-repository variant analysis (MVRA)
+    #[arg(long)]
+    pub mvra: bool,
+
+    /// GitHub search query for MVRA (e.g., "language:python stars:>100")
+    #[arg(long)]
+    pub mvra_search_query: Option<String>,
+
+    /// Code search query for MVRA (e.g., "path:*.py import flask")
+    #[arg(long)]
+    pub mvra_code_query: Option<String>,
+
+    /// Maximum number of repositories to analyze in MVRA
+    #[arg(long, default_value = "10")]
+    pub mvra_max_repos: usize,
+
+    /// Comma-separated list of repositories for MVRA (e.g., "owner/repo1,owner/repo2")
+    #[arg(long)]
+    pub mvra_repositories: Option<String>,
+
+    /// Minimum stars for repository filtering in MVRA
+    #[arg(long)]
+    pub mvra_min_stars: Option<u32>,
+
+    /// Cache directory for cloned repositories in MVRA
+    #[arg(long, default_value = ".parsentry-cache")]
+    pub mvra_cache_dir: Option<PathBuf>,
+
+    /// Disable cache in MVRA (always clone fresh)
+    #[arg(long)]
+    pub mvra_no_cache: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -127,6 +159,14 @@ pub struct ScanArgs {
     pub claude_code_path: Option<PathBuf>,
     pub claude_code_concurrency: usize,
     pub claude_code_poc: bool,
+    pub mvra: bool,
+    pub mvra_search_query: Option<String>,
+    pub mvra_code_query: Option<String>,
+    pub mvra_max_repos: usize,
+    pub mvra_repositories: Option<String>,
+    pub mvra_min_stars: Option<u32>,
+    pub mvra_cache_dir: Option<PathBuf>,
+    pub mvra_no_cache: bool,
 }
 
 impl From<&Args> for ScanArgs {
@@ -150,6 +190,14 @@ impl From<&Args> for ScanArgs {
             claude_code_path: args.claude_code_path.clone(),
             claude_code_concurrency: args.claude_code_concurrency,
             claude_code_poc: args.claude_code_poc,
+            mvra: args.mvra,
+            mvra_search_query: args.mvra_search_query.clone(),
+            mvra_code_query: args.mvra_code_query.clone(),
+            mvra_max_repos: args.mvra_max_repos,
+            mvra_repositories: args.mvra_repositories.clone(),
+            mvra_min_stars: args.mvra_min_stars,
+            mvra_cache_dir: args.mvra_cache_dir.clone(),
+            mvra_no_cache: args.mvra_no_cache,
         }
     }
 }

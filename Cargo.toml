@@ -41,6 +41,9 @@ chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3.10"
+octocrab = "0.41"
+reqwest = { version = "0.12", features = ["json"] }
+urlencoding = "2.1"
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }

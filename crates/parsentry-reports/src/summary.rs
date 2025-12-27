@@ -1,16 +1,17 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 
 use parsentry_core::{Response, VulnType};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileAnalysisResult {
     pub file_path: PathBuf,
     pub response: Response,
     pub output_filename: String,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisSummary {
     pub results: Vec<FileAnalysisResult>,
 }
