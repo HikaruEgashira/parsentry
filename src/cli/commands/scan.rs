@@ -180,6 +180,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                 enable_poc: false,
                 working_dir: root_dir.clone(),
                 log_dir,
+                model: Some("haiku".to_string()),
             };
             printer.info("Mode", "Claude Code");
             let result = generate_custom_patterns_with_claude_code(&root_dir, claude_config).await?;
@@ -286,6 +287,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             enable_poc: config.claude_code.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir: log_dir.clone(),
+            model: Some("haiku".to_string()),
         };
 
         printer.info("Mode", "Claude Code enabled");
@@ -846,6 +848,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             enable_poc: config.claude_code.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir: log_dir.clone(),
+            model: Some("haiku".to_string()),
         };
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))

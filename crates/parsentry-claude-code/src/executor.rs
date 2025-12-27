@@ -61,6 +61,7 @@ pub struct ClaudeCodeExecutor {
     #[allow(dead_code)]
     enable_poc: bool,
     log_dir: Option<PathBuf>,
+    model: Option<String>,
 }
 
 impl ClaudeCodeExecutor {
@@ -80,6 +81,7 @@ impl ClaudeCodeExecutor {
             working_dir: config.working_dir,
             enable_poc: config.enable_poc,
             log_dir: config.log_dir,
+            model: config.model,
         })
     }
 
@@ -140,8 +142,14 @@ impl ClaudeCodeExecutor {
 
         cmd.arg("--print")
             .arg("--output-format")
-            .arg("json")
-            .current_dir(&self.working_dir)
+            .arg("json");
+
+        // Add model argument if specified
+        if let Some(ref model) = self.model {
+            cmd.arg("--model").arg(model);
+        }
+
+        cmd.current_dir(&self.working_dir)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
