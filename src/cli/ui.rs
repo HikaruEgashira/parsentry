@@ -9,7 +9,6 @@ pub mod colors {
     pub const BOLD: &str = "\x1b[1m";
     pub const DIM: &str = "\x1b[2m";
 
-    // Foreground colors
     pub const GREEN: &str = "\x1b[32m";
     pub const YELLOW: &str = "\x1b[33m";
     pub const BLUE: &str = "\x1b[34m";
@@ -18,7 +17,6 @@ pub mod colors {
     pub const RED: &str = "\x1b[31m";
     pub const WHITE: &str = "\x1b[37m";
 
-    // Bright variants
     pub const BRIGHT_GREEN: &str = "\x1b[92m";
     pub const BRIGHT_YELLOW: &str = "\x1b[93m";
     pub const BRIGHT_CYAN: &str = "\x1b[96m";
@@ -190,7 +188,6 @@ impl SummaryTable {
         let term_width = terminal_width();
         let file_width = (term_width / 3).min(40);
 
-        // Header
         eprintln!();
         let header = if self.use_colors {
             format!(
@@ -214,7 +211,6 @@ impl SummaryTable {
         };
         eprintln!("{}", header);
 
-        // Separator
         let sep_len = term_width.min(100);
         if self.use_colors {
             eprintln!("{}{}{}", colors::DIM, "─".repeat(sep_len), colors::RESET);
@@ -222,7 +218,6 @@ impl SummaryTable {
             eprintln!("{}", "-".repeat(sep_len));
         }
 
-        // Rows
         for row in &self.rows {
             let file_display = truncate_path(&row.file, file_width);
 
