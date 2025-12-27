@@ -6,11 +6,11 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::path::Path;
 
+use parsentry_analyzer::{filter_files_by_size, write_patterns_to_file, PatternClassification};
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor};
 use parsentry_core::Language;
 use parsentry_parser::Definition;
-
-use crate::pattern_generator::PatternClassification;
+use parsentry_utils::{FileClassifier, FileDiscovery};
 
 /// Result of pattern generation process
 #[derive(Debug, Clone)]
@@ -29,13 +29,13 @@ pub async fn generate_custom_patterns_with_claude_code(
 ) -> Result<PatternGenerationResult> {
     log::info!("Analyzing directory for definitions: {}", root_dir.display());
 
-    let file_discovery = parsentry_utils::FileDiscovery::new(root_dir.to_path_buf());
+    let file_discovery = FileDiscovery::new(root_dir.to_path_buf());
     let files = file_discovery.get_files()?;
 
     log::debug!("Found {} files", files.len());
 
     let max_lines = 1000;
-    let filtered_files = crate::pattern_generator::filter_files_by_size(&files, max_lines)?;
+    let filtered_files = filter_files_by_size(&files, max_lines)?;
     let skipped_count = files.len() - filtered_files.len();
 
     if skipped_count > 0 {
@@ -66,7 +66,7 @@ pub async fn generate_custom_patterns_with_claude_code(
                     }
                 };
 
-                let language = parsentry_utils::FileClassifier::classify(&filename, &content);
+                let language = FileClassifier::classify(&filename, &content);
                 languages_found.insert(language, true);
 
                 log::debug!(
@@ -161,7 +161,7 @@ pub async fn generate_custom_patterns_with_claude_code(
         }
 
         if !unique_patterns.is_empty() {
-            crate::pattern_generator::write_patterns_to_file(root_dir, *language, &unique_patterns)?;
+            write_patterns_to_file(root_dir, *language, &unique_patterns)?;
             log::info!("{:?}: {} patterns generated", language, unique_patterns.len());
             total_patterns += unique_patterns.len();
             processed_languages.push(*language);
