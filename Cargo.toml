@@ -11,7 +11,6 @@ snapshot-test = []
 benchmark = []
 
 [dependencies]
-git2 = "0.18"
 tokio.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
 parsentry-parser = { path = "crates/parsentry-parser" }
@@ -36,6 +35,8 @@ dotenvy = "0.15"
 genai = "0.4.0-alpha.15"
 futures = { version = "0.3", features = ["thread-pool"] }
 indicatif = "0.17"
+atty = "0.2"
+terminal_size = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
