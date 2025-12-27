@@ -66,17 +66,24 @@ async fn analyze_with_claude_code(
             let duration_str = output.duration_ms
                 .map(|d| format!("{}ms", d))
                 .unwrap_or_else(|| format!("{:.1}s", elapsed.as_secs_f64()));
-            let session_str = output.session_id
-                .as_ref()
-                .map(|s| s.chars().take(8).collect::<String>())
-                .unwrap_or_else(|| "N/A".to_string());
+            // Show log file path
+            let log_path = if let Some(ref sid) = output.session_id {
+                let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
+                let project_name = file_path.parent()
+                    .and_then(|p| p.file_name())
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "default".to_string());
+                format!("{}/.claude/projects/{}/{}.jsonl", home, project_name, sid)
+            } else {
+                "N/A".to_string()
+            };
 
-            println!("✅ Claude Code 成功: {} ({}、コスト: {}、セッション: {})",
+            println!("✅ Claude Code 成功: {} ({}、コスト: {})",
                 file_name,
                 duration_str,
                 cost_str,
-                session_str
             );
+            println!("  📄 ログ: {}", log_path);
 
             info!("Claude Code succeeded for {}", file_path.display());
             let mut response = Response::from_claude_code_response(
