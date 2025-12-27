@@ -137,7 +137,7 @@ async fn execute_chat_request(
         }
         Err(_) => {
             error!("Chat request timed out after 240 seconds");
-            Err(anyhow::anyhow!("Chat request timed out after 180 seconds"))
+            Err(anyhow::anyhow!("Chat request timed out after 240 seconds"))
         }
     }
 }
