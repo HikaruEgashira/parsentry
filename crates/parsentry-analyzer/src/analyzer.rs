@@ -32,7 +32,6 @@ fn save_debug_file(
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
-        // Add timestamp to ensure uniqueness across multiple LLM calls
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -157,7 +156,6 @@ async fn execute_chat_request_with_retry(
                 attempt + 1,
                 max_retries + 1
             );
-            // Exponential backoff
             tokio::time::sleep(Duration::from_millis(1000 * (1 << attempt))).await;
         }
 
