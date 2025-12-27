@@ -42,7 +42,6 @@ impl RepoOps {
         }
     }
 
-    /// Get the repository root path
     pub fn repo_path(&self) -> &Path {
         self.file_discovery.root_path()
     }

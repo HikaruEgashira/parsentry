@@ -37,7 +37,6 @@ async fn analyze_with_claude_code(
 
     let content = tokio::fs::read_to_string(file_path).await?;
 
-    // Build pattern context
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
     let pattern_context = PatternContext::new(
         &pattern_type_str,
@@ -46,14 +45,12 @@ async fn analyze_with_claude_code(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    // Build prompt
     let prompt = prompt_builder.build_security_analysis_prompt(
         file_path,
         &content,
         Some(&pattern_context),
     );
 
-    // Execute Claude Code
     let output = executor.execute_with_retry(&prompt, 2).await;
     let elapsed = start_time.elapsed();
 
@@ -100,10 +97,8 @@ async fn analyze_with_claude_code(
 }
 
 pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
-    // Initialize UI printer
     let printer = StatusPrinter::new();
 
-    // Load configuration with precedence: CLI args > env vars > config file
     let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
     let config = ParsentryConfig::load_with_precedence(
         args.config.clone(),
@@ -111,16 +106,13 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         &env_vars
     )?;
 
-    // Convert config back to args for compatibility with existing code
     let final_args = config.to_args();
 
     validate_scan_args(&final_args)?;
 
-    // Create language configuration
     let language = Language::from_string(&final_args.language);
     let messages = get_messages(&language);
 
-    // Get API base URL from configuration
     let api_base_url = final_args.api_base_url.as_deref();
 
     let (root_dir, repo_name) = if let Some(target) = &final_args.target {
@@ -232,10 +224,8 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     let mut summary = AnalysisSummary::new();
 
-    // プログレスバーを設定（新しいスタイル）
     let progress_bar = ui::progress::create_bar(total as u64);
 
-    // Set concurrency based on mode
     let max_concurrent = if use_claude_code {
         progress_bar.set_message("analyzing with Claude Code");
         config.claude_code.max_concurrent.min(10)
@@ -244,7 +234,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         50
     };
 
-    // Setup Claude Code executor if enabled
     let claude_executor = if use_claude_code {
         let claude_path = config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
@@ -272,7 +261,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     let printer = Arc::new(printer);
 
-    // 並列度を制御してタスクを実行 - パターンごとに分析
     let results = stream::iter(all_pattern_matches.iter().enumerate())
         .map(|(idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
@@ -547,7 +535,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         table.print();
     }
 
-    // Log summary
     if use_claude_code {
         let success_count = filtered_summary.results.len();
         let high_confidence_count = filtered_summary.results.iter().filter(|r| r.response.confidence_score >= 70).count();
