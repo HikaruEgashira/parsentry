@@ -418,6 +418,124 @@ impl Response {
     pub fn to_markdown(&self) -> String {
         crate::reports::markdown::to_markdown(self)
     }
+
+    /// Create a Response from ClaudeCodeResponse
+    pub fn from_claude_code_response(
+        cc_response: parsentry_claude_code::ClaudeCodeResponse,
+        file_path: String,
+    ) -> Self {
+        // Convert vulnerability types
+        let vulnerability_types: Vec<VulnType> = cc_response
+            .vulnerability_types
+            .iter()
+            .map(|s| match s.as_str() {
+                "LFI" => VulnType::LFI,
+                "RCE" => VulnType::RCE,
+                "SSRF" => VulnType::SSRF,
+                "AFO" => VulnType::AFO,
+                "SQLI" => VulnType::SQLI,
+                "XSS" => VulnType::XSS,
+                "IDOR" => VulnType::IDOR,
+                other => VulnType::Other(other.to_string()),
+            })
+            .collect();
+
+        // Convert PAR analysis
+        let par_analysis = ParAnalysis {
+            principals: cc_response
+                .par_analysis
+                .principals
+                .iter()
+                .map(|p| PrincipalInfo {
+                    identifier: p.identifier.clone(),
+                    trust_level: match p.trust_level.as_str() {
+                        "trusted" => TrustLevel::Trusted,
+                        "semi_trusted" => TrustLevel::SemiTrusted,
+                        _ => TrustLevel::Untrusted,
+                    },
+                    source_context: p.source_context.clone(),
+                    risk_factors: p.risk_factors.clone(),
+                })
+                .collect(),
+            actions: cc_response
+                .par_analysis
+                .actions
+                .iter()
+                .map(|a| ActionInfo {
+                    identifier: a.identifier.clone(),
+                    security_function: a.security_function.clone(),
+                    implementation_quality: match a.implementation_quality.as_str() {
+                        "adequate" => SecurityFunctionQuality::Adequate,
+                        "insufficient" => SecurityFunctionQuality::Insufficient,
+                        "missing" => SecurityFunctionQuality::Missing,
+                        _ => SecurityFunctionQuality::Bypassed,
+                    },
+                    detected_weaknesses: a.detected_weaknesses.clone(),
+                    bypass_vectors: a.bypass_vectors.clone(),
+                })
+                .collect(),
+            resources: cc_response
+                .par_analysis
+                .resources
+                .iter()
+                .map(|r| ResourceInfo {
+                    identifier: r.identifier.clone(),
+                    sensitivity_level: match r.sensitivity_level.as_str() {
+                        "low" => SensitivityLevel::Low,
+                        "medium" => SensitivityLevel::Medium,
+                        "high" => SensitivityLevel::High,
+                        _ => SensitivityLevel::Critical,
+                    },
+                    operation_type: r.operation_type.clone(),
+                    protection_mechanisms: r.protection_mechanisms.clone(),
+                })
+                .collect(),
+            policy_violations: cc_response
+                .par_analysis
+                .policy_violations
+                .iter()
+                .map(|v| PolicyViolation {
+                    rule_id: v.rule_id.clone(),
+                    rule_description: v.rule_description.clone(),
+                    violation_path: v.violation_path.clone(),
+                    severity: v.severity.clone(),
+                    confidence: v.confidence,
+                })
+                .collect(),
+        };
+
+        // Convert remediation guidance
+        let remediation_guidance = RemediationGuidance {
+            policy_enforcement: cc_response
+                .remediation_guidance
+                .policy_enforcement
+                .iter()
+                .map(|p| RemediationAction {
+                    component: p.component.clone(),
+                    required_improvement: p.required_improvement.clone(),
+                    specific_guidance: p.specific_guidance.clone(),
+                    priority: p.priority.clone(),
+                })
+                .collect(),
+        };
+
+        let mut response = Self {
+            scratchpad: cc_response.scratchpad,
+            analysis: cc_response.analysis,
+            poc: cc_response.poc,
+            confidence_score: Self::normalize_confidence_score(cc_response.confidence_score),
+            vulnerability_types,
+            par_analysis,
+            remediation_guidance,
+            file_path: Some(file_path),
+            pattern_description: cc_response.pattern_description,
+            matched_source_code: cc_response.matched_source_code,
+            full_source_code: None,
+        };
+
+        response.sanitize();
+        response
+    }
 }
 
 #[cfg(test)]
