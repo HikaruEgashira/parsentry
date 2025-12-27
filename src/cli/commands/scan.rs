@@ -25,15 +25,15 @@ async fn analyze_with_claude_code(
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
-    working_dir: &PathBuf,
+    _working_dir: &PathBuf,
     printer: &StatusPrinter,
 ) -> Result<Option<Response>> {
-    let start_time = std::time::Instant::now();
     let file_name = file_path.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    printer.info("Analyzing", &format!("{} ({})", file_name, pattern_match.pattern_config.description));
+    // Progress is shown via progress bar message, not individual status lines
+    // printer.info("Analyzing", &format!("{} ({})", file_name, pattern_match.pattern_config.description));
 
     let content = tokio::fs::read_to_string(file_path).await?;
 
@@ -52,33 +52,10 @@ async fn analyze_with_claude_code(
     );
 
     let output = executor.execute_with_retry(&prompt, 2).await;
-    let elapsed = start_time.elapsed();
 
     match output {
         Ok(output) => {
-            let cost_str = output.cost_usd
-                .map(|c| format!("${:.4}", c))
-                .unwrap_or_else(|| "N/A".to_string());
-            let duration_str = output.duration_ms
-                .map(|d| format!("{}ms", d))
-                .unwrap_or_else(|| format!("{:.1}s", elapsed.as_secs_f64()));
-            // Show log file path (Claude Code uses absolute working_dir path with "/" and "." replaced by "-")
-            let log_path = if let Some(ref sid) = output.session_id {
-                let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
-                // Convert working_dir to absolute path, then replace "/" and "." with "-"
-                let abs_working_dir = working_dir.canonicalize()
-                    .unwrap_or_else(|_| working_dir.clone());
-                let project_path = abs_working_dir.to_string_lossy()
-                    .replace("/", "-")
-                    .replace(".", "-");
-                format!("{}/.claude/projects/{}/{}.jsonl", home, project_path, sid)
-            } else {
-                "N/A".to_string()
-            };
-
-            printer.success("Done", &format!("{} ({}, {})", file_name, duration_str, cost_str));
-            printer.dim(&format!("log: {}", ui::truncate_path(&log_path, 70)));
-
+            // Success is tracked via progress bar, no need for individual success messages
             info!("Claude Code succeeded for {}", file_path.display());
             let mut response = from_claude_code_response(
                 output.response,
@@ -89,7 +66,7 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
-            printer.error("Failed", &format!("{} ({:.1}s): {}", file_name, elapsed.as_secs_f64(), e));
+            printer.error("Failed", &format!("{}: {}", file_name, e));
             error!("Claude Code execution error for {}: {}", file_path.display(), e);
             Err(anyhow::anyhow!("Claude Code failed: {}", e))
         }
