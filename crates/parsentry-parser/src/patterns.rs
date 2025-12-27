@@ -182,7 +182,9 @@ impl SecurityRiskPatterns {
     #[must_use]
     pub fn matches(&self, content: &str) -> bool {
         let mut parser = Parser::new();
-        parser.set_language(&self.language).unwrap();
+        if parser.set_language(&self.language).is_err() {
+            return false;
+        }
 
         let tree = match parser.parse(content, None) {
             Some(tree) => tree,
@@ -246,7 +248,9 @@ impl SecurityRiskPatterns {
     #[must_use]
     pub fn get_pattern_type(&self, content: &str) -> Option<PatternType> {
         let mut parser = Parser::new();
-        parser.set_language(&self.language).unwrap();
+        if parser.set_language(&self.language).is_err() {
+            return None;
+        }
 
         let tree = parser.parse(content, None)?;
 
@@ -303,7 +307,9 @@ impl SecurityRiskPatterns {
     #[must_use]
     pub fn get_pattern_matches(&self, content: &str) -> Vec<PatternMatch> {
         let mut parser = Parser::new();
-        parser.set_language(&self.language).unwrap();
+        if parser.set_language(&self.language).is_err() {
+            return Vec::new();
+        }
 
         let tree = match parser.parse(content, None) {
             Some(tree) => tree,
