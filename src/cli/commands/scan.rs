@@ -32,9 +32,6 @@ async fn analyze_with_claude_code(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    // Progress is shown via progress bar message, not individual status lines
-    // printer.info("Analyzing", &format!("{} ({})", file_name, pattern_match.pattern_config.description));
-
     let content = tokio::fs::read_to_string(file_path).await?;
 
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
@@ -55,7 +52,6 @@ async fn analyze_with_claude_code(
 
     match output {
         Ok(output) => {
-            // Success is tracked via progress bar, no need for individual success messages
             info!("Claude Code succeeded for {}", file_path.display());
             let mut response = from_claude_code_response(
                 output.response,
