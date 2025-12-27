@@ -46,8 +46,8 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: このFlaskアプリケーションには、`order_receipt()` ルート（94-109行目）に**重大なIDOR脆弱性**が存在します。\n\n**問題点:**\n1. ユーザーがURLパラメータ `order_id` を通じて任意の注文IDを指定可能\n2. セッションから `user_id` を取得しているが、**注文の所有者確認を行っていない**\n3. `Order.query.get(order_id)` で直接データベースから注文を取得し、レスポンスとして返却\n\n**影響:**\n- 認証済みユーザーは、他のユーザーの注文領収書を閲覧可能\n- `__init__.py` で作成された `order_id=300401` には機密情報（フラグ）が含まれており、これにも直接アクセス可能\n\n**追加のセキュリティ問題:**\n1. デフォルト認証情報: test/test でログイン可能\n2. パスワードが平文で保存されている\n3. `app.secret_key = 'your_secret_key'` がハードコードされている",
-            "markdown": "このFlaskアプリケーションには、`order_receipt()` ルート（94-109行目）に**重大なIDOR脆弱性**が存在します。\n\n**問題点:**\n1. ユーザーがURLパラメータ `order_id` を通じて任意の注文IDを指定可能\n2. セッションから `user_id` を取得しているが、**注文の所有者確認を行っていない**\n3. `Order.query.get(order_id)` で直接データベースから注文を取得し、レスポンスとして返却\n\n**影響:**\n- 認証済みユーザーは、他のユーザーの注文領収書を閲覧可能\n- `__init__.py` で作成された `order_id=300401` には機密情報（フラグ）が含まれており、これにも直接アクセス可能\n\n**追加のセキュリティ問題:**\n1. デフォルト認証情報: test/test でログイン可能\n2. パスワードが平文で保存されている\n3. `app.secret_key = 'your_secret_key'` がハードコードされている"
+            "text": "IDOR: このFlask Webアプリケーションには**IDOR (Insecure Direct Object Reference) 脆弱性**が存在します。\n\n### 脆弱性の詳細\n\n`order_receipt` 関数（94-109行目）では、ユーザーがセッションにログインしているかどうかを確認していますが、**リクエストされた `order_id` が現在ログインしているユーザーの注文に属しているかどうかの認可チェックが欠如**しています。\n\n具体的には:\n- 104行目: `order = Order.query.get(order_id)` でURLパスから受け取った `order_id` を直接使用してデータベースから注文を取得\n- 所有者の検証なし: 取得した `order.user_id` と `session['user_id']` の比較が行われていない\n\n### 攻撃シナリオ\n1. 攻撃者がアカウントを作成またはログイン\n2. `/order/1/receipt`, `/order/2/receipt`, `/order/3/receipt` 等、連番でorder_idを列挙\n3. 他のユーザーの注文情報（日付、銘柄、取引種別、数量、価格、レシート情報）にアクセス可能\n\n### 追加の脆弱性\n- **平文パスワード保存**: `password = db.Column(db.String(100), nullable=False)` でハッシュ化なし\n- **ユーザー列挙**: ログイン時に「User not found」と「Incorrect password」で異なるエラーメッセージを返す",
+            "markdown": "このFlask Webアプリケーションには**IDOR (Insecure Direct Object Reference) 脆弱性**が存在します。\n\n### 脆弱性の詳細\n\n`order_receipt` 関数（94-109行目）では、ユーザーがセッションにログインしているかどうかを確認していますが、**リクエストされた `order_id` が現在ログインしているユーザーの注文に属しているかどうかの認可チェックが欠如**しています。\n\n具体的には:\n- 104行目: `order = Order.query.get(order_id)` でURLパスから受け取った `order_id` を直接使用してデータベースから注文を取得\n- 所有者の検証なし: 取得した `order.user_id` と `session['user_id']` の比較が行われていない\n\n### 攻撃シナリオ\n1. 攻撃者がアカウントを作成またはログイン\n2. `/order/1/receipt`, `/order/2/receipt`, `/order/3/receipt` 等、連番でorder_idを列挙\n3. 他のユーザーの注文情報（日付、銘柄、取引種別、数量、価格、レシート情報）にアクセス可能\n\n### 追加の脆弱性\n- **平文パスワード保存**: `password = db.Column(db.String(100), nullable=False)` でハッシュ化なし\n- **ユーザー列挙**: ログイン時に「User not found」と「Incorrect password」で異なるエラーメッセージを返す"
           },
           "locations": [
             {
@@ -60,10 +60,10 @@
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "c1329229e5574dec"
+            "parsentry/v1": "2050926f1e9a3480"
           },
           "properties": {
-            "confidence": 1.0,
+            "confidence": 0.9,
             "mitre_attack": [
               "T1190"
             ],
@@ -81,8 +81,8 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "IDOR: このアプリケーションは**IDOR（Insecure Direct Object Reference）脆弱性**を持つトレーディングプラットフォームです。\n\n**主要な脆弱性の詳細**:\n\n1. `/order/<int:order_id>/receipt` エンドポイントでは、ユーザーがログインしているかどうかのみを確認し、**リクエストされた注文がそのユーザーのものかどうかを検証していません**。これにより、認証済みの攻撃者は任意のorder_idを指定して他のユーザーの注文レシートを閲覧できます。\n\n2. アプリケーション初期化時に `/flag` ファイルの内容がorder_id=300401のレシートとして保存されています。この注文はuser_idがNullで、どのユーザーにも紐付いていません。\n\n3. IDORを悪用して `/order/300401/receipt` にアクセスすることで、認証済みユーザーは機密データ（フラグ）を取得できます。\n\n**攻撃シナリオ**:\n1. デフォルト認証情報（test/test）でログイン\n2. /order/300401/receipt にアクセス\n3. フラグの内容がレシートとして表示される",
-            "markdown": "このアプリケーションは**IDOR（Insecure Direct Object Reference）脆弱性**を持つトレーディングプラットフォームです。\n\n**主要な脆弱性の詳細**:\n\n1. `/order/<int:order_id>/receipt` エンドポイントでは、ユーザーがログインしているかどうかのみを確認し、**リクエストされた注文がそのユーザーのものかどうかを検証していません**。これにより、認証済みの攻撃者は任意のorder_idを指定して他のユーザーの注文レシートを閲覧できます。\n\n2. アプリケーション初期化時に `/flag` ファイルの内容がorder_id=300401のレシートとして保存されています。この注文はuser_idがNullで、どのユーザーにも紐付いていません。\n\n3. IDORを悪用して `/order/300401/receipt` にアクセスすることで、認証済みユーザーは機密データ（フラグ）を取得できます。\n\n**攻撃シナリオ**:\n1. デフォルト認証情報（test/test）でログイン\n2. /order/300401/receipt にアクセス\n3. フラグの内容がレシートとして表示される"
+            "text": "IDOR: このFlaskトレーディングプラットフォームには**重大なIDOR脆弱性**が存在します。\n\n**主要な脆弱性の流れ:**\n1. `__init__.py:85-96`で`/flag`ファイルの内容が`order_id=300401`のOrderレコードの`receipt`フィールドに格納される\n2. `routes.py:94-106`の`/order/<int:order_id>/receipt`エンドポイントでは、認証チェック（ログイン確認）のみが行われ、**認可チェック（そのオーダーがログインユーザーのものか）は行われていない**\n3. 攻撃者は正規ユーザー（test/test）でログイン後、`/order/300401/receipt`にアクセスするだけでフラグを取得可能\n\n**追加の脆弱性:**\n- ハードコードされた弱いシークレットキー（`your_secret_key`）\n- データベース認証情報がソースコードに平文で記載\n- パスワードが平文で保存（ハッシュ化なし）\n- デフォルト認証情報（test/test）",
+            "markdown": "このFlaskトレーディングプラットフォームには**重大なIDOR脆弱性**が存在します。\n\n**主要な脆弱性の流れ:**\n1. `__init__.py:85-96`で`/flag`ファイルの内容が`order_id=300401`のOrderレコードの`receipt`フィールドに格納される\n2. `routes.py:94-106`の`/order/<int:order_id>/receipt`エンドポイントでは、認証チェック（ログイン確認）のみが行われ、**認可チェック（そのオーダーがログインユーザーのものか）は行われていない**\n3. 攻撃者は正規ユーザー（test/test）でログイン後、`/order/300401/receipt`にアクセスするだけでフラグを取得可能\n\n**追加の脆弱性:**\n- ハードコードされた弱いシークレットキー（`your_secret_key`）\n- データベース認証情報がソースコードに平文で記載\n- パスワードが平文で保存（ハッシュ化なし）\n- デフォルト認証情報（test/test）"
           },
           "locations": [
             {
@@ -95,7 +95,7 @@
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "159f77849e8a4e53"
+            "parsentry/v1": "6262c436b7940029"
           },
           "properties": {
             "confidence": 0.9,
