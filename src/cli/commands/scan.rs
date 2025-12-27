@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
+use tracing::{info, error};
 
 use crate::analyzer::analyze_pattern;
 use crate::cli::args::{ScanArgs, validate_scan_args};
@@ -25,7 +26,7 @@ async fn analyze_with_claude_code(
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
 ) -> Result<Option<Response>> {
-    let content = std::fs::read_to_string(file_path)?;
+    let content = tokio::fs::read_to_string(file_path).await?;
 
     // Build pattern context
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
@@ -48,7 +49,7 @@ async fn analyze_with_claude_code(
 
     match output {
         Ok(output) => {
-            println!("✅ Claude Code succeeded for {}", file_path.display());
+            info!("Claude Code succeeded for {}", file_path.display());
             let mut response = Response::from_claude_code_response(
                 output.response,
                 file_path.to_string_lossy().to_string(),
@@ -58,7 +59,7 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
-            println!("❌ Claude Code execution error for {}: {}", file_path.display(), e);
+            error!("Claude Code execution error for {}: {}", file_path.display(), e);
             Err(anyhow::anyhow!("Claude Code failed: {}", e))
         }
     }
@@ -309,13 +310,13 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                         {
                             Ok(Some(res)) => res,
                             Ok(None) => {
-                                println!("⚠️ Claude Code returned None for {}", file_path.display());
+                                info!("Claude Code returned None for {}", file_path.display());
                                 progress_bar.inc(1);
                                 return None;
                             }
                             Err(e) => {
-                                println!(
-                                    "❌ Claude Code {}: {}: {}",
+                                error!(
+                                    "Claude Code {}: {}: {}",
                                     messages
                                         .get("analysis_failed")
                                         .unwrap_or(&"Analysis failed"),
