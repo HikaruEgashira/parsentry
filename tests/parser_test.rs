@@ -37,7 +37,7 @@ fn test_add_file_not_found() -> Result<()> {
         result
             .unwrap_err()
             .to_string()
-            .contains("ファイルの読み込みに失敗しました")
+            .contains("Failed to read file")
     );
     Ok(())
 }
@@ -161,7 +161,7 @@ fn test_find_definition_file_not_in_parser() -> Result<()> {
         result
             .unwrap_err()
             .to_string()
-            .contains("パーサーにファイルが見つかりません")
+            .contains("File not found in parser")
     );
     Ok(())
 }
@@ -290,7 +290,7 @@ fn test_build_context_from_file_missing_file() -> Result<()> {
         result
             .unwrap_err()
             .to_string()
-            .contains("ファイルが見つかりません")
+            .contains("File not found")
     );
     Ok(())
 }
