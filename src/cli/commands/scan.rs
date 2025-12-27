@@ -3,10 +3,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
-use indicatif::{ProgressBar, ProgressStyle};
 use tracing::{info, error};
 
 use crate::cli::args::{ScanArgs, validate_scan_args};
+use crate::cli::ui::{self, StatusPrinter, SummaryTable, SummaryRow};
 use crate::config::ParsentryConfig;
 use crate::repo::{RepoOps, clone_github_repo};
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
@@ -26,16 +26,14 @@ async fn analyze_with_claude_code(
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
     working_dir: &PathBuf,
+    printer: &StatusPrinter,
 ) -> Result<Option<Response>> {
     let start_time = std::time::Instant::now();
     let file_name = file_path.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    eprintln!("🤖 Claude Code 分析開始: {} (pattern: {})",
-        file_name,
-        pattern_match.pattern_config.description
-    );
+    printer.info("Analyzing", &format!("{} ({})", file_name, pattern_match.pattern_config.description));
 
     let content = tokio::fs::read_to_string(file_path).await?;
 
@@ -81,12 +79,8 @@ async fn analyze_with_claude_code(
                 "N/A".to_string()
             };
 
-            eprintln!("✅ Claude Code 成功: {} ({}、コスト: {})",
-                file_name,
-                duration_str,
-                cost_str,
-            );
-            eprintln!("  📄 ログ: {}", log_path);
+            printer.success("Done", &format!("{} ({}, {})", file_name, duration_str, cost_str));
+            printer.dim(&format!("log: {}", ui::truncate_path(&log_path, 70)));
 
             info!("Claude Code succeeded for {}", file_path.display());
             let mut response = from_claude_code_response(
@@ -98,11 +92,7 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
-            eprintln!("❌ Claude Code 失敗: {} ({:.1}s): {}",
-                file_name,
-                elapsed.as_secs_f64(),
-                e
-            );
+            printer.error("Failed", &format!("{} ({:.1}s): {}", file_name, elapsed.as_secs_f64(), e));
             error!("Claude Code execution error for {}: {}", file_path.display(), e);
             Err(anyhow::anyhow!("Claude Code failed: {}", e))
         }
@@ -110,6 +100,9 @@ async fn analyze_with_claude_code(
 }
 
 pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
+    // Initialize UI printer
+    let printer = StatusPrinter::new();
+
     // Load configuration with precedence: CLI args > env vars > config file
     let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
     let config = ParsentryConfig::load_with_precedence(
@@ -117,10 +110,10 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         &args,
         &env_vars
     )?;
-    
+
     // Convert config back to args for compatibility with existing code
     let final_args = config.to_args();
-    
+
     validate_scan_args(&final_args)?;
 
     // Create language configuration
@@ -144,14 +137,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                     )
                 })?;
             }
-            println!(
-                "🛠️  {}: {} → {}",
-                messages
-                    .get("cloning_repo")
-                    .map_or("Cloning GitHub repository", |s| s),
-                target,
-                dest.display()
-            );
+            printer.status("Cloning", &format!("{} → {}", target, dest.display()));
             clone_github_repo(target, &dest).map_err(|e| {
                 anyhow::anyhow!(
                     "{}: {}",
@@ -178,31 +164,15 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Handle pattern generation mode
     if final_args.generate_patterns {
-        println!(
-            "🔧 {}",
-            messages
-                .get("custom_pattern_generation_start")
-                .unwrap_or(&"Starting custom pattern generation mode")
-        );
+        printer.status("Generating", "custom security patterns");
         generate_custom_patterns(&root_dir, &final_args.model, api_base_url).await?;
-        println!(
-            "✅ {}",
-            messages
-                .get("pattern_generation_completed")
-                .unwrap_or(&"Pattern generation completed")
-        );
+        printer.success("Generated", "custom patterns");
     }
 
     let repo = RepoOps::new(root_dir.clone());
     let files = repo.get_relevant_files();
 
-    println!(
-        "📁 {} ({}件)",
-        messages
-            .get("relevant_files_detected")
-            .unwrap_or(&"Detected relevant source files"),
-        files.len()
-    );
+    printer.status("Discovered", &format!("{} source files", files.len()));
 
     // Collect all pattern matches across all files
     let mut all_pattern_matches = Vec::new();
@@ -226,22 +196,16 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         }
     }
 
-    println!(
-        "🔎 {} ({}件のパターンマッチ)",
-        messages
-            .get("security_pattern_files_detected")
-            .unwrap_or(&"Detected security patterns"),
-        all_pattern_matches.len()
-    );
-    
+    printer.status("Matched", &format!("{} security patterns", all_pattern_matches.len()));
+
     // Group patterns by type for display
     let mut pattern_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for (_, pattern_match) in &all_pattern_matches {
         *pattern_types.entry(pattern_match.pattern_config.description.clone()).or_insert(0) += 1;
     }
-    
-    for (pattern_desc, count) in pattern_types {
-        println!("  [{}] {} matches", count, pattern_desc);
+
+    for (pattern_desc, count) in &pattern_types {
+        printer.bullet(&format!("{} ({})", pattern_desc, count));
     }
 
     let total = all_pattern_matches.len();
@@ -268,21 +232,15 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     let mut summary = AnalysisSummary::new();
 
-    // プログレスバーを設定
-    let progress_bar = ProgressBar::new(total as u64);
-    progress_bar.set_style(
-        ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} {msg}")
-            .unwrap()
-            .progress_chars("█▉▊▋▌▍▎▏  "),
-    );
+    // プログレスバーを設定（新しいスタイル）
+    let progress_bar = ui::progress::create_bar(total as u64);
 
     // Set concurrency based on mode
     let max_concurrent = if use_claude_code {
-        progress_bar.set_message("Analyzing files with Claude Code...");
+        progress_bar.set_message("analyzing with Claude Code");
         config.claude_code.max_concurrent.min(10)
     } else {
-        progress_bar.set_message("Analyzing files...");
+        progress_bar.set_message("analyzing patterns");
         50
     };
 
@@ -299,7 +257,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             log_dir: log_dir.clone(),
         };
 
-        println!("🤖 Claude Code モード有効");
+        printer.info("Mode", "Claude Code enabled");
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
     } else {
@@ -311,6 +269,8 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             .with_poc(config.claude_code.enable_poc)
             .with_language(&final_args.language)
     );
+
+    let printer = Arc::new(printer);
 
     // 並列度を制御してタスクを実行 - パターンごとに分析
     let results = stream::iter(all_pattern_matches.iter().enumerate())
@@ -328,6 +288,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             let claude_executor = claude_executor.clone();
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
+            let printer = Arc::clone(&printer);
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -356,6 +317,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                             &file_path,
                             &pattern_match,
                             &_root_dir,
+                            &printer,
                         )
                         .await
                         {
@@ -529,45 +491,20 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     {
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
-                println!(
-                    "❌ {}: {}: {}",
-                    messages
-                        .get("error_directory_creation")
-                        .map_or("Failed to create directory", |s| s),
-                    final_output_dir.display(),
-                    e
-                );
+                printer.error("Error", &format!("Failed to create directory {}: {}", final_output_dir.display(), e));
             } else {
                 if !filtered_summary.results.is_empty() {
                     let mut summary_path = final_output_dir.clone();
                     summary_path.push("summary.md");
                     if let Err(e) = std::fs::write(&summary_path, filtered_summary.to_markdown()) {
-                        println!(
-                            "❌ {}: {}: {}",
-                            messages
-                                .get("summary_report_output_failed")
-                                .map_or("Failed to output summary report", |s| s),
-                            summary_path.display(),
-                            e
-                        );
+                        printer.error("Error", &format!("Failed to write {}: {}", summary_path.display(), e));
                     } else {
-                        println!(
-                            "📊 {}: {}",
-                            messages
-                                .get("summary_report_output")
-                                .map_or("Output summary report", |s| s),
-                            summary_path.display()
-                        );
+                        printer.success("Wrote", &format!("{}", summary_path.display()));
                     }
                 }
             }
         } else {
-            println!(
-                "⚠ {}",
-                messages
-                    .get("summary_report_needs_output_dir")
-                    .map_or("Summary report output requires --output-dir option", |s| s)
-            );
+            printer.warning("Warning", "Summary report requires --output-dir");
         }
     }
 
@@ -577,67 +514,50 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {
-                println!(
-                    "❌ {}: {}: {}",
-                    messages
-                        .get("error_directory_creation")
-                        .map_or("Failed to create directory", |s| s),
-                    final_output_dir.display(),
-                    e
-                );
+                printer.error("Error", &format!("Failed to create directory {}: {}", final_output_dir.display(), e));
             } else {
                 let mut sarif_path = final_output_dir.clone();
                 sarif_path.push("parsentry-results.sarif");
                 if let Err(e) = sarif_report.save_to_file(&sarif_path) {
-                    println!(
-                        "❌ {}: {}: {}",
-                        messages
-                            .get("sarif_report_output_failed")
-                            .map_or("Failed to output SARIF report", |s| s),
-                        sarif_path.display(),
-                        e
-                    );
+                    printer.error("Error", &format!("Failed to write {}: {}", sarif_path.display(), e));
                 } else {
-                    println!(
-                        "📋 {}: {}",
-                        messages
-                            .get("sarif_report_output")
-                            .map_or("Output SARIF report", |s| s),
-                        sarif_path.display()
-                    );
+                    printer.success("Wrote", &format!("{}", sarif_path.display()));
                 }
             }
         } else {
             // Output SARIF to stdout if no output directory specified
             match sarif_report.to_json() {
                 Ok(json) => println!("{}", json),
-                Err(e) => println!(
-                    "❌ {}: {}",
-                    messages
-                        .get("sarif_output_failed")
-                        .map_or("Failed to output SARIF", |s| s),
-                    e
-                ),
+                Err(e) => printer.error("Error", &format!("Failed to output SARIF: {}", e)),
             }
         }
     }
 
-    // Log Claude Code summary if used
+    // Display summary table
+    if !filtered_summary.results.is_empty() {
+        let mut table = SummaryTable::new();
+        for result in &filtered_summary.results {
+            table.add(SummaryRow {
+                file: result.file_path.to_string_lossy().to_string(),
+                pattern: result.response.pattern_description.clone().unwrap_or_default(),
+                confidence: result.response.confidence_score as u8,
+                vuln_types: result.response.vulnerability_types.iter().map(|v| format!("{:?}", v)).collect(),
+            });
+        }
+        table.print();
+    }
+
+    // Log summary
     if use_claude_code {
         let success_count = filtered_summary.results.len();
         let high_confidence_count = filtered_summary.results.iter().filter(|r| r.response.confidence_score >= 70).count();
-        println!("🤖 Claude Code 分析サマリー");
-        println!("  分析パターン数: {}", all_pattern_matches.len());
-        println!("  成功: {}", success_count);
-        println!("  検出脆弱性: {}", high_confidence_count);
+        printer.section("Summary");
+        printer.kv("patterns analyzed", &all_pattern_matches.len().to_string());
+        printer.kv("vulnerabilities found", &success_count.to_string());
+        printer.kv("high confidence", &high_confidence_count.to_string());
     }
 
-    println!(
-        "✅ {}",
-        messages
-            .get("analysis_completed")
-            .map_or("Analysis completed", |s| s)
-    );
+    printer.success("Finished", "analysis complete");
 
     Ok(())
 }
