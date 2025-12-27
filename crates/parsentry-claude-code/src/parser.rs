@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Response from Claude Code security analysis.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ClaudeCodeResponse {
     /// Analysis reasoning and notes.
     #[serde(default)]
@@ -44,23 +44,6 @@ pub struct ClaudeCodeResponse {
     /// Matched source code snippet.
     #[serde(default)]
     pub matched_source_code: Option<String>,
-}
-
-impl Default for ClaudeCodeResponse {
-    fn default() -> Self {
-        Self {
-            scratchpad: String::new(),
-            analysis: String::new(),
-            poc: String::new(),
-            confidence_score: 0,
-            vulnerability_types: Vec::new(),
-            par_analysis: ParAnalysis::default(),
-            remediation_guidance: RemediationGuidance::default(),
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-        }
-    }
 }
 
 impl ClaudeCodeResponse {

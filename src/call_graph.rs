@@ -2,9 +2,8 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use streaming_iterator::StreamingIterator;
 
-use crate::parser::{CodeParser, Definition};
+use crate::parser::{CodeParser, Definition, Query, QueryCursor, StreamingIterator};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CallNode {
@@ -280,7 +279,7 @@ impl CallGraphBuilder {
         };
 
         // Create and execute the query
-        let query = match tree_sitter::Query::new(&language, &query_str) {
+        let query = match Query::new(&language, &query_str) {
             Ok(q) => q,
             Err(_) => {
                 // Fallback to regex-based extraction if query creation fails
@@ -288,7 +287,7 @@ impl CallGraphBuilder {
             }
         };
 
-        let mut query_cursor = tree_sitter::QueryCursor::new();
+        let mut query_cursor = QueryCursor::new();
         let mut matches = query_cursor.matches(&query, tree.root_node(), definition.source.as_bytes());
 
         while let Some(mat) = matches.next() {

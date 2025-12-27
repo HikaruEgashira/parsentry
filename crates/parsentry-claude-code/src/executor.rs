@@ -93,16 +93,14 @@ impl ClaudeCodeExecutor {
 
         debug!("Acquired semaphore permit, executing Claude Code");
 
-        let result = timeout(
+        timeout(
             Duration::from_secs(self.timeout_secs),
             self.spawn_claude_process(prompt),
         )
         .await
         .map_err(|_| ClaudeCodeError::Timeout {
             timeout_secs: self.timeout_secs,
-        })?;
-
-        result
+        })?
     }
 
     /// Execute with retry logic using exponential backoff.
