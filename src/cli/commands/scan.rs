@@ -26,6 +26,16 @@ async fn analyze_with_claude_code(
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
 ) -> Result<Option<Response>> {
+    let start_time = std::time::Instant::now();
+    let file_name = file_path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    println!("[CLAUDE CODE] START: {} (pattern: {})",
+        file_name,
+        pattern_match.pattern_config.description
+    );
+
     let content = tokio::fs::read_to_string(file_path).await?;
 
     // Build pattern context
@@ -46,9 +56,28 @@ async fn analyze_with_claude_code(
 
     // Execute Claude Code
     let output = executor.execute_with_retry(&prompt, 2).await;
+    let elapsed = start_time.elapsed();
 
     match output {
         Ok(output) => {
+            let cost_str = output.cost_usd
+                .map(|c| format!("${:.4}", c))
+                .unwrap_or_else(|| "N/A".to_string());
+            let duration_str = output.duration_ms
+                .map(|d| format!("{}ms", d))
+                .unwrap_or_else(|| format!("{:.1}s", elapsed.as_secs_f64()));
+            let session_str = output.session_id
+                .as_ref()
+                .map(|s| s.chars().take(8).collect::<String>())
+                .unwrap_or_else(|| "N/A".to_string());
+
+            println!("[CLAUDE CODE] SUCCESS: {} | duration: {} | cost: {} | session: {}",
+                file_name,
+                duration_str,
+                cost_str,
+                session_str
+            );
+
             info!("Claude Code succeeded for {}", file_path.display());
             let mut response = Response::from_claude_code_response(
                 output.response,
@@ -59,6 +88,11 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
+            println!("[CLAUDE CODE] FAILED: {} | duration: {:.1}s | error: {}",
+                file_name,
+                elapsed.as_secs_f64(),
+                e
+            );
             error!("Claude Code execution error for {}: {}", file_path.display(), e);
             Err(anyhow::anyhow!("Claude Code failed: {}", e))
         }
@@ -244,13 +278,26 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Setup Claude Code executor if enabled
     let claude_executor = if use_claude_code {
+        let claude_path = config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let claude_config = ClaudeCodeConfig {
-            claude_path: config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude")),
+            claude_path: claude_path.clone(),
             max_concurrent: config.claude_code.max_concurrent.min(10),
             timeout_secs: config.claude_code.timeout_secs,
             enable_poc: config.claude_code.enable_poc,
             working_dir: root_dir.as_ref().clone(),
         };
+
+        // Log Claude Code configuration
+        println!("╔══════════════════════════════════════════════════════════════════╗");
+        println!("║                    CLAUDE CODE MODE ENABLED                      ║");
+        println!("╠══════════════════════════════════════════════════════════════════╣");
+        println!("║ Binary Path:    {:50} ║", claude_path.display());
+        println!("║ Max Concurrent: {:50} ║", claude_config.max_concurrent);
+        println!("║ Timeout:        {:48}s ║", claude_config.timeout_secs);
+        println!("║ PoC Enabled:    {:50} ║", claude_config.enable_poc);
+        println!("║ Working Dir:    {:50} ║", claude_config.working_dir.display().to_string().chars().take(50).collect::<String>());
+        println!("╚══════════════════════════════════════════════════════════════════╝");
+
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
     } else {
         None
@@ -569,6 +616,19 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                 ),
             }
         }
+    }
+
+    // Log Claude Code summary if used
+    if use_claude_code {
+        let success_count = filtered_summary.results.len();
+        let high_confidence_count = filtered_summary.results.iter().filter(|r| r.response.confidence_score >= 70).count();
+        println!("╔══════════════════════════════════════════════════════════════════╗");
+        println!("║                  CLAUDE CODE ANALYSIS SUMMARY                    ║");
+        println!("╠══════════════════════════════════════════════════════════════════╣");
+        println!("║ Total Patterns Analyzed: {:42} ║", all_pattern_matches.len());
+        println!("║ Successful Analyses:     {:42} ║", success_count);
+        println!("║ Vulnerabilities Found:   {:42} ║", high_confidence_count);
+        println!("╚══════════════════════════════════════════════════════════════════╝");
     }
 
     println!(
