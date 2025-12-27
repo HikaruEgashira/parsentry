@@ -72,7 +72,29 @@ async fn analyze_with_claude_code(
     }
 }
 
-pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
+pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
+    // Auto-detect MVRA mode based on target pattern
+    if !args.mvra && args.target.is_some() {
+        let target = args.target.as_ref().unwrap();
+
+        // Check if target is a local path
+        let is_local_path = std::path::Path::new(target).exists();
+
+        // Check if target is owner/repo format (exactly one '/' with content on both sides)
+        let is_repo_format = {
+            let parts: Vec<&str> = target.split('/').collect();
+            parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() && !target.contains(' ')
+        };
+
+        // If target is neither a local path nor owner/repo format, treat it as a search query
+        if !is_local_path && !is_repo_format {
+            // Auto-enable MVRA mode with target as search query
+            args.mvra = true;
+            args.mvra_search_query = Some(target.clone());
+            args.target = None; // Clear target since we're using it as a search query
+        }
+    }
+
     // Check if MVRA mode is enabled
     if args.mvra {
         return run_mvra_scan(args).await;
