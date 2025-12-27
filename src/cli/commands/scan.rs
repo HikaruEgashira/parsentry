@@ -11,9 +11,9 @@ use crate::config::ParsentryConfig;
 use crate::repo::{RepoOps, clone_github_repo};
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
 
-use parsentry_analyzer::{
-    analyze_pattern, generate_custom_patterns, generate_custom_patterns_with_claude_code,
-};
+use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
+
+use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
 use parsentry_i18n::{Language, get_messages};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};

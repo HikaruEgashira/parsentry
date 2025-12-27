@@ -15,6 +15,7 @@ pub mod call_graph;
 pub mod call_graph_output;
 pub mod cli;
 pub mod config;
+pub mod pattern_generator_claude_code;
 pub mod repo;
 pub mod response;
 
