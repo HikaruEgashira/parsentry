@@ -28,6 +28,8 @@ pub struct ClaudeCodeConfig {
     pub working_dir: PathBuf,
     /// Directory to save Claude Code execution logs (optional).
     pub log_dir: Option<PathBuf>,
+    /// Model to use for Claude Code (e.g., "haiku", "sonnet", "opus").
+    pub model: Option<String>,
 }
 
 impl Default for ClaudeCodeConfig {
@@ -39,6 +41,7 @@ impl Default for ClaudeCodeConfig {
             enable_poc: false,
             working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             log_dir: None,
+            model: Some("haiku".to_string()),
         }
     }
 }
@@ -79,6 +82,12 @@ impl ClaudeCodeConfig {
     /// Set the log directory for saving execution logs.
     pub fn with_log_dir(mut self, dir: PathBuf) -> Self {
         self.log_dir = Some(dir);
+        self
+    }
+
+    /// Set the model to use for Claude Code.
+    pub fn with_model(mut self, model: String) -> Self {
+        self.model = Some(model);
         self
     }
 }
