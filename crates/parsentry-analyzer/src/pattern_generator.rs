@@ -54,7 +54,7 @@ fn create_pattern_target_resolver(base_url: &str) -> ServiceTargetResolver {
     )
 }
 
-fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
+pub fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathBuf>> {
     let mut filtered_files = Vec::new();
 
     for file_path in files {

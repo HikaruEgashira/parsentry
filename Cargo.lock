@@ -1237,6 +1237,7 @@ dependencies = [
  "async-trait",
  "genai",
  "log",
+ "parsentry-claude-code",
  "parsentry-core",
  "parsentry-i18n",
  "parsentry-parser",

@@ -11,7 +11,9 @@ use crate::config::ParsentryConfig;
 use crate::repo::{RepoOps, clone_github_repo};
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
 
-use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
+use parsentry_analyzer::{
+    analyze_pattern, generate_custom_patterns, generate_custom_patterns_with_claude_code,
+};
 use parsentry_i18n::{Language, get_messages};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
@@ -130,8 +132,39 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Handle pattern generation mode
     if final_args.generate_patterns {
         printer.status("Generating", "custom security patterns");
-        generate_custom_patterns(&root_dir, &final_args.model, api_base_url).await?;
-        printer.success("Generated", "custom patterns");
+
+        if config.claude_code.enabled {
+            let claude_path = config.claude_code.path.clone()
+                .unwrap_or_else(|| PathBuf::from("claude"));
+            let log_dir = final_args.output_dir.as_ref().map(|d| d.join("claude_code_logs"));
+            let claude_config = parsentry_claude_code::ClaudeCodeConfig {
+                claude_path,
+                max_concurrent: config.claude_code.max_concurrent.min(10),
+                timeout_secs: config.claude_code.timeout_secs,
+                enable_poc: false,
+                working_dir: root_dir.clone(),
+                log_dir,
+            };
+            printer.info("Mode", "Claude Code");
+            let result = generate_custom_patterns_with_claude_code(&root_dir, claude_config).await?;
+
+            printer.status("Discovered", &format!("{} source files", result.total_files));
+            if result.skipped_files > 0 {
+                printer.warning("Skipped", &format!("{} files (too large)", result.skipped_files));
+            }
+            printer.status("Analyzed", &format!("{} files", result.analyzed_files));
+
+            if !result.languages.is_empty() {
+                for lang in &result.languages {
+                    printer.bullet(&format!("{:?}", lang));
+                }
+            }
+
+            printer.success("Generated", &format!("{} patterns", result.patterns_generated));
+        } else {
+            generate_custom_patterns(&root_dir, &final_args.model, api_base_url).await?;
+            printer.success("Generated", "custom patterns");
+        }
     }
 
     let repo = RepoOps::new(root_dir.clone());
