@@ -25,6 +25,7 @@ async fn analyze_with_claude_code(
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
+    working_dir: &PathBuf,
 ) -> Result<Option<Response>> {
     let start_time = std::time::Instant::now();
     let file_name = file_path.file_name()
@@ -66,14 +67,16 @@ async fn analyze_with_claude_code(
             let duration_str = output.duration_ms
                 .map(|d| format!("{}ms", d))
                 .unwrap_or_else(|| format!("{:.1}s", elapsed.as_secs_f64()));
-            // Show log file path
+            // Show log file path (Claude Code uses absolute working_dir path with "/" and "." replaced by "-")
             let log_path = if let Some(ref sid) = output.session_id {
                 let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
-                let project_name = file_path.parent()
-                    .and_then(|p| p.file_name())
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "default".to_string());
-                format!("{}/.claude/projects/{}/{}.jsonl", home, project_name, sid)
+                // Convert working_dir to absolute path, then replace "/" and "." with "-"
+                let abs_working_dir = working_dir.canonicalize()
+                    .unwrap_or_else(|_| working_dir.clone());
+                let project_path = abs_working_dir.to_string_lossy()
+                    .replace("/", "-")
+                    .replace(".", "-");
+                format!("{}/.claude/projects/{}/{}.jsonl", home, project_path, sid)
             } else {
                 "N/A".to_string()
             };
@@ -360,6 +363,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
+                            &_root_dir,
                         )
                         .await
                         {
