@@ -1,68 +1,17 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
-use tree_sitter::{Language as TreeSitterLanguage, Query, QueryCursor, Parser};
 use streaming_iterator::StreamingIterator;
+use tree_sitter::{Language as TreeSitterLanguage, Parser, Query, QueryCursor};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-pub enum Language {
-    Python,
-    JavaScript,
-    Rust,
-    TypeScript,
-    Java,
-    Go,
-    Ruby,
-    C,
-    Cpp,
-    Terraform,
-    CloudFormation,
-    Kubernetes,
-    Yaml,
-    Bash,
-    Shell,
-    Php,
-    Other,
-}
-
-impl Language {
-    pub fn from_extension(ext: &str) -> Self {
-        match ext {
-            "py" => Language::Python,
-            "js" => Language::JavaScript,
-            "rs" => Language::Rust,
-            "ts" => Language::TypeScript,
-            "java" => Language::Java,
-            "go" => Language::Go,
-            "rb" => Language::Ruby,
-            "c" | "h" => Language::C,
-            "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Language::Cpp,
-            "tf" | "hcl" => Language::Terraform,
-            "yml" | "yaml" => Language::Yaml,
-            "sh" | "bash" => Language::Bash,
-            "php" | "php3" | "php4" | "php5" | "phtml" => Language::Php,
-            _ => Language::Other,
-        }
-    }
-
-    pub fn from_filename(filename: &str) -> Self {
-        // Extract extension and use existing logic
-        if let Some(ext) = std::path::Path::new(filename)
-            .extension()
-            .and_then(|e| e.to_str())
-        {
-            Self::from_extension(ext)
-        } else {
-            Language::Other
-        }
-    }
-}
+// Re-export Language from parsentry-core
+pub use parsentry_core::Language;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternType {
-    Principal, // Who: user input (Programming) | AWS account/role (IaC)
-    Action,    // What: operations/methods (Programming) | API actions (IaC)
-    Resource,  // Where: files/databases (Programming) | AWS resources (IaC)
+    Principal,
+    Action,
+    Resource,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,9 +31,9 @@ pub enum PatternQuery {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LanguagePatterns {
-    pub principals: Option<Vec<PatternConfig>>, // Who (sources of authority/input)
-    pub actions: Option<Vec<PatternConfig>>,    // What (operations/permissions)
-    pub resources: Option<Vec<PatternConfig>>,  // Where (targets/sinks)
+    pub principals: Option<Vec<PatternConfig>>,
+    pub actions: Option<Vec<PatternConfig>>,
+    pub resources: Option<Vec<PatternConfig>>,
 }
 
 pub struct SecurityRiskPatterns {
@@ -212,7 +161,7 @@ impl SecurityRiskPatterns {
             Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
             Language::Terraform => tree_sitter_hcl::LANGUAGE.into(),
             Language::Php => tree_sitter_php::LANGUAGE_PHP.into(),
-            _ => tree_sitter_javascript::LANGUAGE.into(), // Default fallback
+            _ => tree_sitter_javascript::LANGUAGE.into(),
         }
     }
 

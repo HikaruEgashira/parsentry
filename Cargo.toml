@@ -48,6 +48,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3.10"
 parsentry-claude-code = { path = "crates/parsentry-claude-code" }
+parsentry-core = { path = "crates/parsentry-core" }
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }
