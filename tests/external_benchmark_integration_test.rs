@@ -203,7 +203,7 @@ fn discover_ossf_cve_benchmarks() -> Result<Vec<PathBuf>> {
 }
 
 fn load_ossf_cve_benchmark(benchmark_file: &Path) -> Result<Option<OssfCveBenchmark>> {
-    // OSSF CVE Benchmarkのメタデータ読み込み（簡易版）
+    // OSSF CVE Benchmarkのメタデータ読み込み
     let file_name = benchmark_file.file_stem()
         .and_then(|name| name.to_str())
         .unwrap_or("unknown");
@@ -513,7 +513,7 @@ async fn test_validation_benchmarks_sample() -> Result<()> {
         return Ok(());
     }
 
-    // 最初の10個のベンチマークでテスト（CI時間を考慮）
+    // 最初の10個のベンチマークでテスト。CI時間を考慮
     let sample_size = std::cmp::min(10, benchmark_dirs.len());
     let sample_dirs = &benchmark_dirs[0..sample_size];
 
@@ -756,7 +756,7 @@ async fn test_ossf_cve_benchmark_sample() -> Result<()> {
         return Ok(());
     }
 
-    // 最初の5個のベンチマークでテスト（CI時間を考慮）
+    // 最初の5個のベンチマークでテスト。CI時間を考慮
     let sample_size = std::cmp::min(5, benchmark_files.len());
     let sample_files = &benchmark_files[0..sample_size];
 
@@ -793,7 +793,7 @@ async fn test_ossf_cve_benchmark_sample() -> Result<()> {
     println!("  平均信頼度: {:.1}", summary.avg_confidence);
     println!("  平均実行時間: {:.1}ms", summary.avg_execution_time_ms);
 
-    // OSSF CVE Benchmarksでは再現率 0.85以上を期待（既知のCVEなので検出すべき）
+    // OSSF CVE Benchmarksでは再現率 0.85以上を期待。既知のCVEなので検出すべき
     assert!(
         summary.recall >= 0.85,
         "OSSF CVE Benchmark再現率が基準を下回っています: {:.3} (要求: 0.85)",

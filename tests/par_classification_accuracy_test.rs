@@ -228,7 +228,7 @@ function transformUserData(userData) {
         test_rationale: "データ変換 - ActionとPrincipalの境界、処理の観点でAction",
     },
 
-    // === 非セキュリティ関数（PARに分類されないもの） ===
+    // === 非セキュリティ関数。PARに分類されないもの ===
     PARTestCase {
         name: "Pure math function",
         language: Language::Python,

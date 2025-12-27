@@ -5,12 +5,11 @@ use genai::{Client, ClientConfig};
 use genai::{ModelIden, ServiceTarget, adapter::AdapterKind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-#[allow(unused_imports)]
 use std::path::{Path, PathBuf};
 
-use crate::parser::Definition;
-use crate::repo::RepoOps;
-use crate::security_patterns::Language;
+use parsentry_core::Language;
+use parsentry_parser::{CodeParser, Definition};
+use parsentry_utils::FileClassifier;
 
 fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
     let client_config = ClientConfig::default().with_chat_options(
@@ -80,8 +79,8 @@ fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathB
 pub struct PatternClassification {
     pub function_name: String,
     pub pattern_type: Option<String>,
-    pub query_type: String, // "definition" or "reference"
-    pub query: String,      // tree-sitter query instead of regex pattern
+    pub query_type: String,
+    pub query: String,
     pub description: String,
     pub reasoning: String,
     pub attack_vector: Vec<String>,
@@ -90,6 +89,71 @@ pub struct PatternClassification {
 #[derive(Serialize, Deserialize, Debug)]
 struct PatternAnalysisResponse {
     patterns: Vec<PatternClassification>,
+}
+
+/// A simplified RepoOps for pattern generation
+struct PatternRepoOps {
+    repo_path: PathBuf,
+    supported_extensions: Vec<String>,
+}
+
+impl PatternRepoOps {
+    fn new(repo_path: PathBuf) -> Self {
+        let supported_extensions = vec![
+            "py".to_string(),
+            "js".to_string(),
+            "jsx".to_string(),
+            "ts".to_string(),
+            "tsx".to_string(),
+            "rs".to_string(),
+            "go".to_string(),
+            "java".to_string(),
+            "rb".to_string(),
+            "c".to_string(),
+            "h".to_string(),
+            "cpp".to_string(),
+            "tf".to_string(),
+            "hcl".to_string(),
+            "yml".to_string(),
+            "yaml".to_string(),
+            "sh".to_string(),
+            "bash".to_string(),
+            "php".to_string(),
+        ];
+
+        Self {
+            repo_path,
+            supported_extensions,
+        }
+    }
+
+    fn get_files_to_analyze(&self, _analyze_path: Option<PathBuf>) -> Result<Vec<PathBuf>> {
+        let mut files = Vec::new();
+        self.visit_dirs(&self.repo_path, &mut |path: &Path| {
+            if let Some(ext) = path.extension() {
+                let ext_str = ext.to_string_lossy().to_lowercase();
+                if self.supported_extensions.contains(&ext_str) {
+                    files.push(path.to_path_buf());
+                }
+            }
+        })?;
+        Ok(files)
+    }
+
+    fn visit_dirs(&self, dir: &Path, cb: &mut dyn FnMut(&Path)) -> std::io::Result<()> {
+        if dir.is_dir() {
+            for entry in std::fs::read_dir(dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_dir() {
+                    self.visit_dirs(&path, cb)?;
+                } else {
+                    cb(&path);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 pub async fn generate_custom_patterns(
@@ -111,7 +175,7 @@ async fn generate_custom_patterns_impl(
         root_dir.display()
     );
 
-    let repo = RepoOps::new(root_dir.to_path_buf());
+    let repo = PatternRepoOps::new(root_dir.to_path_buf());
     let files = repo.get_files_to_analyze(None)?;
 
     println!("📁 検出されたファイル数: {}", files.len());
@@ -135,7 +199,7 @@ async fn generate_custom_patterns_impl(
     let mut seen_names = std::collections::HashSet::new();
 
     for file_path in &filtered_files {
-        let mut parser = crate::parser::CodeParser::new()?;
+        let mut parser = CodeParser::new()?;
         if let Err(e) = parser.add_file(file_path) {
             eprintln!(
                 "⚠️  ファイルのパース追加に失敗: {}: {}",
@@ -149,8 +213,7 @@ async fn generate_custom_patterns_impl(
             Ok(context) => {
                 let filename = file_path.to_string_lossy();
                 let content = std::fs::read_to_string(file_path).unwrap_or_default();
-                let language =
-                    crate::file_classifier::FileClassifier::classify(&filename, &content);
+                let language = FileClassifier::classify(&filename, &content);
                 languages_found.insert(language, true);
 
                 println!(
@@ -160,18 +223,7 @@ async fn generate_custom_patterns_impl(
                     context.definitions.len(),
                     context.references.len()
                 );
-                // if !context.definitions.is_empty() {
-                //     for def in &context.definitions {
-                //         print!("{},", def.name);
-                //     }
-                //     println!();
-                // }
-                // if !context.references.is_empty() {
-                //     for ref_def in &context.references {
-                //         print!("{},", ref_def.name);
-                //     }
-                //     println!();
-                // }
+
                 for def in context.definitions {
                     seen_names.insert(def.name.clone());
                     all_definitions.push((def, language));
@@ -278,7 +330,7 @@ async fn generate_custom_patterns_impl(
 
 pub async fn analyze_definitions_for_security_patterns<'a>(
     model: &str,
-    definitions: &'a [&crate::parser::Definition],
+    definitions: &'a [&Definition],
     language: Language,
     api_base_url: Option<&str>,
 ) -> Result<Vec<PatternClassification>> {
@@ -287,7 +339,7 @@ pub async fn analyze_definitions_for_security_patterns<'a>(
 
 pub async fn analyze_references_for_security_patterns<'a>(
     model: &str,
-    references: &'a [&crate::parser::Definition],
+    references: &'a [&Definition],
     language: Language,
     api_base_url: Option<&str>,
 ) -> Result<Vec<PatternClassification>> {
@@ -296,7 +348,7 @@ pub async fn analyze_references_for_security_patterns<'a>(
 
 async fn analyze_all_definitions_at_once(
     model: &str,
-    definitions: &[&crate::parser::Definition],
+    definitions: &[&Definition],
     language: Language,
     api_base_url: Option<&str>,
 ) -> Result<Vec<PatternClassification>> {
@@ -322,7 +374,7 @@ async fn analyze_all_definitions_at_once(
 
 For each function, determine if it should be classified as:
 - "principals": Sources that act as data entry points and should be treated as tainted/untrusted
-- "actions": Functions that perform validation, sanitization, authorization, or security operations  
+- "actions": Functions that perform validation, sanitization, authorization, or security operations
 - "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
 - "none": Not a security pattern
 
@@ -441,7 +493,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
 async fn analyze_all_references_at_once(
     model: &str,
-    references: &[&crate::parser::Definition],
+    references: &[&Definition],
     language: Language,
     api_base_url: Option<&str>,
 ) -> Result<Vec<PatternClassification>> {
@@ -466,53 +518,10 @@ async fn analyze_all_references_at_once(
 {}
 
 For each function reference, determine if it should be classified as:
-- "principals": Functions that return or provide untrusted data that attackers can control. This includes:
-  * User input functions (request.params, request.body, request.query)
-  * External data sources (API responses, file readers, socket data)
-  * Network/communication inputs (HTTP requests, message queues)
-  * Functions that retrieve attacker-controlled data
-  * Any function that introduces data from outside the application's control boundary
-  
-- "actions": Functions that perform security processing (validation, sanitization, authorization). This includes:
-  * Input validation functions (validators, sanitizers)
-  * Authentication/authorization functions (login checks, permission checks)
-  * Cryptographic functions (encryption, hashing, signing)
-  * Security-focused data transformation functions
-  
-- "resources": Functions that operate on attack targets (files, databases, system commands, DOM). This includes:
-  * File system operations (readFile, writeFile, deleteFile)
-  * Database operations (query, insert, update, delete)
-  * System command execution (exec, spawn, system)
-  * DOM manipulation (innerHTML, setAttribute, createElement)
-  * Network operations (HTTP requests, socket connections)
-  
+- "principals": Functions that return or provide untrusted data that attackers can control
+- "actions": Functions that perform security processing (validation, sanitization, authorization)
+- "resources": Functions that operate on attack targets (files, databases, system commands, DOM)
 - "none": Not a security-relevant call
-
-## Classification Examples:
-
-**Principal Examples:**
-- `request.params.get('user_id')` - returns untrusted user input
-- `os.environ.get('USER_INPUT')` - if environment variable contains user data
-- `json.loads(request.body)` - parses untrusted JSON data
-
-**Action Examples:**
-- `validate_email(email)` - validates email format
-- `bcrypt.hash(password)` - hashes password securely
-- `escape_html(content)` - sanitizes HTML content
-
-**Resource Examples:**
-- `fs.readFileSync(filepath)` - reads file from filesystem
-- `db.query(sql, params)` - executes database query
-- `document.getElementById('output').innerHTML` - modifies DOM
-- `os.system(command)` - executes system command
-
-Focus especially on identifying principals that represent sources in source-sink analysis patterns. These are the starting points where untrusted data enters the application.
-
-Generate tree-sitter queries instead of regex patterns. Use the following format:
-
-IMPORTANT: For definition patterns, add @function capture to the entire function_definition.
-For reference patterns, add @call capture to the entire call_expression or @attribute capture to the entire attribute access.
-This ensures we capture the complete context, not just the identifier names.
 
 Return a JSON object with this structure:
 
@@ -667,18 +676,12 @@ pub fn write_patterns_to_file(
     if !principals.is_empty() {
         yaml_content.push_str("  principals:\n");
         for pattern in principals {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
+            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
             // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
+            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
@@ -693,18 +696,12 @@ pub fn write_patterns_to_file(
     if !actions.is_empty() {
         yaml_content.push_str("  actions:\n");
         for pattern in actions {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
+            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
             // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
+            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {
@@ -719,18 +716,12 @@ pub fn write_patterns_to_file(
     if !resources.is_empty() {
         yaml_content.push_str("  resources:\n");
         for pattern in resources {
-            yaml_content.push_str(&format!(
-                "    - {}: |\n",
-                pattern.query_type
-            ));
+            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
             // Add indented query
             for line in pattern.query.lines() {
                 yaml_content.push_str(&format!("        {}\n", line));
             }
-            yaml_content.push_str(&format!(
-                "      description: \"{}\"\n",
-                pattern.description
-            ));
+            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
             yaml_content.push_str("      attack_vector:\n");
             if !pattern.attack_vector.is_empty() {
                 for technique in &pattern.attack_vector {

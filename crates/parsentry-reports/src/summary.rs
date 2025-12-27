@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::response::{Response, VulnType};
+use parsentry_core::{Response, VulnType};
 
 #[derive(Debug, Clone)]
 pub struct FileAnalysisResult {
     pub file_path: PathBuf,
     pub response: Response,
-    pub output_filename: String, // The generated filename used for the actual markdown file
+    pub output_filename: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -100,20 +100,27 @@ impl AnalysisSummary {
 
                 // Create display name from filename + pattern if available
                 let display_name = if let Some(pattern) = &result.response.pattern_description {
-                    format!("{} ({})", 
-                        result.file_path.file_name().unwrap_or_default().to_string_lossy(),
-                        pattern)
+                    format!(
+                        "{} ({})",
+                        result
+                            .file_path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy(),
+                        pattern
+                    )
                 } else {
-                    result.file_path.file_name().unwrap_or_default().to_string_lossy().to_string()
+                    result
+                        .file_path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string()
                 };
 
                 md.push_str(&format!(
                     "| [{}]({}) | {} | {} | {} |\n",
-                    display_name,
-                    result.output_filename,
-                    vuln_types,
-                    confidence_level,
-                    violations
+                    display_name, result.output_filename, vuln_types, confidence_level, violations
                 ));
             }
         }

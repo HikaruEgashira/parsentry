@@ -1,7 +1,7 @@
-use parsentry::locales::Language;
-use parsentry::locales::*;
-use parsentry::prompts::vuln_specific;
-use parsentry::response::VulnType;
+use parsentry_core::VulnType;
+use parsentry_i18n::Language;
+use parsentry_i18n::*;
+use parsentry_reports::prompts::vuln_specific;
 
 #[test]
 fn test_sys_prompt_template() {

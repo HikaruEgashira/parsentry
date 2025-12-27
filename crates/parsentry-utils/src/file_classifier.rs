@@ -1,4 +1,4 @@
-use crate::security_patterns::Language;
+use parsentry_core::Language;
 
 pub struct FileClassifier;
 

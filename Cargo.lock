@@ -1273,9 +1273,13 @@ dependencies = [
  "indicatif",
  "insta",
  "log",
+ "parsentry-analyzer",
  "parsentry-claude-code",
  "parsentry-core",
+ "parsentry-i18n",
  "parsentry-parser",
+ "parsentry-reports",
+ "parsentry-utils",
  "quick-xml",
  "regex",
  "serde",
@@ -1287,6 +1291,25 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "parsentry-analyzer"
+version = "0.9.2"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "genai",
+ "log",
+ "parsentry-core",
+ "parsentry-i18n",
+ "parsentry-parser",
+ "parsentry-reports",
+ "parsentry-utils",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -1314,6 +1337,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "parsentry-i18n"
+version = "0.9.2"
+
+[[package]]
 name = "parsentry-parser"
 version = "0.9.2"
 dependencies = [
@@ -1335,6 +1362,26 @@ dependencies = [
  "tree-sitter-ruby",
  "tree-sitter-rust",
  "tree-sitter-typescript",
+]
+
+[[package]]
+name = "parsentry-reports"
+version = "0.9.2"
+dependencies = [
+ "anyhow",
+ "parsentry-core",
+ "parsentry-i18n",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "parsentry-utils"
+version = "0.9.2"
+dependencies = [
+ "parsentry-core",
 ]
 
 [[package]]

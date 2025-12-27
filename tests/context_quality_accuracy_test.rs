@@ -498,7 +498,7 @@ fn analyze_context_quality(
         100.0
     };
 
-    // 3. データフロー追跡精度の測定（簡易版）
+    // 3. データフロー追跡精度の測定
     let mut correct_flows = 0;
     let total_flows = test_case.data_flow_expectations.len();
 
@@ -723,7 +723,7 @@ async fn test_data_flow_tracking_accuracy() -> Result<()> {
     println!("\n📊 データフロー追跡結果:");
     println!("  全体精度: {:.1}%", overall_accuracy);
 
-    // データフロー追跡は75%以上の精度を要求（複雑な解析のため基準を下げる）
+    // データフロー追跡は75%以上の精度を要求。複雑な解析のため基準を下げている
     assert!(
         overall_accuracy >= 75.0,
         "データフロー追跡精度が基準を下回っています: {:.1}% (要求: 75.0%)",
@@ -760,7 +760,7 @@ async fn test_comprehensive_context_quality() -> Result<()> {
         data_flow_total += result.data_flow_accuracy;
         total_tests += 1;
 
-        // 総合スコア計算（重み付き平均）
+        // 総合スコア計算
         let comprehensive_score = (result.definition_accuracy * 0.5) + 
                                  (result.reference_accuracy * 0.3) + 
                                  (result.data_flow_accuracy * 0.2);

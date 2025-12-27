@@ -11,7 +11,7 @@ Your task is to analyze the provided infrastructure configuration for security v
 - Check for missing security features (encryption, logging, monitoring)
 - Assess network security posture
 
-### 2. Compliance Assessment  
+### 2. Compliance Assessment
 - Evaluate against security frameworks (CIS Benchmarks, NIST, etc.)
 - Identify violations of data protection regulations (GDPR, HIPAA, SOX)
 - Check for industry best practices adherence

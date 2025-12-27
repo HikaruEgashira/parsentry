@@ -80,7 +80,7 @@ def get_user_by_email(email):
     return result
 
 def safe_get_user(user_id):
-    """安全なユーザー取得（比較用）"""
+    """安全なユーザー取得。比較用"""
     conn = sqlite3.connect('users.db')
     cursor = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     result = cursor.fetchone()
@@ -126,10 +126,10 @@ def create_user():
     # ユーザー入力を取得
     raw_data = request.get_json()
     
-    # 入力処理（utils.pyで定義）
+    # 入力処理。utils.pyで定義
     processed_data = process_user_input(raw_data)
-    
-    # データベース保存（database.pyで定義）
+
+    # データベース保存。database.pyで定義
     user_id = store_user_data(processed_data)
     
     return {"user_id": user_id, "status": "created"}
@@ -549,7 +549,7 @@ async fn test_end_to_end_case(
         parser.add_file(file_path)?;
         let context = parser.build_context_from_file(file_path)?;
         
-        // コンテキスト品質評価（定義数、参照数、平均長さから簡易評価）
+        // コンテキスト品質評価。定義数、参照数、平均長さから簡易評価
         let definition_count = context.definitions.len() as f64;
         let reference_count = context.references.len() as f64;
         let avg_definition_length = if definition_count > 0.0 {
@@ -811,7 +811,7 @@ async fn test_multi_file_end_to_end() -> Result<()> {
     println!("\n📊 マルチファイル E2E 結果:");
     println!("  平均精度: {:.1}%", avg_accuracy);
 
-    // マルチファイルE2Eは85%以上の精度を要求（複雑性を考慮して基準を下げる）
+    // マルチファイルE2Eは85%以上の精度を要求。複雑性を考慮して基準を下げている
     assert!(
         avg_accuracy >= 85.0,
         "マルチファイルE2E精度が基準を下回っています: {:.1}% (要求: 85.0%)",

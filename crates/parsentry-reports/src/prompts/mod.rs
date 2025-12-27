@@ -1,3 +1,5 @@
+//! Prompt templates for Parsentry analysis.
+
 mod analysis;
 mod evaluator;
 pub mod iac;

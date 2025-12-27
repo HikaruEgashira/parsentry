@@ -1,0 +1,16 @@
+[package]
+name = "parsentry-reports"
+version.workspace = true
+edition.workspace = true
+description = "Report generation for Parsentry security scanner"
+
+[dependencies]
+parsentry-core = { path = "../parsentry-core" }
+parsentry-i18n = { path = "../parsentry-i18n" }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+regex = "1.10"
+
+[dev-dependencies]
+tempfile = "3.10"

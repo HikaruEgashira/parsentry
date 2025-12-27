@@ -1,16 +1,22 @@
-use crate::response::Response;
+use parsentry_core::Response;
 
 pub fn to_markdown(response: &Response) -> String {
     let mut md = String::new();
-    
+
     // Enhanced title with file and pattern information
-    let title = if let (Some(file_path), Some(pattern)) = (&response.file_path, &response.pattern_description) {
-        format!("# Security Analysis: {} - {}", 
-            file_path.split('/').last().unwrap_or(file_path), 
-            pattern)
+    let title = if let (Some(file_path), Some(pattern)) =
+        (&response.file_path, &response.pattern_description)
+    {
+        format!(
+            "# Security Analysis: {} - {}",
+            file_path.split('/').last().unwrap_or(file_path),
+            pattern
+        )
     } else if let Some(file_path) = &response.file_path {
-        format!("# Security Analysis: {}", 
-            file_path.split('/').last().unwrap_or(file_path))
+        format!(
+            "# Security Analysis: {}",
+            file_path.split('/').last().unwrap_or(file_path)
+        )
     } else {
         "# Security Analysis Report".to_string()
     };
@@ -132,7 +138,7 @@ pub fn to_markdown(response: &Response) -> String {
     md.push_str("\n\n");
 
     if !response.poc.is_empty() {
-        md.push_str("## PoC（概念実証コード）\n\n");
+        md.push_str("## PoC\n\n");
         md.push_str("```text\n");
         md.push_str(&response.poc);
         md.push_str("\n```\n\n");

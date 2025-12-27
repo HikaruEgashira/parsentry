@@ -6,16 +6,16 @@ use futures::stream::{self, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use tracing::{info, error};
 
-use crate::analyzer::analyze_pattern;
 use crate::cli::args::{ScanArgs, validate_scan_args};
 use crate::config::ParsentryConfig;
-use crate::file_classifier::FileClassifier;
-use crate::locales::{Language, get_messages};
-use crate::pattern_generator::generate_custom_patterns;
 use crate::repo::{RepoOps, clone_github_repo};
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
-use crate::reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
-use crate::security_patterns::{PatternMatch, SecurityRiskPatterns};
+
+use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
+use parsentry_i18n::{Language, get_messages};
+use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
+use parsentry_reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
+use parsentry_utils::FileClassifier;
 
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PromptBuilder, PatternContext};
 
@@ -573,7 +573,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Always generate SARIF report
     {
-        let sarif_report = SarifReport::from_analysis_summary(&filtered_summary);
+        let sarif_report = SarifReport::from_analysis_summary(&filtered_summary, env!("CARGO_PKG_VERSION"));
 
         if let Some(ref final_output_dir) = output_dir {
             if let Err(e) = std::fs::create_dir_all(final_output_dir) {

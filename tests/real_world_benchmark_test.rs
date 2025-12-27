@@ -509,7 +509,7 @@ async fn test_benchmark_case(
         0.0
     };
 
-    // 解析品質評価（簡易版）
+    // 解析品質評価
     let analysis_quality = if response.analysis.len() > 100 && 
                              response.analysis.to_lowercase().contains("脆弱") {
         85.0
@@ -519,7 +519,7 @@ async fn test_benchmark_case(
         40.0
     };
 
-    // PoC品質評価（簡易版）
+    // PoC品質評価
     let poc_quality = if response.poc.len() > 50 &&
                         (response.poc.contains("curl") || 
                          response.poc.contains("SELECT") ||
@@ -673,7 +673,7 @@ async fn test_comprehensive_benchmark_suite() -> Result<()> {
                 count);
     }
 
-    // 総合スコア計算（重み付き平均）
+    // 総合スコア計算
     let comprehensive_score = (avg_detection * 0.5) + (avg_analysis * 0.3) + (avg_poc * 0.2);
 
     println!("\n総合評価スコア: {:.1}%", comprehensive_score);

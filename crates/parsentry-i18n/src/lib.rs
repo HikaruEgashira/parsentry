@@ -3,7 +3,7 @@ pub mod ja;
 
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Language {
     Japanese,
     English,
@@ -18,7 +18,7 @@ impl Language {
         }
     }
 
-    pub fn to_string(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Language::Japanese => "ja",
             Language::English => "en",
