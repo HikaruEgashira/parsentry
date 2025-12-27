@@ -64,7 +64,7 @@ parsentry owner/repository --generate-patterns
                 │
         P A R S E N T R Y
                 │
-             v0.9.1
+             v0.9.2
 
 Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
 
@@ -89,6 +89,31 @@ Options:
       --language <LANGUAGE>              [default: ja]
   -c, --config <CONFIG>                  
       --generate-config
+```
+
+### Output Example
+
+```
+  Discovered 9 source files
+     Matched 2 security patterns
+  • HTTP request handlers (1)
+  • File operations resource (1)
+        Mode Claude Code enabled
+⠋ [00:00:42] ━━━━━━━━━━╸━━━━━━━━━━━ 1/2 analyzing with Claude Code
+        Done routes.py (42.5s, $0.24)
+       Wrote docs/results/summary.md
+       Wrote docs/results/parsentry-results.sarif
+
+  FILE                                      CONF  VULNERABILITIES
+────────────────────────────────────────────────────────────────────
+  app/routes.py                              85%  LFI, SSRF
+
+Summary
+  patterns analyzed: 2
+  vulnerabilities found: 2
+  high confidence: 2
+
+    Finished analysis complete
 ```
 
 ### Example Reports
