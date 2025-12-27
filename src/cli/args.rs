@@ -54,6 +54,22 @@ pub struct Args {
 
     #[arg(long)]
     pub generate_config: bool,
+
+    /// Use Claude Code CLI for analysis instead of API
+    #[arg(long)]
+    pub claude_code: bool,
+
+    /// Path to claude CLI binary
+    #[arg(long)]
+    pub claude_code_path: Option<PathBuf>,
+
+    /// Maximum concurrent Claude Code processes (max 10)
+    #[arg(long, default_value = "10")]
+    pub claude_code_concurrency: usize,
+
+    /// Enable PoC execution in Claude Code
+    #[arg(long)]
+    pub claude_code_poc: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -105,6 +121,10 @@ pub struct ScanArgs {
     pub language: String,
     pub config: Option<PathBuf>,
     pub generate_config: bool,
+    pub claude_code: bool,
+    pub claude_code_path: Option<PathBuf>,
+    pub claude_code_concurrency: usize,
+    pub claude_code_poc: bool,
 }
 
 impl From<&Args> for ScanArgs {
@@ -124,6 +144,10 @@ impl From<&Args> for ScanArgs {
             language: args.language.clone(),
             config: args.config.clone(),
             generate_config: args.generate_config,
+            claude_code: args.claude_code,
+            claude_code_path: args.claude_code_path.clone(),
+            claude_code_concurrency: args.claude_code_concurrency,
+            claude_code_poc: args.claude_code_poc,
         }
     }
 }

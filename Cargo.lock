@@ -1273,6 +1273,7 @@ dependencies = [
  "indicatif",
  "insta",
  "log",
+ "parsentry-claude-code",
  "quick-xml",
  "regex",
  "serde",
@@ -1298,6 +1299,20 @@ dependencies = [
  "tree-sitter-ruby",
  "tree-sitter-rust",
  "tree-sitter-typescript",
+]
+
+[[package]]
+name = "parsentry-claude-code"
+version = "0.9.2"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
 ]
 
 [[package]]

@@ -9,24 +9,52 @@ use crate::cli::args::ScanArgs;
 pub struct ParsentryConfig {
     #[serde(default)]
     pub analysis: AnalysisConfig,
-    
+
     #[serde(default)]
     pub paths: PathsConfig,
-    
+
     #[serde(default)]
     pub filtering: FilteringConfig,
-    
+
     #[serde(default)]
     pub api: ApiConfig,
-    
+
     #[serde(default)]
     pub repo: RepoConfig,
-    
+
     #[serde(default)]
     pub generation: GenerationConfig,
-    
+
     #[serde(default)]
     pub call_graph: CallGraphConfigToml,
+
+    #[serde(default)]
+    pub claude_code: ClaudeCodeConfigToml,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ClaudeCodeConfigToml {
+    #[serde(default)]
+    pub enabled: bool,
+
+    pub path: Option<PathBuf>,
+
+    #[serde(default = "default_claude_code_max_concurrent")]
+    pub max_concurrent: usize,
+
+    #[serde(default = "default_claude_code_timeout")]
+    pub timeout_secs: u64,
+
+    #[serde(default)]
+    pub enable_poc: bool,
+}
+
+fn default_claude_code_max_concurrent() -> usize {
+    10
+}
+
+fn default_claude_code_timeout() -> u64 {
+    300
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -192,6 +220,19 @@ impl Default for CallGraphConfigToml {
         }
     }
 }
+
+impl Default for ClaudeCodeConfigToml {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            path: None,
+            max_concurrent: default_claude_code_max_concurrent(),
+            timeout_secs: default_claude_code_timeout(),
+            enable_poc: false,
+        }
+    }
+}
+
 impl Default for ParsentryConfig {
     fn default() -> Self {
         Self {
@@ -202,6 +243,7 @@ impl Default for ParsentryConfig {
             repo: RepoConfig::default(),
             generation: GenerationConfig::default(),
             call_graph: CallGraphConfigToml::default(),
+            claude_code: ClaudeCodeConfigToml::default(),
         }
     }
 }
@@ -263,6 +305,13 @@ max_depth = 10
 # exclude = ["test/**"]
 detect_cycles = false
 security_focus = false
+
+[claude_code]
+enabled = false
+# path = "/usr/local/bin/claude"
+max_concurrent = 10
+timeout_secs = 300
+enable_poc = false
 "#.to_string()
         })
     }
@@ -428,6 +477,20 @@ security_focus = false
             self.generation.generate_patterns = args.generate_patterns;
         }
 
+        // Claude Code settings
+        if args.claude_code {
+            self.claude_code.enabled = true;
+        }
+        if let Some(ref path) = args.claude_code_path {
+            self.claude_code.path = Some(path.clone());
+        }
+        if args.claude_code_concurrency != default_claude_code_max_concurrent() {
+            self.claude_code.max_concurrent = args.claude_code_concurrency.min(10);
+        }
+        if args.claude_code_poc {
+            self.claude_code.enable_poc = true;
+        }
+
         Ok(())
     }
 
@@ -508,6 +571,10 @@ security_focus = false
             language: self.analysis.language.clone(),
             config: None,
             generate_config: false,
+            claude_code: self.claude_code.enabled,
+            claude_code_path: self.claude_code.path.clone(),
+            claude_code_concurrency: self.claude_code.max_concurrent,
+            claude_code_poc: self.claude_code.enable_poc,
         }
     }
 }
