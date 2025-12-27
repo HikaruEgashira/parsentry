@@ -117,57 +117,48 @@ impl CallGraphBuilder {
     }
 
     pub fn build(&mut self, config: &CallGraphConfig) -> Result<&CallGraph> {
-        // Clear previous state
         self.graph.nodes.clear();
         self.graph.edges.clear();
         self.visited.clear();
 
-        // If start functions are specified, build from them
         if !config.start_functions.is_empty() {
             for start_func in &config.start_functions {
                 self.build_from_function(start_func, 0, config)?;
             }
         } else {
-            // Otherwise, build from all discovered functions
             self.build_full_graph(config)?;
         }
 
-        // Detect cycles if requested
         if config.detect_cycles {
             self.detect_cycles()?;
         }
 
-        // Update metadata
         self.update_metadata();
 
         Ok(&self.graph)
     }
 
     fn build_from_function(
-        &mut self, 
-        function_name: &str, 
-        current_depth: usize, 
+        &mut self,
+        function_name: &str,
+        current_depth: usize,
         config: &CallGraphConfig
     ) -> Result<()> {
-        // Check depth limit
         if let Some(max_depth) = config.max_depth {
             if current_depth >= max_depth {
                 return Ok(());
             }
         }
 
-        // Skip if already visited
         if self.visited.contains(function_name) {
             return Ok(());
         }
         self.visited.insert(function_name.to_string());
 
-        // Find the function definition
         let mut definition_found = false;
         let file_paths: Vec<PathBuf> = self.parser.files.keys().cloned().collect();
         for file_path in file_paths {
             if let Some((def_file, definition)) = self.parser.find_definition(function_name, &file_path)? {
-                // Add node to graph
                 let node = CallNode {
                     function_name: function_name.to_string(),
                     file_path: def_file.clone(),
@@ -179,15 +170,12 @@ impl CallGraphBuilder {
                 self.graph.nodes.insert(function_name.to_string(), node);
                 definition_found = true;
 
-                // Extract function calls from the function definition itself
                 if let Ok(called_functions) = self.extract_function_calls(&def_file, &definition) {
                     for (called_func, relation_type) in called_functions {
-                        // Skip self-references to avoid infinite loops
                         if called_func == function_name {
                             continue;
                         }
-                        
-                        // Add edge
+
                         let edge = CallEdge {
                             caller: function_name.to_string(),
                             callee: called_func.clone(),
@@ -201,7 +189,6 @@ impl CallGraphBuilder {
                         };
                         self.graph.edges.push(edge);
 
-                        // Only recurse if within depth limit
                         if config.max_depth.is_none() || current_depth + 1 < config.max_depth.unwrap() {
                             self.build_from_function(&called_func, current_depth + 1, config)?;
                         }
@@ -212,7 +199,6 @@ impl CallGraphBuilder {
         }
 
         if !definition_found {
-            // Add as external/unknown node
             let node = CallNode {
                 function_name: function_name.to_string(),
                 file_path: PathBuf::from("external"),
@@ -228,10 +214,9 @@ impl CallGraphBuilder {
     }
 
     fn build_full_graph(&mut self, config: &CallGraphConfig) -> Result<()> {
-        // Collect all function definitions first
         let mut all_functions = Vec::new();
         let file_paths: Vec<PathBuf> = self.parser.files.keys().cloned().collect();
-        
+
         for file_path in file_paths {
             let context = self.parser.build_context_from_file(&file_path)?;
             for definition in context.definitions {
@@ -239,7 +224,6 @@ impl CallGraphBuilder {
             }
         }
 
-        // Build graph from all functions
         for function_name in all_functions {
             if !self.visited.contains(&function_name) {
                 self.build_from_function(&function_name, 0, config)?;
