@@ -48,6 +48,7 @@ async fn analyze_with_claude_code(
 
     match output {
         Ok(output) => {
+            println!("✅ Claude Code succeeded for {}", file_path.display());
             let mut response = Response::from_claude_code_response(
                 output.response,
                 file_path.to_string_lossy().to_string(),
@@ -57,8 +58,8 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
-            tracing::warn!("Claude Code analysis failed for {}: {}", file_path.display(), e);
-            Ok(None)
+            println!("❌ Claude Code execution error for {}: {}", file_path.display(), e);
+            Err(anyhow::anyhow!("Claude Code failed: {}", e))
         }
     }
 }
@@ -308,20 +309,19 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                         {
                             Ok(Some(res)) => res,
                             Ok(None) => {
+                                println!("⚠️ Claude Code returned None for {}", file_path.display());
                                 progress_bar.inc(1);
                                 return None;
                             }
                             Err(e) => {
-                                if verbosity > 0 {
-                                    println!(
-                                        "❌ Claude Code {}: {}: {}",
-                                        messages
-                                            .get("analysis_failed")
-                                            .unwrap_or(&"Analysis failed"),
-                                        file_path.display(),
-                                        e
-                                    );
-                                }
+                                println!(
+                                    "❌ Claude Code {}: {}: {}",
+                                    messages
+                                        .get("analysis_failed")
+                                        .unwrap_or(&"Analysis failed"),
+                                    file_path.display(),
+                                    e
+                                );
                                 progress_bar.inc(1);
                                 return None;
                             }
