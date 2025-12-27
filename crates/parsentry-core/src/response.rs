@@ -7,14 +7,21 @@ use crate::par::{ParAnalysis, RemediationGuidance};
 use crate::vuln_type::VulnType;
 
 /// The main response structure for security analysis.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Response {
+    #[serde(default)]
     pub scratchpad: String,
+    #[serde(default)]
     pub analysis: String,
+    #[serde(default)]
     pub poc: String,
+    #[serde(default)]
     pub confidence_score: i32,
+    #[serde(default)]
     pub vulnerability_types: Vec<VulnType>,
+    #[serde(default)]
     pub par_analysis: ParAnalysis,
+    #[serde(default)]
     pub remediation_guidance: RemediationGuidance,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_path: Option<String>,
@@ -26,26 +33,9 @@ pub struct Response {
     pub full_source_code: Option<String>,
 }
 
-impl Default for Response {
-    fn default() -> Self {
-        Self {
-            scratchpad: String::new(),
-            analysis: String::new(),
-            poc: String::new(),
-            confidence_score: 0,
-            vulnerability_types: Vec::new(),
-            par_analysis: ParAnalysis::default(),
-            remediation_guidance: RemediationGuidance::default(),
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
-        }
-    }
-}
-
 impl Response {
     /// Normalize confidence score (convert 1-10 scale to 1-100).
+    #[must_use]
     pub fn normalize_confidence_score(score: i32) -> i32 {
         if score > 0 && score <= 10 {
             score * 10
@@ -56,28 +46,27 @@ impl Response {
 
     /// Clean up and validate the response data.
     pub fn sanitize(&mut self) {
-        // Remove duplicate vulnerability types
         let mut unique_vulns = std::collections::HashSet::new();
         self.vulnerability_types
             .retain(|v| unique_vulns.insert(v.clone()));
 
-        // If no vulnerability types and high confidence, reset confidence
         if self.vulnerability_types.is_empty() && self.confidence_score > 50 {
             self.confidence_score = 0;
         }
 
-        // If PAR analysis is empty but high confidence, adjust confidence
         if self.par_analysis.is_empty() && self.confidence_score > 30 {
             self.confidence_score = std::cmp::min(self.confidence_score, 30);
         }
     }
 
     /// Check if this response indicates a vulnerability was found.
+    #[must_use]
     pub fn has_vulnerability(&self) -> bool {
         !self.vulnerability_types.is_empty() && self.confidence_score > 0
     }
 
     /// Get severity level based on confidence score.
+    #[must_use]
     pub fn severity_level(&self) -> &'static str {
         match self.confidence_score {
             90..=100 => "critical",
@@ -90,6 +79,7 @@ impl Response {
 }
 
 /// Generate JSON schema for the response structure.
+#[must_use]
 pub fn response_json_schema() -> serde_json::Value {
     json!({
         "type": "object",
@@ -230,5 +220,15 @@ mod tests {
         };
         response.sanitize();
         assert_eq!(response.vulnerability_types.len(), 1);
+    }
+
+    #[test]
+    fn test_has_vulnerability() {
+        let mut response = Response::default();
+        assert!(!response.has_vulnerability());
+
+        response.vulnerability_types = vec![VulnType::SQLI];
+        response.confidence_score = 80;
+        assert!(response.has_vulnerability());
     }
 }

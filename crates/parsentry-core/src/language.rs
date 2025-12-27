@@ -26,6 +26,7 @@ pub enum Language {
 
 impl Language {
     /// Create a Language from a file extension.
+    #[must_use]
     pub fn from_extension(ext: &str) -> Self {
         match ext {
             "py" => Language::Python,
@@ -46,6 +47,7 @@ impl Language {
     }
 
     /// Create a Language from a filename.
+    #[must_use]
     pub fn from_filename(filename: &str) -> Self {
         if let Some(ext) = std::path::Path::new(filename)
             .extension()
@@ -58,6 +60,7 @@ impl Language {
     }
 
     /// Check if this language is an Infrastructure as Code language.
+    #[must_use]
     pub fn is_iac(&self) -> bool {
         matches!(
             self,
@@ -66,6 +69,7 @@ impl Language {
     }
 
     /// Get the display name for this language.
+    #[must_use]
     pub fn display_name(&self) -> &'static str {
         match self {
             Language::Python => "Python",
@@ -117,5 +121,11 @@ mod tests {
     fn test_is_iac() {
         assert!(Language::Terraform.is_iac());
         assert!(!Language::Python.is_iac());
+    }
+
+    #[test]
+    fn test_display() {
+        assert_eq!(format!("{}", Language::Python), "Python");
+        assert_eq!(format!("{}", Language::Cpp), "C++");
     }
 }

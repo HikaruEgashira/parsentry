@@ -1,6 +1,7 @@
 //! PAR (Principal-Action-Resource) analysis types.
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Trust level of a principal (data source).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +12,16 @@ pub enum TrustLevel {
     SemiTrusted,
     #[serde(rename = "untrusted")]
     Untrusted,
+}
+
+impl fmt::Display for TrustLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TrustLevel::Trusted => write!(f, "trusted"),
+            TrustLevel::SemiTrusted => write!(f, "semi_trusted"),
+            TrustLevel::Untrusted => write!(f, "untrusted"),
+        }
+    }
 }
 
 /// Sensitivity level of a resource.
@@ -26,6 +37,17 @@ pub enum SensitivityLevel {
     Critical,
 }
 
+impl fmt::Display for SensitivityLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SensitivityLevel::Low => write!(f, "low"),
+            SensitivityLevel::Medium => write!(f, "medium"),
+            SensitivityLevel::High => write!(f, "high"),
+            SensitivityLevel::Critical => write!(f, "critical"),
+        }
+    }
+}
+
 /// Quality assessment of a security function implementation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityFunctionQuality {
@@ -37,6 +59,17 @@ pub enum SecurityFunctionQuality {
     Missing,
     #[serde(rename = "bypassed")]
     Bypassed,
+}
+
+impl fmt::Display for SecurityFunctionQuality {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SecurityFunctionQuality::Adequate => write!(f, "adequate"),
+            SecurityFunctionQuality::Insufficient => write!(f, "insufficient"),
+            SecurityFunctionQuality::Missing => write!(f, "missing"),
+            SecurityFunctionQuality::Bypassed => write!(f, "bypassed"),
+        }
+    }
 }
 
 /// Information about a principal (data source/actor).
@@ -78,7 +111,7 @@ pub struct PolicyViolation {
 }
 
 /// Complete PAR analysis result.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ParAnalysis {
     pub principals: Vec<PrincipalInfo>,
     pub actions: Vec<ActionInfo>,
@@ -86,19 +119,9 @@ pub struct ParAnalysis {
     pub policy_violations: Vec<PolicyViolation>,
 }
 
-impl Default for ParAnalysis {
-    fn default() -> Self {
-        Self {
-            principals: Vec::new(),
-            actions: Vec::new(),
-            resources: Vec::new(),
-            policy_violations: Vec::new(),
-        }
-    }
-}
-
 impl ParAnalysis {
     /// Check if the analysis is empty (no findings).
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.principals.is_empty()
             && self.actions.is_empty()
@@ -117,17 +140,9 @@ pub struct RemediationAction {
 }
 
 /// Guidance for remediation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RemediationGuidance {
     pub policy_enforcement: Vec<RemediationAction>,
-}
-
-impl Default for RemediationGuidance {
-    fn default() -> Self {
-        Self {
-            policy_enforcement: Vec::new(),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -149,5 +164,24 @@ mod tests {
             ..Default::default()
         };
         assert!(!non_empty.is_empty());
+    }
+
+    #[test]
+    fn test_trust_level_display() {
+        assert_eq!(format!("{}", TrustLevel::Trusted), "trusted");
+        assert_eq!(format!("{}", TrustLevel::SemiTrusted), "semi_trusted");
+        assert_eq!(format!("{}", TrustLevel::Untrusted), "untrusted");
+    }
+
+    #[test]
+    fn test_sensitivity_level_display() {
+        assert_eq!(format!("{}", SensitivityLevel::Low), "low");
+        assert_eq!(format!("{}", SensitivityLevel::Critical), "critical");
+    }
+
+    #[test]
+    fn test_security_function_quality_display() {
+        assert_eq!(format!("{}", SecurityFunctionQuality::Adequate), "adequate");
+        assert_eq!(format!("{}", SecurityFunctionQuality::Bypassed), "bypassed");
     }
 }
