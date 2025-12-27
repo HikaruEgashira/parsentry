@@ -60,6 +60,7 @@ pub struct ClaudeCodeExecutor {
     working_dir: PathBuf,
     #[allow(dead_code)]
     enable_poc: bool,
+    log_dir: Option<PathBuf>,
 }
 
 impl ClaudeCodeExecutor {
@@ -67,12 +68,18 @@ impl ClaudeCodeExecutor {
     pub fn new(config: ClaudeCodeConfig) -> Result<Self> {
         let semaphore = Arc::new(Semaphore::new(config.max_concurrent));
 
+        // Create log directory if specified
+        if let Some(ref log_dir) = config.log_dir {
+            std::fs::create_dir_all(log_dir).ok();
+        }
+
         Ok(Self {
             claude_path: config.claude_path,
             timeout_secs: config.timeout_secs,
             semaphore,
             working_dir: config.working_dir,
             enable_poc: config.enable_poc,
+            log_dir: config.log_dir,
         })
     }
 
@@ -171,6 +178,32 @@ impl ClaudeCodeExecutor {
 
         let raw_output = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr_output = String::from_utf8_lossy(&output.stderr).to_string();
+
+        // Save log if log_dir is configured
+        if let Some(ref log_dir) = self.log_dir {
+            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
+            let log_file = log_dir.join(format!("claude_code_{}.log", timestamp));
+            let log_content = format!(
+                "=== Claude Code Execution Log ===\n\
+                 Timestamp: {}\n\
+                 Working Dir: {}\n\
+                 \n\
+                 === STDOUT ===\n\
+                 {}\n\
+                 \n\
+                 === STDERR ===\n\
+                 {}\n",
+                chrono::Utc::now().to_rfc3339(),
+                self.working_dir.display(),
+                raw_output,
+                stderr_output
+            );
+            if let Err(e) = std::fs::write(&log_file, &log_content) {
+                warn!("Failed to write Claude Code log: {}", e);
+            } else {
+                info!("Claude Code log saved: {}", log_file.display());
+            }
+        }
 
         if !stderr_output.is_empty() {
             warn!("Claude Code stderr: {}", stderr_output);

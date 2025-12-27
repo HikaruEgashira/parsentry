@@ -26,6 +26,8 @@ pub struct ClaudeCodeConfig {
     pub enable_poc: bool,
     /// Working directory for Claude Code execution.
     pub working_dir: PathBuf,
+    /// Directory to save Claude Code execution logs (optional).
+    pub log_dir: Option<PathBuf>,
 }
 
 impl Default for ClaudeCodeConfig {
@@ -36,6 +38,7 @@ impl Default for ClaudeCodeConfig {
             timeout_secs: 300,
             enable_poc: false,
             working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+            log_dir: None,
         }
     }
 }
@@ -70,6 +73,12 @@ impl ClaudeCodeConfig {
     /// Set the working directory.
     pub fn with_working_dir(mut self, dir: PathBuf) -> Self {
         self.working_dir = dir;
+        self
+    }
+
+    /// Set the log directory for saving execution logs.
+    pub fn with_log_dir(mut self, dir: PathBuf) -> Self {
+        self.log_dir = Some(dir);
         self
     }
 }
