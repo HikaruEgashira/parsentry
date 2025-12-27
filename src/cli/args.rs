@@ -89,14 +89,6 @@ pub struct Args {
     #[arg(long, default_value = "10")]
     pub mvra_max_repos: usize,
 
-    /// Comma-separated list of repositories for MVRA (e.g., "owner/repo1,owner/repo2")
-    #[arg(long)]
-    pub mvra_repositories: Option<String>,
-
-    /// Minimum stars for repository filtering in MVRA
-    #[arg(long)]
-    pub mvra_min_stars: Option<u32>,
-
     /// Cache directory for cloned repositories in MVRA
     #[arg(long, default_value = ".parsentry-cache")]
     pub mvra_cache_dir: Option<PathBuf>,
@@ -163,8 +155,6 @@ pub struct ScanArgs {
     pub mvra_search_query: Option<String>,
     pub mvra_code_query: Option<String>,
     pub mvra_max_repos: usize,
-    pub mvra_repositories: Option<String>,
-    pub mvra_min_stars: Option<u32>,
     pub mvra_cache_dir: Option<PathBuf>,
     pub mvra_no_cache: bool,
 }
@@ -194,8 +184,6 @@ impl From<&Args> for ScanArgs {
             mvra_search_query: args.mvra_search_query.clone(),
             mvra_code_query: args.mvra_code_query.clone(),
             mvra_max_repos: args.mvra_max_repos,
-            mvra_repositories: args.mvra_repositories.clone(),
-            mvra_min_stars: args.mvra_min_stars,
             mvra_cache_dir: args.mvra_cache_dir.clone(),
             mvra_no_cache: args.mvra_no_cache,
         }

@@ -8,7 +8,7 @@ use crate::github::{GitHubSearchClient, SearchResult};
 /// Multi-repository variant analysis configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MvraConfig {
-    /// GitHub search query for repositories
+    /// GitHub search query for repositories (e.g., "language:python stars:>100")
     pub search_query: Option<String>,
 
     /// Code search query (for finding specific code patterns)
@@ -22,12 +22,6 @@ pub struct MvraConfig {
 
     /// Whether to skip repositories that already exist in cache
     pub use_cache: bool,
-
-    /// Minimum stars for repository filtering
-    pub min_stars: Option<u32>,
-
-    /// List of specific repositories to analyze (owner/repo format)
-    pub repositories: Option<Vec<String>>,
 }
 
 impl Default for MvraConfig {
@@ -38,8 +32,6 @@ impl Default for MvraConfig {
             max_repos: 10,
             cache_dir: PathBuf::from(".parsentry-cache"),
             use_cache: true,
-            min_stars: None,
-            repositories: None,
         }
     }
 }
@@ -110,39 +102,13 @@ impl MvraScanner {
     pub async fn get_target_repositories(&self) -> Result<Vec<SearchResult>> {
         let mut repos = Vec::new();
 
-        // First, add explicitly specified repositories
-        if let Some(ref repo_list) = self.config.repositories {
-            for repo_str in repo_list {
-                let parts: Vec<&str> = repo_str.split('/').collect();
-                if parts.len() != 2 {
-                    return Err(anyhow!("Invalid repository format: {}. Expected 'owner/repo'", repo_str));
-                }
-
-                repos.push(SearchResult {
-                    owner: parts[0].to_string(),
-                    repo: parts[1].to_string(),
-                    full_name: repo_str.clone(),
-                    clone_url: format!("https://github.com/{}.git", repo_str),
-                    html_url: format!("https://github.com/{}", repo_str),
-                    stars: 0,
-                    description: None,
-                });
-            }
-        }
-
-        // Then, search for repositories if query is provided
+        // Search for repositories if query is provided
+        // Use "stars:>N" in the query for minimum stars filtering
         if let Some(ref query) = self.config.search_query {
             let client = self.github_client.as_ref()
                 .ok_or_else(|| anyhow!("GitHub client not initialized"))?;
 
-            let remaining = self.config.max_repos.saturating_sub(repos.len());
-            let mut search_results = client.search_repositories(query, remaining).await?;
-
-            // Filter by minimum stars if specified
-            if let Some(min_stars) = self.config.min_stars {
-                search_results.retain(|r| r.stars >= min_stars);
-            }
-
+            let search_results = client.search_repositories(query, self.config.max_repos).await?;
             repos.extend(search_results);
         }
 

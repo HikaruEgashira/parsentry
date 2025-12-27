@@ -98,8 +98,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     // Auto-enable MVRA mode if any MVRA-specific options are provided
     if !args.mvra && (
         args.mvra_search_query.is_some() ||
-        args.mvra_code_query.is_some() ||
-        args.mvra_repositories.is_some()
+        args.mvra_code_query.is_some()
     ) {
         args.mvra = true;
     }
@@ -622,15 +621,6 @@ async fn run_mvra_scan(args: ScanArgs) -> Result<()> {
         mvra_config.max_repos = args.mvra_max_repos;
     }
 
-    if let Some(ref repos_str) = args.mvra_repositories {
-        let repos: Vec<String> = repos_str.split(',').map(|s| s.trim().to_string()).collect();
-        mvra_config.repositories = Some(repos);
-    }
-
-    if let Some(min_stars) = args.mvra_min_stars {
-        mvra_config.min_stars = Some(min_stars);
-    }
-
     if let Some(ref cache_dir) = args.mvra_cache_dir {
         mvra_config.cache_dir = cache_dir.clone();
     }
@@ -642,10 +632,9 @@ async fn run_mvra_scan(args: ScanArgs) -> Result<()> {
     // Validate MVRA configuration
     if mvra_config.search_query.is_none()
         && mvra_config.code_query.is_none()
-        && mvra_config.repositories.is_none()
     {
         return Err(anyhow::anyhow!(
-            "MVRA requires at least one of: --mvra-search-query, --mvra-code-query, or --mvra-repositories"
+            "MVRA requires at least one of: --mvra-search-query or --mvra-code-query"
         ));
     }
 
