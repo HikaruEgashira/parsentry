@@ -1193,7 +1193,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1231,7 +1231,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-analyzer"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1250,7 +1250,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-claude-code"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1265,7 +1265,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-core"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1274,11 +1274,11 @@ dependencies = [
 
 [[package]]
 name = "parsentry-i18n"
-version = "0.9.2"
+version = "0.10.0"
 
 [[package]]
 name = "parsentry-parser"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "parsentry-core",
@@ -1302,7 +1302,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-reports"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "parsentry-core",
@@ -1315,7 +1315,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-utils"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "parsentry-core",
