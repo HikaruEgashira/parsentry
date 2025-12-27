@@ -32,7 +32,7 @@ async fn analyze_with_claude_code(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    println!("🤖 Claude Code 分析開始: {} (pattern: {})",
+    eprintln!("🤖 Claude Code 分析開始: {} (pattern: {})",
         file_name,
         pattern_match.pattern_config.description
     );
@@ -81,12 +81,12 @@ async fn analyze_with_claude_code(
                 "N/A".to_string()
             };
 
-            println!("✅ Claude Code 成功: {} ({}、コスト: {})",
+            eprintln!("✅ Claude Code 成功: {} ({}、コスト: {})",
                 file_name,
                 duration_str,
                 cost_str,
             );
-            println!("  📄 ログ: {}", log_path);
+            eprintln!("  📄 ログ: {}", log_path);
 
             info!("Claude Code succeeded for {}", file_path.display());
             let mut response = Response::from_claude_code_response(
@@ -98,7 +98,7 @@ async fn analyze_with_claude_code(
             Ok(Some(response))
         }
         Err(e) => {
-            println!("❌ Claude Code 失敗: {} ({:.1}s): {}",
+            eprintln!("❌ Claude Code 失敗: {} ({:.1}s): {}",
                 file_name,
                 elapsed.as_secs_f64(),
                 e
