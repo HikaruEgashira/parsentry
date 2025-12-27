@@ -1,0 +1,36 @@
+[package]
+name = "parsentry-parser"
+version.workspace = true
+edition.workspace = true
+description = "Tree-sitter based code parser and security pattern matcher for Parsentry"
+license = "MIT"
+
+[dependencies]
+parsentry-core = { path = "../parsentry-core" }
+
+# Tree-sitter core
+tree-sitter = "0.25.6"
+streaming-iterator = "0.1"
+
+# Tree-sitter language grammars
+tree-sitter-c = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-rust = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-hcl = "1.1"
+tree-sitter-php = "0.23"
+
+# Serialization
+serde = { workspace = true }
+serde_yaml = "0.9"
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
