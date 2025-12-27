@@ -9,7 +9,7 @@ mod prompt;
 
 pub use executor::{ClaudeCodeExecutor, ClaudeCodeOutput};
 pub use parser::{ClaudeCodeResponse, ParAnalysis, VulnerabilityInfo};
-pub use prompt::PromptBuilder;
+pub use prompt::{PromptBuilder, PatternContext};
 
 use std::path::PathBuf;
 

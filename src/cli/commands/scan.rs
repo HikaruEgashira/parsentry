@@ -12,9 +12,56 @@ use crate::file_classifier::FileClassifier;
 use crate::locales::{Language, get_messages};
 use crate::pattern_generator::generate_custom_patterns;
 use crate::repo::{RepoOps, clone_github_repo};
-use crate::response::VulnType;
+use crate::response::{Response, VulnType};
 use crate::reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
-use crate::security_patterns::SecurityRiskPatterns;
+use crate::security_patterns::{PatternMatch, SecurityRiskPatterns};
+
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PromptBuilder, PatternContext};
+
+/// Analyze a pattern using Claude Code CLI
+async fn analyze_with_claude_code(
+    executor: &ClaudeCodeExecutor,
+    prompt_builder: &PromptBuilder,
+    file_path: &PathBuf,
+    pattern_match: &PatternMatch,
+) -> Result<Option<Response>> {
+    let content = std::fs::read_to_string(file_path)?;
+
+    // Build pattern context
+    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
+    let pattern_context = PatternContext::new(
+        &pattern_type_str,
+        &pattern_match.pattern_config.description,
+        &pattern_match.matched_text,
+    )
+    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
+
+    // Build prompt
+    let prompt = prompt_builder.build_security_analysis_prompt(
+        file_path,
+        &content,
+        Some(&pattern_context),
+    );
+
+    // Execute Claude Code
+    let output = executor.execute_with_retry(&prompt, 2).await;
+
+    match output {
+        Ok(output) => {
+            let mut response = Response::from_claude_code_response(
+                output.response,
+                file_path.to_string_lossy().to_string(),
+            );
+            response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+            response.matched_source_code = Some(pattern_match.matched_text.clone());
+            Ok(Some(response))
+        }
+        Err(e) => {
+            tracing::warn!("Claude Code analysis failed for {}: {}", file_path.display(), e);
+            Ok(None)
+        }
+    }
+}
 
 pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Load configuration with precedence: CLI args > env vars > config file
@@ -171,6 +218,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let debug = final_args.debug;
+    let use_claude_code = config.claude_code.enabled;
 
     let mut summary = AnalysisSummary::new();
 
@@ -182,7 +230,35 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             .unwrap()
             .progress_chars("█▉▊▋▌▍▎▏  "),
     );
-    progress_bar.set_message("Analyzing files...");
+
+    // Set concurrency based on mode
+    let max_concurrent = if use_claude_code {
+        progress_bar.set_message("Analyzing files with Claude Code...");
+        config.claude_code.max_concurrent.min(10)
+    } else {
+        progress_bar.set_message("Analyzing files...");
+        50
+    };
+
+    // Setup Claude Code executor if enabled
+    let claude_executor = if use_claude_code {
+        let claude_config = ClaudeCodeConfig {
+            claude_path: config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude")),
+            max_concurrent: config.claude_code.max_concurrent.min(10),
+            timeout_secs: config.claude_code.timeout_secs,
+            enable_poc: config.claude_code.enable_poc,
+            working_dir: root_dir.as_ref().clone(),
+        };
+        Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
+    } else {
+        None
+    };
+
+    let prompt_builder = Arc::new(
+        PromptBuilder::new()
+            .with_poc(config.claude_code.enable_poc)
+            .with_language(&final_args.language)
+    );
 
     // 並列度を制御してタスクを実行 - パターンごとに分析
     let results = stream::iter(all_pattern_matches.iter().enumerate())
@@ -197,6 +273,9 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
             let debug = debug;
             let messages = messages.clone();
             let language = language.clone();
+            let claude_executor = claude_executor.clone();
+            let prompt_builder = prompt_builder.clone();
+            let use_claude_code = use_claude_code;
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -216,38 +295,75 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                     println!("{}", "=".repeat(80));
                 }
 
-                let analysis_result = match analyze_pattern(
-                    &file_path,
-                    &pattern_match,
-                    &model,
-                    &files,
-                    verbosity,
-                    0,
-                    debug,
-                    &output_dir,
-                    api_base_url,
-                    &language,
-                )
-                .await
-                {
-                    Ok(Some(res)) => res,
-                    Ok(None) => {
+                // Choose analysis method based on mode
+                let analysis_result = if use_claude_code {
+                    if let Some(ref executor) = claude_executor {
+                        match analyze_with_claude_code(
+                            executor,
+                            &prompt_builder,
+                            &file_path,
+                            &pattern_match,
+                        )
+                        .await
+                        {
+                            Ok(Some(res)) => res,
+                            Ok(None) => {
+                                progress_bar.inc(1);
+                                return None;
+                            }
+                            Err(e) => {
+                                if verbosity > 0 {
+                                    println!(
+                                        "❌ Claude Code {}: {}: {}",
+                                        messages
+                                            .get("analysis_failed")
+                                            .unwrap_or(&"Analysis failed"),
+                                        file_path.display(),
+                                        e
+                                    );
+                                }
+                                progress_bar.inc(1);
+                                return None;
+                            }
+                        }
+                    } else {
                         progress_bar.inc(1);
                         return None;
                     }
-                    Err(e) => {
-                        if verbosity > 0 {
-                            println!(
-                                "❌ {}: {}: {}",
-                                messages
-                                    .get("analysis_failed")
-                                    .unwrap_or(&"Analysis failed"),
-                                file_path.display(),
-                                e
-                            );
+                } else {
+                    match analyze_pattern(
+                        &file_path,
+                        &pattern_match,
+                        &model,
+                        &files,
+                        verbosity,
+                        0,
+                        debug,
+                        &output_dir,
+                        api_base_url,
+                        &language,
+                    )
+                    .await
+                    {
+                        Ok(Some(res)) => res,
+                        Ok(None) => {
+                            progress_bar.inc(1);
+                            return None;
                         }
-                        progress_bar.inc(1);
-                        return None;
+                        Err(e) => {
+                            if verbosity > 0 {
+                                println!(
+                                    "❌ {}: {}: {}",
+                                    messages
+                                        .get("analysis_failed")
+                                        .unwrap_or(&"Analysis failed"),
+                                    file_path.display(),
+                                    e
+                                );
+                            }
+                            progress_bar.inc(1);
+                            return None;
+                        }
                     }
                 };
 
@@ -309,7 +425,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
                 Some((file_path, analysis_result))
             }
         })
-        .buffer_unordered(50) // パターンベース分析での並列処理強化
+        .buffer_unordered(max_concurrent) // Claude Code: max 10, API: 50
         .collect::<Vec<_>>()
         .await;
     for result in results.into_iter() {
