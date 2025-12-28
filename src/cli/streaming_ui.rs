@@ -3,6 +3,7 @@
 //! Provides callback implementations for displaying streaming output
 //! from Claude Code CLI in real-time.
 
+use std::collections::VecDeque;
 use std::io::{stderr, Write};
 use std::sync::Mutex;
 
@@ -10,13 +11,17 @@ use parsentry_claude_code::{StreamCallback, StreamEvent};
 
 use crate::cli::ui::{colors, colors_enabled, StatusPrinter};
 
-/// Streaming output display for terminal
+const MAX_DISPLAY_LINES: usize = 3;
+
+/// Streaming output display for terminal with scroll buffer
 ///
 /// Implements `StreamCallback` to receive and display streaming events
-/// from Claude Code execution in real-time.
+/// from Claude Code execution in real-time. Maintains a buffer of the last
+/// 3 lines and scrolls them as new content arrives.
 pub struct StreamingDisplay {
     printer: StatusPrinter,
     current_file: Mutex<Option<String>>,
+    line_buffer: Mutex<VecDeque<String>>,
     show_tokens: bool,
     use_colors: bool,
 }
@@ -30,6 +35,7 @@ impl StreamingDisplay {
         Self {
             printer: StatusPrinter::new(),
             current_file: Mutex::new(None),
+            line_buffer: Mutex::new(VecDeque::with_capacity(MAX_DISPLAY_LINES)),
             show_tokens,
             use_colors: colors_enabled(),
         }
@@ -37,12 +43,35 @@ impl StreamingDisplay {
 
     /// Set the current file being analyzed (for context in output)
     pub fn set_current_file(&self, file: &str) {
-        *self.current_file.lock().unwrap() = Some(file.to_string());
+        if let Ok(mut current_file) = self.current_file.lock() {
+            *current_file = Some(file.to_string());
+        }
     }
 
     /// Clear the current file context
     pub fn clear_current_file(&self) {
-        *self.current_file.lock().unwrap() = None;
+        if let Ok(mut current_file) = self.current_file.lock() {
+            *current_file = None;
+        }
+    }
+
+    /// Add a line to the scroll buffer and display it
+    fn add_line_with_scroll(&self, line: String) {
+        if let Ok(mut buffer) = self.line_buffer.lock() {
+            if buffer.len() >= MAX_DISPLAY_LINES {
+                buffer.pop_front();
+            }
+            buffer.push_back(line);
+
+            self.redraw_buffer(&buffer);
+        }
+    }
+
+    /// Redraw the entire buffer
+    fn redraw_buffer(&self, buffer: &VecDeque<String>) {
+        for line in buffer.iter() {
+            self.printer.dim(line);
+        }
     }
 
     fn format_tool_name(&self, name: &str) -> String {
@@ -77,13 +106,14 @@ impl StreamCallback for StreamingDisplay {
             StreamEvent::Progress(msg) => {
                 let trimmed = msg.trim();
                 if !trimmed.is_empty() {
-                    self.printer.dim(trimmed);
+                    self.add_line_with_scroll(trimmed.to_string());
                 }
             }
             StreamEvent::Complete(_) => {
-                let file = self.current_file.lock().unwrap();
-                if let Some(ref f) = *file {
-                    self.printer.success("Analyzed", f);
+                if let Ok(file) = self.current_file.lock() {
+                    if let Some(ref f) = *file {
+                        self.printer.success("Analyzed", f);
+                    }
                 }
             }
             StreamEvent::Error(err) => {
@@ -152,12 +182,17 @@ impl SilentStreamingDisplay {
 
     /// Get all collected events
     pub fn events(&self) -> Vec<StreamEvent> {
-        self.events.lock().unwrap().clone()
+        self.events
+            .lock()
+            .map(|e| e.clone())
+            .unwrap_or_default()
     }
 
     /// Clear collected events
     pub fn clear(&self) {
-        self.events.lock().unwrap().clear();
+        if let Ok(mut events) = self.events.lock() {
+            events.clear();
+        }
     }
 }
 
@@ -197,11 +232,28 @@ mod tests {
     fn test_set_current_file() {
         let display = StreamingDisplay::new(false);
         display.set_current_file("test.rs");
-        assert_eq!(
-            *display.current_file.lock().unwrap(),
-            Some("test.rs".to_string())
-        );
+        if let Ok(file) = display.current_file.lock() {
+            assert_eq!(*file, Some("test.rs".to_string()));
+        }
         display.clear_current_file();
-        assert_eq!(*display.current_file.lock().unwrap(), None);
+        if let Ok(file) = display.current_file.lock() {
+            assert_eq!(*file, None);
+        }
+    }
+
+    #[test]
+    fn test_line_buffer_scrolls() {
+        let display = StreamingDisplay::new(false);
+        display.add_line_with_scroll("line1".to_string());
+        display.add_line_with_scroll("line2".to_string());
+        display.add_line_with_scroll("line3".to_string());
+        display.add_line_with_scroll("line4".to_string());
+
+        if let Ok(buffer) = display.line_buffer.lock() {
+            assert_eq!(buffer.len(), MAX_DISPLAY_LINES);
+            assert_eq!(buffer.get(0), Some(&"line2".to_string()));
+            assert_eq!(buffer.get(1), Some(&"line3".to_string()));
+            assert_eq!(buffer.get(2), Some(&"line4".to_string()));
+        }
     }
 }
