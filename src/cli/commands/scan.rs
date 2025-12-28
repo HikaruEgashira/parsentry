@@ -31,7 +31,7 @@ async fn analyze_with_claude_code(
     pattern_match: &PatternMatch,
     _working_dir: &PathBuf,
     printer: &StatusPrinter,
-    verbose: bool,
+    streaming_display: &Arc<StreamingDisplay>,
 ) -> Result<Option<Response>> {
     let file_name = file_path
         .file_name()
@@ -50,14 +50,10 @@ async fn analyze_with_claude_code(
 
     let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
 
-    // Create streaming display callback
-    // Show tokens only in very verbose mode (verbosity > 1)
-    let streaming_display = StreamingDisplay::new(verbose);
+    // Use streaming execution for real-time output (shared display across parallel tasks)
     streaming_display.set_current_file(&file_name);
-
-    // Use streaming execution for real-time output
     let output = executor
-        .execute_streaming_with_retry(&prompt, &streaming_display, 2)
+        .execute_streaming_with_retry(&prompt, streaming_display.as_ref(), 2)
         .await;
 
     match output {
@@ -316,6 +312,9 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let printer = Arc::new(printer);
 
+    // Create shared streaming display for all parallel tasks
+    let streaming_display = Arc::new(StreamingDisplay::new(verbosity > 1));
+
     let results = stream::iter(all_pattern_matches.iter().enumerate())
         .map(|(idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
@@ -332,6 +331,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
+            let streaming_display = Arc::clone(&streaming_display);
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -361,7 +361,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &pattern_match,
                             &_root_dir,
                             &printer,
-                            verbosity > 1, // Show tokens in very verbose mode
+                            &streaming_display,
                         )
                         .await
                         {
@@ -876,6 +876,9 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
 
     let printer = Arc::new(StatusPrinter::new());
 
+    // Create shared streaming display for all parallel tasks
+    let streaming_display = Arc::new(StreamingDisplay::new(verbosity > 1));
+
     let results = stream::iter(all_pattern_matches.iter().enumerate())
         .map(|(_idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
@@ -887,6 +890,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let debug = debug;
             let language = language.clone();
             let claude_executor = claude_executor.clone();
+            let streaming_display = Arc::clone(&streaming_display);
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
@@ -903,7 +907,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &pattern_match,
                             &_root_dir,
                             &printer,
-                            verbosity > 1, // Show tokens in very verbose mode
+                            &streaming_display,
                         )
                         .await
                         {
