@@ -1,115 +1,184 @@
 principals:
-  - pattern: "variable\\s+\"[^\"]*\"\\s*\\{"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "variable")
+        (string_lit) @name) @definition
     description: "Variable declarations"
     attack_vector:
       - "T1190"
       - "T1021"
-  - pattern: "data\\s+\"[^\"]*\"\\s+\"[^\"]*\"\\s*\\{"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "data")
+        (string_lit) @resource_type
+        (string_lit) @name) @definition
     description: "Data sources"
     attack_vector:
       - "T1083"
       - "T1005"
-  - pattern: "module\\s+\"[^\"]*\"\\s*\\{"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "module")
+        (string_lit) @name) @definition
     description: "Module declarations"
     attack_vector:
       - "T1105"
       - "T1027"
-  - pattern: "provider\\s+\"[^\"]*\"\\s*\\{"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "provider")
+        (string_lit) @name) @definition
     description: "Provider configurations"
     attack_vector:
       - "T1078"
       - "T1550"
-  - pattern: "locals\\s*\\{"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "locals")) @definition
     description: "Local value definitions"
     attack_vector:
       - "T1083"
       - "T1082"
-  - pattern: "arn:aws:iam::[0-9]*:root"
-    description: "AWS root account"
-    attack_vector:
-      - "T1078"
-      - "T1484"
-  - pattern: "arn:aws:iam::[0-9]*:"
-    description: "Cross-account access"
-    attack_vector:
-      - "T1078"
-      - "T1484"
 
 actions:
-  - pattern: "validation\\s*\\{"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "validation")) @definition
     description: "Input validation"
     attack_vector:
       - "T1070"
       - "T1027"
-  - pattern: "condition\\s*="
-    description: "Validation conditions"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "lifecycle")) @definition
+    description: "Lifecycle management"
     attack_vector:
-      - "T1070"
-      - "T1027"
-  - pattern: "error_message\\s*="
-    description: "Validation error messages"
-    attack_vector:
-      - "T1070"
-      - "T1027"
-  - pattern: "sensitive\\s*=\\s*true"
+      - "T1485"
+      - "T1490"
+  - reference: |
+      (attribute
+        (identifier) @attr_name (#eq? @attr_name "sensitive")
+        (expression
+          (literal_value) @value (#eq? @value "true"))) @attribute
     description: "Sensitive variable marking"
     attack_vector:
       - "T1552"
       - "T1078"
-  - pattern: "type\\s*=\\s*(string|number|bool|list|map|set|object|tuple)"
-    description: "Type constraints"
-    attack_vector:
-      - "T1070"
-      - "T1027"
-  - pattern: "encrypted\\s*=\\s*true"
+  - reference: |
+      (attribute
+        (identifier) @attr_name (#match? @attr_name "^(encrypted|encryption|encrypt)$")
+        (expression
+          (literal_value) @value (#eq? @value "true"))) @attribute
     description: "Encryption enablement"
     attack_vector:
       - "T1027"
       - "T1486"
-  - pattern: "versioning.*enabled\\s*=\\s*true"
-    description: "Versioning enablement"
-    attack_vector:
-      - "T1005"
-      - "T1083"
 
 resources:
-  - pattern: "(password|secret|key|token)\\s*=\\s*\"[^\"]+\""
-    description: "Hardcoded secrets"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "aws_s3")
+        (string_lit) @name) @definition
+    description: "AWS S3 bucket resources"
     attack_vector:
-      - "T1552"
-      - "T1078"
-  - pattern: "access_key\\s*=\\s*\"[^\"]+\""
-    description: "Hardcoded AWS access keys"
+      - "T1530"
+      - "T1537"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "aws_iam")
+        (string_lit) @name) @definition
+    description: "AWS IAM resources"
     attack_vector:
-      - "T1552"
       - "T1078"
-  - pattern: "cidr_blocks\\s*=\\s*\\[\\s*\"0\\.0\\.0\\.0/0\"\\s*\\]"
-    description: "Overly permissive network access"
+      - "T1484"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "aws_security_group")
+        (string_lit) @name) @definition
+    description: "AWS security group resources"
     attack_vector:
       - "T1190"
       - "T1021"
-  - pattern: "publicly_accessible\\s*=\\s*true"
-    description: "Public database"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "aws_db")
+        (string_lit) @name) @definition
+    description: "AWS RDS database resources"
     attack_vector:
       - "T1190"
       - "T1213"
-  - pattern: "encrypted\\s*=\\s*false"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "aws_instance")
+        (string_lit) @name) @definition
+    description: "AWS EC2 instance resources"
+    attack_vector:
+      - "T1078"
+      - "T1106"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "aws_lambda")
+        (string_lit) @name) @definition
+    description: "AWS Lambda function resources"
+    attack_vector:
+      - "T1059"
+      - "T1078"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "google_storage")
+        (string_lit) @name) @definition
+    description: "Google Cloud Storage resources"
+    attack_vector:
+      - "T1530"
+      - "T1537"
+  - definition: |
+      (block
+        (identifier) @block_type (#eq? @block_type "resource")
+        (string_lit) @resource_type (#match? @resource_type "azurerm_storage")
+        (string_lit) @name) @definition
+    description: "Azure storage resources"
+    attack_vector:
+      - "T1530"
+      - "T1537"
+  - reference: |
+      (attribute
+        (identifier) @attr_name (#match? @attr_name "cidr_block")
+        (expression) @value) @attribute
+    description: "Network CIDR configuration"
+    attack_vector:
+      - "T1190"
+      - "T1021"
+  - reference: |
+      (attribute
+        (identifier) @attr_name (#eq? @attr_name "publicly_accessible")
+        (expression
+          (literal_value) @value (#eq? @value "true"))) @attribute
+    description: "Publicly accessible resource"
+    attack_vector:
+      - "T1190"
+      - "T1213"
+  - reference: |
+      (attribute
+        (identifier) @attr_name (#match? @attr_name "^(encrypted|encryption)$")
+        (expression
+          (literal_value) @value (#eq? @value "false"))) @attribute
     description: "Unencrypted storage"
     attack_vector:
       - "T1005"
       - "T1213"
-  - pattern: "enable_logging\\s*=\\s*false"
+  - reference: |
+      (attribute
+        (identifier) @attr_name (#match? @attr_name "logging|enable_logging")
+        (expression
+          (literal_value) @value (#eq? @value "false"))) @attribute
     description: "Disabled logging"
     attack_vector:
       - "T1562"
       - "T1070"
-  - pattern: "backup_retention_period\\s*=\\s*0"
-    description: "No backup retention"
-    attack_vector:
-      - "T1485"
-      - "T1490"
-  - pattern: "deletion_protection\\s*=\\s*false"
-    description: "No deletion protection"
-    attack_vector:
-      - "T1485"
-      - "T1490"
