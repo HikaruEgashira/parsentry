@@ -536,6 +536,7 @@ impl SecurityRiskPatterns {
             (C, include_str!("patterns/c.yml")),
             (Cpp, include_str!("patterns/cpp.yml")),
             (Php, include_str!("patterns/php.yml")),
+            (Terraform, include_str!("patterns/terraform.yml")),
         ];
 
         for (lang, content) in languages {
