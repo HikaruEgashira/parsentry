@@ -3,6 +3,14 @@ name = "parsentry"
 version = "0.12.0"
 edition = "2024"
 default-run = "parsentry"
+description = "PAR-based security scanner using LLMs and static code analysis"
+license = "AGPL-3.0-only"
+repository = "https://github.com/HikaruEgashira/parsentry"
+homepage = "https://github.com/HikaruEgashira/parsentry"
+keywords = ["security", "scanner", "llm", "static-analysis", "vulnerability"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+authors = ["Hikaru Egashira"]
 
 
 [features]

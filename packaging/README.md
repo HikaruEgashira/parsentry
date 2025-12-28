@@ -2,6 +2,39 @@
 
 Once packages are submitted to the respective repositories, Parsentry will automatically appear on [repology.org](https://repology.org/project/parsentry/versions).
 
+#### crates.io
+
+##### Install (User)
+
+```bash
+# Install from crates.io
+cargo install parsentry
+
+# Install from GitHub (latest)
+cargo install --git https://github.com/HikaruEgashira/parsentry
+```
+
+##### Publish Package (Maintainer)
+
+1. Ensure you're logged in to crates.io
+   ```bash
+   cargo login
+   ```
+
+2. Verify package before publishing
+   ```bash
+   cargo publish --dry-run
+   ```
+
+3. Publish to crates.io
+   ```bash
+   cargo publish
+   ```
+
+4. Verify the package appears on [crates.io/crates/parsentry](https://crates.io/crates/parsentry)
+
+**Note**: Version bumps in `Cargo.toml` must be done before publishing. Once published, a version cannot be changed or deleted.
+
 #### Nix / NixOS
 
 ```bash
