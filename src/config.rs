@@ -77,6 +77,11 @@ impl ProviderConfig {
         self.provider_type == "claude-code"
     }
 
+    /// Check if Codex provider is enabled
+    pub fn is_codex(&self) -> bool {
+        self.provider_type == "codex"
+    }
+
     /// Get the Provider enum value
     pub fn get_provider(&self) -> Provider {
         match self.provider_type.as_str() {

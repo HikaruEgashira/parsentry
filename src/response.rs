@@ -119,6 +119,112 @@ impl ResponseExt for Response {
     }
 }
 
+/// Create a Response from CodexResponse.
+pub fn from_codex_response(
+    codex_response: parsentry_codex::CodexResponse,
+    file_path: String,
+) -> Response {
+    let vulnerability_types: Vec<VulnType> = codex_response
+        .vulnerability_types
+        .iter()
+        .map(|s| s.parse().unwrap())
+        .collect();
+
+    let par_analysis = ParAnalysis {
+        principals: codex_response
+            .par_analysis
+            .principals
+            .iter()
+            .map(|p| PrincipalInfo {
+                identifier: p.identifier.clone(),
+                trust_level: match p.trust_level.as_str() {
+                    "trusted" => TrustLevel::Trusted,
+                    "semi_trusted" => TrustLevel::SemiTrusted,
+                    _ => TrustLevel::Untrusted,
+                },
+                source_context: p.source_context.clone(),
+                risk_factors: p.risk_factors.clone(),
+            })
+            .collect(),
+        actions: codex_response
+            .par_analysis
+            .actions
+            .iter()
+            .map(|a| ActionInfo {
+                identifier: a.identifier.clone(),
+                security_function: a.security_function.clone(),
+                implementation_quality: match a.implementation_quality.as_str() {
+                    "adequate" => SecurityFunctionQuality::Adequate,
+                    "insufficient" => SecurityFunctionQuality::Insufficient,
+                    "missing" => SecurityFunctionQuality::Missing,
+                    _ => SecurityFunctionQuality::Bypassed,
+                },
+                detected_weaknesses: a.detected_weaknesses.clone(),
+                bypass_vectors: a.bypass_vectors.clone(),
+            })
+            .collect(),
+        resources: codex_response
+            .par_analysis
+            .resources
+            .iter()
+            .map(|r| ResourceInfo {
+                identifier: r.identifier.clone(),
+                sensitivity_level: match r.sensitivity_level.as_str() {
+                    "low" => SensitivityLevel::Low,
+                    "medium" => SensitivityLevel::Medium,
+                    "high" => SensitivityLevel::High,
+                    _ => SensitivityLevel::Critical,
+                },
+                operation_type: r.operation_type.clone(),
+                protection_mechanisms: r.protection_mechanisms.clone(),
+            })
+            .collect(),
+        policy_violations: codex_response
+            .par_analysis
+            .policy_violations
+            .iter()
+            .map(|pv| PolicyViolation {
+                rule_id: pv.rule_id.clone(),
+                rule_description: pv.rule_description.clone(),
+                violation_path: pv.violation_path.clone(),
+                severity: pv.severity.clone(),
+                confidence: pv.confidence,
+            })
+            .collect(),
+    };
+
+    let remediation_guidance = RemediationGuidance {
+        policy_enforcement: codex_response
+            .remediation_guidance
+            .policy_enforcement
+            .iter()
+            .map(|pe| RemediationAction {
+                component: pe.component.clone(),
+                required_improvement: pe.required_improvement.clone(),
+                specific_guidance: pe.specific_guidance.clone(),
+                priority: pe.priority.clone(),
+            })
+            .collect(),
+    };
+
+    let mut response = Response {
+        scratchpad: codex_response.scratchpad,
+        analysis: codex_response.analysis,
+        poc: codex_response.poc,
+        confidence_score: Response::normalize_confidence_score(codex_response.confidence_score),
+        vulnerability_types,
+        par_analysis,
+        remediation_guidance,
+        file_path: Some(file_path),
+        pattern_description: codex_response.pattern_description,
+        matched_source_code: codex_response.matched_source_code,
+        full_source_code: None,
+    };
+
+    response.sanitize();
+    response
+}
+
 /// Create a Response from ClaudeCodeResponse.
 pub fn from_claude_code_response(
     cc_response: parsentry_claude_code::ClaudeCodeResponse,

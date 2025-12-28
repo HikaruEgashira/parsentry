@@ -9,7 +9,7 @@ use crate::cli::args::{ScanArgs, validate_scan_args};
 use crate::cli::ui::{self, StatusPrinter, SummaryTable, SummaryRow};
 use crate::config::ParsentryConfig;
 use crate::repo::{RepoOps, clone_github_repo};
-use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
+use crate::response::{from_claude_code_response, from_codex_response, Response, ResponseExt, VulnType};
 use crate::mvra::{MvraScanner, MvraRepositoryResult, MvraResults};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
@@ -20,12 +20,13 @@ use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
 use parsentry_utils::FileClassifier;
 
-use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PromptBuilder, PatternContext};
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PromptBuilder as ClaudePromptBuilder, PatternContext as ClaudePatternContext};
+use parsentry_codex::{CodexConfig, CodexExecutor, PromptBuilder as CodexPromptBuilder, PatternContext as CodexPatternContext};
 
 /// Analyze a pattern using Claude Code CLI
 async fn analyze_with_claude_code(
     executor: &ClaudeCodeExecutor,
-    prompt_builder: &PromptBuilder,
+    prompt_builder: &ClaudePromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
     _working_dir: &PathBuf,
@@ -38,7 +39,7 @@ async fn analyze_with_claude_code(
     let content = tokio::fs::read_to_string(file_path).await?;
 
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
-    let pattern_context = PatternContext::new(
+    let pattern_context = ClaudePatternContext::new(
         &pattern_type_str,
         &pattern_match.pattern_config.description,
         &pattern_match.matched_text,
@@ -68,6 +69,56 @@ async fn analyze_with_claude_code(
             printer.error("Failed", &format!("{}: {}", file_name, e));
             error!("Claude Code execution error for {}: {}", file_path.display(), e);
             Err(anyhow::anyhow!("Claude Code failed: {}", e))
+        }
+    }
+}
+
+/// Analyze a pattern using Codex API
+async fn analyze_with_codex(
+    executor: &CodexExecutor,
+    prompt_builder: &CodexPromptBuilder,
+    file_path: &PathBuf,
+    pattern_match: &PatternMatch,
+    _working_dir: &PathBuf,
+    printer: &StatusPrinter,
+) -> Result<Option<Response>> {
+    let file_name = file_path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let content = tokio::fs::read_to_string(file_path).await?;
+
+    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
+    let pattern_context = CodexPatternContext::new(
+        &pattern_type_str,
+        &pattern_match.pattern_config.description,
+        &pattern_match.matched_text,
+    )
+    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
+
+    let prompt = prompt_builder.build_security_analysis_prompt(
+        file_path,
+        &content,
+        Some(&pattern_context),
+    );
+
+    let output = executor.execute_with_retry(&prompt, 2).await;
+
+    match output {
+        Ok(output) => {
+            info!("Codex succeeded for {}", file_path.display());
+            let mut response = from_codex_response(
+                output.response,
+                file_path.to_string_lossy().to_string(),
+            );
+            response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+            response.matched_source_code = Some(pattern_match.matched_text.clone());
+            Ok(Some(response))
+        }
+        Err(e) => {
+            printer.error("Failed", &format!("{}: {}", file_name, e));
+            error!("Codex execution error for {}: {}", file_path.display(), e);
+            Err(anyhow::anyhow!("Codex failed: {}", e))
         }
     }
 }
@@ -263,21 +314,28 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let debug = final_args.debug;
-    let use_claude_code = config.provider.is_claude_code();
+    let provider_type = config.provider.get_provider();
 
     let mut summary = AnalysisSummary::new();
 
     let progress_bar = ui::progress::create_bar(total as u64);
 
-    let max_concurrent = if use_claude_code {
-        progress_bar.set_message("analyzing with Claude Code");
-        config.provider.max_concurrent.min(10)
-    } else {
-        progress_bar.set_message("analyzing patterns");
-        config.provider.max_concurrent.min(50)
+    let max_concurrent = match provider_type {
+        crate::cli::args::Provider::ClaudeCode => {
+            progress_bar.set_message("analyzing with Claude Code");
+            config.provider.max_concurrent.min(10)
+        }
+        crate::cli::args::Provider::Codex => {
+            progress_bar.set_message("analyzing with Codex");
+            config.provider.max_concurrent.min(50)
+        }
+        crate::cli::args::Provider::Genai => {
+            progress_bar.set_message("analyzing patterns");
+            config.provider.max_concurrent.min(50)
+        }
     };
 
-    let claude_executor = if use_claude_code {
+    let claude_executor = if config.provider.is_claude_code() {
         let claude_path = config.provider.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
@@ -297,8 +355,33 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         None
     };
 
-    let prompt_builder = Arc::new(
-        PromptBuilder::new()
+    let codex_executor = if config.provider.is_codex() {
+        let log_dir = output_dir.as_ref().map(|d| d.join("codex_logs"));
+        let codex_config = CodexConfig {
+            working_dir: root_dir.as_ref().clone(),
+            log_dir: log_dir.clone(),
+            model: model.clone(),
+            max_concurrent: config.provider.max_concurrent.min(50),
+            timeout_secs: config.provider.timeout_secs,
+            enable_poc: config.provider.enable_poc,
+            ..CodexConfig::default()
+        };
+
+        printer.info("Mode", "Codex enabled");
+
+        Some(Arc::new(CodexExecutor::new(codex_config)?))
+    } else {
+        None
+    };
+
+    let claude_prompt_builder = Arc::new(
+        ClaudePromptBuilder::new()
+            .with_poc(config.provider.enable_poc)
+            .with_language(&final_args.language)
+    );
+
+    let codex_prompt_builder = Arc::new(
+        CodexPromptBuilder::new()
             .with_poc(config.provider.enable_poc)
             .with_language(&final_args.language)
     );
@@ -318,8 +401,10 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let messages = messages.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
-            let prompt_builder = prompt_builder.clone();
-            let use_claude_code = use_claude_code;
+            let codex_executor = codex_executor.clone();
+            let claude_prompt_builder = claude_prompt_builder.clone();
+            let codex_prompt_builder = codex_prompt_builder.clone();
+            let provider_type = provider_type;
             let printer = Arc::clone(&printer);
 
             async move {
@@ -340,75 +425,114 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                     println!("{}", "=".repeat(80));
                 }
 
-                // Choose analysis method based on mode
-                let analysis_result = if use_claude_code {
-                    if let Some(ref executor) = claude_executor {
-                        match analyze_with_claude_code(
-                            executor,
-                            &prompt_builder,
+                // Choose analysis method based on provider
+                let analysis_result = match provider_type {
+                    crate::cli::args::Provider::ClaudeCode => {
+                        if let Some(ref executor) = claude_executor {
+                            match analyze_with_claude_code(
+                                executor,
+                                &claude_prompt_builder,
+                                &file_path,
+                                &pattern_match,
+                                &_root_dir,
+                                &printer,
+                            )
+                            .await
+                            {
+                                Ok(Some(res)) => res,
+                                Ok(None) => {
+                                    info!("Claude Code returned None for {}", file_path.display());
+                                    progress_bar.inc(1);
+                                    return None;
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Claude Code {}: {}: {}",
+                                        messages
+                                            .get("analysis_failed")
+                                            .unwrap_or(&"Analysis failed"),
+                                        file_path.display(),
+                                        e
+                                    );
+                                    progress_bar.inc(1);
+                                    return None;
+                                }
+                            }
+                        } else {
+                            progress_bar.inc(1);
+                            return None;
+                        }
+                    }
+                    crate::cli::args::Provider::Codex => {
+                        if let Some(ref executor) = codex_executor {
+                            match analyze_with_codex(
+                                executor,
+                                &codex_prompt_builder,
+                                &file_path,
+                                &pattern_match,
+                                &_root_dir,
+                                &printer,
+                            )
+                            .await
+                            {
+                                Ok(Some(res)) => res,
+                                Ok(None) => {
+                                    info!("Codex returned None for {}", file_path.display());
+                                    progress_bar.inc(1);
+                                    return None;
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Codex {}: {}: {}",
+                                        messages
+                                            .get("analysis_failed")
+                                            .unwrap_or(&"Analysis failed"),
+                                        file_path.display(),
+                                        e
+                                    );
+                                    progress_bar.inc(1);
+                                    return None;
+                                }
+                            }
+                        } else {
+                            progress_bar.inc(1);
+                            return None;
+                        }
+                    }
+                    crate::cli::args::Provider::Genai => {
+                        match analyze_pattern(
                             &file_path,
                             &pattern_match,
-                            &_root_dir,
-                            &printer,
+                            &model,
+                            &files,
+                            verbosity,
+                            0,
+                            debug,
+                            &output_dir,
+                            api_base_url,
+                            &language,
                         )
                         .await
                         {
                             Ok(Some(res)) => res,
                             Ok(None) => {
-                                info!("Claude Code returned None for {}", file_path.display());
                                 progress_bar.inc(1);
                                 return None;
                             }
                             Err(e) => {
-                                error!(
-                                    "Claude Code {}: {}: {}",
-                                    messages
-                                        .get("analysis_failed")
-                                        .unwrap_or(&"Analysis failed"),
-                                    file_path.display(),
-                                    e
-                                );
+                                if verbosity > 0 {
+                                    println!(
+                                        "❌ {}: {}: {}",
+                                        messages
+                                            .get("analysis_failed")
+                                            .unwrap_or(&"Analysis failed"),
+                                        file_path.display(),
+                                        e
+                                    );
+                                }
                                 progress_bar.inc(1);
                                 return None;
                             }
-                        }
-                    } else {
-                        progress_bar.inc(1);
-                        return None;
-                    }
-                } else {
-                    match analyze_pattern(
-                        &file_path,
-                        &pattern_match,
-                        &model,
-                        &files,
-                        verbosity,
-                        0,
-                        debug,
-                        &output_dir,
-                        api_base_url,
-                        &language,
-                    )
-                    .await
-                    {
-                        Ok(Some(res)) => res,
-                        Ok(None) => {
-                            progress_bar.inc(1);
-                            return None;
-                        }
-                        Err(e) => {
-                            if verbosity > 0 {
-                                println!(
-                                    "❌ {}: {}: {}",
-                                    messages
-                                        .get("analysis_failed")
-                                        .unwrap_or(&"Analysis failed"),
-                                    file_path.display(),
-                                    e
-                                );
-                            }
-                            progress_bar.inc(1);
-                            return None;
                         }
                     }
                 };
@@ -579,7 +703,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         table.print();
     }
 
-    if use_claude_code {
+    if config.provider.is_claude_code() || config.provider.is_codex() {
         let success_count = filtered_summary.results.len();
         let high_confidence_count = filtered_summary.results.iter().filter(|r| r.response.confidence_score >= 70).count();
         printer.section("Summary");
@@ -828,17 +952,17 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let debug = final_args.debug;
-    let use_claude_code = config.provider.is_claude_code();
+    let provider_type = config.provider.get_provider();
 
     let mut summary = AnalysisSummary::new();
 
-    let max_concurrent = if use_claude_code {
-        config.provider.max_concurrent.min(10)
-    } else {
-        config.provider.max_concurrent.min(50)
+    let max_concurrent = match provider_type {
+        crate::cli::args::Provider::ClaudeCode => config.provider.max_concurrent.min(10),
+        crate::cli::args::Provider::Codex => config.provider.max_concurrent.min(50),
+        crate::cli::args::Provider::Genai => config.provider.max_concurrent.min(50),
     };
 
-    let claude_executor = if use_claude_code {
+    let claude_executor = if config.provider.is_claude_code() {
         let claude_path = config.provider.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
@@ -856,8 +980,31 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
         None
     };
 
-    let prompt_builder = Arc::new(
-        PromptBuilder::new()
+    let codex_executor = if config.provider.is_codex() {
+        let log_dir = output_dir.as_ref().map(|d| d.join("codex_logs"));
+        let codex_config = CodexConfig {
+            working_dir: root_dir.as_ref().clone(),
+            log_dir: log_dir.clone(),
+            model: model.clone(),
+            max_concurrent: config.provider.max_concurrent.min(50),
+            timeout_secs: config.provider.timeout_secs,
+            enable_poc: config.provider.enable_poc,
+            ..CodexConfig::default()
+        };
+
+        Some(Arc::new(CodexExecutor::new(codex_config)?))
+    } else {
+        None
+    };
+
+    let claude_prompt_builder = Arc::new(
+        ClaudePromptBuilder::new()
+            .with_poc(config.provider.enable_poc)
+            .with_language(&final_args.language)
+    );
+
+    let codex_prompt_builder = Arc::new(
+        CodexPromptBuilder::new()
             .with_poc(config.provider.enable_poc)
             .with_language(&final_args.language)
     );
@@ -875,47 +1022,71 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let debug = debug;
             let language = language.clone();
             let claude_executor = claude_executor.clone();
-            let prompt_builder = prompt_builder.clone();
-            let use_claude_code = use_claude_code;
+            let codex_executor = codex_executor.clone();
+            let claude_prompt_builder = claude_prompt_builder.clone();
+            let codex_prompt_builder = codex_prompt_builder.clone();
+            let provider_type = provider_type;
             let printer = Arc::clone(&printer);
 
             async move {
-                // Choose analysis method based on mode
-                let analysis_result = if use_claude_code {
-                    if let Some(ref executor) = claude_executor {
-                        match analyze_with_claude_code(
-                            executor,
-                            &prompt_builder,
+                // Choose analysis method based on provider
+                let analysis_result = match provider_type {
+                    crate::cli::args::Provider::ClaudeCode => {
+                        if let Some(ref executor) = claude_executor {
+                            match analyze_with_claude_code(
+                                executor,
+                                &claude_prompt_builder,
+                                &file_path,
+                                &pattern_match,
+                                &_root_dir,
+                                &printer,
+                            )
+                            .await
+                            {
+                                Ok(Some(res)) => res,
+                                Ok(None) | Err(_) => return None,
+                            }
+                        } else {
+                            return None;
+                        }
+                    }
+                    crate::cli::args::Provider::Codex => {
+                        if let Some(ref executor) = codex_executor {
+                            match analyze_with_codex(
+                                executor,
+                                &codex_prompt_builder,
+                                &file_path,
+                                &pattern_match,
+                                &_root_dir,
+                                &printer,
+                            )
+                            .await
+                            {
+                                Ok(Some(res)) => res,
+                                Ok(None) | Err(_) => return None,
+                            }
+                        } else {
+                            return None;
+                        }
+                    }
+                    crate::cli::args::Provider::Genai => {
+                        match analyze_pattern(
                             &file_path,
                             &pattern_match,
-                            &_root_dir,
-                            &printer,
+                            &model,
+                            &files,
+                            0,
+                            0,
+                            debug,
+                            &output_dir,
+                            api_base_url,
+                            &language,
                         )
                         .await
                         {
                             Ok(Some(res)) => res,
                             Ok(None) | Err(_) => return None,
                         }
-                    } else {
-                        return None;
-                    }
-                } else {
-                    match analyze_pattern(
-                        &file_path,
-                        &pattern_match,
-                        &model,
-                        &files,
-                        verbosity,
-                        0,
-                        debug,
-                        &output_dir,
-                        api_base_url,
-                        &language,
-                    )
-                    .await
-                    {
-                        Ok(Some(res)) => res,
-                        Ok(None) | Err(_) => return None,
                     }
                 };
 
