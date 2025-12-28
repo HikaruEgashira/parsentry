@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use log::warn;
 use parsentry_core::Language;
 use parsentry_parser::{CodeParser, Definition};
+use parsentry_reports::prompts::vuln_specific;
 use parsentry_utils::{FileClassifier, FileDiscovery};
 
 fn create_pattern_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
@@ -234,12 +235,17 @@ async fn generate_custom_patterns_impl(
         let mut all_patterns = definition_patterns;
         all_patterns.extend(reference_patterns);
 
-        // Deduplicate patterns based on function name
         let mut unique_patterns = Vec::new();
-        let mut seen_functions = std::collections::HashSet::new();
+        let mut seen: std::collections::HashSet<(String, Option<String>, String)> =
+            std::collections::HashSet::new();
 
         for pattern in all_patterns {
-            if seen_functions.insert(pattern.function_name.clone()) {
+            let key = (
+                pattern.function_name.clone(),
+                pattern.pattern_type.clone(),
+                pattern.query_type.clone(),
+            );
+            if seen.insert(key) {
                 unique_patterns.push(pattern);
             }
         }
@@ -302,16 +308,39 @@ async fn analyze_all_definitions_at_once(
         ));
     }
 
-    let prompt = format!(
-        r#"Analyze these function definitions from a {:?} codebase and determine which represent security patterns.
+    let vuln_info_map = vuln_specific::get_vuln_specific_info();
+    let vuln_hints: String = vuln_info_map
+        .iter()
+        .map(|(vt, info)| {
+            format!(
+                "- {:?}: {} (Bypasses: {})",
+                vt,
+                info.prompt,
+                info.bypasses.join(", ")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
-{}
+    let prompt = format!(
+        r#"Analyze these function definitions from a {language:?} codebase and determine which represent security patterns.
+
+{definitions_context}
+
+## Vulnerability-Specific Detection Hints
+
+Consider these vulnerability types when classifying functions:
+{vuln_hints}
+
+## Classification Guidelines
 
 For each function, determine if it should be classified as:
-- "principals": Sources that act as data entry points and should be treated as tainted/untrusted
-- "actions": Functions that perform validation, sanitization, authorization, or security operations
-- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
+- "principals": Sources that act as data entry points and should be treated as tainted/untrusted (e.g., request.args, user input, file reads, external API responses)
+- "actions": Functions that perform validation, sanitization, authorization, or security operations (e.g., input validation, SQL escaping, authentication checks)
+- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources (e.g., SQL queries, file writes, command execution)
 - "none": Not a security pattern
+
+## Output Format
 
 Generate tree-sitter queries instead of regex patterns. Use the following format:
 
@@ -335,8 +364,8 @@ Return a JSON object with this structure:
   ]
 }}
 
-All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
-        language, definitions_context, language
+All fields are required for each object. Use proper tree-sitter query syntax for the {language:?} language."#,
+        language = language, definitions_context = definitions_context, vuln_hints = vuln_hints
     );
 
     let response_schema = serde_json::json!({
@@ -447,16 +476,39 @@ async fn analyze_all_references_at_once(
         ));
     }
 
-    let prompt = format!(
-        r#"Analyze these function references/calls from a {:?} codebase and determine which represent calls to security-sensitive functions.
+    let vuln_info_map = vuln_specific::get_vuln_specific_info();
+    let vuln_hints: String = vuln_info_map
+        .iter()
+        .map(|(vt, info)| {
+            format!(
+                "- {:?}: {} (Bypasses: {})",
+                vt,
+                info.prompt,
+                info.bypasses.join(", ")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
-{}
+    let prompt = format!(
+        r#"Analyze these function references/calls from a {language:?} codebase and determine which represent calls to security-sensitive functions.
+
+{references_context}
+
+## Vulnerability-Specific Detection Hints
+
+Consider these vulnerability types when classifying function calls:
+{vuln_hints}
+
+## Classification Guidelines
 
 For each function reference, determine if it should be classified as:
-- "principals": Functions that return or provide untrusted data that attackers can control
-- "actions": Functions that perform security processing (validation, sanitization, authorization)
-- "resources": Functions that operate on attack targets (files, databases, system commands, DOM)
+- "principals": Functions that return or provide untrusted data that attackers can control (e.g., request.get(), input(), file read operations)
+- "actions": Functions that perform security processing (validation, sanitization, authorization) (e.g., escape(), validate(), authenticate())
+- "resources": Functions that operate on attack targets (files, databases, system commands, DOM) (e.g., execute(), open(), query(), innerHTML)
 - "none": Not a security-relevant call
+
+## Output Format
 
 Return a JSON object with this structure:
 
@@ -474,8 +526,8 @@ Return a JSON object with this structure:
   ]
 }}
 
-All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
-        language, references_context, language
+All fields are required for each object. Use proper tree-sitter query syntax for the {language:?} language."#,
+        language = language, references_context = references_context, vuln_hints = vuln_hints
     );
 
     let response_schema = serde_json::json!({

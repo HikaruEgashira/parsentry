@@ -282,6 +282,158 @@ impl ClaudeCodeExecutor {
     pub fn available_permits(&self) -> usize {
         self.semaphore.available_permits()
     }
+
+    /// Execute a prompt and return raw result string without parsing as ClaudeCodeResponse.
+    /// Useful for pattern generation that uses custom JSON structures.
+    pub async fn execute_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
+
+        debug!("Acquired semaphore permit, executing Claude Code (raw mode)");
+
+        timeout(
+            Duration::from_secs(self.timeout_secs),
+            self.spawn_claude_process_raw(prompt),
+        )
+        .await
+        .map_err(|_| ClaudeCodeError::Timeout {
+            timeout_secs: self.timeout_secs,
+        })?
+    }
+
+    /// Execute raw with retry logic.
+    pub async fn execute_raw_with_retry(
+        &self,
+        prompt: &str,
+        max_retries: u32,
+    ) -> Result<String, ClaudeCodeError> {
+        let mut last_error = None;
+
+        for attempt in 0..=max_retries {
+            if attempt > 0 {
+                let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
+                warn!("Retry attempt {} after {:?}", attempt, delay);
+                tokio::time::sleep(delay).await;
+            }
+
+            match self.execute_raw(prompt).await {
+                Ok(output) => {
+                    info!("Claude Code raw execution succeeded on attempt {}", attempt + 1);
+                    return Ok(output);
+                }
+                Err(e) => {
+                    error!("Claude Code raw execution failed: {}", e);
+                    last_error = Some(e);
+                }
+            }
+        }
+
+        Err(last_error.unwrap())
+    }
+
+    /// Spawn the Claude Code process and return raw result string.
+    async fn spawn_claude_process_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
+        let mut cmd = Command::new(&self.claude_path);
+
+        cmd.arg("--print")
+            .arg("--output-format")
+            .arg("json");
+
+        // Add model argument if specified
+        if let Some(ref model) = self.model {
+            cmd.arg("--model").arg(model);
+        }
+
+        cmd.current_dir(&self.working_dir)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+
+        debug!("Spawning Claude Code process (raw): {:?}", cmd);
+
+        let mut child = cmd.spawn().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
+            } else {
+                ClaudeCodeError::SpawnError(e)
+            }
+        })?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(ClaudeCodeError::SpawnError)?;
+            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
+        }
+
+        let output = child.wait_with_output().await.map_err(ClaudeCodeError::SpawnError)?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(ClaudeCodeError::NonZeroExit {
+                code: output.status.code().unwrap_or(-1),
+                stderr,
+            });
+        }
+
+        let raw_output = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr_output = String::from_utf8_lossy(&output.stderr).to_string();
+
+        // Save log if log_dir is configured
+        if let Some(ref log_dir) = self.log_dir {
+            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
+            let log_file = log_dir.join(format!("claude_code_raw_{}.log", timestamp));
+            let log_content = format!(
+                "=== Claude Code Raw Execution Log ===\n\
+                 Timestamp: {}\n\
+                 Working Dir: {}\n\
+                 \n\
+                 === STDOUT ===\n\
+                 {}\n\
+                 \n\
+                 === STDERR ===\n\
+                 {}\n",
+                chrono::Utc::now().to_rfc3339(),
+                self.working_dir.display(),
+                raw_output,
+                stderr_output
+            );
+            if let Err(e) = std::fs::write(&log_file, &log_content) {
+                warn!("Failed to write Claude Code log: {}", e);
+            } else {
+                info!("Claude Code log saved: {}", log_file.display());
+            }
+        }
+
+        if !stderr_output.is_empty() {
+            warn!("Claude Code stderr: {}", stderr_output);
+        }
+
+        if raw_output.is_empty() {
+            debug!("Claude Code returned empty output");
+            return Err(ClaudeCodeError::ParseError("Empty output from Claude Code".to_string()));
+        }
+
+        // Parse JSON to extract just the result field
+        let parsed: serde_json::Value = serde_json::from_str(&raw_output)
+            .map_err(|e| ClaudeCodeError::ParseError(format!("JSON parse error: {}", e)))?;
+
+        let result_str = if let Some(result) = parsed.get("result") {
+            if let Some(s) = result.as_str() {
+                s.to_string()
+            } else {
+                result.to_string()
+            }
+        } else {
+            raw_output
+        };
+
+        Ok(result_str)
+    }
 }
 
 #[cfg(test)]
