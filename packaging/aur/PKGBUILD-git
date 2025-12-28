@@ -1,0 +1,35 @@
+# Maintainer: Hikaru Egashira
+# AUR Package: parsentry-git (build from source)
+#
+# For users who want to build from the latest git commit
+
+pkgname=parsentry-git
+pkgver=0.12.0
+pkgrel=1
+pkgdesc="PAR-based security scanner using LLMs and static code analysis (git version)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/HikaruEgashira/parsentry"
+license=('AGPL-3.0-only')
+makedepends=('cargo' 'git' 'pkg-config')
+depends=('openssl')
+provides=('parsentry')
+conflicts=('parsentry' 'parsentry-bin')
+source=("${pkgname}::git+https://github.com/HikaruEgashira/parsentry.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "${pkgname}"
+    git describe --tags --long 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' || \
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    cd "${pkgname}"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo build --release --locked
+}
+
+package() {
+    cd "${pkgname}"
+    install -Dm755 "target/release/parsentry" "${pkgdir}/usr/bin/parsentry"
+}

@@ -1,0 +1,26 @@
+# Maintainer: Hikaru Egashira
+# AUR Package: parsentry-bin
+#
+# Submit to AUR:
+#   1. Clone: git clone ssh://aur@aur.archlinux.org/parsentry-bin.git
+#   2. Copy this PKGBUILD and .SRCINFO to the cloned directory
+#   3. Generate .SRCINFO: makepkg --printsrcinfo > .SRCINFO
+#   4. Commit and push
+
+pkgname=parsentry-bin
+pkgver=0.12.0
+pkgrel=1
+pkgdesc="PAR-based security scanner using LLMs and static code analysis"
+arch=('x86_64')
+url="https://github.com/HikaruEgashira/parsentry"
+license=('AGPL-3.0-only')
+depends=('openssl')
+provides=('parsentry')
+conflicts=('parsentry')
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/HikaruEgashira/parsentry/releases/download/v${pkgver}/parsentry-x86_64-unknown-linux-gnu.tar.gz")
+# sha256sums=('UPDATE_WITH_ACTUAL_SHA256')
+sha256sums=('SKIP')
+
+package() {
+    install -Dm755 "parsentry" "${pkgdir}/usr/bin/parsentry"
+}
