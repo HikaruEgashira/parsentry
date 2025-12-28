@@ -169,14 +169,14 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     if final_args.generate_patterns {
         printer.status("Generating", "custom security patterns");
 
-        if config.claude_code.enabled {
-            let claude_path = config.claude_code.path.clone()
+        if config.provider.is_claude_code() {
+            let claude_path = config.provider.path.clone()
                 .unwrap_or_else(|| PathBuf::from("claude"));
             let log_dir = final_args.output_dir.as_ref().map(|d| d.join("claude_code_logs"));
             let claude_config = parsentry_claude_code::ClaudeCodeConfig {
                 claude_path,
-                max_concurrent: config.claude_code.max_concurrent.min(10),
-                timeout_secs: config.claude_code.timeout_secs,
+                max_concurrent: config.provider.max_concurrent.min(10),
+                timeout_secs: config.provider.timeout_secs,
                 enable_poc: false,
                 working_dir: root_dir.clone(),
                 log_dir,
@@ -263,7 +263,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let debug = final_args.debug;
-    let use_claude_code = config.claude_code.enabled;
+    let use_claude_code = config.provider.is_claude_code();
 
     let mut summary = AnalysisSummary::new();
 
@@ -271,20 +271,20 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let max_concurrent = if use_claude_code {
         progress_bar.set_message("analyzing with Claude Code");
-        config.claude_code.max_concurrent.min(10)
+        config.provider.max_concurrent.min(10)
     } else {
         progress_bar.set_message("analyzing patterns");
-        50
+        config.provider.max_concurrent.min(50)
     };
 
     let claude_executor = if use_claude_code {
-        let claude_path = config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        let claude_path = config.provider.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
-            max_concurrent: config.claude_code.max_concurrent.min(10),
-            timeout_secs: config.claude_code.timeout_secs,
-            enable_poc: config.claude_code.enable_poc,
+            max_concurrent: config.provider.max_concurrent.min(10),
+            timeout_secs: config.provider.timeout_secs,
+            enable_poc: config.provider.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir: log_dir.clone(),
             model: Some("haiku".to_string()),
@@ -299,7 +299,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let prompt_builder = Arc::new(
         PromptBuilder::new()
-            .with_poc(config.claude_code.enable_poc)
+            .with_poc(config.provider.enable_poc)
             .with_language(&final_args.language)
     );
 
@@ -828,24 +828,24 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let debug = final_args.debug;
-    let use_claude_code = config.claude_code.enabled;
+    let use_claude_code = config.provider.is_claude_code();
 
     let mut summary = AnalysisSummary::new();
 
     let max_concurrent = if use_claude_code {
-        config.claude_code.max_concurrent.min(10)
+        config.provider.max_concurrent.min(10)
     } else {
-        50
+        config.provider.max_concurrent.min(50)
     };
 
     let claude_executor = if use_claude_code {
-        let claude_path = config.claude_code.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        let claude_path = config.provider.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
-            max_concurrent: config.claude_code.max_concurrent.min(10),
-            timeout_secs: config.claude_code.timeout_secs,
-            enable_poc: config.claude_code.enable_poc,
+            max_concurrent: config.provider.max_concurrent.min(10),
+            timeout_secs: config.provider.timeout_secs,
+            enable_poc: config.provider.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir: log_dir.clone(),
             model: Some("haiku".to_string()),
@@ -858,7 +858,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
 
     let prompt_builder = Arc::new(
         PromptBuilder::new()
-            .with_poc(config.claude_code.enable_poc)
+            .with_poc(config.provider.enable_poc)
             .with_language(&final_args.language)
     );
 

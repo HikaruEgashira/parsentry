@@ -1,8 +1,18 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 use parsentry_reports::validate_output_directory;
+
+/// LLM provider for analysis
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum Provider {
+    /// Use GenAI API (OpenAI-compatible endpoints)
+    #[default]
+    Genai,
+    /// Use Claude Code CLI for analysis
+    ClaudeCode,
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -57,21 +67,21 @@ pub struct Args {
     #[arg(long)]
     pub generate_config: bool,
 
-    /// Use Claude Code CLI for analysis instead of API
-    #[arg(long)]
-    pub claude_code: bool,
+    /// LLM provider to use for analysis
+    #[arg(long, value_enum, default_value = "genai", global = true)]
+    pub provider: Provider,
 
-    /// Path to claude CLI binary
+    /// Path to claude CLI binary (only used with --provider claude-code)
     #[arg(long)]
-    pub claude_code_path: Option<PathBuf>,
+    pub provider_path: Option<PathBuf>,
 
-    /// Maximum concurrent Claude Code processes (max 10)
+    /// Maximum concurrent processes for provider (Claude Code: max 10, GenAI: max 50)
     #[arg(long, default_value = "10")]
-    pub claude_code_concurrency: usize,
+    pub provider_concurrency: usize,
 
-    /// Enable PoC execution in Claude Code
+    /// Enable PoC execution (only used with --provider claude-code)
     #[arg(long)]
-    pub claude_code_poc: bool,
+    pub provider_poc: bool,
 
     /// Enable multi-repository variant analysis (MVRA)
     #[arg(long)]
@@ -159,9 +169,9 @@ pub enum Commands {
         #[arg(long, default_value = "5")]
         max_repos: usize,
 
-        /// Use Claude Code CLI for pattern generation
-        #[arg(long)]
-        claude_code: bool,
+        /// LLM provider for pattern generation (overrides global --provider)
+        #[arg(long, value_enum)]
+        provider: Option<Provider>,
     },
 
 }
@@ -182,10 +192,10 @@ pub struct ScanArgs {
     pub language: String,
     pub config: Option<PathBuf>,
     pub generate_config: bool,
-    pub claude_code: bool,
-    pub claude_code_path: Option<PathBuf>,
-    pub claude_code_concurrency: usize,
-    pub claude_code_poc: bool,
+    pub provider: Provider,
+    pub provider_path: Option<PathBuf>,
+    pub provider_concurrency: usize,
+    pub provider_poc: bool,
     pub mvra: bool,
     pub mvra_search_query: Option<String>,
     pub mvra_code_query: Option<String>,
@@ -211,10 +221,10 @@ impl From<&Args> for ScanArgs {
             language: args.language.clone(),
             config: args.config.clone(),
             generate_config: args.generate_config,
-            claude_code: args.claude_code,
-            claude_code_path: args.claude_code_path.clone(),
-            claude_code_concurrency: args.claude_code_concurrency,
-            claude_code_poc: args.claude_code_poc,
+            provider: args.provider,
+            provider_path: args.provider_path.clone(),
+            provider_concurrency: args.provider_concurrency,
+            provider_poc: args.provider_poc,
             mvra: args.mvra,
             mvra_search_query: args.mvra_search_query.clone(),
             mvra_code_query: args.mvra_code_query.clone(),
@@ -284,7 +294,7 @@ pub struct GenerateArgs {
     pub verbosity: u8,
     pub debug: bool,
     pub api_base_url: Option<String>,
-    pub claude_code: bool,
+    pub provider: Provider,
 }
 
 pub fn validate_generate_args(args: &GenerateArgs) -> Result<()> {
