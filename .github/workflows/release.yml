@@ -102,18 +102,102 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      - name: Generate SHA256 checksums
+        run: |
+          cd artifacts
+          echo "# SHA256 Checksums for v${{ steps.version.outputs.version }}" > ../checksums.txt
+          echo "" >> ../checksums.txt
+          for dir in */; do
+            for file in "$dir"*; do
+              if [ -f "$file" ]; then
+                sha256sum "$file" >> ../checksums.txt
+              fi
+            done
+          done
+          cat ../checksums.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/*/*
+          files: |
+            artifacts/*/*
+            checksums.txt
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-packaging:
+    name: Update Packaging Files
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download release assets and calculate hashes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+
+          # Download and calculate SHA256 for each platform
+          declare -A HASHES
+
+          for target in "x86_64-unknown-linux-gnu" "aarch64-apple-darwin" "x86_64-pc-windows-msvc"; do
+            if [[ "$target" == *"windows"* ]]; then
+              ext="zip"
+            else
+              ext="tar.gz"
+            fi
+
+            url="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/parsentry-${target}.${ext}"
+            if curl -fsSL -o "parsentry-${target}.${ext}" "$url" 2>/dev/null; then
+              HASHES[$target]=$(sha256sum "parsentry-${target}.${ext}" | cut -d' ' -f1)
+              echo "${target}: ${HASHES[$target]}"
+            fi
+          done
+
+          # Update Homebrew formula
+          sed -i "s|version \".*\"|version \"${VERSION}\"|" packaging/homebrew/parsentry.rb
+          if [ -n "${HASHES[aarch64-apple-darwin]}" ]; then
+            sed -i "s|sha256 \"PLACEHOLDER_AARCH64_APPLE_DARWIN\"|sha256 \"${HASHES[aarch64-apple-darwin]}\"|" packaging/homebrew/parsentry.rb
+            sed -i "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${HASHES[aarch64-apple-darwin]}\"|" packaging/homebrew/parsentry.rb
+          fi
+          if [ -n "${HASHES[x86_64-unknown-linux-gnu]}" ]; then
+            sed -i "s|sha256 \"PLACEHOLDER_X86_64_LINUX_GNU\"|sha256 \"${HASHES[x86_64-unknown-linux-gnu]}\"|" packaging/homebrew/parsentry.rb
+          fi
+
+          # Update AUR PKGBUILD
+          if [ -n "${HASHES[x86_64-unknown-linux-gnu]}" ]; then
+            sed -i "s|pkgver=.*|pkgver=${VERSION}|" packaging/aur/PKGBUILD
+            sed -i "s|sha256sums=('SKIP')|sha256sums=('${HASHES[x86_64-unknown-linux-gnu]}')|" packaging/aur/PKGBUILD
+            sed -i "s|sha256sums=('[a-f0-9]\{64\}')|sha256sums=('${HASHES[x86_64-unknown-linux-gnu]}')|" packaging/aur/PKGBUILD
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packaging/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update packaging SHA256 for v${{ needs.release.outputs.version }}"
+            git push
+          fi
