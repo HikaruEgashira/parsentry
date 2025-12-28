@@ -68,54 +68,62 @@ impl StreamingDisplay {
         if let (Ok(mut displayed), Ok(mut buffer)) =
             (self.displayed_lines.lock(), self.line_buffer.lock())
         {
-            self.clear_lines(*displayed);
+            if *displayed > 0 {
+                let mut output = String::new();
+                for _ in 0..*displayed {
+                    output.push_str(ansi::CURSOR_UP);
+                    output.push_str(ansi::CURSOR_START);
+                    output.push_str(ansi::CLEAR_LINE);
+                }
+                let _ = stderr().write_all(output.as_bytes());
+                let _ = stderr().flush();
+            }
             *displayed = 0;
             buffer.clear();
         }
     }
 
-    /// Clear n lines from the terminal
-    fn clear_lines(&self, n: usize) {
-        let mut out = stderr();
-        for _ in 0..n {
-            let _ = write!(out, "{}{}{}", ansi::CURSOR_UP, ansi::CURSOR_START, ansi::CLEAR_LINE);
-        }
-        let _ = out.flush();
-    }
-
-    /// Add a line to the scroll buffer and display it
+    /// Add a line to the scroll buffer and display it (thread-safe, atomic output)
     fn add_line_with_scroll(&self, line: String) {
         if let (Ok(mut buffer), Ok(mut displayed)) =
             (self.line_buffer.lock(), self.displayed_lines.lock())
         {
-            self.clear_lines(*displayed);
-
             if buffer.len() >= MAX_DISPLAY_LINES {
                 buffer.pop_front();
             }
             buffer.push_back(line);
 
-            self.redraw_buffer(&buffer);
+            // Build entire output as single string for atomic write
+            let mut output = String::new();
+
+            // Clear previous lines
+            for _ in 0..*displayed {
+                output.push_str(ansi::CURSOR_UP);
+                output.push_str(ansi::CURSOR_START);
+                output.push_str(ansi::CLEAR_LINE);
+            }
+
+            // Redraw buffer
+            for line in buffer.iter() {
+                let truncated = if line.len() > 80 {
+                    format!("{}...", &line[..77])
+                } else {
+                    line.clone()
+                };
+                if self.use_colors {
+                    output.push_str(&format!("{}{}{}\n", colors::DIM, truncated, colors::RESET));
+                } else {
+                    output.push_str(&truncated);
+                    output.push('\n');
+                }
+            }
+
+            // Single atomic write
+            let _ = stderr().write_all(output.as_bytes());
+            let _ = stderr().flush();
+
             *displayed = buffer.len();
         }
-    }
-
-    /// Redraw the entire buffer
-    fn redraw_buffer(&self, buffer: &VecDeque<String>) {
-        let mut out = stderr();
-        for line in buffer.iter() {
-            let truncated = if line.len() > 80 {
-                format!("{}...", &line[..77])
-            } else {
-                line.clone()
-            };
-            if self.use_colors {
-                let _ = writeln!(out, "{}{}{}", colors::DIM, truncated, colors::RESET);
-            } else {
-                let _ = writeln!(out, "{}", truncated);
-            }
-        }
-        let _ = out.flush();
     }
 }
 
