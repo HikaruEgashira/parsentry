@@ -68,7 +68,7 @@ impl RootCommand {
                 repos,
                 search,
                 max_repos,
-                claude_code,
+                provider: cmd_provider,
             }) => {
                 let generate_args = GenerateArgs {
                     target: target.clone(),
@@ -82,7 +82,7 @@ impl RootCommand {
                     verbosity: args.verbosity,
                     debug: args.debug,
                     api_base_url: args.api_base_url.clone(),
-                    claude_code: *claude_code,
+                    provider: cmd_provider.unwrap_or(args.provider),
                 };
 
                 validate_generate_args(&generate_args)?;

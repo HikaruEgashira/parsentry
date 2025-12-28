@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::cli::args::ScanArgs;
+use crate::cli::args::{Provider, ScanArgs};
 use crate::mvra::MvraConfig;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -30,35 +30,60 @@ pub struct ParsentryConfig {
     pub call_graph: CallGraphConfigToml,
 
     #[serde(default)]
-    pub claude_code: ClaudeCodeConfigToml,
+    pub provider: ProviderConfig,
 
     #[serde(default)]
     pub mvra: MvraConfig,
 }
 
+/// Provider configuration for LLM analysis
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ClaudeCodeConfigToml {
-    #[serde(default)]
-    pub enabled: bool,
+pub struct ProviderConfig {
+    /// Provider type: "genai" (default) or "claude-code"
+    #[serde(default = "default_provider_type")]
+    pub provider_type: String,
 
+    /// Path to provider binary (for claude-code)
     pub path: Option<PathBuf>,
 
-    #[serde(default = "default_claude_code_max_concurrent")]
+    /// Maximum concurrent processes
+    #[serde(default = "default_provider_max_concurrent")]
     pub max_concurrent: usize,
 
-    #[serde(default = "default_claude_code_timeout")]
+    /// Timeout in seconds (for claude-code)
+    #[serde(default = "default_provider_timeout")]
     pub timeout_secs: u64,
 
+    /// Enable PoC execution (for claude-code)
     #[serde(default)]
     pub enable_poc: bool,
 }
 
-fn default_claude_code_max_concurrent() -> usize {
+fn default_provider_type() -> String {
+    "genai".to_string()
+}
+
+fn default_provider_max_concurrent() -> usize {
     10
 }
 
-fn default_claude_code_timeout() -> u64 {
+fn default_provider_timeout() -> u64 {
     300
+}
+
+impl ProviderConfig {
+    /// Check if Claude Code provider is enabled
+    pub fn is_claude_code(&self) -> bool {
+        self.provider_type == "claude-code"
+    }
+
+    /// Get the Provider enum value
+    pub fn get_provider(&self) -> Provider {
+        match self.provider_type.as_str() {
+            "claude-code" => Provider::ClaudeCode,
+            _ => Provider::Genai,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -225,13 +250,13 @@ impl Default for CallGraphConfigToml {
     }
 }
 
-impl Default for ClaudeCodeConfigToml {
+impl Default for ProviderConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
+            provider_type: default_provider_type(),
             path: None,
-            max_concurrent: default_claude_code_max_concurrent(),
-            timeout_secs: default_claude_code_timeout(),
+            max_concurrent: default_provider_max_concurrent(),
+            timeout_secs: default_provider_timeout(),
             enable_poc: false,
         }
     }
@@ -247,7 +272,7 @@ impl Default for ParsentryConfig {
             repo: RepoConfig::default(),
             generation: GenerationConfig::default(),
             call_graph: CallGraphConfigToml::default(),
-            claude_code: ClaudeCodeConfigToml::default(),
+            provider: ProviderConfig::default(),
             mvra: MvraConfig::default(),
         }
     }
@@ -311,9 +336,10 @@ max_depth = 10
 detect_cycles = false
 security_focus = false
 
-[claude_code]
-enabled = false
-# path = "/usr/local/bin/claude"
+[provider]
+# Provider type: "genai" (default) or "claude-code"
+provider_type = "genai"
+# path = "/usr/local/bin/claude"  # Only for claude-code
 max_concurrent = 10
 timeout_secs = 300
 enable_poc = false
@@ -491,17 +517,22 @@ use_cache = true
             self.generation.generate_patterns = args.generate_patterns;
         }
 
-        if args.claude_code {
-            self.claude_code.enabled = true;
+        match args.provider {
+            Provider::ClaudeCode => {
+                self.provider.provider_type = "claude-code".to_string();
+            }
+            Provider::Genai => {
+                self.provider.provider_type = "genai".to_string();
+            }
         }
-        if let Some(ref path) = args.claude_code_path {
-            self.claude_code.path = Some(path.clone());
+        if let Some(ref path) = args.provider_path {
+            self.provider.path = Some(path.clone());
         }
-        if args.claude_code_concurrency != default_claude_code_max_concurrent() {
-            self.claude_code.max_concurrent = args.claude_code_concurrency.min(10);
+        if args.provider_concurrency != default_provider_max_concurrent() {
+            self.provider.max_concurrent = args.provider_concurrency.min(50);
         }
-        if args.claude_code_poc {
-            self.claude_code.enable_poc = true;
+        if args.provider_poc {
+            self.provider.enable_poc = true;
         }
 
         Ok(())
@@ -584,10 +615,10 @@ use_cache = true
             language: self.analysis.language.clone(),
             config: None,
             generate_config: false,
-            claude_code: self.claude_code.enabled,
-            claude_code_path: self.claude_code.path.clone(),
-            claude_code_concurrency: self.claude_code.max_concurrent,
-            claude_code_poc: self.claude_code.enable_poc,
+            provider: self.provider.get_provider(),
+            provider_path: self.provider.path.clone(),
+            provider_concurrency: self.provider.max_concurrent,
+            provider_poc: self.provider.enable_poc,
             mvra: false,
             mvra_search_query: self.mvra.search_query.clone(),
             mvra_code_query: self.mvra.code_query.clone(),
