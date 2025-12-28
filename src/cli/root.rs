@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use crate::cli::args::{Args, Commands, ScanArgs, GraphArgs, GenerateArgs, validate_scan_args, validate_graph_args, validate_generate_args};
-use crate::cli::commands::{run_scan_command, run_graph_command, run_generate_command};
+use crate::cli::commands::{run_scan_command, run_graph_command, run_generate_command, handle_cache_command};
 use crate::config::ParsentryConfig;
 
 pub struct RootCommand;
@@ -87,6 +87,15 @@ impl RootCommand {
 
                 validate_generate_args(&generate_args)?;
                 run_generate_command(generate_args).await
+            },
+            Some(Commands::Cache { action }) => {
+                // Load config for cache settings
+                let config = if let Some(config_path) = &args.config {
+                    ParsentryConfig::load_from_file(config_path)?
+                } else {
+                    ParsentryConfig::load_with_merged_configs()?
+                };
+                handle_cache_command(action, &config).await
             },
             None => {
                 // Default to scan command for backward compatibility

@@ -34,6 +34,9 @@ pub struct ParsentryConfig {
 
     #[serde(default)]
     pub mvra: MvraConfig,
+
+    #[serde(default)]
+    pub cache: CacheConfig,
 }
 
 /// Provider configuration for LLM analysis
@@ -89,6 +92,133 @@ impl ProviderConfig {
                 );
                 Provider::Genai
             }
+        }
+    }
+}
+
+/// Cache configuration for LLM responses
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct CacheConfig {
+    /// Enable cache
+    #[serde(default = "default_cache_enabled")]
+    pub enabled: bool,
+
+    /// Cache directory
+    #[serde(default = "default_cache_directory")]
+    pub directory: PathBuf,
+
+    /// Cleanup configuration
+    #[serde(default)]
+    pub cleanup: CacheCleanupConfig,
+}
+
+fn default_cache_enabled() -> bool {
+    true
+}
+
+fn default_cache_directory() -> PathBuf {
+    PathBuf::from(".parsentry/cache")
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_cache_enabled(),
+            directory: default_cache_directory(),
+            cleanup: CacheCleanupConfig::default(),
+        }
+    }
+}
+
+/// Cache cleanup configuration
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct CacheCleanupConfig {
+    /// Cleanup trigger type
+    #[serde(default = "default_cleanup_trigger")]
+    pub trigger: String,
+
+    /// Periodic cleanup interval in days
+    #[serde(default = "default_periodic_days")]
+    pub periodic_days: Option<usize>,
+
+    /// Size limit in MB
+    #[serde(default = "default_size_limit_mb")]
+    pub size_limit_mb: Option<usize>,
+
+    /// Maximum age in days
+    #[serde(default = "default_max_age_days")]
+    pub max_age_days: usize,
+
+    /// Maximum idle days
+    #[serde(default = "default_max_idle_days")]
+    pub max_idle_days: usize,
+
+    /// Remove version mismatch entries
+    #[serde(default = "default_remove_version_mismatch")]
+    pub remove_version_mismatch: bool,
+}
+
+fn default_cleanup_trigger() -> String {
+    "combined".to_string()
+}
+
+fn default_periodic_days() -> Option<usize> {
+    Some(7)
+}
+
+fn default_size_limit_mb() -> Option<usize> {
+    Some(500)
+}
+
+fn default_max_age_days() -> usize {
+    90
+}
+
+fn default_max_idle_days() -> usize {
+    30
+}
+
+fn default_remove_version_mismatch() -> bool {
+    true
+}
+
+impl Default for CacheCleanupConfig {
+    fn default() -> Self {
+        Self {
+            trigger: default_cleanup_trigger(),
+            periodic_days: default_periodic_days(),
+            size_limit_mb: default_size_limit_mb(),
+            max_age_days: default_max_age_days(),
+            max_idle_days: default_max_idle_days(),
+            remove_version_mismatch: default_remove_version_mismatch(),
+        }
+    }
+}
+
+impl CacheConfig {
+    /// Convert to parsentry-cache types
+    pub fn to_cleanup_policy(&self) -> parsentry_cache::CleanupPolicy {
+        parsentry_cache::CleanupPolicy {
+            max_cache_size_mb: self.cleanup.size_limit_mb.unwrap_or(500),
+            max_age_days: self.cleanup.max_age_days,
+            max_idle_days: self.cleanup.max_idle_days,
+            remove_version_mismatch: self.cleanup.remove_version_mismatch,
+        }
+    }
+
+    pub fn to_cleanup_trigger(&self) -> parsentry_cache::CleanupTrigger {
+        match self.cleanup.trigger.as_str() {
+            "periodic" => parsentry_cache::CleanupTrigger::Periodic {
+                days: self.cleanup.periodic_days.unwrap_or(7),
+            },
+            "on_size_limit" => parsentry_cache::CleanupTrigger::OnSizeLimit {
+                threshold_mb: self.cleanup.size_limit_mb.unwrap_or(500),
+            },
+            "manual" => parsentry_cache::CleanupTrigger::Manual,
+            _ => parsentry_cache::CleanupTrigger::Combined {
+                periodic_days: self.cleanup.periodic_days,
+                size_limit_mb: self.cleanup.size_limit_mb,
+            },
         }
     }
 }
@@ -281,6 +411,7 @@ impl Default for ParsentryConfig {
             call_graph: CallGraphConfigToml::default(),
             provider: ProviderConfig::default(),
             mvra: MvraConfig::default(),
+            cache: CacheConfig::default(),
         }
     }
 }
@@ -843,6 +974,9 @@ use_cache = true
             mvra_max_repos: self.mvra.max_repos,
             mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
             mvra_no_cache: !self.mvra.use_cache,
+            cache: self.cache.enabled,
+            no_cache: !self.cache.enabled,
+            cache_only: false,
         }
     }
 }

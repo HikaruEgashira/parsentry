@@ -106,6 +106,18 @@ pub struct Args {
     /// Disable cache in MVRA (always clone fresh)
     #[arg(long = "no-cache")]
     pub mvra_no_cache: bool,
+
+    /// Enable LLM response cache
+    #[arg(long, global = true)]
+    pub cache: bool,
+
+    /// Disable LLM response cache
+    #[arg(long, global = true, conflicts_with = "cache")]
+    pub no_cache: bool,
+
+    /// Use cache only (fail if cache miss)
+    #[arg(long, global = true)]
+    pub cache_only: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -174,6 +186,43 @@ pub enum Commands {
         provider: Option<Provider>,
     },
 
+    /// Manage LLM response cache
+    Cache {
+        #[command(subcommand)]
+        action: CacheAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CacheAction {
+    /// Clean up stale cache entries
+    Clean {
+        /// Clean all entries (default: stale only)
+        #[arg(long)]
+        all: bool,
+
+        /// Maximum age in days (override config)
+        #[arg(long)]
+        max_age: Option<usize>,
+
+        /// Maximum idle days (override config)
+        #[arg(long)]
+        max_idle: Option<usize>,
+
+        /// Dry run (show what would be deleted)
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Show cache statistics
+    Stats,
+
+    /// Clear all cache entries
+    Clear {
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -202,6 +251,9 @@ pub struct ScanArgs {
     pub mvra_max_repos: usize,
     pub mvra_cache_dir: Option<PathBuf>,
     pub mvra_no_cache: bool,
+    pub cache: bool,
+    pub no_cache: bool,
+    pub cache_only: bool,
 }
 
 impl From<&Args> for ScanArgs {
@@ -231,6 +283,9 @@ impl From<&Args> for ScanArgs {
             mvra_max_repos: args.mvra_max_repos,
             mvra_cache_dir: args.mvra_cache_dir.clone(),
             mvra_no_cache: args.mvra_no_cache,
+            cache: args.cache,
+            no_cache: args.no_cache,
+            cache_only: args.cache_only,
         }
     }
 }
