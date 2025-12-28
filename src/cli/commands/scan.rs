@@ -3,26 +3,27 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
-use tracing::{info, error};
+use tracing::{error, info};
 
-use crate::cli::args::{ScanArgs, validate_scan_args};
-use crate::cli::ui::{self, StatusPrinter, SummaryTable, SummaryRow};
+use crate::cli::args::{validate_scan_args, ScanArgs};
+use crate::cli::streaming_ui::StreamingDisplay;
+use crate::cli::ui::{self, StatusPrinter, SummaryRow, SummaryTable};
 use crate::config::ParsentryConfig;
-use crate::repo::{RepoOps, clone_github_repo};
+use crate::mvra::{MvraRepositoryResult, MvraResults, MvraScanner};
+use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
+use crate::repo::{clone_github_repo, RepoOps};
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
-use crate::mvra::{MvraScanner, MvraRepositoryResult, MvraResults};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
-
-use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
-use parsentry_i18n::{Language, get_messages};
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder};
+use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
-use parsentry_reports::{AnalysisSummary, generate_output_filename, generate_pattern_specific_filename, SarifReport};
+use parsentry_reports::{
+    generate_output_filename, generate_pattern_specific_filename, AnalysisSummary, SarifReport,
+};
 use parsentry_utils::FileClassifier;
 
-use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PromptBuilder, PatternContext};
-
-/// Analyze a pattern using Claude Code CLI
+/// Analyze a pattern using Claude Code CLI with streaming output
 async fn analyze_with_claude_code(
     executor: &ClaudeCodeExecutor,
     prompt_builder: &PromptBuilder,
@@ -30,8 +31,10 @@ async fn analyze_with_claude_code(
     pattern_match: &PatternMatch,
     _working_dir: &PathBuf,
     printer: &StatusPrinter,
+    verbose: bool,
 ) -> Result<Option<Response>> {
-    let file_name = file_path.file_name()
+    let file_name = file_path
+        .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
@@ -45,13 +48,17 @@ async fn analyze_with_claude_code(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    let prompt = prompt_builder.build_security_analysis_prompt(
-        file_path,
-        &content,
-        Some(&pattern_context),
-    );
+    let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
 
-    let output = executor.execute_with_retry(&prompt, 2).await;
+    // Create streaming display callback
+    // Show tokens only in very verbose mode (verbosity > 1)
+    let streaming_display = StreamingDisplay::new(verbose);
+    streaming_display.set_current_file(&file_name);
+
+    // Use streaming execution for real-time output
+    let output = executor
+        .execute_streaming_with_retry(&prompt, &streaming_display, 2)
+        .await;
 
     match output {
         Ok(output) => {
@@ -66,7 +73,11 @@ async fn analyze_with_claude_code(
         }
         Err(e) => {
             printer.error("Failed", &format!("{}: {}", file_name, e));
-            error!("Claude Code execution error for {}: {}", file_path.display(), e);
+            error!(
+                "Claude Code execution error for {}: {}",
+                file_path.display(),
+                e
+            );
             Err(anyhow::anyhow!("Claude Code failed: {}", e))
         }
     }
@@ -350,6 +361,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &pattern_match,
                             &_root_dir,
                             &printer,
+                            verbosity > 1, // Show tokens in very verbose mode
                         )
                         .await
                         {
@@ -878,6 +890,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
+            let verbosity = verbosity;
 
             async move {
                 // Choose analysis method based on mode
@@ -890,6 +903,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &pattern_match,
                             &_root_dir,
                             &printer,
+                            verbosity > 1, // Show tokens in very verbose mode
                         )
                         .await
                         {
