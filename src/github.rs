@@ -44,7 +44,26 @@ impl GitHubSearchClient {
 
     /// Get GitHub token from git credential helper
     fn get_token_from_credential_helper() -> Option<String> {
-        let mut child = Command::new("git")
+        // Security: Verify git binary path to prevent PATH manipulation attacks
+        let git_path = std::process::Command::new("which")
+            .arg("git")
+            .output()
+            .ok()
+            .and_then(|o| {
+                if o.status.success() {
+                    String::from_utf8(o.stdout).ok().map(|s| s.trim().to_string())
+                } else {
+                    None
+                }
+            })?;
+
+        // Verify git is from a trusted location
+        if !git_path.starts_with("/usr/") && !git_path.starts_with("/opt/") {
+            debug!("git binary not in trusted location: {}", git_path);
+            return None;
+        }
+
+        let mut child = Command::new(&git_path)
             .args(["credential", "fill"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

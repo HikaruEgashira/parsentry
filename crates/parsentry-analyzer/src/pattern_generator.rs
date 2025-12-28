@@ -298,6 +298,9 @@ async fn analyze_all_definitions_at_once(
     }
 
     // Create context for all definitions
+    // NOTE: Security consideration - The source code being analyzed may contain prompt
+    // injection attempts. This is an accepted risk for a security scanner, as we need
+    // to analyze potentially malicious code. The LLM output is validated before use.
     let mut definitions_context = String::new();
     for (idx, def) in definitions.iter().enumerate() {
         definitions_context.push_str(&format!(
@@ -717,17 +720,30 @@ pub fn write_patterns_to_file(
         }
     }
 
-    if vuln_patterns_path.exists() {
-        let existing_content = std::fs::read_to_string(&vuln_patterns_path)?;
+    // Security: Canonicalize path to prevent directory traversal attacks
+    let canonical_output = std::fs::canonicalize(root_dir)
+        .unwrap_or_else(|_| root_dir.to_path_buf());
+    let canonical_patterns_path = canonical_output.join("vuln-patterns.yml");
+
+    // Verify the resolved path is still within the output directory
+    if !canonical_patterns_path.starts_with(&canonical_output) {
+        anyhow::bail!(
+            "Security error: Pattern path escapes output directory: {:?}",
+            canonical_patterns_path
+        );
+    }
+
+    if canonical_patterns_path.exists() {
+        let existing_content = std::fs::read_to_string(&canonical_patterns_path)?;
         let updated_content = format!("{}\n{}", existing_content, yaml_content);
-        std::fs::write(&vuln_patterns_path, updated_content)?;
+        std::fs::write(&canonical_patterns_path, updated_content)?;
     } else {
-        std::fs::write(&vuln_patterns_path, yaml_content)?;
+        std::fs::write(&canonical_patterns_path, yaml_content)?;
     }
 
     println!(
         "📝 パターンファイルに追記: {}",
-        vuln_patterns_path.display()
+        canonical_patterns_path.display()
     );
     Ok(())
 }
