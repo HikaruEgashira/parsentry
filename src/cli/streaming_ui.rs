@@ -30,7 +30,6 @@ pub struct StreamingDisplay {
     current_file: Mutex<Option<String>>,
     line_buffer: Mutex<VecDeque<String>>,
     displayed_lines: Mutex<usize>,
-    show_tokens: bool,
     use_colors: bool,
 }
 
@@ -38,14 +37,13 @@ impl StreamingDisplay {
     /// Create a new streaming display
     ///
     /// # Arguments
-    /// * `show_tokens` - If true, display token-by-token output (very verbose)
-    pub fn new(show_tokens: bool) -> Self {
+    /// * `_show_tokens` - Reserved for future use (token-by-token output)
+    pub fn new(_show_tokens: bool) -> Self {
         Self {
             printer: StatusPrinter::new(),
             current_file: Mutex::new(None),
             line_buffer: Mutex::new(VecDeque::with_capacity(MAX_DISPLAY_LINES)),
             displayed_lines: Mutex::new(0),
-            show_tokens,
             use_colors: colors_enabled(),
         }
     }
@@ -119,35 +117,19 @@ impl StreamingDisplay {
         }
         let _ = out.flush();
     }
-
-    fn format_tool_name(&self, name: &str) -> String {
-        if self.use_colors {
-            format!("{}{}{}", colors::CYAN, name, colors::RESET)
-        } else {
-            name.to_string()
-        }
-    }
 }
 
 impl StreamCallback for StreamingDisplay {
     fn on_event(&self, event: StreamEvent) {
         match event {
-            StreamEvent::Text(text) => {
-                if self.show_tokens {
-                    eprint!("{}", text);
-                    let _ = stderr().flush();
-                }
+            StreamEvent::Text(_) => {
+                // Token streaming is handled via Progress events
             }
             StreamEvent::ToolUse { name, .. } => {
-                let tool = self.format_tool_name(&name);
-                self.printer.info("Tool", &format!("Using {}", tool));
+                self.add_line_with_scroll(format!("Tool Using {}", name));
             }
-            StreamEvent::ToolComplete { name, success } => {
-                if success {
-                    self.printer.success("Done", &name);
-                } else {
-                    self.printer.warning("Failed", &name);
-                }
+            StreamEvent::ToolComplete { .. } => {
+                // Tool completion is silent - next ToolUse will replace it
             }
             StreamEvent::Progress(msg) => {
                 let trimmed = msg.trim();
@@ -164,6 +146,7 @@ impl StreamCallback for StreamingDisplay {
                 }
             }
             StreamEvent::Error(err) => {
+                self.clear_display();
                 self.printer.error("Error", &err);
             }
         }
@@ -262,7 +245,7 @@ mod tests {
     #[test]
     fn test_streaming_display_creation() {
         let display = StreamingDisplay::new(false);
-        assert!(!display.show_tokens);
+        assert!(display.line_buffer.lock().unwrap().is_empty());
     }
 
     #[test]
