@@ -129,6 +129,41 @@ pub enum Commands {
         #[arg(long)]
         security_focus: bool,
     },
+
+    /// Generate security patterns from source code
+    Generate {
+        /// Target directory or GitHub repository (owner/repo) to analyze
+        target: String,
+
+        /// Output directory for generated patterns
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Run benchmark validation after generation
+        #[arg(long)]
+        benchmark: bool,
+
+        /// Path to benchmark.json for validation
+        #[arg(long)]
+        benchmark_file: Option<PathBuf>,
+
+        /// Additional GitHub repositories to analyze (owner/repo format)
+        #[arg(long = "repo", short = 'r')]
+        repos: Vec<String>,
+
+        /// GitHub search query to find repositories (e.g., "language:python flask")
+        #[arg(long)]
+        search: Option<String>,
+
+        /// Maximum number of repositories to analyze from search
+        #[arg(long, default_value = "5")]
+        max_repos: usize,
+
+        /// Use Claude Code CLI for pattern generation
+        #[arg(long)]
+        claude_code: bool,
+    },
+
 }
 
 #[derive(Debug, Clone)]
@@ -231,6 +266,54 @@ pub fn validate_graph_args(args: &GraphArgs) -> Result<()> {
     match args.format.to_lowercase().as_str() {
         "json" | "dot" | "mermaid" | "csv" => {},
         _ => return Err(anyhow::anyhow!("Unsupported format: {}", args.format)),
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct GenerateArgs {
+    pub target: String,
+    pub output: Option<PathBuf>,
+    pub benchmark: bool,
+    pub benchmark_file: Option<PathBuf>,
+    pub repos: Vec<String>,
+    pub search: Option<String>,
+    pub max_repos: usize,
+    pub model: String,
+    pub verbosity: u8,
+    pub debug: bool,
+    pub api_base_url: Option<String>,
+    pub claude_code: bool,
+}
+
+pub fn validate_generate_args(args: &GenerateArgs) -> Result<()> {
+    // Check if target is a GitHub repo (owner/repo format) or local path
+    let is_github_repo = args.target.contains('/') && !args.target.starts_with('/') && !args.target.starts_with('.');
+
+    if !is_github_repo {
+        let target_path = PathBuf::from(&args.target);
+        if !target_path.exists() {
+            return Err(anyhow::anyhow!(
+                "Target directory does not exist: {}",
+                args.target
+            ));
+        }
+        if !target_path.is_dir() {
+            return Err(anyhow::anyhow!(
+                "Target must be a directory: {}",
+                args.target
+            ));
+        }
+    }
+
+    if let Some(benchmark_file) = &args.benchmark_file {
+        if !benchmark_file.exists() {
+            return Err(anyhow::anyhow!(
+                "Benchmark file does not exist: {}",
+                benchmark_file.display()
+            ));
+        }
     }
 
     Ok(())

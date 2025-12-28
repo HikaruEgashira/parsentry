@@ -4,13 +4,37 @@
 
 use anyhow::Result;
 use serde::Deserialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use parsentry_analyzer::{filter_files_by_size, write_patterns_to_file, PatternClassification};
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor};
 use parsentry_core::Language;
 use parsentry_parser::Definition;
 use parsentry_utils::{FileClassifier, FileDiscovery};
+
+/// Find the validation script path
+fn find_validation_script() -> PathBuf {
+    // Try relative to current working directory first
+    let cwd_script = PathBuf::from("scripts/validate-patterns.sh");
+    if cwd_script.exists() {
+        return std::fs::canonicalize(&cwd_script).unwrap_or(cwd_script);
+    }
+
+    // Try relative to executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            // cargo run: target/debug/parsentry -> project root
+            let project_root = exe_dir.join("../../..");
+            let script = project_root.join("scripts/validate-patterns.sh");
+            if script.exists() {
+                return std::fs::canonicalize(&script).unwrap_or(script);
+            }
+        }
+    }
+
+    // Fallback
+    PathBuf::from("scripts/validate-patterns.sh")
+}
 
 /// Result of pattern generation process
 #[derive(Debug, Clone)]
@@ -135,6 +159,7 @@ pub async fn generate_custom_patterns_with_claude_code(
                 &executor,
                 &lang_definitions,
                 *language,
+                root_dir,
             )
             .await?;
         }
@@ -144,6 +169,7 @@ pub async fn generate_custom_patterns_with_claude_code(
                 &executor,
                 &lang_references,
                 *language,
+                root_dir,
             )
             .await?;
         }
@@ -181,118 +207,276 @@ pub async fn generate_custom_patterns_with_claude_code(
     })
 }
 
+/// Maximum number of definitions to analyze in a single batch
+const MAX_DEFINITIONS_PER_BATCH: usize = 30;
+
 async fn analyze_definitions_with_claude_code(
     executor: &ClaudeCodeExecutor,
     definitions: &[&Definition],
     language: Language,
+    working_dir: &Path,
 ) -> Result<Vec<PatternClassification>> {
     if definitions.is_empty() {
         return Ok(Vec::new());
     }
 
-    let mut definitions_context = String::new();
-    for (idx, def) in definitions.iter().enumerate() {
-        definitions_context.push_str(&format!(
-            "Definition {}: {}\nCode:\n{}\n\n",
-            idx + 1,
-            def.name,
-            def.source
-        ));
-    }
+    // Chunk definitions into smaller batches
+    let chunks: Vec<_> = definitions.chunks(MAX_DEFINITIONS_PER_BATCH).collect();
+    log::info!(
+        "Splitting {} definitions into {} batches",
+        definitions.len(),
+        chunks.len()
+    );
 
-    let prompt = format!(
-        r#"Analyze these function definitions from a {:?} codebase and determine which represent security patterns.
+    let mut all_patterns = Vec::new();
 
-{}
+    for (batch_idx, chunk) in chunks.iter().enumerate() {
+        log::debug!(
+            "Processing definition batch {}/{} ({} items)",
+            batch_idx + 1,
+            chunks.len(),
+            chunk.len()
+        );
 
-For each function, determine if it should be classified as:
-- "principals": Sources that act as data entry points and should be treated as tainted/untrusted
-- "actions": Functions that perform validation, sanitization, authorization, or security operations
-- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources
-- "none": Not a security pattern
+        let mut definitions_context = String::new();
+        for (idx, def) in chunk.iter().enumerate() {
+            definitions_context.push_str(&format!(
+                "Definition {}: {}\nCode:\n{}\n\n",
+                idx + 1,
+                def.name,
+                def.source
+            ));
+        }
 
-Generate tree-sitter queries instead of regex patterns. Use the following format:
+        let output_file = working_dir
+            .join(format!(".parsentry-patterns-def-{}.json", batch_idx));
+        let output_path = output_file.to_string_lossy();
 
-IMPORTANT: For definition patterns, add @function capture to the entire function_definition.
-For reference patterns, add @call capture to the entire call_expression or @attribute capture to the entire attribute access.
-This ensures we capture the complete context, not just the identifier names.
+        let _ = std::fs::remove_file(&output_file);
 
-Return a JSON object with this structure:
+        let script_path = find_validation_script();
+        let script_path_str = script_path.to_string_lossy();
 
+        let prompt = format!(
+            r#"TASK: Analyze function definitions for security patterns. Write JSON, validate with script, fix errors.
+
+LANGUAGE: {language:?}
+
+DEFINITIONS:
+{definitions_context}
+
+CLASSIFICATION RULES:
+- "principals": Data entry points (user input, request data, environment vars)
+- "actions": Security controls (validation, sanitization, auth checks)
+- "resources": Sensitive operations (file/DB/network access, command execution)
+- "none": Not security-relevant
+
+STEP 1: Write JSON to {output_path}
 {{
   "patterns": [
     {{
       "classification": "principals|actions|resources|none",
-      "function_name": "function_name",
+      "function_name": "exact_function_name",
       "query_type": "definition",
       "query": "(function_definition name: (identifier) @name (#eq? @name \"function_name\")) @function",
-      "description": "Brief description of what this pattern detects",
-      "reasoning": "Why this function fits this classification",
-      "attack_vector": ["T1234", "T5678"]
+      "description": "What this pattern detects",
+      "reasoning": "Classification rationale"
     }}
   ]
 }}
 
-All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
-        language, definitions_context, language
-    );
+STEP 2: Run validation script:
+bash {script_path} {output_path}
 
-    let output = executor.execute_with_retry(&prompt, 2).await?;
-    parse_pattern_response(&output.response.analysis)
+STEP 3: If validation fails, fix the errors and rewrite the JSON file.
+Repeat STEP 2 and STEP 3 until validation passes.
+
+REQUIREMENTS:
+- All queries must have balanced parentheses
+- All queries must contain capture names (@name, @function, etc)
+- classification must be one of: principals, actions, resources, none
+- query_type must be: definition
+- Include ALL functions in patterns array"#,
+            language = language,
+            definitions_context = definitions_context,
+            output_path = output_path,
+            script_path = script_path_str
+        );
+
+        match executor.execute_raw_with_retry(&prompt, 2).await {
+            Ok(_) => {
+                // Read the output file
+                match std::fs::read_to_string(&output_file) {
+                    Ok(content) => {
+                        match parse_pattern_response(&content) {
+                            Ok(patterns) => {
+                                log::debug!("Batch {}: {} patterns found", batch_idx + 1, patterns.len());
+                                all_patterns.extend(patterns);
+                            }
+                            Err(e) => {
+                                log::warn!("Batch {} parse failed: {}", batch_idx + 1, e);
+                            }
+                        }
+                        // Clean up
+                        let _ = std::fs::remove_file(&output_file);
+                    }
+                    Err(e) => {
+                        log::warn!("Batch {} output file not found: {}", batch_idx + 1, e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("Batch {} execution failed: {}", batch_idx + 1, e);
+            }
+        }
+    }
+
+    Ok(all_patterns)
 }
+
+/// Maximum number of references to analyze (skip if too many)
+const MAX_REFERENCES_TOTAL: usize = 500;
+const MAX_REFERENCES_PER_BATCH: usize = 50;
 
 async fn analyze_references_with_claude_code(
     executor: &ClaudeCodeExecutor,
     references: &[&Definition],
     language: Language,
+    working_dir: &Path,
 ) -> Result<Vec<PatternClassification>> {
     if references.is_empty() {
         return Ok(Vec::new());
     }
 
-    let mut references_context = String::new();
-    for (idx, ref_def) in references.iter().enumerate() {
-        references_context.push_str(&format!(
-            "Reference {}: {}\nCode:\n{}\n\n",
-            idx + 1,
-            ref_def.name,
-            ref_def.source
-        ));
+    // Skip if too many references - focus on definitions which are more important
+    if references.len() > MAX_REFERENCES_TOTAL {
+        log::warn!(
+            "Skipping {} references (exceeds limit of {})",
+            references.len(),
+            MAX_REFERENCES_TOTAL
+        );
+        return Ok(Vec::new());
     }
 
-    let prompt = format!(
-        r#"Analyze these function references/calls from a {:?} codebase and determine which represent calls to security-sensitive functions.
+    // Deduplicate references by name to reduce noise
+    let mut unique_refs: std::collections::HashMap<String, &Definition> =
+        std::collections::HashMap::new();
+    for ref_def in references {
+        unique_refs.entry(ref_def.name.clone()).or_insert(ref_def);
+    }
+    let unique_refs: Vec<_> = unique_refs.values().cloned().collect();
 
-{}
+    log::info!(
+        "Analyzing {} unique references (from {} total)",
+        unique_refs.len(),
+        references.len()
+    );
 
-For each function reference, determine if it should be classified as:
-- "principals": Functions that return or provide untrusted data that attackers can control
-- "actions": Functions that perform security processing (validation, sanitization, authorization)
-- "resources": Functions that operate on attack targets (files, databases, system commands, DOM)
-- "none": Not a security-relevant call
+    let chunks: Vec<_> = unique_refs.chunks(MAX_REFERENCES_PER_BATCH).collect();
+    let mut all_patterns = Vec::new();
 
-Return a JSON object with this structure:
+    for (batch_idx, chunk) in chunks.iter().enumerate() {
+        log::debug!(
+            "Processing reference batch {}/{} ({} items)",
+            batch_idx + 1,
+            chunks.len(),
+            chunk.len()
+        );
 
+        let mut references_context = String::new();
+        for (idx, ref_def) in chunk.iter().enumerate() {
+            references_context.push_str(&format!(
+                "Reference {}: {}\nCode:\n{}\n\n",
+                idx + 1,
+                ref_def.name,
+                ref_def.source
+            ));
+        }
+
+        let output_file = working_dir
+            .join(format!(".parsentry-patterns-ref-{}.json", batch_idx));
+        let output_path = output_file.to_string_lossy();
+
+        let _ = std::fs::remove_file(&output_file);
+
+        let script_path = find_validation_script();
+        let script_path_str = script_path.to_string_lossy();
+
+        let prompt = format!(
+            r#"TASK: Analyze function call references for security patterns. Write JSON, validate with script, fix errors.
+
+LANGUAGE: {language:?}
+
+REFERENCES:
+{references_context}
+
+CLASSIFICATION RULES:
+- "principals": Functions returning untrusted/user-controlled data
+- "actions": Security processing functions (validation, sanitization, auth)
+- "resources": Sensitive operation targets (file, DB, network, DOM, exec)
+- "none": Not security-relevant
+
+STEP 1: Write JSON to {output_path}
 {{
   "patterns": [
     {{
       "classification": "principals|actions|resources|none",
-      "function_name": "function_name",
+      "function_name": "exact_function_name",
       "query_type": "reference",
       "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\")) @call",
-      "description": "Brief description of what this pattern detects",
-      "reasoning": "Why this function call fits this classification",
-      "attack_vector": ["T1234", "T5678"]
+      "description": "What this pattern detects",
+      "reasoning": "Classification rationale"
     }}
   ]
 }}
 
-All fields are required for each object. Use proper tree-sitter query syntax for the {:?} language."#,
-        language, references_context, language
-    );
+STEP 2: Run validation script:
+bash {script_path} {output_path}
 
-    let output = executor.execute_with_retry(&prompt, 2).await?;
-    parse_pattern_response(&output.response.analysis)
+STEP 3: If validation fails, fix the errors and rewrite the JSON file.
+Repeat STEP 2 and STEP 3 until validation passes.
+
+REQUIREMENTS:
+- All queries must have balanced parentheses
+- All queries must contain capture names (@name, @call, etc)
+- classification must be one of: principals, actions, resources, none
+- query_type must be: reference
+- Include ALL functions in patterns array"#,
+            language = language,
+            references_context = references_context,
+            output_path = output_path,
+            script_path = script_path_str
+        );
+
+        match executor.execute_raw_with_retry(&prompt, 2).await {
+            Ok(_) => {
+                // Read the output file
+                match std::fs::read_to_string(&output_file) {
+                    Ok(content) => {
+                        match parse_pattern_response(&content) {
+                            Ok(patterns) => {
+                                log::debug!("Batch {}: {} patterns found", batch_idx + 1, patterns.len());
+                                all_patterns.extend(patterns);
+                            }
+                            Err(e) => {
+                                log::warn!("Batch {} parse failed: {}", batch_idx + 1, e);
+                            }
+                        }
+                        // Clean up
+                        let _ = std::fs::remove_file(&output_file);
+                    }
+                    Err(e) => {
+                        log::warn!("Batch {} output file not found: {}", batch_idx + 1, e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("Batch {} execution failed: {}", batch_idx + 1, e);
+            }
+        }
+    }
+
+    Ok(all_patterns)
 }
 
 fn parse_pattern_response(analysis: &str) -> Result<Vec<PatternClassification>> {
@@ -309,10 +493,23 @@ fn parse_pattern_response(analysis: &str) -> Result<Vec<PatternClassification>> 
         query: String,
         description: String,
         reasoning: String,
+        #[serde(default)]
         attack_vector: Vec<String>,
     }
 
-    let json_str = if let Some(start) = analysis.find('{') {
+    log::debug!("Raw response length: {} bytes", analysis.len());
+    log::debug!("Raw response preview: {}", &analysis[..analysis.len().min(500)]);
+
+    // Try to extract JSON from markdown code blocks first
+    let json_str = if let Some(json_start) = analysis.find("```json") {
+        let content_start = json_start + 7;
+        let remaining = &analysis[content_start..];
+        if let Some(json_end) = remaining.find("```") {
+            remaining[..json_end].trim()
+        } else {
+            analysis
+        }
+    } else if let Some(start) = analysis.find('{') {
         if let Some(end) = analysis.rfind('}') {
             &analysis[start..=end]
         } else {
@@ -322,8 +519,11 @@ fn parse_pattern_response(analysis: &str) -> Result<Vec<PatternClassification>> 
         analysis
     };
 
+    log::debug!("Extracted JSON preview: {}", &json_str[..json_str.len().min(300)]);
+
     let response: BatchAnalysisResponse = serde_json::from_str(json_str).map_err(|e| {
-        log::debug!("Failed response preview: {}", &analysis[..analysis.len().min(200)]);
+        log::error!("Failed to parse response. Error: {}", e);
+        log::error!("Extracted JSON: {}", json_str);
         anyhow::anyhow!("Failed to parse Claude Code response: {}", e)
     })?;
 
