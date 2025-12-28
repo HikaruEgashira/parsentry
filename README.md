@@ -40,10 +40,13 @@ Download the latest release for your platform from [GitHub Releases](https://git
 # Analyze a GitHub repository
 parsentry owner/repository
 
+# Analyze with Claude Code CLI
+parsentry owner/repository --provider claude-code
+
 # Analyze a local directory
 parsentry /path/to/code
 
-# generate pattern
+# Generate security patterns
 parsentry owner/repository --generate-patterns
 ```
 
@@ -64,31 +67,34 @@ parsentry owner/repository --generate-patterns
                 │
         P A R S E N T R Y
                 │
-             v0.9.2
+             v0.12.0
 
 Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
 
 Commands:
-  graph  Generate call graphs from source code
-  help   Print this message or the help of the given subcommand(s)
+  graph     Generate call graphs from source code
+  generate  Generate security patterns from source code
+  help      Print this message or the help of the given subcommand(s)
 
 Arguments:
   [TARGET]  Target to analyze: local path or GitHub repository (owner/repo)
 
 Options:
-  -a, --analyze <ANALYZE>                
-  -m, --model <MODEL>                    [default: o4-mini]
-  -v, --verbosity...                     
-  -e, --evaluate                         
-      --output-dir <OUTPUT_DIR>          
+  -m, --model <MODEL>                    [default: gpt-5.1-codex]
+      --output-dir <OUTPUT_DIR>          [default: ./reports]
       --min-confidence <MIN_CONFIDENCE>  [default: 70]
-      --vuln-types <VULN_TYPES>          
-      --generate-patterns                
-      --debug                            
-      --api-base-url <API_BASE_URL>      
+      --generate-patterns
+      --api-base-url <API_BASE_URL>
       --language <LANGUAGE>              [default: ja]
-  -c, --config <CONFIG>                  
+  -c, --config <CONFIG>
       --generate-config
+
+Provider Options:
+      --provider <PROVIDER>              [default: genai]
+                                         Possible values: genai, claude-code
+      --provider-path <PATH>             Path to claude CLI binary
+      --provider-concurrency <N>         Max concurrent processes [default: 10]
+      --provider-poc                     Enable PoC execution
 ```
 
 ### Output Example

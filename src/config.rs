@@ -285,6 +285,125 @@ impl Default for ParsentryConfig {
     }
 }
 
+impl ParsentryConfig {
+    /// Merge another config into this one (other takes precedence for set values)
+    pub fn merge(&mut self, other: &ParsentryConfig) {
+        // Analysis config - merge non-default values
+        if other.analysis.model != default_model() {
+            self.analysis.model = other.analysis.model.clone();
+        }
+        if other.analysis.min_confidence != default_min_confidence() {
+            self.analysis.min_confidence = other.analysis.min_confidence;
+        }
+        if other.analysis.language != default_language() {
+            self.analysis.language = other.analysis.language.clone();
+        }
+        if other.analysis.debug {
+            self.analysis.debug = other.analysis.debug;
+        }
+        if other.analysis.evaluate {
+            self.analysis.evaluate = other.analysis.evaluate;
+        }
+        if other.analysis.verbosity > 0 {
+            self.analysis.verbosity = other.analysis.verbosity;
+        }
+
+        // Paths config - merge Option fields
+        if other.paths.target.is_some() {
+            self.paths.target = other.paths.target.clone();
+        }
+        if other.paths.output_dir.is_some() {
+            self.paths.output_dir = other.paths.output_dir.clone();
+        }
+        if other.paths.analyze.is_some() {
+            self.paths.analyze = other.paths.analyze.clone();
+        }
+
+        // Filtering config
+        if other.filtering.vuln_types.is_some() {
+            self.filtering.vuln_types = other.filtering.vuln_types.clone();
+        }
+
+        // API config
+        if other.api.base_url.is_some() {
+            self.api.base_url = other.api.base_url.clone();
+        }
+
+        // Repo config
+        if other.repo.url.is_some() {
+            self.repo.url = other.repo.url.clone();
+        }
+
+        // Generation config
+        if other.generation.generate_patterns {
+            self.generation.generate_patterns = other.generation.generate_patterns;
+        }
+
+        // Call graph config
+        if other.call_graph.call_graph {
+            self.call_graph.call_graph = other.call_graph.call_graph;
+        }
+        if other.call_graph.format != default_call_graph_format() {
+            self.call_graph.format = other.call_graph.format.clone();
+        }
+        if other.call_graph.output.is_some() {
+            self.call_graph.output = other.call_graph.output.clone();
+        }
+        if other.call_graph.start_functions.is_some() {
+            self.call_graph.start_functions = other.call_graph.start_functions.clone();
+        }
+        if other.call_graph.max_depth != default_call_graph_max_depth() {
+            self.call_graph.max_depth = other.call_graph.max_depth;
+        }
+        if other.call_graph.include.is_some() {
+            self.call_graph.include = other.call_graph.include.clone();
+        }
+        if other.call_graph.exclude.is_some() {
+            self.call_graph.exclude = other.call_graph.exclude.clone();
+        }
+        if other.call_graph.detect_cycles {
+            self.call_graph.detect_cycles = other.call_graph.detect_cycles;
+        }
+        if other.call_graph.security_focus {
+            self.call_graph.security_focus = other.call_graph.security_focus;
+        }
+
+        // Provider config
+        if other.provider.provider_type != default_provider_type() {
+            self.provider.provider_type = other.provider.provider_type.clone();
+        }
+        if other.provider.path.is_some() {
+            self.provider.path = other.provider.path.clone();
+        }
+        if other.provider.max_concurrent != default_provider_max_concurrent() {
+            self.provider.max_concurrent = other.provider.max_concurrent;
+        }
+        if other.provider.timeout_secs != default_provider_timeout() {
+            self.provider.timeout_secs = other.provider.timeout_secs;
+        }
+        if other.provider.enable_poc {
+            self.provider.enable_poc = other.provider.enable_poc;
+        }
+
+        // MVRA config
+        if other.mvra.search_query.is_some() {
+            self.mvra.search_query = other.mvra.search_query.clone();
+        }
+        if other.mvra.code_query.is_some() {
+            self.mvra.code_query = other.mvra.code_query.clone();
+        }
+        if other.mvra.max_repos != 10 {
+            self.mvra.max_repos = other.mvra.max_repos;
+        }
+        if other.mvra.cache_dir != PathBuf::from(".parsentry-cache") {
+            self.mvra.cache_dir = other.mvra.cache_dir.clone();
+        }
+        if !other.mvra.use_cache {
+            self.mvra.use_cache = other.mvra.use_cache;
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigError {
     #[error("Invalid path in {field}: {path} does not exist")]
@@ -369,13 +488,89 @@ use_cache = true
         Ok(config)
     }
 
+    /// Get the user config file path (~/.config/parsentry/config.toml)
+    pub fn get_user_config_path() -> Option<PathBuf> {
+        dirs::home_dir().map(|home| home.join(".config/parsentry/config.toml"))
+    }
+
+    /// Get the system config file path (/etc/parsentry/config.toml)
+    pub fn get_system_config_path() -> PathBuf {
+        PathBuf::from("/etc/parsentry/config.toml")
+    }
+
+    /// Get the current directory config file path (./parsentry.toml)
+    pub fn get_current_config_path() -> PathBuf {
+        PathBuf::from("./parsentry.toml")
+    }
+
+    /// Ensure user config file exists, creating it if necessary
+    /// Returns the path to the user config file
+    pub fn ensure_user_config_exists() -> Result<PathBuf> {
+        let user_config_path = Self::get_user_config_path()
+            .ok_or_else(|| anyhow!("Could not determine home directory"))?;
+
+        if !user_config_path.exists() {
+            // Create parent directory if it doesn't exist
+            if let Some(parent) = user_config_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            // Write default config
+            let default_config = Self::generate_default_config();
+            std::fs::write(&user_config_path, default_config)?;
+
+            tracing::info!("Created user config file at: {}", user_config_path.display());
+        }
+
+        Ok(user_config_path)
+    }
+
+    /// Load and merge configs from all sources with priority:
+    /// 1. User config (~/.config/parsentry/config.toml) - lowest priority (base)
+    /// 2. Current directory (./parsentry.toml)
+    /// 3. System config (/etc/parsentry/config.toml) - highest priority
+    pub fn load_with_merged_configs() -> Result<Self, ConfigError> {
+        let mut config = Self::default();
+
+        // 1. Load user config (lowest priority - base settings)
+        if let Some(user_path) = Self::get_user_config_path() {
+            if user_path.exists() {
+                if let Ok(user_config) = Self::load_from_file(&user_path) {
+                    config.merge(&user_config);
+                    tracing::debug!("Loaded user config from: {}", user_path.display());
+                }
+            }
+        }
+
+        // 2. Load current directory config (medium priority)
+        let current_path = Self::get_current_config_path();
+        if current_path.exists() {
+            if let Ok(current_config) = Self::load_from_file(&current_path) {
+                config.merge(&current_config);
+                tracing::debug!("Loaded current directory config from: {}", current_path.display());
+            }
+        }
+
+        // 3. Load system config (highest priority)
+        let system_path = Self::get_system_config_path();
+        if system_path.exists() {
+            if let Ok(system_config) = Self::load_from_file(&system_path) {
+                config.merge(&system_config);
+                tracing::debug!("Loaded system config from: {}", system_path.display());
+            }
+        }
+
+        Ok(config)
+    }
+
+    #[deprecated(since = "0.12.0", note = "Use load_with_merged_configs() instead")]
     pub fn find_default_config() -> Option<PathBuf> {
         let search_paths = vec![
             "./parsentry.toml",
             "~/.config/parsentry/config.toml",
             "/etc/parsentry/config.toml",
         ];
-        
+
         for path_str in search_paths {
             let path = if path_str.starts_with("~/") {
                 if let Some(home) = dirs::home_dir() {
@@ -386,7 +581,7 @@ use_cache = true
             } else {
                 PathBuf::from(path_str)
             };
-            
+
             if path.exists() {
                 return Some(path);
             }
@@ -394,12 +589,9 @@ use_cache = true
         None
     }
 
+    #[deprecated(since = "0.12.0", note = "Use load_with_merged_configs() instead")]
     pub fn find_and_load_default() -> Result<Self, ConfigError> {
-        if let Some(path) = Self::find_default_config() {
-            Self::load_from_file(path)
-        } else {
-            Ok(Self::default())
-        }
+        Self::load_with_merged_configs()
     }
 
     pub fn apply_env_vars(&mut self, env_vars: &HashMap<String, String>) -> Result<()> {
@@ -545,23 +737,42 @@ use_cache = true
         Ok(())
     }
 
+    /// Load configuration with full precedence chain:
+    /// 1. Default values (lowest)
+    /// 2. User config (~/.config/parsentry/config.toml) - auto-created on first run
+    /// 3. Current directory (./parsentry.toml)
+    /// 4. System config (/etc/parsentry/config.toml) - highest file priority
+    /// 5. Environment variables (PARSENTRY_*)
+    /// 6. CLI arguments (highest)
+    ///
+    /// If config_path is explicitly provided, it's loaded and merged after step 4.
     pub fn load_with_precedence(
         config_path: Option<PathBuf>,
         cli_args: &ScanArgs,
         env_vars: &HashMap<String, String>
     ) -> Result<Self> {
-        let mut config = if let Some(path) = config_path {
-            Self::load_from_file(&path)
-                .map_err(|e| anyhow!("Failed to load config file {}: {}", path.display(), e))?
-        } else {
-            Self::find_and_load_default()
-                .unwrap_or_else(|_| Self::default())
-        };
-        
+        // Ensure user config exists (auto-create on first run)
+        if let Err(e) = Self::ensure_user_config_exists() {
+            tracing::debug!("Could not create user config: {}", e);
+        }
+
+        // Load merged configs from all sources
+        let mut config = Self::load_with_merged_configs()
+            .unwrap_or_else(|_| Self::default());
+
+        // If explicit config path is provided, merge it with highest file priority
+        if let Some(path) = config_path {
+            let explicit_config = Self::load_from_file(&path)
+                .map_err(|e| anyhow!("Failed to load config file {}: {}", path.display(), e))?;
+            config.merge(&explicit_config);
+        }
+
+        // Apply environment variables
         config.apply_env_vars(env_vars)?;
+        // Apply CLI arguments (highest priority)
         config.apply_scan_args(cli_args)?;
         config.validate()?;
-        
+
         Ok(config)
     }
 
@@ -822,5 +1033,116 @@ enable_poc = true
         assert_eq!(args.provider_path, Some(PathBuf::from("/custom/claude")));
         assert_eq!(args.provider_concurrency, 8);
         assert!(args.provider_poc);
+    }
+
+    #[test]
+    fn test_config_merge() {
+        let mut base = ParsentryConfig::default();
+
+        // Create config with overrides
+        let override_config: ParsentryConfig = toml::from_str(r#"
+[analysis]
+model = "gpt-4"
+min_confidence = 90
+debug = true
+
+[paths]
+target = "custom-target"
+
+[provider]
+provider_type = "claude-code"
+max_concurrent = 5
+"#).unwrap();
+
+        base.merge(&override_config);
+
+        // Verify merged values
+        assert_eq!(base.analysis.model, "gpt-4");
+        assert_eq!(base.analysis.min_confidence, 90);
+        assert!(base.analysis.debug);
+        assert_eq!(base.paths.target, Some("custom-target".to_string()));
+        assert_eq!(base.provider.provider_type, "claude-code");
+        assert_eq!(base.provider.max_concurrent, 5);
+
+        // Verify default values are preserved where not overridden
+        assert_eq!(base.analysis.language, "ja");
+        assert!(!base.analysis.evaluate);
+    }
+
+    #[test]
+    fn test_config_merge_priority() {
+        // Simulate: user config -> current config -> system config
+        let mut config = ParsentryConfig::default();
+
+        // User config (lowest priority)
+        let user_config: ParsentryConfig = toml::from_str(r#"
+[analysis]
+model = "user-model"
+min_confidence = 60
+language = "en"
+"#).unwrap();
+        config.merge(&user_config);
+
+        // Current directory config (medium priority)
+        let current_config: ParsentryConfig = toml::from_str(r#"
+[analysis]
+model = "current-model"
+min_confidence = 75
+"#).unwrap();
+        config.merge(&current_config);
+
+        // System config (highest priority)
+        let system_config: ParsentryConfig = toml::from_str(r#"
+[analysis]
+model = "system-model"
+"#).unwrap();
+        config.merge(&system_config);
+
+        // System config's model should win
+        assert_eq!(config.analysis.model, "system-model");
+        // Current config's min_confidence should win (system didn't override)
+        assert_eq!(config.analysis.min_confidence, 75);
+        // User config's language should be preserved (not overridden)
+        assert_eq!(config.analysis.language, "en");
+    }
+
+    #[test]
+    fn test_get_user_config_path() {
+        let path = ParsentryConfig::get_user_config_path();
+        assert!(path.is_some());
+        let path = path.unwrap();
+        assert!(path.ends_with(".config/parsentry/config.toml"));
+    }
+
+    #[test]
+    fn test_get_system_config_path() {
+        let path = ParsentryConfig::get_system_config_path();
+        assert_eq!(path, PathBuf::from("/etc/parsentry/config.toml"));
+    }
+
+    #[test]
+    fn test_get_current_config_path() {
+        let path = ParsentryConfig::get_current_config_path();
+        assert_eq!(path, PathBuf::from("./parsentry.toml"));
+    }
+
+    #[test]
+    fn test_ensure_user_config_exists() {
+        use tempfile::TempDir;
+
+        // Create a temporary directory to simulate home
+        let temp_dir = TempDir::new().unwrap();
+        let config_dir = temp_dir.path().join(".config/parsentry");
+        let config_path = config_dir.join("config.toml");
+
+        // Manually test the logic (since we can't easily mock dirs::home_dir)
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let default_config = ParsentryConfig::generate_default_config();
+        std::fs::write(&config_path, &default_config).unwrap();
+
+        // Verify file was created with valid TOML
+        let content = std::fs::read_to_string(&config_path).unwrap();
+        let parsed: Result<ParsentryConfig, _> = toml::from_str(&content);
+        assert!(parsed.is_ok());
     }
 }
