@@ -5,16 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Types of streaming messages from Codex CLI (JSONL format)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum StreamMessage {
-    /// Message event with content
-    Message(MessageEvent),
-    /// Generic JSON event
-    Generic(serde_json::Value),
-}
-
 /// Message event from Codex
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageEvent {
@@ -77,41 +67,27 @@ pub trait StreamCallback: Send + Sync {
     fn on_event(&self, event: StreamEvent);
 }
 
-/// Default no-op callback for backward compatibility
-pub struct NoOpCallback;
-
-impl StreamCallback for NoOpCallback {
-    fn on_event(&self, _event: StreamEvent) {}
-}
-
-/// Callback that collects events into a channel
-pub struct ChannelCallback {
-    sender: tokio::sync::mpsc::UnboundedSender<StreamEvent>,
-}
-
-impl ChannelCallback {
-    /// Create a new channel callback and receiver pair
-    pub fn new() -> (Self, tokio::sync::mpsc::UnboundedReceiver<StreamEvent>) {
-        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
-        (Self { sender }, receiver)
-    }
-}
-
-impl Default for ChannelCallback {
-    fn default() -> Self {
-        Self::new().0
-    }
-}
-
-impl StreamCallback for ChannelCallback {
-    fn on_event(&self, event: StreamEvent) {
-        let _ = self.sender.send(event);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Callback that collects events into a channel (test-only)
+    struct ChannelCallback {
+        sender: tokio::sync::mpsc::UnboundedSender<StreamEvent>,
+    }
+
+    impl ChannelCallback {
+        fn new() -> (Self, tokio::sync::mpsc::UnboundedReceiver<StreamEvent>) {
+            let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+            (Self { sender }, receiver)
+        }
+    }
+
+    impl StreamCallback for ChannelCallback {
+        fn on_event(&self, event: StreamEvent) {
+            let _ = self.sender.send(event);
+        }
+    }
 
     #[test]
     fn test_channel_callback() {
