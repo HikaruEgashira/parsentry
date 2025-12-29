@@ -1,6 +1,6 @@
 //! Parsentry cache system for LLM responses
 //!
-//! This crate provides caching functionality for LLM provider responses,
+//! This crate provides caching functionality for LLM agent responses,
 //! enabling faster testing, reduced costs, and offline operation.
 
 pub mod cleanup;
@@ -75,15 +75,15 @@ impl Cache {
     }
 
     /// Get a cached response
-    pub fn get(&self, prompt: &str, model: &str, provider: &str) -> Result<Option<String>> {
+    pub fn get(&self, prompt: &str, model: &str, agent: &str) -> Result<Option<String>> {
         if !self.enabled {
             return Ok(None);
         }
 
-        let key = self.key_gen.generate_key(prompt, model, provider);
-        log::debug!("Cache lookup: key={}, provider={}, model={}", &key[..8], provider, model);
+        let key = self.key_gen.generate_key(prompt, model, agent);
+        log::debug!("Cache lookup: key={}, agent={}, model={}", &key[..8], agent, model);
 
-        if let Some(entry) = self.storage.get(provider, model, &key)? {
+        if let Some(entry) = self.storage.get(agent, model, &key)? {
             log::info!("Cache hit: {}", &key[..8]);
             Ok(Some(entry.response))
         } else {
@@ -93,15 +93,15 @@ impl Cache {
     }
 
     /// Set a cached response
-    pub fn set(&self, prompt: &str, model: &str, provider: &str, response: &str) -> Result<()> {
+    pub fn set(&self, prompt: &str, model: &str, agent: &str, response: &str) -> Result<()> {
         if !self.enabled {
             return Ok(());
         }
 
-        let key = self.key_gen.generate_key(prompt, model, provider);
+        let key = self.key_gen.generate_key(prompt, model, agent);
         let entry = CacheEntry::new(
             self.key_gen.version().to_string(),
-            provider.to_string(),
+            agent.to_string(),
             model.to_string(),
             key.clone(),
             response.to_string(),
@@ -189,14 +189,14 @@ mod tests {
         let response = "test response";
 
         // Cache miss
-        let result = cache.get(prompt, model, provider).unwrap();
+        let result = cache.get(prompt, model, agent).unwrap();
         assert!(result.is_none());
 
         // Set cache
-        cache.set(prompt, model, provider, response).unwrap();
+        cache.set(prompt, model, agent, response).unwrap();
 
         // Cache hit
-        let result = cache.get(prompt, model, provider).unwrap();
+        let result = cache.get(prompt, model, agent).unwrap();
         assert_eq!(result, Some(response.to_string()));
     }
 

@@ -23,29 +23,22 @@ impl CacheKeyGenerator {
         Self { version }
     }
 
-    /// Generate a cache key from prompt, model, and provider
+    /// Generate a cache key from prompt, model, and agent
     ///
     /// The key is a SHA256 hash of:
     /// - Cache version (to invalidate on template changes)
-    /// - Provider name (genai vs claude-code have different formats)
+    /// - Agent name (genai vs claude-code have different formats)
     /// - Model name (different models produce different outputs)
     /// - Full prompt text (the main determinant)
-    pub fn generate_key(&self, prompt: &str, model: &str, provider: &str) -> String {
+    pub fn generate_key(&self, prompt: &str, model: &str, agent: &str) -> String {
         let mut hasher = Sha256::new();
 
-        // Include version to invalidate cache when templates change
         hasher.update(self.version.as_bytes());
         hasher.update(b"|");
-
-        // Include provider (different providers have different response formats)
-        hasher.update(provider.as_bytes());
+        hasher.update(agent.as_bytes());
         hasher.update(b"|");
-
-        // Include model (different models produce different outputs)
         hasher.update(model.as_bytes());
         hasher.update(b"|");
-
-        // Include full prompt (main determinant)
         hasher.update(prompt.as_bytes());
 
         let result = hasher.finalize();
@@ -99,7 +92,7 @@ mod tests {
     }
 
     #[test]
-    fn test_key_generation_different_providers() {
+    fn test_key_generation_different_agents() {
         let gen = CacheKeyGenerator::new();
 
         let key1 = gen.generate_key("test", "gpt-4", "genai");
@@ -107,7 +100,7 @@ mod tests {
 
         assert_ne!(
             key1, key2,
-            "Different providers should produce different keys"
+            "Different agents should produce different keys"
         );
     }
 

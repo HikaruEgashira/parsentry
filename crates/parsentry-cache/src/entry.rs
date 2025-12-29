@@ -9,8 +9,8 @@ pub struct CacheEntry {
     /// Cache format version
     pub version: String,
 
-    /// Provider name (genai, claude-code)
-    pub provider: String,
+    /// Agent name (genai, claude-code)
+    pub agent: String,
 
     /// Model name
     pub model: String,
@@ -56,7 +56,7 @@ impl CacheEntry {
     /// Create a new cache entry
     pub fn new(
         version: String,
-        provider: String,
+        agent: String,
         model: String,
         prompt_hash: String,
         response: String,
@@ -67,7 +67,7 @@ impl CacheEntry {
 
         Self {
             version,
-            provider,
+            agent,
             model,
             prompt_hash,
             response,
@@ -128,7 +128,7 @@ mod tests {
         );
 
         assert_eq!(entry.version, "1.0.0");
-        assert_eq!(entry.provider, "genai");
+        assert_eq!(entry.agent, "genai");
         assert_eq!(entry.model, "gpt-4");
         assert_eq!(entry.prompt_hash, "abc123");
         assert_eq!(entry.response, "test response");

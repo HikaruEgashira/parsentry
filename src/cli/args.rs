@@ -4,9 +4,9 @@ use std::path::PathBuf;
 
 use parsentry_reports::validate_output_directory;
 
-/// LLM provider for analysis
+/// LLM agent for analysis
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum Provider {
+pub enum Agent {
     /// Use GenAI API (OpenAI-compatible endpoints)
     #[default]
     Genai,
@@ -67,21 +67,21 @@ pub struct Args {
     #[arg(long)]
     pub generate_config: bool,
 
-    /// LLM provider to use for analysis
+    /// LLM agent to use for analysis
     #[arg(long, value_enum, default_value = "genai", global = true)]
-    pub provider: Provider,
+    pub agent: Agent,
 
-    /// Path to claude CLI binary (only used with --provider claude-code)
+    /// Path to claude CLI binary (only used with --agent claude-code)
     #[arg(long)]
-    pub provider_path: Option<PathBuf>,
+    pub agent_path: Option<PathBuf>,
 
-    /// Maximum concurrent processes for provider (Claude Code: max 10, GenAI: max 50)
+    /// Maximum concurrent processes for agent (Claude Code: max 10, GenAI: max 50)
     #[arg(long, default_value = "10")]
-    pub provider_concurrency: usize,
+    pub agent_concurrency: usize,
 
-    /// Enable PoC execution (only used with --provider claude-code)
+    /// Enable PoC execution (only used with --agent claude-code)
     #[arg(long)]
-    pub provider_poc: bool,
+    pub agent_poc: bool,
 
     /// Enable multi-repository variant analysis (MVRA)
     #[arg(long)]
@@ -181,9 +181,9 @@ pub enum Commands {
         #[arg(long, default_value = "5")]
         max_repos: usize,
 
-        /// LLM provider for pattern generation (overrides global --provider)
+        /// LLM agent for pattern generation (overrides global --agent)
         #[arg(long, value_enum)]
-        provider: Option<Provider>,
+        agent: Option<Agent>,
     },
 
     /// Manage LLM response cache
@@ -241,10 +241,10 @@ pub struct ScanArgs {
     pub language: String,
     pub config: Option<PathBuf>,
     pub generate_config: bool,
-    pub provider: Provider,
-    pub provider_path: Option<PathBuf>,
-    pub provider_concurrency: usize,
-    pub provider_poc: bool,
+    pub agent: Agent,
+    pub agent_path: Option<PathBuf>,
+    pub agent_concurrency: usize,
+    pub agent_poc: bool,
     pub mvra: bool,
     pub mvra_search_query: Option<String>,
     pub mvra_code_query: Option<String>,
@@ -273,10 +273,10 @@ impl From<&Args> for ScanArgs {
             language: args.language.clone(),
             config: args.config.clone(),
             generate_config: args.generate_config,
-            provider: args.provider,
-            provider_path: args.provider_path.clone(),
-            provider_concurrency: args.provider_concurrency,
-            provider_poc: args.provider_poc,
+            agent: args.agent,
+            agent_path: args.agent_path.clone(),
+            agent_concurrency: args.agent_concurrency,
+            agent_poc: args.agent_poc,
             mvra: args.mvra,
             mvra_search_query: args.mvra_search_query.clone(),
             mvra_code_query: args.mvra_code_query.clone(),
@@ -349,7 +349,7 @@ pub struct GenerateArgs {
     pub verbosity: u8,
     pub debug: bool,
     pub api_base_url: Option<String>,
-    pub provider: Provider,
+    pub agent: Agent,
 }
 
 pub fn validate_generate_args(args: &GenerateArgs) -> Result<()> {
