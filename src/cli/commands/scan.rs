@@ -12,12 +12,14 @@ use crate::cli::ui::{self, StatusPrinter, SummaryRow, SummaryTable};
 use crate::config::ParsentryConfig;
 use crate::mvra::{MvraRepositoryResult, MvraResults, MvraScanner};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
+use crate::pattern_generator_codex::generate_custom_patterns_with_codex;
 use crate::github::clone_repo;
 use crate::repo::RepoOps;
 use crate::response::{Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
+use parsentry_codex::{CodexConfig, CodexExecutor};
 use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{
@@ -113,6 +115,103 @@ async fn analyze_with_claude_code<C: StreamCallback>(
                 e
             );
             Err(anyhow::anyhow!("Claude Code SARIF output failed: {}", e))
+        }
+    }
+}
+
+/// Analyze a pattern using Codex CLI with caching
+async fn analyze_with_codex(
+    executor: &CodexExecutor,
+    cache: Option<&Cache>,
+    cache_mode: CacheMode,
+    prompt_builder: &PromptBuilder,
+    file_path: &PathBuf,
+    pattern_match: &PatternMatch,
+    _working_dir: &PathBuf,
+    printer: &StatusPrinter,
+) -> Result<Option<Response>> {
+    let file_name = file_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let content = tokio::fs::read_to_string(file_path).await?;
+
+    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
+    let pattern_context = PatternContext::new(
+        &pattern_type_str,
+        &pattern_match.pattern_config.description,
+        &pattern_match.matched_text,
+    )
+    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
+
+    let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
+
+    let model = "codex";
+    let provider = "codex";
+
+    // Try cache first (unless NoCache mode)
+    if cache_mode != CacheMode::NoCache {
+        if let Some(cache) = cache {
+            if let Ok(Some(cached_response)) = cache.get(&prompt, model, provider) {
+                // Parse cached response
+                if let Ok(parsed) = serde_json::from_str::<parsentry_codex::CodexResponse>(&cached_response) {
+                    printer.status("Cache hit", &file_name);
+                    let mut response = from_codex_response(
+                        parsed,
+                        file_path.to_string_lossy().to_string(),
+                    );
+                    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+                    response.matched_source_code = Some(pattern_match.matched_text.clone());
+                    return Ok(Some(response));
+                }
+            }
+        }
+    }
+
+    // If cache-only mode and no cache hit, return None
+    if cache_mode == CacheMode::CacheOnly {
+        debug!("Cache-only mode: no cache hit for {}", file_path.display());
+        return Ok(None);
+    }
+
+    // Execute with retry logic
+    printer.status("Analyzing", &file_name);
+    let output = executor
+        .execute_with_retry(&prompt, 2)
+        .await;
+
+    match output {
+        Ok(output) => {
+            info!("Codex succeeded for {}", file_path.display());
+
+            // Store in cache (unless NoCache mode)
+            if cache_mode != CacheMode::NoCache {
+                if let Some(cache) = cache {
+                    if let Ok(response_json) = serde_json::to_string(&output.response) {
+                        if let Err(e) = cache.set(&prompt, model, provider, &response_json) {
+                            debug!("Failed to cache response: {}", e);
+                        }
+                    }
+                }
+            }
+
+            let mut response = from_codex_response(
+                output.response,
+                file_path.to_string_lossy().to_string(),
+            );
+            response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+            response.matched_source_code = Some(pattern_match.matched_text.clone());
+            Ok(Some(response))
+        }
+        Err(e) => {
+            printer.error("Failed", &format!("{}: {}", file_name, e));
+            error!(
+                "Codex execution error for {}: {}",
+                file_path.display(),
+                e
+            );
+            Err(anyhow::anyhow!("Codex failed: {}", e))
         }
     }
 }
@@ -243,6 +342,34 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             }
 
             printer.success("Generated", &format!("{} patterns", result.patterns_generated));
+        } else if config.provider.is_codex() {
+            let codex_path = config.provider.path.clone();
+            let log_dir = final_args.output_dir.as_ref().map(|d| d.join("codex_logs"));
+            let codex_config = CodexConfig {
+                codex_path,
+                max_concurrent: config.provider.max_concurrent.min(10),
+                timeout_secs: config.provider.timeout_secs,
+                enable_poc: false,
+                working_dir: root_dir.clone(),
+                log_dir,
+                model: final_args.model.clone(),
+            };
+            printer.info("Mode", "Codex");
+            let result = generate_custom_patterns_with_codex(&root_dir, codex_config).await?;
+
+            printer.status("Discovered", &format!("{} source files", result.total_files));
+            if result.skipped_files > 0 {
+                printer.warning("Skipped", &format!("{} files (too large)", result.skipped_files));
+            }
+            printer.status("Analyzed", &format!("{} files", result.analyzed_files));
+
+            if !result.languages.is_empty() {
+                for lang in &result.languages {
+                    printer.bullet(&format!("{:?}", lang));
+                }
+            }
+
+            printer.success("Generated", &format!("{} patterns", result.patterns_generated));
         } else {
             generate_custom_patterns(&root_dir, &final_args.model, api_base_url).await?;
             printer.success("Generated", "custom patterns");
@@ -308,6 +435,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let use_claude_code = config.agent.is_claude_code();
+    let use_codex = config.agent.is_codex();
 
     let mut summary = AnalysisSummary::new();
 
@@ -315,6 +443,9 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let max_concurrent = if use_claude_code {
         progress_bar.set_message("analyzing with Claude Code");
+        config.agent.max_concurrent.min(10)
+    } else if use_codex {
+        progress_bar.set_message("analyzing with Codex");
         config.agent.max_concurrent.min(10)
     } else {
         progress_bar.set_message("analyzing patterns");
@@ -337,6 +468,26 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         printer.info("Mode", "Claude Code enabled");
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
+    } else {
+        None
+    };
+
+    let codex_executor = if use_codex {
+        let codex_path = config.agent.path.clone();
+        let log_dir = output_dir.as_ref().map(|d| d.join("codex_logs"));
+        let codex_config = CodexConfig {
+            codex_path,
+            max_concurrent: config.agent.max_concurrent.min(10),
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: config.agent.enable_poc,
+            working_dir: root_dir.as_ref().clone(),
+            log_dir,
+            model: model.clone(),
+        };
+
+        printer.info("Mode", "Codex enabled");
+
+        Some(Arc::new(CodexExecutor::new(codex_config)?))
     } else {
         None
     };
@@ -364,8 +515,10 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let messages = messages.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
+            let codex_executor = codex_executor.clone();
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
+            let use_codex = use_codex;
             let printer = Arc::clone(&printer);
             let streaming_display = Arc::clone(&streaming_display);
 
@@ -473,6 +626,43 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             Err(e) => {
                                 error!(
                                     "Claude Code {}: {}: {}",
+                                    messages
+                                        .get("analysis_failed")
+                                        .unwrap_or(&"Analysis failed"),
+                                    file_path.display(),
+                                    e
+                                );
+                                progress_bar.inc(1);
+                                return None;
+                            }
+                        }
+                    } else {
+                        progress_bar.inc(1);
+                        return None;
+                    }
+                } else if use_codex {
+                    if let Some(ref executor) = codex_executor {
+                        match analyze_with_codex(
+                            executor,
+                            cache.as_deref(),
+                            cache_mode,
+                            &prompt_builder,
+                            &file_path,
+                            &pattern_match,
+                            &_root_dir,
+                            &printer,
+                        )
+                        .await
+                        {
+                            Ok(Some(res)) => res,
+                            Ok(None) => {
+                                info!("Codex returned None for {}", file_path.display());
+                                progress_bar.inc(1);
+                                return None;
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Codex {}: {}: {}",
                                     messages
                                         .get("analysis_failed")
                                         .unwrap_or(&"Analysis failed"),
@@ -689,7 +879,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         table.print();
     }
 
-    if use_claude_code {
+    if use_claude_code || use_codex {
         let success_count = filtered_summary.results.len();
         let high_confidence_count = filtered_summary.results.iter().filter(|r| r.response.confidence_score >= 70).count();
         printer.section("Summary");
@@ -938,10 +1128,13 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let files = files.clone();
     let verbosity = final_args.verbosity;
     let use_claude_code = config.agent.is_claude_code();
+    let use_codex = config.agent.is_codex();
 
     let mut summary = AnalysisSummary::new();
 
     let max_concurrent = if use_claude_code {
+        config.agent.max_concurrent.min(10)
+    } else if use_codex {
         config.agent.max_concurrent.min(10)
     } else {
         config.agent.max_concurrent.min(50)
@@ -961,6 +1154,24 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
         };
 
         Some(Arc::new(ClaudeCodeExecutor::new(claude_config)?))
+    } else {
+        None
+    };
+
+    let codex_executor = if use_codex {
+        let codex_path = config.agent.path.clone();
+        let log_dir = output_dir.as_ref().map(|d| d.join("codex_logs"));
+        let codex_config = CodexConfig {
+            codex_path,
+            max_concurrent: config.agent.max_concurrent.min(10),
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: config.agent.enable_poc,
+            working_dir: root_dir.as_ref().clone(),
+            log_dir,
+            model: model.clone(),
+        };
+
+        Some(Arc::new(CodexExecutor::new(codex_config)?))
     } else {
         None
     };
@@ -986,9 +1197,11 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let files = files.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
+            let codex_executor = codex_executor.clone();
             let streaming_display = Arc::clone(&streaming_display);
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
+            let use_codex = use_codex;
             let printer = Arc::clone(&printer);
 
             async move {
@@ -1062,6 +1275,26 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                                 }
                             }
                             Ok(false) | Err(_) => return None,
+                        }
+                    } else {
+                        return None;
+                    }
+                } else if use_codex {
+                    if let Some(ref executor) = codex_executor {
+                        match analyze_with_codex(
+                            executor,
+                            cache.as_deref(),
+                            cache_mode,
+                            &prompt_builder,
+                            &file_path,
+                            &pattern_match,
+                            &_root_dir,
+                            &printer,
+                        )
+                        .await
+                        {
+                            Ok(Some(res)) => res,
+                            Ok(None) | Err(_) => return None,
                         }
                     } else {
                         return None;
