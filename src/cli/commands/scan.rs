@@ -80,12 +80,12 @@ async fn analyze_with_claude_code(
     let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
 
     let model = "claude-code";
-    let provider = "claude-code";
+    let agent = "claude-code";
 
     // Try cache first (unless NoCache mode)
     if cache_mode != CacheMode::NoCache {
         if let Some(cache) = cache {
-            if let Ok(Some(cached_response)) = cache.get(&prompt, model, provider) {
+            if let Ok(Some(cached_response)) = cache.get(&prompt, model, agent) {
                 // Parse cached response
                 if let Ok(parsed) = serde_json::from_str::<parsentry_claude_code::ClaudeCodeResponse>(&cached_response) {
                     printer.status("Cache hit", &file_name);
@@ -121,7 +121,7 @@ async fn analyze_with_claude_code(
             if cache_mode != CacheMode::NoCache {
                 if let Some(cache) = cache {
                     if let Ok(response_json) = serde_json::to_string(&output.response) {
-                        if let Err(e) = cache.set(&prompt, model, provider, &response_json) {
+                        if let Err(e) = cache.set(&prompt, model, agent, &response_json) {
                             debug!("Failed to cache response: {}", e);
                         }
                     }
