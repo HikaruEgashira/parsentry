@@ -233,13 +233,11 @@ pub struct AnalysisConfig {
     
     #[serde(default = "default_language")]
     pub language: String,
-    
-    #[serde(default)]
-    pub debug: bool,
-    
+
     #[serde(default)]
     pub evaluate: bool,
-    
+
+    /// Verbosity level: 0=quiet, 1=normal, 2+=debug
     #[serde(default)]
     pub verbosity: u8,
 }
@@ -322,7 +320,6 @@ impl Default for AnalysisConfig {
             model: default_model(),
             min_confidence: default_min_confidence(),
             language: default_language(),
-            debug: false,
             evaluate: false,
             verbosity: 0,
         }
@@ -428,9 +425,6 @@ impl ParsentryConfig {
         }
         if other.analysis.language != default_language() {
             self.analysis.language = other.analysis.language.clone();
-        }
-        if other.analysis.debug {
-            self.analysis.debug = other.analysis.debug;
         }
         if other.analysis.evaluate {
             self.analysis.evaluate = other.analysis.evaluate;
@@ -736,8 +730,12 @@ use_cache = true
                     }
                     "ANALYSIS_LANGUAGE" => self.analysis.language = value.clone(),
                     "ANALYSIS_DEBUG" => {
-                        self.analysis.debug = value.parse()
+                        // Legacy: ANALYSIS_DEBUG=true sets verbosity to 2
+                        let debug_enabled: bool = value.parse()
                             .map_err(|_| anyhow!("Invalid debug value: {}", value))?;
+                        if debug_enabled && self.analysis.verbosity < 2 {
+                            self.analysis.verbosity = 2;
+                        }
                     }
                     "ANALYSIS_EVALUATE" => {
                         self.analysis.evaluate = value.parse()
@@ -810,14 +808,14 @@ use_cache = true
             self.analysis.language = args.language.clone();
         }
 
-        if args.debug {
-            self.analysis.debug = args.debug;
-        }
-
         if args.evaluate {
             self.analysis.evaluate = args.evaluate;
         }
 
+        // --debug is equivalent to -vv (verbosity >= 2)
+        if args.debug && self.analysis.verbosity < 2 {
+            self.analysis.verbosity = 2;
+        }
         if args.verbosity > 0 {
             self.analysis.verbosity = args.verbosity;
         }
@@ -966,7 +964,7 @@ use_cache = true
             min_confidence: self.analysis.min_confidence,
             vuln_types: self.filtering.vuln_types.as_ref().map(|v| v.join(",")),
             generate_patterns: self.generation.generate_patterns,
-            debug: self.analysis.debug,
+            debug: self.analysis.verbosity >= 2,  // debug is now derived from verbosity
             api_base_url: self.api.base_url.clone(),
             language: self.analysis.language.clone(),
             config: None,
@@ -1000,7 +998,6 @@ mod tests {
         assert_eq!(config.analysis.model, "gpt-5.1-codex");
         assert_eq!(config.analysis.min_confidence, 70);
         assert_eq!(config.analysis.language, "ja");
-        assert!(!config.analysis.debug);
         assert!(!config.analysis.evaluate);
         assert_eq!(config.analysis.verbosity, 0);
     }
@@ -1012,7 +1009,7 @@ mod tests {
 model = "gpt-4"
 min_confidence = 80
 language = "en"
-debug = true
+verbosity = 2
 
 [paths]
 target = "src"
@@ -1026,7 +1023,7 @@ vuln_types = ["SQLI", "XSS"]
         assert_eq!(config.analysis.model, "gpt-4");
         assert_eq!(config.analysis.min_confidence, 80);
         assert_eq!(config.analysis.language, "en");
-        assert!(config.analysis.debug);
+        assert_eq!(config.analysis.verbosity, 2);
         assert_eq!(config.paths.target, Some("src".to_string()));
         assert_eq!(config.paths.output_dir, Some(PathBuf::from("reports")));
         assert_eq!(config.filtering.vuln_types, Some(vec!["SQLI".to_string(), "XSS".to_string()]));
@@ -1039,12 +1036,12 @@ vuln_types = ["SQLI", "XSS"]
         env_vars.insert("PARSENTRY_ANALYSIS_MODEL".to_string(), "gpt-4".to_string());
         env_vars.insert("PARSENTRY_ANALYSIS_MIN_CONFIDENCE".to_string(), "90".to_string());
         env_vars.insert("PARSENTRY_ANALYSIS_DEBUG".to_string(), "true".to_string());
-        
+
         config.apply_env_vars(&env_vars).unwrap();
-        
+
         assert_eq!(config.analysis.model, "gpt-4");
         assert_eq!(config.analysis.min_confidence, 90);
-        assert!(config.analysis.debug);
+        assert_eq!(config.analysis.verbosity, 2);  // DEBUG=true sets verbosity to 2
     }
 
     #[test]
@@ -1185,7 +1182,7 @@ enable_poc = true
 [analysis]
 model = "gpt-4"
 min_confidence = 90
-debug = true
+verbosity = 2
 
 [paths]
 target = "custom-target"
@@ -1200,7 +1197,7 @@ max_concurrent = 5
         // Verify merged values
         assert_eq!(base.analysis.model, "gpt-4");
         assert_eq!(base.analysis.min_confidence, 90);
-        assert!(base.analysis.debug);
+        assert_eq!(base.analysis.verbosity, 2);
         assert_eq!(base.paths.target, Some("custom-target".to_string()));
         assert_eq!(base.provider.provider_type, "claude-code");
         assert_eq!(base.provider.max_concurrent, 5);

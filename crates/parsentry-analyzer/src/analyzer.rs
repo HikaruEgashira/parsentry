@@ -189,7 +189,6 @@ pub async fn analyze_file(
     verbosity: u8,
     context: &Context,
     min_confidence: i32,
-    debug: bool,
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
     language: &Language,
@@ -279,8 +278,8 @@ pub async fn analyze_file(
     );
     debug!("[PROMPT]\n{}", prompt);
 
-    // Save debug input if debug mode is enabled
-    if debug {
+    // Save debug input if verbosity >= 2
+    if verbosity >= 2 {
         let debug_content = format!(
             "=== INITIAL ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}",
             model,
@@ -308,8 +307,8 @@ pub async fn analyze_file(
     let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
     debug!("[LLM Response]\n{}", chat_content);
 
-    // Save debug output if debug mode is enabled
-    if debug {
+    // Save debug output if verbosity >= 2
+    if verbosity >= 2 {
         let debug_content = format!(
             "=== INITIAL ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nTimestamp: {}\n\n{}",
             model,
@@ -385,8 +384,8 @@ pub async fn analyze_file(
                     prompts::get_guidelines_template(language),
                 );
 
-                // Save debug input if debug mode is enabled
-                if debug {
+                // Save debug input if verbosity >= 2
+                if verbosity >= 2 {
                     let debug_content = format!(
                         "=== VULNERABILITY-SPECIFIC ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}",
                         model,
@@ -418,8 +417,8 @@ pub async fn analyze_file(
                     execute_chat_request_with_retry(&json_client, model, chat_req, 2).await?;
                 debug!("[LLM Response]\n{}", chat_content);
 
-                // Save debug output if debug mode is enabled
-                if debug {
+                // Save debug output if verbosity >= 2
+                if verbosity >= 2 {
                     let debug_content = format!(
                         "=== VULNERABILITY-SPECIFIC ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nVulnerability Type: {:?}\nTimestamp: {}\n\n{}",
                         model,
@@ -567,9 +566,8 @@ pub async fn analyze_pattern(
     pattern_match: &PatternMatch,
     model: &str,
     files: &[PathBuf],
-    _verbosity: u8,
+    verbosity: u8,
     min_confidence: i32,
-    debug: bool,
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
     language: &Language,
@@ -636,8 +634,8 @@ pub async fn analyze_pattern(
 
     debug!("[PATTERN-BASED PROMPT]\n{}", prompt);
 
-    // Save debug input if debug mode is enabled
-    if debug {
+    // Save debug input if verbosity >= 2
+    if verbosity >= 2 {
         let debug_content = format!(
             "=== PATTERN-BASED ANALYSIS PROMPT ===\nModel: {}\nFile: {}\nPattern: {}\nTimestamp: {}\n\n{}",
             model,
@@ -673,8 +671,8 @@ pub async fn analyze_pattern(
     let chat_content = execute_chat_request(&json_client, model, chat_req).await?;
     debug!("[PATTERN LLM Response]\n{}", chat_content);
 
-    // Save debug output if debug mode is enabled
-    if debug {
+    // Save debug output if verbosity >= 2
+    if verbosity >= 2 {
         let debug_content = format!(
             "=== PATTERN-BASED ANALYSIS RESPONSE ===\nModel: {}\nFile: {}\nPattern: {}\nTimestamp: {}\n\n{}",
             model,

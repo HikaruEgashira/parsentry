@@ -338,7 +338,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let model = final_args.model.clone();
     let files = files.clone();
     let verbosity = final_args.verbosity;
-    let debug_flag = final_args.debug;
     let use_claude_code = config.provider.is_claude_code();
 
     // Initialize cache
@@ -412,7 +411,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let model = model.clone();
             let files = files.clone();
             let progress_bar = progress_bar.clone();
-            let debug_flag = debug_flag;
             let messages = messages.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
@@ -488,7 +486,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                         &files,
                         verbosity,
                         0,
-                        debug_flag,
                         &output_dir,
                         api_base_url,
                         &language,
@@ -931,7 +928,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let model = final_args.model.clone();
     let files = files.clone();
     let verbosity = final_args.verbosity;
-    let debug_flag = final_args.debug;
     let use_claude_code = config.provider.is_claude_code();
 
     // Initialize cache for MVRA scans
@@ -992,7 +988,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let output_dir = output_dir.clone();
             let model = model.clone();
             let files = files.clone();
-            let debug_flag = debug_flag;
             let language = language.clone();
             let claude_executor = claude_executor.clone();
             let streaming_display = Arc::clone(&streaming_display);
@@ -1034,7 +1029,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                         &files,
                         verbosity,
                         0,
-                        debug_flag,
                         &output_dir,
                         api_base_url,
                         &language,
