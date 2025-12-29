@@ -76,7 +76,7 @@ pub enum ContentBlock {
 }
 
 /// Final result message
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResultMessage {
     #[serde(default)]
     pub subtype: Option<String>,
