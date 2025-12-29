@@ -76,13 +76,11 @@ impl CacheStorage {
     pub fn set(&self, entry: &CacheEntry) -> Result<()> {
         let path = self.get_cache_path(&entry.agent, &entry.model, &entry.prompt_hash);
 
-        // Create parent directories
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("Failed to create cache subdirectory: {}", parent.display()))?;
         }
 
-        // Write entry to file
         let content = serde_json::to_string_pretty(entry)
             .context("Failed to serialize cache entry")?;
 
