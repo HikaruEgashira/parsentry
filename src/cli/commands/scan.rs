@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::cli::args::{validate_scan_args, ScanArgs};
 use crate::cli::streaming_ui::StreamingDisplay;
@@ -15,6 +15,7 @@ use crate::repo::{clone_github_repo, RepoOps};
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
+use parsentry_cache::Cache;
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder};
 use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
@@ -23,9 +24,37 @@ use parsentry_reports::{
 };
 use parsentry_utils::FileClassifier;
 
-/// Analyze a pattern using Claude Code CLI with streaming output
+/// Cache mode for LLM responses
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CacheMode {
+    /// Normal mode: use cache if available, otherwise call LLM
+    Normal,
+    /// Cache only: only use cache, never call LLM
+    CacheOnly,
+    /// No cache: always call LLM, don't use cache
+    NoCache,
+}
+
+impl CacheMode {
+    pub fn from_flags(cache: bool, no_cache: bool, cache_only: bool) -> Self {
+        if cache_only {
+            CacheMode::CacheOnly
+        } else if no_cache {
+            CacheMode::NoCache
+        } else if cache {
+            CacheMode::Normal
+        } else {
+            // Default: cache is enabled
+            CacheMode::Normal
+        }
+    }
+}
+
+/// Analyze a pattern using Claude Code CLI with streaming output and caching
 async fn analyze_with_claude_code(
     executor: &ClaudeCodeExecutor,
+    cache: Option<&Cache>,
+    cache_mode: CacheMode,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
@@ -50,6 +79,34 @@ async fn analyze_with_claude_code(
 
     let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
 
+    let model = "claude-code";
+    let provider = "claude-code";
+
+    // Try cache first (unless NoCache mode)
+    if cache_mode != CacheMode::NoCache {
+        if let Some(cache) = cache {
+            if let Ok(Some(cached_response)) = cache.get(&prompt, model, provider) {
+                // Parse cached response
+                if let Ok(parsed) = serde_json::from_str::<parsentry_claude_code::ClaudeCodeResponse>(&cached_response) {
+                    printer.status("Cache hit", &file_name);
+                    let mut response = from_claude_code_response(
+                        parsed,
+                        file_path.to_string_lossy().to_string(),
+                    );
+                    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
+                    response.matched_source_code = Some(pattern_match.matched_text.clone());
+                    return Ok(Some(response));
+                }
+            }
+        }
+    }
+
+    // If cache-only mode and no cache hit, return None
+    if cache_mode == CacheMode::CacheOnly {
+        debug!("Cache-only mode: no cache hit for {}", file_path.display());
+        return Ok(None);
+    }
+
     // Use streaming execution for real-time output (shared display across parallel tasks)
     streaming_display.set_current_file(&file_name);
     let output = executor
@@ -59,6 +116,18 @@ async fn analyze_with_claude_code(
     match output {
         Ok(output) => {
             info!("Claude Code succeeded for {}", file_path.display());
+
+            // Store in cache (unless NoCache mode)
+            if cache_mode != CacheMode::NoCache {
+                if let Some(cache) = cache {
+                    if let Ok(response_json) = serde_json::to_string(&output.response) {
+                        if let Err(e) = cache.set(&prompt, model, provider, &response_json) {
+                            debug!("Failed to cache response: {}", e);
+                        }
+                    }
+                }
+            }
+
             let mut response = from_claude_code_response(
                 output.response,
                 file_path.to_string_lossy().to_string(),
@@ -269,8 +338,27 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let model = final_args.model.clone();
     let files = files.clone();
     let verbosity = final_args.verbosity;
-    let debug = final_args.debug;
+    let debug_flag = final_args.debug;
     let use_claude_code = config.provider.is_claude_code();
+
+    // Initialize cache
+    let cache_mode = CacheMode::from_flags(
+        args.cache,
+        args.no_cache,
+        args.cache_only,
+    );
+
+    let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
+        match Cache::new(&config.cache.directory) {
+            Ok(cache) => Some(Arc::new(cache)),
+            Err(e) => {
+                debug!("Cache initialization failed: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
 
     let mut summary = AnalysisSummary::new();
 
@@ -324,7 +412,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let model = model.clone();
             let files = files.clone();
             let progress_bar = progress_bar.clone();
-            let debug = debug;
+            let debug_flag = debug_flag;
             let messages = messages.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
@@ -332,6 +420,8 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
             let streaming_display = Arc::clone(&streaming_display);
+            let cache = cache.clone();
+            let cache_mode = cache_mode;
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -356,6 +446,8 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                     if let Some(ref executor) = claude_executor {
                         match analyze_with_claude_code(
                             executor,
+                            cache.as_deref(),
+                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
@@ -396,7 +488,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                         &files,
                         verbosity,
                         0,
-                        debug,
+                        debug_flag,
                         &output_dir,
                         api_base_url,
                         &language,
@@ -839,8 +931,21 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let model = final_args.model.clone();
     let files = files.clone();
     let verbosity = final_args.verbosity;
-    let debug = final_args.debug;
+    let debug_flag = final_args.debug;
     let use_claude_code = config.provider.is_claude_code();
+
+    // Initialize cache for MVRA scans
+    let cache_mode = CacheMode::from_flags(
+        args.cache,
+        args.no_cache,
+        args.cache_only,
+    );
+
+    let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
+        Cache::new(&config.cache.directory).ok().map(Arc::new)
+    } else {
+        None
+    };
 
     let mut summary = AnalysisSummary::new();
 
@@ -887,7 +992,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let output_dir = output_dir.clone();
             let model = model.clone();
             let files = files.clone();
-            let debug = debug;
+            let debug_flag = debug_flag;
             let language = language.clone();
             let claude_executor = claude_executor.clone();
             let streaming_display = Arc::clone(&streaming_display);
@@ -895,6 +1000,8 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
             let verbosity = verbosity;
+            let cache = cache.clone();
+            let cache_mode = cache_mode;
 
             async move {
                 // Choose analysis method based on mode
@@ -902,6 +1009,8 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                     if let Some(ref executor) = claude_executor {
                         match analyze_with_claude_code(
                             executor,
+                            cache.as_deref(),
+                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
@@ -925,7 +1034,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                         &files,
                         verbosity,
                         0,
-                        debug,
+                        debug_flag,
                         &output_dir,
                         api_base_url,
                         &language,
