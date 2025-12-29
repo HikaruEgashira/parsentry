@@ -55,39 +55,31 @@ parsentry owner/repository --generate-patterns
 ```
 ❯ parsentry --help
 
-                ▲
-               ╱ ╲
-              ╱   ╲
-             ╱ ░░░ ╲
-            ╱ ░▓▓▓░ ╲
-           ╱ ░▓███▓░ ╲
-          ╱ ░▓█████▓░ ╲
-         ╱_░▓███████▓░_╲
-           ─────┬─────
-                │
-        P A R S E N T R Y
-                │
-             v0.12.0
-
 Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
 
 Commands:
   graph     Generate call graphs from source code
   generate  Generate security patterns from source code
+  cache     Manage LLM response cache
   help      Print this message or the help of the given subcommand(s)
 
 Arguments:
   [TARGET]  Target to analyze: local path or GitHub repository (owner/repo)
 
-Options:
+Core Options:
+  -a, --analyze <ANALYZE>                Analysis target
   -m, --model <MODEL>                    [default: gpt-5.1-codex]
+  -v, --verbosity...                     Increase verbosity level
+  -e, --evaluate                         Enable evaluation mode
       --output-dir <OUTPUT_DIR>          [default: ./reports]
       --min-confidence <MIN_CONFIDENCE>  [default: 70]
-      --generate-patterns
-      --api-base-url <API_BASE_URL>
+      --vuln-types <VULN_TYPES>          Vulnerability types to analyze
+      --generate-patterns                Generate security patterns
+      --debug                            Enable debug mode
+      --api-base-url <API_BASE_URL>      Custom API base URL
       --language <LANGUAGE>              [default: ja]
-  -c, --config <CONFIG>
-      --generate-config
+  -c, --config <CONFIG>                  Config file path
+      --generate-config                  Generate config file
 
 Agent Options:
       --agent <AGENT>                    [default: genai]
@@ -95,6 +87,19 @@ Agent Options:
       --agent-path <PATH>                Path to claude CLI binary
       --agent-concurrency <N>            Max concurrent processes [default: 10]
       --agent-poc                        Enable PoC execution
+
+Multi-Repository Variant Analysis (MVRA):
+      --mvra                             Enable multi-repository variant analysis
+      --search-query <MVRA_SEARCH_QUERY> GitHub search query for MVRA
+      --code-query <MVRA_CODE_QUERY>     Code search query for MVRA
+      --max-repos <MVRA_MAX_REPOS>       Max repos to analyze [default: 10]
+      --cache-dir <MVRA_CACHE_DIR>       Cache directory [default: .parsentry-cache]
+      --mvra-no-cache                    Disable repository cache
+
+Cache Options:
+      --cache                            Enable LLM response cache
+      --no-cache                         Disable LLM response cache
+      --cache-only                       Use cache only (fail if miss)
 ```
 
 ### Output Example
