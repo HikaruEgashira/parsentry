@@ -6,10 +6,12 @@
 mod executor;
 mod parser;
 mod prompt;
+mod stream;
 
 pub use executor::{CodexExecutor, CodexOutput};
 pub use parser::{CodexResponse, ParAnalysis, VulnerabilityInfo};
 pub use prompt::{PromptBuilder, PatternContext};
+pub use stream::{ResultMessage, StreamCallback, StreamEvent};
 
 use std::path::PathBuf;
 
