@@ -865,6 +865,13 @@ use_cache = true
             self.provider.enable_poc = true;
         }
 
+        // Apply cache flags
+        if args.no_cache {
+            self.cache.enabled = false;
+        } else if args.cache {
+            self.cache.enabled = true;
+        }
+
         Ok(())
     }
 
@@ -975,8 +982,8 @@ use_cache = true
             mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
             mvra_no_cache: !self.mvra.use_cache,
             cache: self.cache.enabled,
-            no_cache: !self.cache.enabled,
-            cache_only: false,
+            no_cache: false,  // CLI flags are applied in scan command
+            cache_only: false,  // CLI flags are applied in scan command
         }
     }
 }

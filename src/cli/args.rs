@@ -103,8 +103,8 @@ pub struct Args {
     #[arg(long = "cache-dir", default_value = ".parsentry-cache")]
     pub mvra_cache_dir: Option<PathBuf>,
 
-    /// Disable cache in MVRA (always clone fresh)
-    #[arg(long = "no-cache")]
+    /// Disable repository cache in MVRA (always clone fresh)
+    #[arg(long = "mvra-no-cache")]
     pub mvra_no_cache: bool,
 
     /// Enable LLM response cache
