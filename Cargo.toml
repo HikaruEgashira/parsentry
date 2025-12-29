@@ -36,7 +36,6 @@ dotenvy = "0.15"
 genai = "0.4.0-alpha.15"
 futures = { version = "0.3", features = ["thread-pool"] }
 indicatif = "0.17"
-atty = "0.2"
 terminal_size = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
