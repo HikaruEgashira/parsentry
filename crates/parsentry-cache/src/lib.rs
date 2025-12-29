@@ -185,7 +185,7 @@ mod tests {
 
         let prompt = "test prompt";
         let model = "gpt-4";
-        let provider = "genai";
+        let agent = "genai";
         let response = "test response";
 
         // Cache miss
