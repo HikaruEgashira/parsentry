@@ -6,7 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use crate::cli::args::{GenerateArgs, Provider};
+use crate::cli::args::{GenerateArgs, Agent};
 use crate::github::GitHubSearchClient;
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
 use crate::repo::clone_github_repo;
@@ -168,15 +168,15 @@ async fn process_single_target(target: &str, args: &GenerateArgs) -> Result<Benc
     // Generate patterns
     println!("🔧 パターン生成中...");
 
-    match args.provider {
-        Provider::ClaudeCode => {
+    match args.agent {
+        Agent::ClaudeCode => {
             let claude_config = ClaudeCodeConfig {
                 working_dir: local_path.clone(),
                 ..ClaudeCodeConfig::default()
             };
             generate_custom_patterns_with_claude_code(&local_path, claude_config).await?;
         }
-        Provider::Genai => {
+        Agent::Genai => {
             generate_custom_patterns(&local_path, &args.model, args.api_base_url.as_deref()).await?;
         }
     }

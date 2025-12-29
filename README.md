@@ -41,7 +41,7 @@ Download the latest release for your platform from [GitHub Releases](https://git
 parsentry owner/repository
 
 # Analyze with Claude Code CLI
-parsentry owner/repository --provider claude-code
+parsentry owner/repository --agent claude-code
 
 # Analyze a local directory
 parsentry /path/to/code
@@ -89,12 +89,12 @@ Options:
   -c, --config <CONFIG>
       --generate-config
 
-Provider Options:
-      --provider <PROVIDER>              [default: genai]
+Agent Options:
+      --agent <AGENT>                    [default: genai]
                                          Possible values: genai, claude-code
-      --provider-path <PATH>             Path to claude CLI binary
-      --provider-concurrency <N>         Max concurrent processes [default: 10]
-      --provider-poc                     Enable PoC execution
+      --agent-path <PATH>                Path to claude CLI binary
+      --agent-concurrency <N>            Max concurrent processes [default: 10]
+      --agent-poc                        Enable PoC execution
 ```
 
 ### Output Example
