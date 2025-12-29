@@ -150,7 +150,7 @@ async fn analyze_with_claude_code(
     }
 }
 
-/// Analyze a pattern using Codex CLI with caching
+/// Analyze a pattern using Codex CLI with streaming output and caching
 async fn analyze_with_codex(
     executor: &CodexExecutor,
     cache: Option<&Cache>,
@@ -160,6 +160,7 @@ async fn analyze_with_codex(
     pattern_match: &PatternMatch,
     _working_dir: &PathBuf,
     printer: &StatusPrinter,
+    streaming_display: &Arc<StreamingDisplay>,
 ) -> Result<Option<Response>> {
     let file_name = file_path
         .file_name()
@@ -206,10 +207,10 @@ async fn analyze_with_codex(
         return Ok(None);
     }
 
-    // Execute with retry logic
-    printer.status("Analyzing", &file_name);
+    // Use streaming execution for real-time output (shared display across parallel tasks)
+    streaming_display.set_current_file(&file_name);
     let output = executor
-        .execute_with_retry(&prompt, 2)
+        .execute_streaming_with_retry(&prompt, streaming_display.as_ref(), 2)
         .await;
 
     match output {
@@ -642,6 +643,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &pattern_match,
                             &_root_dir,
                             &printer,
+                            &streaming_display,
                         )
                         .await
                         {
@@ -1245,6 +1247,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &pattern_match,
                             &_root_dir,
                             &printer,
+                            &streaming_display,
                         )
                         .await
                         {

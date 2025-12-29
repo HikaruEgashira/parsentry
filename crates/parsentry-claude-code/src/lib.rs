@@ -17,7 +17,7 @@ pub mod stream;
 pub use executor::{ClaudeCodeExecutor, ClaudeCodeOutput};
 pub use parser::{ClaudeCodeResponse, ParAnalysis, VulnerabilityInfo};
 pub use prompt::{PatternContext, PromptBuilder};
-pub use stream::{ChannelCallback, NoOpCallback, StreamCallback, StreamEvent, StreamMessage};
+pub use stream::{ChannelCallback, NoOpCallback, ResultMessage, StreamCallback, StreamEvent, StreamMessage};
 
 use std::path::PathBuf;
 
