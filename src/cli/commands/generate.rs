@@ -9,8 +9,10 @@ use std::time::Instant;
 use crate::cli::args::{GenerateArgs, Agent};
 use crate::github::{clone_repo, GitHubSearchClient};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
+use crate::pattern_generator_codex::generate_custom_patterns_with_codex;
 use parsentry_analyzer::generate_custom_patterns;
 use parsentry_claude_code::ClaudeCodeConfig;
+use parsentry_codex::CodexConfig;
 
 /// Benchmark result for pattern generation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,6 +176,14 @@ async fn process_single_target(target: &str, args: &GenerateArgs) -> Result<Benc
                 ..ClaudeCodeConfig::default()
             };
             generate_custom_patterns_with_claude_code(&local_path, claude_config).await?;
+        }
+        Agent::Codex => {
+            let codex_config = CodexConfig {
+                working_dir: local_path.clone(),
+                model: args.model.clone(),
+                ..CodexConfig::default()
+            };
+            generate_custom_patterns_with_codex(&local_path, codex_config).await?;
         }
         Agent::Genai => {
             generate_custom_patterns(&local_path, &args.model, args.api_base_url.as_deref()).await?;

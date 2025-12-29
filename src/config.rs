@@ -80,14 +80,20 @@ impl AgentConfig {
         self.agent_type == "claude-code"
     }
 
+    /// Check if Codex agent is enabled
+    pub fn is_codex(&self) -> bool {
+        self.agent_type == "codex"
+    }
+
     /// Get the Agent enum value
     pub fn get_agent(&self) -> Agent {
         match self.agent_type.as_str() {
             "claude-code" => Agent::ClaudeCode,
+            "codex" => Agent::Codex,
             "genai" => Agent::Genai,
             unknown => {
                 tracing::warn!(
-                    "Unknown agent type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code'",
+                    "Unknown agent type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code', 'codex'",
                     unknown
                 );
                 Agent::Genai
@@ -848,6 +854,9 @@ use_cache = true
         match args.agent {
             Agent::ClaudeCode => {
                 self.agent.agent_type = "claude-code".to_string();
+            }
+            Agent::Codex => {
+                self.agent.agent_type = "codex".to_string();
             }
             Agent::Genai => {
                 self.agent.agent_type = "genai".to_string();

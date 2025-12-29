@@ -12,6 +12,8 @@ pub enum Agent {
     Genai,
     /// Use Claude Code CLI for analysis
     ClaudeCode,
+    /// Use Codex CLI for analysis
+    Codex,
 }
 
 #[derive(Parser, Debug)]
