@@ -1507,6 +1507,7 @@ dependencies = [
  "parsentry-analyzer",
  "parsentry-cache",
  "parsentry-claude-code",
+ "parsentry-codex",
  "parsentry-core",
  "parsentry-i18n",
  "parsentry-parser",
@@ -1570,6 +1571,22 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+]
+
+[[package]]
+name = "parsentry-codex"
+version = "0.12.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "reqwest",
  "serde",
  "serde_json",
  "thiserror 1.0.69",

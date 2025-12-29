@@ -80,14 +80,20 @@ impl ProviderConfig {
         self.provider_type == "claude-code"
     }
 
+    /// Check if Codex provider is enabled
+    pub fn is_codex(&self) -> bool {
+        self.provider_type == "codex"
+    }
+
     /// Get the Provider enum value
     pub fn get_provider(&self) -> Provider {
         match self.provider_type.as_str() {
             "claude-code" => Provider::ClaudeCode,
+            "codex" => Provider::Codex,
             "genai" => Provider::Genai,
             unknown => {
                 tracing::warn!(
-                    "Unknown provider type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code'",
+                    "Unknown provider type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code', 'codex'",
                     unknown
                 );
                 Provider::Genai
@@ -848,6 +854,9 @@ use_cache = true
         match args.provider {
             Provider::ClaudeCode => {
                 self.provider.provider_type = "claude-code".to_string();
+            }
+            Provider::Codex => {
+                self.provider.provider_type = "codex".to_string();
             }
             Provider::Genai => {
                 self.provider.provider_type = "genai".to_string();
