@@ -275,7 +275,6 @@ Respond with the same JSON format as the initial analysis, but with:
     }
 
     /// Build a prompt for direct SARIF output mode.
-    /// The LLM will output SARIF JSON directly to a file.
     pub fn build_sarif_output_prompt(
         &self,
         file_path: &Path,

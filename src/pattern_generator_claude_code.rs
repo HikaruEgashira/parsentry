@@ -12,7 +12,6 @@ use parsentry_core::Language;
 use parsentry_parser::Definition;
 use parsentry_utils::{FileClassifier, FileDiscovery};
 
-/// Find the validation script path
 fn find_validation_script() -> PathBuf {
     // Try relative to current working directory first
     let cwd_script = PathBuf::from("scripts/validate-patterns.sh");
@@ -207,7 +206,6 @@ pub async fn generate_custom_patterns_with_claude_code(
     })
 }
 
-/// Maximum number of definitions to analyze in a single batch
 const MAX_DEFINITIONS_PER_BATCH: usize = 30;
 
 async fn analyze_definitions_with_claude_code(
@@ -337,7 +335,6 @@ REQUIREMENTS:
     Ok(all_patterns)
 }
 
-/// Maximum number of references to analyze (skip if too many)
 const MAX_REFERENCES_TOTAL: usize = 500;
 const MAX_REFERENCES_PER_BATCH: usize = 50;
 

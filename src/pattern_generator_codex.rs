@@ -181,7 +181,6 @@ pub async fn generate_custom_patterns_with_codex(
     })
 }
 
-/// Maximum number of definitions to analyze in a single batch
 const MAX_DEFINITIONS_PER_BATCH: usize = 30;
 
 async fn analyze_definitions_with_codex(
@@ -284,7 +283,6 @@ REQUIREMENTS:
     Ok(all_patterns)
 }
 
-/// Maximum number of references to analyze (skip if too many)
 const MAX_REFERENCES_TOTAL: usize = 500;
 const MAX_REFERENCES_PER_BATCH: usize = 50;
 
