@@ -302,6 +302,8 @@ fn test_context_creation_and_validation() -> Result<()> {
         start_byte: 0,
         end_byte: 13,
         source: "fn func1() {}".to_string(),
+        file_path: None,
+        line_number: None,
     };
 
     let def2 = Definition {
@@ -309,6 +311,8 @@ fn test_context_creation_and_validation() -> Result<()> {
         start_byte: 20,
         end_byte: 33,
         source: "fn func2() {}".to_string(),
+        file_path: None,
+        line_number: None,
     };
 
     let context = Context {
