@@ -94,11 +94,11 @@ Multi-Repository Variant Analysis (MVRA):
       --code-query <MVRA_CODE_QUERY>     Code search query for MVRA
       --max-repos <MVRA_MAX_REPOS>       Max repos to analyze [default: 10]
       --cache-dir <MVRA_CACHE_DIR>       Cache directory [default: .parsentry-cache]
-      --mvra-no-cache                    Disable repository cache
+      --mvra-cache[=<bool>]          Enable repository cache [default: true]
 
 Cache Options:
-      --cache                            Enable LLM response cache
-      --no-cache                         Disable LLM response cache
+
+      --cache[=<bool>]              Enable LLM response cache [default: true]
       --cache-only                       Use cache only (fail if miss)
 ```
 
@@ -141,6 +141,16 @@ Summary
 ### Security
 
 This tool is intended for security research and educational purposes only. Do not use the example vulnerable applications in production environments.
+
+#### Cache Directory Policy
+
+The `.parsentry-cache` directory stores cloned repositories for MVRA (Multi-Repository Variant Analysis) and LLM response caches. To improve development efficiency, some intentionally vulnerable sample applications are committed to GitHub for testing and benchmarking.
+
+**Important:**
+- The `.parsentry-cache` directory is explicitly listed in `.gitignore` by default
+- Only pre-approved intentionally vulnerable applications (e.g., OWASP goat apps, CTF challenges) may be committed via `git add -f`
+- Never commit cache data from real-world application scans
+- LLM response caches may contain sensitive information and should never be committed
 
 ### License
 

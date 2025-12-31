@@ -12,4 +12,9 @@ coverage
 debug
 benchmarks
 .devenv
-.devenv.flake.nix.parsentry-cache
+.devenv.flake.nix
+
+# Cache directory - ignored by default for security
+# Only intentionally vulnerable sample applications may be committed
+# See Security section in README.md for details
+.parsentry-cache

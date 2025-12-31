@@ -36,16 +36,13 @@ pub enum CacheMode {
 }
 
 impl CacheMode {
-    pub fn from_flags(cache: bool, no_cache: bool, cache_only: bool) -> Self {
+    pub fn from_flags(cache: bool, cache_only: bool) -> Self {
         if cache_only {
             CacheMode::CacheOnly
-        } else if no_cache {
-            CacheMode::NoCache
         } else if cache {
             CacheMode::Normal
         } else {
-            // Default: cache is enabled
-            CacheMode::Normal
+            CacheMode::NoCache
         }
     }
 }
@@ -341,11 +338,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let use_claude_code = config.agent.is_claude_code();
 
     // Initialize cache
-    let cache_mode = CacheMode::from_flags(
-        args.cache,
-        args.no_cache,
-        args.cache_only,
-    );
+    let cache_mode = CacheMode::from_flags(args.cache, args.cache_only);
 
     let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
         match Cache::new(&config.cache.directory) {
@@ -728,7 +721,7 @@ async fn run_mvra_scan(args: ScanArgs) -> Result<()> {
         mvra_config.cache_dir = cache_dir.clone();
     }
 
-    if args.mvra_no_cache {
+    if !args.mvra_cache {
         mvra_config.use_cache = false;
     }
 
@@ -931,11 +924,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let use_claude_code = config.agent.is_claude_code();
 
     // Initialize cache for MVRA scans
-    let cache_mode = CacheMode::from_flags(
-        args.cache,
-        args.no_cache,
-        args.cache_only,
-    );
+    let cache_mode = CacheMode::from_flags(args.cache, args.cache_only);
 
     let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
         Cache::new(&config.cache.directory).ok().map(Arc::new)

@@ -103,17 +103,13 @@ pub struct Args {
     #[arg(long = "cache-dir", default_value = ".parsentry-cache")]
     pub mvra_cache_dir: Option<PathBuf>,
 
-    /// Disable repository cache in MVRA (always clone fresh)
-    #[arg(long = "mvra-no-cache")]
-    pub mvra_no_cache: bool,
+    /// Enable repository cache in MVRA [default: true]
+    #[arg(long = "mvra-cache", default_value = "true", num_args = 0..=1, default_missing_value = "true")]
+    pub mvra_cache: bool,
 
-    /// Enable LLM response cache
-    #[arg(long, global = true)]
+    /// Enable LLM response cache [default: true]
+    #[arg(long, global = true, default_value = "true", num_args = 0..=1, default_missing_value = "true")]
     pub cache: bool,
-
-    /// Disable LLM response cache
-    #[arg(long, global = true, conflicts_with = "cache")]
-    pub no_cache: bool,
 
     /// Use cache only (fail if cache miss)
     #[arg(long, global = true)]
@@ -250,9 +246,8 @@ pub struct ScanArgs {
     pub mvra_code_query: Option<String>,
     pub mvra_max_repos: usize,
     pub mvra_cache_dir: Option<PathBuf>,
-    pub mvra_no_cache: bool,
+    pub mvra_cache: bool,
     pub cache: bool,
-    pub no_cache: bool,
     pub cache_only: bool,
 }
 
@@ -282,9 +277,8 @@ impl From<&Args> for ScanArgs {
             mvra_code_query: args.mvra_code_query.clone(),
             mvra_max_repos: args.mvra_max_repos,
             mvra_cache_dir: args.mvra_cache_dir.clone(),
-            mvra_no_cache: args.mvra_no_cache,
+            mvra_cache: args.mvra_cache,
             cache: args.cache,
-            no_cache: args.no_cache,
             cache_only: args.cache_only,
         }
     }
