@@ -273,6 +273,210 @@ Respond with the same JSON format as the initial analysis, but with:
             analysis = analysis,
         )
     }
+
+    /// Build a prompt for direct file output mode (no JSON parsing).
+    /// Claude Code will write the analysis directly to a markdown file.
+    pub fn build_direct_file_output_prompt(
+        &self,
+        file_path: &Path,
+        content: &str,
+        output_path: &Path,
+        output_dir: &Path,
+        scripts_dir: &Path,
+        pattern_context: Option<&PatternContext>,
+    ) -> String {
+        let file_ops_instruction = if self.enable_file_ops {
+            r#"
+## Deep Context Analysis
+
+You have access to file operations. Use them to:
+- Read imported modules to understand function implementations
+- Search for security-related patterns in the codebase
+- Trace call chains to identify complete attack paths
+- Read configuration files that may affect security"#
+        } else {
+            ""
+        };
+
+        let poc_instruction = if self.enable_poc {
+            r#"
+## PoC Verification
+
+If a vulnerability is confirmed:
+1. Create a minimal PoC demonstrating the vulnerability
+2. Execute the PoC in a safe, read-only manner if possible
+3. Document the actual behavior observed
+
+Safety Constraints:
+- DO NOT execute destructive operations
+- DO NOT access sensitive files outside the target
+- Use read-only operations when possible
+- Report theoretical impact if execution is unsafe"#
+        } else {
+            r#"
+## PoC Generation
+
+If a vulnerability is confirmed, generate a PoC code that demonstrates the vulnerability.
+Do NOT execute the PoC - only generate the code."#
+        };
+
+        let pattern_section = if let Some(ctx) = pattern_context {
+            format!(
+                r#"
+## Pattern Context
+
+- **Pattern Type**: {}
+- **Description**: {}
+- **Matched Code**:
+```
+{}
+```
+- **Attack Vectors**: {}
+"#,
+                ctx.pattern_type,
+                ctx.description,
+                ctx.matched_code,
+                ctx.attack_vectors.join(", ")
+            )
+        } else {
+            String::new()
+        };
+
+        let lang_instruction = if self.language == "ja" {
+            "日本語で記述してください。"
+        } else {
+            "Write in English."
+        };
+
+        let safe_file_path = sanitize_for_prompt(&file_path.display().to_string());
+        let safe_content = sanitize_for_prompt(content);
+        let safe_output_path = output_path.display().to_string();
+        let safe_output_dir = output_dir.display().to_string();
+        let safe_scripts_dir = scripts_dir.display().to_string();
+
+        format!(
+            r#"You are a security vulnerability analyzer with access to code execution and file operations.
+
+## Analysis Target
+
+File: {file_path}
+{pattern_section}
+
+## Source Code
+
+```
+{content}
+```
+
+## Instructions
+
+Analyze this code for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
+
+1. **Identify Principals**: Find untrusted data sources (user input, external APIs, file uploads)
+2. **Identify Resources**: Find sensitive operations (database queries, file system, command execution)
+3. **Evaluate Actions**: Assess security controls between principals and resources
+4. **Detect Policy Violations**: Identify paths where untrusted data reaches resources without proper validation
+{file_ops_instruction}
+{poc_instruction}
+
+## PAR Analysis Framework
+
+- **Principal**: Untrusted data sources (user input, external APIs, environment variables)
+- **Action**: Security controls (validation, sanitization, authentication, authorization)
+- **Resource**: Sensitive operations (DB, file system, command execution, network)
+
+## Output Instructions
+
+{lang_instruction}
+
+**IMPORTANT**: Do NOT output JSON. Instead, write the analysis directly to a markdown file.
+
+1. Use the Write tool to create a markdown file at: `{output_path}`
+
+2. The markdown file MUST follow this exact format:
+
+```markdown
+# Security Analysis: [filename]
+
+## ファイル情報
+- **パス**: `[file_path]`
+- **検出パターン**: [pattern_description]
+- **信頼度スコア**: [0-100]/100
+
+## 脆弱性タイプ
+- `[VULN_TYPE]`
+
+## PAR Policy Analysis
+
+### Principals (データソース)
+| 名前 | 信頼レベル | 説明 |
+|-----|----------|-----|
+| [identifier] | [trusted/semi_trusted/untrusted] | [description] |
+
+### Actions (セキュリティ制御)
+| 名前 | 品質 | 弱点 |
+|-----|-----|-----|
+| [identifier] | [adequate/insufficient/missing] | [weaknesses] |
+
+### Resources (操作対象)
+| 名前 | 重要度 | 種類 |
+|-----|-------|-----|
+| [identifier] | [low/medium/high/critical] | [operation_type] |
+
+### Policy Violations
+| ルールID | 説明 | 違反パス | 重要度 |
+|---------|-----|---------|-------|
+| [rule_id] | [description] | [principal -> action -> resource] | [severity] |
+
+## マッチしたソースコード
+```[lang]
+[matched_code]
+```
+
+## 詳細解析
+[Comprehensive security assessment]
+
+## PoC
+```
+[Proof of concept code if vulnerability found]
+```
+
+## 修復ガイダンス
+### 推奨事項
+[Recommendations for fixing the vulnerability]
+
+### コード例
+```[lang]
+[Fixed code example]
+```
+
+## 解析ノート
+[Your analysis reasoning and notes]
+```
+
+3. After writing the markdown file, execute the following command using the Bash tool:
+   ```bash
+   bash {scripts_dir}/sarif.sh {output_dir}
+   ```
+
+## Important Notes
+
+- confidence_score: Set to 0 if no vulnerability is found
+- Normalize confidence_score to multiples of 10 (0, 10, 20, ..., 100)
+- Only report vulnerabilities with high confidence (>= 70)
+- Include full attack path in violation_path (Policy Violations section)
+"#,
+            file_path = safe_file_path,
+            content = safe_content,
+            pattern_section = pattern_section,
+            file_ops_instruction = file_ops_instruction,
+            poc_instruction = poc_instruction,
+            lang_instruction = lang_instruction,
+            output_path = safe_output_path,
+            output_dir = safe_output_dir,
+            scripts_dir = safe_scripts_dir,
+        )
+    }
 }
 
 /// Context information about a security pattern match.

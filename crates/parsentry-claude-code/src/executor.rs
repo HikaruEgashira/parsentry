@@ -56,6 +56,19 @@ pub struct ClaudeCodeOutput {
     pub raw_output: String,
 }
 
+/// Result from direct file output execution (no JSON parsing).
+#[derive(Debug, Clone)]
+pub struct FileOutputResult {
+    /// Whether the execution was successful.
+    pub success: bool,
+    /// Duration in milliseconds.
+    pub duration_ms: Option<u64>,
+    /// Raw stdout output for debugging.
+    pub stdout: String,
+    /// Raw stderr output for debugging.
+    pub stderr: String,
+}
+
 /// Executor for Claude Code CLI with semaphore-based concurrency control.
 pub struct ClaudeCodeExecutor {
     claude_path: PathBuf,
@@ -336,6 +349,122 @@ impl ClaudeCodeExecutor {
         }
 
         Err(last_error.unwrap())
+    }
+
+    /// Execute with direct file output mode (no JSON parsing).
+    /// Claude Code will write the analysis directly to a markdown file.
+    pub async fn execute_with_file_output(
+        &self,
+        prompt: &str,
+    ) -> Result<FileOutputResult, ClaudeCodeError> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
+
+        debug!("Acquired semaphore permit, executing Claude Code (file output mode)");
+
+        timeout(
+            Duration::from_secs(self.timeout_secs),
+            self.spawn_claude_process_text(prompt),
+        )
+        .await
+        .map_err(|_| ClaudeCodeError::Timeout {
+            timeout_secs: self.timeout_secs,
+        })?
+    }
+
+    /// Spawn Claude Code process with text output format (no JSON parsing).
+    async fn spawn_claude_process_text(
+        &self,
+        prompt: &str,
+    ) -> Result<FileOutputResult, ClaudeCodeError> {
+        let mut cmd = Command::new(&self.claude_path);
+
+        cmd.arg("--print")
+            .arg("--output-format")
+            .arg("text"); // Use text format instead of JSON
+
+        // Add model argument if specified
+        if let Some(ref model) = self.model {
+            cmd.arg("--model").arg(model);
+        }
+
+        cmd.current_dir(&self.working_dir)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+
+        debug!("Spawning Claude Code process (text output): {:?}", cmd);
+
+        let start = std::time::Instant::now();
+
+        let mut child = cmd.spawn().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
+            } else {
+                ClaudeCodeError::SpawnError(e)
+            }
+        })?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(ClaudeCodeError::SpawnError)?;
+            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
+        }
+
+        let output = child
+            .wait_with_output()
+            .await
+            .map_err(ClaudeCodeError::SpawnError)?;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        // Save log if log_dir is configured
+        if let Some(ref log_dir) = self.log_dir {
+            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
+            let log_file = log_dir.join(format!("claude_code_file_output_{}.log", timestamp));
+            let log_content = format!(
+                "=== Claude Code File Output Execution Log ===\n\
+                 Timestamp: {}\n\
+                 Working Dir: {}\n\
+                 Duration: {}ms\n\
+                 Success: {}\n\
+                 \n\
+                 === STDOUT ===\n\
+                 {}\n\
+                 \n\
+                 === STDERR ===\n\
+                 {}\n",
+                chrono::Utc::now().to_rfc3339(),
+                self.working_dir.display(),
+                duration_ms,
+                output.status.success(),
+                stdout,
+                stderr
+            );
+            if let Err(e) = std::fs::write(&log_file, &log_content) {
+                warn!("Failed to write Claude Code log: {}", e);
+            } else {
+                info!("Claude Code log saved: {}", log_file.display());
+            }
+        }
+
+        if !stderr.is_empty() {
+            debug!("Claude Code stderr: {}", stderr);
+        }
+
+        Ok(FileOutputResult {
+            success: output.status.success(),
+            duration_ms: Some(duration_ms),
+            stdout,
+            stderr,
+        })
     }
 
     /// Spawn the Claude Code process and return raw result string.
