@@ -3,7 +3,6 @@ use std::{
     fs::{File, read_to_string},
     io::{BufRead, BufReader, Result as IoResult},
     path::{Path, PathBuf},
-    process::Command,
 };
 
 use parsentry_parser::SecurityRiskPatterns;
@@ -195,30 +194,4 @@ impl RepoOps {
     pub fn add_file_to_parser(&mut self, path: &std::path::Path) -> anyhow::Result<()> {
         self.code_parser.add_file(path)
     }
-}
-
-/// GitHubリポジトリをcloneする
-///
-/// # 引数
-/// - repo: "owner/repo" 形式のGitHubリポジトリ名
-/// - dest: clone先ディレクトリ
-pub fn clone_github_repo(repo: &str, dest: &Path) -> Result<()> {
-    if dest.exists() {
-        anyhow::bail!("Destination directory already exists");
-    }
-
-    let url = format!("https://github.com/{}.git", repo);
-
-    // Use system git command for reliable authentication handling
-    let output = Command::new("git")
-        .args(["clone", "--depth", "1", &url])
-        .arg(dest)
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("git clone failed: {}", stderr);
-    }
-
-    Ok(())
 }
