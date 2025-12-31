@@ -233,11 +233,7 @@ async fn analyze_with_codex(
         Err(e) => {
             // Handle rate limit errors gracefully - skip this analysis
             if e.is_rate_limit() {
-                printer.warning("Rate limit", &format!("{}: {}", file_name, e));
-                info!(
-                    "Codex rate limit exceeded for {}, skipping",
-                    file_path.display()
-                );
+                printer.status("Skipped", &format!("{} (rate limit)", file_name));
                 return Ok(None);
             }
 
