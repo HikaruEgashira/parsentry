@@ -58,7 +58,13 @@ impl GitHubSearchClient {
             })?;
 
         // Verify git is from a trusted location
-        if !git_path.starts_with("/usr/") && !git_path.starts_with("/opt/") {
+        // Allow: /usr/*, /opt/*, ~/.nix-profile/*, /nix/store/*
+        let is_trusted = git_path.starts_with("/usr/")
+            || git_path.starts_with("/opt/")
+            || git_path.contains(".nix-profile/")
+            || git_path.starts_with("/nix/store/");
+
+        if !is_trusted {
             debug!("git binary not in trusted location: {}", git_path);
             return None;
         }
