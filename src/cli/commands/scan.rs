@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::cli::args::{validate_scan_args, ScanArgs};
 use crate::cli::streaming_ui::StreamingDisplay;
@@ -15,12 +15,37 @@ use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_c
 use crate::pattern_generator_codex::generate_custom_patterns_with_codex;
 use crate::github::clone_repo;
 use crate::repo::RepoOps;
-use crate::response::{Response, ResponseExt, VulnType};
+use crate::response::{from_codex_response, Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
+use parsentry_cache::Cache;
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
 #[allow(unused_imports)]
 use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
+
+/// Cache mode for analysis
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheMode {
+    /// Use cache normally (read and write)
+    Normal,
+    /// Skip cache entirely
+    NoCache,
+    /// Only use cached results, don't make new requests
+    CacheOnly,
+}
+
+impl CacheMode {
+    /// Create CacheMode from CLI flags
+    pub fn from_flags(cache: bool, cache_only: bool) -> Self {
+        if cache_only {
+            CacheMode::CacheOnly
+        } else if cache {
+            CacheMode::Normal
+        } else {
+            CacheMode::NoCache
+        }
+    }
+}
 use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{
@@ -350,13 +375,13 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             }
 
             printer.success("Generated", &format!("{} patterns", result.patterns_generated));
-        } else if config.provider.is_codex() {
-            let codex_path = config.provider.path.clone();
+        } else if config.agent.is_codex() {
+            let codex_path = config.agent.path.clone();
             let log_dir = final_args.output_dir.as_ref().map(|d| d.join("codex_logs"));
             let codex_config = CodexConfig {
                 codex_path,
-                max_concurrent: config.provider.max_concurrent.min(10),
-                timeout_secs: config.provider.timeout_secs,
+                max_concurrent: config.agent.max_concurrent.min(10),
+                timeout_secs: config.agent.timeout_secs,
                 enable_poc: false,
                 working_dir: root_dir.clone(),
                 log_dir,
@@ -445,6 +470,20 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let use_claude_code = config.agent.is_claude_code();
     let use_codex = config.agent.is_codex();
 
+    // Initialize cache mode and cache
+    let cache_mode = CacheMode::from_flags(final_args.cache, final_args.cache_only);
+    let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
+        match Cache::new(&config.cache.directory) {
+            Ok(c) => Some(Arc::new(c)),
+            Err(e) => {
+                debug!("Cache initialization failed: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     let mut summary = AnalysisSummary::new();
 
     let progress_bar = ui::progress::create_bar(total as u64);
@@ -529,6 +568,8 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let use_codex = use_codex;
             let printer = Arc::clone(&printer);
             let streaming_display = Arc::clone(&streaming_display);
+            let cache = cache.clone();
+            let cache_mode = cache_mode;
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -1139,6 +1180,14 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let use_claude_code = config.agent.is_claude_code();
     let use_codex = config.agent.is_codex();
 
+    // Initialize cache mode and cache for MVRA
+    let cache_mode = CacheMode::from_flags(final_args.cache, final_args.cache_only);
+    let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
+        Cache::new(&config.cache.directory).ok().map(Arc::new)
+    } else {
+        None
+    };
+
     let mut summary = AnalysisSummary::new();
 
     let max_concurrent = if use_claude_code {
@@ -1212,6 +1261,8 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let use_claude_code = use_claude_code;
             let use_codex = use_codex;
             let printer = Arc::clone(&printer);
+            let cache = cache.clone();
+            let cache_mode = cache_mode;
 
             async move {
                 let analysis_result = if use_claude_code {
