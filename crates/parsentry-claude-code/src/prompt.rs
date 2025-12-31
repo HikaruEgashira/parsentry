@@ -274,15 +274,13 @@ Respond with the same JSON format as the initial analysis, but with:
         )
     }
 
-    /// Build a prompt for direct file output mode (no JSON parsing).
-    /// Claude Code will write the analysis directly to a markdown file.
-    pub fn build_direct_file_output_prompt(
+    /// Build a prompt for direct SARIF output mode.
+    /// The LLM will output SARIF JSON directly to a file.
+    pub fn build_sarif_output_prompt(
         &self,
         file_path: &Path,
         content: &str,
-        output_path: &Path,
-        output_dir: &Path,
-        scripts_dir: &Path,
+        sarif_output_path: &Path,
         pattern_context: Option<&PatternContext>,
     ) -> String {
         let file_ops_instruction = if self.enable_file_ops {
@@ -305,19 +303,9 @@ You have access to file operations. Use them to:
 If a vulnerability is confirmed:
 1. Create a minimal PoC demonstrating the vulnerability
 2. Execute the PoC in a safe, read-only manner if possible
-3. Document the actual behavior observed
-
-Safety Constraints:
-- DO NOT execute destructive operations
-- DO NOT access sensitive files outside the target
-- Use read-only operations when possible
-- Report theoretical impact if execution is unsafe"#
+3. Document the actual behavior observed"#
         } else {
-            r#"
-## PoC Generation
-
-If a vulnerability is confirmed, generate a PoC code that demonstrates the vulnerability.
-Do NOT execute the PoC - only generate the code."#
+            ""
         };
 
         let pattern_section = if let Some(ctx) = pattern_context {
@@ -342,20 +330,12 @@ Do NOT execute the PoC - only generate the code."#
             String::new()
         };
 
-        let lang_instruction = if self.language == "ja" {
-            "日本語で記述してください。"
-        } else {
-            "Write in English."
-        };
-
         let safe_file_path = sanitize_for_prompt(&file_path.display().to_string());
         let safe_content = sanitize_for_prompt(content);
-        let safe_output_path = output_path.display().to_string();
-        let safe_output_dir = output_dir.display().to_string();
-        let safe_scripts_dir = scripts_dir.display().to_string();
+        let safe_sarif_path = sarif_output_path.display().to_string();
 
         format!(
-            r#"You are a security vulnerability analyzer with access to code execution and file operations.
+            r#"You are a security vulnerability analyzer. Analyze the code and output results in SARIF format.
 
 ## Analysis Target
 
@@ -379,102 +359,57 @@ Analyze this code for security vulnerabilities using the PAR (Principal-Action-R
 {file_ops_instruction}
 {poc_instruction}
 
-## PAR Analysis Framework
-
-- **Principal**: Untrusted data sources (user input, external APIs, environment variables)
-- **Action**: Security controls (validation, sanitization, authentication, authorization)
-- **Resource**: Sensitive operations (DB, file system, command execution, network)
-
 ## Output Instructions
 
-{lang_instruction}
+**IMPORTANT**: Output SARIF JSON directly. Use the Write tool to save to: `{sarif_path}`
 
-**IMPORTANT**: Do NOT output JSON. Instead, write the analysis directly to a markdown file.
+The SARIF file MUST follow SARIF v2.1.0 schema with this structure:
 
-1. Use the Write tool to create a markdown file at: `{output_path}`
+- $schema: https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
+- version: 2.1.0
+- runs[0].tool.driver.name: Parsentry
+- runs[0].tool.driver.version: 0.13.0
+- runs[0].tool.driver.rules: Array of rule definitions
+- runs[0].results: Array of findings
 
-2. The markdown file MUST follow this exact format:
+Each result must have:
+- ruleId: One of SQLI, XSS, RCE, LFI, SSRF, AFO, IDOR
+- ruleIndex: Index of the rule in rules array
+- level: error (confidence >= 90), warning (>= 70), note (>= 50)
+- message.text: Brief description
+- message.markdown: Detailed analysis
+- locations[0].physicalLocation.artifactLocation.uri: File path
+- locations[0].physicalLocation.region.startLine: Line number
+- locations[0].physicalLocation.region.snippet.text: Matched code
+- properties.confidence: Float 0.0-1.0
+- properties.cwe: Array of CWE IDs
+- properties.owasp: Array of OWASP categories
+- properties.mitre_attack: Array of MITRE ATT&CK IDs
 
-```markdown
-# Security Analysis: [filename]
+## Vulnerability Types (ruleId)
 
-## ファイル情報
-- **パス**: `[file_path]`
-- **検出パターン**: [pattern_description]
-- **信頼度スコア**: [0-100]/100
-
-## 脆弱性タイプ
-- `[VULN_TYPE]`
-
-## PAR Policy Analysis
-
-### Principals (データソース)
-| 名前 | 信頼レベル | 説明 |
-|-----|----------|-----|
-| [identifier] | [trusted/semi_trusted/untrusted] | [description] |
-
-### Actions (セキュリティ制御)
-| 名前 | 品質 | 弱点 |
-|-----|-----|-----|
-| [identifier] | [adequate/insufficient/missing] | [weaknesses] |
-
-### Resources (操作対象)
-| 名前 | 重要度 | 種類 |
-|-----|-------|-----|
-| [identifier] | [low/medium/high/critical] | [operation_type] |
-
-### Policy Violations
-| ルールID | 説明 | 違反パス | 重要度 |
-|---------|-----|---------|-------|
-| [rule_id] | [description] | [principal -> action -> resource] | [severity] |
-
-## マッチしたソースコード
-```[lang]
-[matched_code]
-```
-
-## 詳細解析
-[Comprehensive security assessment]
-
-## PoC
-```
-[Proof of concept code if vulnerability found]
-```
-
-## 修復ガイダンス
-### 推奨事項
-[Recommendations for fixing the vulnerability]
-
-### コード例
-```[lang]
-[Fixed code example]
-```
-
-## 解析ノート
-[Your analysis reasoning and notes]
-```
-
-3. After writing the markdown file, execute the following command using the Bash tool:
-   ```bash
-   bash {scripts_dir}/sarif.sh {output_dir}
-   ```
+Use these exact values:
+- SQLI: SQL Injection
+- XSS: Cross-Site Scripting
+- RCE: Remote Code Execution
+- LFI: Local File Inclusion
+- SSRF: Server-Side Request Forgery
+- AFO: Arbitrary File Operation
+- IDOR: Insecure Direct Object Reference
 
 ## Important Notes
 
-- confidence_score: Set to 0 if no vulnerability is found
-- Normalize confidence_score to multiples of 10 (0, 10, 20, ..., 100)
-- Only report vulnerabilities with high confidence (>= 70)
-- Include full attack path in violation_path (Policy Violations section)
+- If no vulnerability found or confidence < 0.5, output empty results array
+- Only report vulnerabilities with confidence >= 0.7
+- Include CWE, OWASP, and MITRE ATT&CK mappings when applicable
+- The help field in rules should contain remediation guidance
 "#,
             file_path = safe_file_path,
             content = safe_content,
             pattern_section = pattern_section,
             file_ops_instruction = file_ops_instruction,
             poc_instruction = poc_instruction,
-            lang_instruction = lang_instruction,
-            output_path = safe_output_path,
-            output_dir = safe_output_dir,
-            scripts_dir = safe_scripts_dir,
+            sarif_path = safe_sarif_path,
         )
     }
 }
