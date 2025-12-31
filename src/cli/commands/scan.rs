@@ -48,98 +48,11 @@ impl CacheMode {
     }
 }
 use parsentry_i18n::{get_messages, Language};
-use parsentry_parser::{CodeParser, PatternMatch, PatternType, SecurityRiskPatterns};
+use parsentry_parser::{PatternMatch, PatternType, SecurityRiskPatterns};
 use parsentry_reports::{
     generate_output_filename, generate_pattern_specific_filename, AnalysisSummary, SarifReport,
 };
 use parsentry_utils::FileClassifier;
-
-/// Check if a Resource has a reachable Principal in its call graph.
-/// This traces backwards from the resource function to find if any caller
-/// chain leads to a Principal (user input source).
-fn has_reachable_principal(
-    parser: &mut CodeParser,
-    resource_function: &str,
-    principal_functions: &HashSet<String>,
-    max_depth: usize,
-) -> bool {
-    let mut visited = HashSet::new();
-    has_reachable_principal_recursive(
-        parser,
-        resource_function,
-        principal_functions,
-        &mut visited,
-        0,
-        max_depth,
-    )
-}
-
-fn has_reachable_principal_recursive(
-    parser: &mut CodeParser,
-    current: &str,
-    principals: &HashSet<String>,
-    visited: &mut HashSet<String>,
-    depth: usize,
-    max_depth: usize,
-) -> bool {
-    if depth > max_depth || visited.contains(current) {
-        return false;
-    }
-    visited.insert(current.to_string());
-
-    // Check if current function is a Principal
-    if principals.contains(current) {
-        return true;
-    }
-
-    // Trace callers (functions that call the current function)
-    if let Ok(callers) = parser.find_calls(current) {
-        for (_, def, _) in callers {
-            if has_reachable_principal_recursive(
-                parser,
-                &def.name,
-                principals,
-                visited,
-                depth + 1,
-                max_depth,
-            ) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Extract function name from matched text (handle method calls, etc.)
-fn extract_function_name(matched_text: &str) -> Option<String> {
-    // Try to extract a clean function/method name from the matched text
-    // Handle cases like "open(file)", "os.system(cmd)", "subprocess.run(...)"
-    let trimmed = matched_text.trim();
-
-    // If it's a simple identifier, return it
-    if trimmed.chars().all(|c| c.is_alphanumeric() || c == '_') {
-        return Some(trimmed.to_string());
-    }
-
-    // Try to extract function name from call expression like "func(...)"
-    if let Some(paren_pos) = trimmed.find('(') {
-        let before_paren = &trimmed[..paren_pos];
-        // Handle method calls like "obj.method"
-        if let Some(dot_pos) = before_paren.rfind('.') {
-            let method = &before_paren[dot_pos + 1..];
-            if !method.is_empty() {
-                return Some(method.to_string());
-            }
-        }
-        // Simple function name
-        let func = before_paren.trim();
-        if !func.is_empty() && func.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            return Some(func.to_string());
-        }
-    }
-
-    None
-}
 
 /// Analyze a pattern using Claude Code CLI with direct SARIF output.
 /// Claude Code will write the SARIF JSON directly to a file using the Write tool.
@@ -504,7 +417,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     // Collect all pattern matches across all files
     let mut all_pattern_matches: Vec<(PathBuf, PatternMatch)> = Vec::new();
-    let mut principal_functions: HashSet<String> = HashSet::new();
 
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
@@ -520,64 +432,39 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let matches = patterns.get_pattern_matches(&content);
 
             for pattern_match in matches {
-                // Collect Principal function names for call graph analysis
-                if pattern_match.pattern_type == PatternType::Principal {
-                    if let Some(func_name) = extract_function_name(&pattern_match.matched_text) {
-                        principal_functions.insert(func_name);
-                    }
-                }
                 all_pattern_matches.push((file_path.clone(), pattern_match));
             }
         }
     }
 
     let total_before_filter = all_pattern_matches.len();
-    printer.status("Detected", &format!("{} patterns ({} principals)", total_before_filter, principal_functions.len()));
 
-    // Filter: Only analyze Resource patterns that have a reachable Principal in call graph
-    let filtered_pattern_matches: Vec<(PathBuf, PatternMatch)> = if principal_functions.is_empty() {
+    // Collect files that contain Principal patterns
+    let files_with_principals: HashSet<PathBuf> = all_pattern_matches
+        .iter()
+        .filter(|(_, pm)| pm.pattern_type == PatternType::Principal)
+        .map(|(path, _)| path.clone())
+        .collect();
+
+    printer.status("Detected", &format!("{} patterns ({} files with principals)", total_before_filter, files_with_principals.len()));
+
+    // Filter: Only analyze Resource patterns in files that also have a Principal
+    let filtered_pattern_matches: Vec<(PathBuf, PatternMatch)> = if files_with_principals.is_empty() {
         printer.warning("Skipped", "No Principal (input source) detected in project - no attack vectors");
         Vec::new()
     } else {
-        // Initialize parser for call graph analysis
-        let parser_result = CodeParser::new();
-        if parser_result.is_err() {
-            printer.warning("Warning", "Failed to create parser, analyzing all Resource patterns");
-            all_pattern_matches
-                .into_iter()
-                .filter(|(_, pm)| pm.pattern_type == PatternType::Resource)
-                .collect()
-        } else {
-            let mut parser = parser_result.unwrap();
-
-            // Add files to parser for call graph analysis
-            for file in &files {
-                if let Err(e) = parser.add_file(file) {
-                    debug!("Failed to add file to parser: {}: {}", file.display(), e);
+        all_pattern_matches
+            .into_iter()
+            .filter(|(file_path, pm)| {
+                // Only analyze Resource patterns
+                if pm.pattern_type != PatternType::Resource {
+                    return false;
                 }
-            }
 
-            let max_call_depth = 10; // Maximum depth for call graph traversal
-
-            all_pattern_matches
-                .into_iter()
-                .filter(|(_, pm)| {
-                    // Only analyze Resource patterns
-                    if pm.pattern_type != PatternType::Resource {
-                        return false;
-                    }
-
-                    // Extract function name from matched text
-                    let func_name = match extract_function_name(&pm.matched_text) {
-                        Some(name) => name,
-                        None => return true, // Keep if we can't extract function name (conservative)
-                    };
-
-                    // Check if there's a reachable Principal in the call graph
-                    has_reachable_principal(&mut parser, &func_name, &principal_functions, max_call_depth)
-                })
-                .collect()
-        }
+                // Check if this file contains any Principal pattern (same-file heuristic)
+                files_with_principals.contains(file_path)
+            })
+            .collect()
     };
 
     let all_pattern_matches = filtered_pattern_matches;
@@ -1307,7 +1194,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
 
     // Collect all pattern matches
     let mut all_pattern_matches: Vec<(PathBuf, PatternMatch)> = Vec::new();
-    let mut principal_functions: HashSet<String> = HashSet::new();
 
     for file_path in &files {
         if let Ok(content) = std::fs::read_to_string(file_path) {
@@ -1321,46 +1207,29 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let matches = patterns.get_pattern_matches(&content);
 
             for pattern_match in matches {
-                // Collect Principal function names for call graph analysis
-                if pattern_match.pattern_type == PatternType::Principal {
-                    if let Some(func_name) = extract_function_name(&pattern_match.matched_text) {
-                        principal_functions.insert(func_name);
-                    }
-                }
                 all_pattern_matches.push((file_path.clone(), pattern_match));
             }
         }
     }
 
-    // Filter: Only analyze Resource patterns that have a reachable Principal in call graph
-    let all_pattern_matches: Vec<(PathBuf, PatternMatch)> = if principal_functions.is_empty() {
+    // Collect files that contain Principal patterns
+    let files_with_principals: HashSet<PathBuf> = all_pattern_matches
+        .iter()
+        .filter(|(_, pm)| pm.pattern_type == PatternType::Principal)
+        .map(|(path, _)| path.clone())
+        .collect();
+
+    // Filter: Only analyze Resource patterns in files that also have a Principal
+    let all_pattern_matches: Vec<(PathBuf, PatternMatch)> = if files_with_principals.is_empty() {
         Vec::new()
     } else {
-        let mut parser = match CodeParser::new() {
-            Ok(p) => p,
-            Err(_) => {
-                // Fallback: return all Resource patterns without filtering
-                return Ok(AnalysisSummary::new());
-            }
-        };
-
-        for file in &files {
-            let _ = parser.add_file(file);
-        }
-
-        let max_call_depth = 10;
-
         all_pattern_matches
             .into_iter()
-            .filter(|(_, pm)| {
+            .filter(|(file_path, pm)| {
                 if pm.pattern_type != PatternType::Resource {
                     return false;
                 }
-                let func_name = match extract_function_name(&pm.matched_text) {
-                    Some(name) => name,
-                    None => return true,
-                };
-                has_reachable_principal(&mut parser, &func_name, &principal_functions, max_call_depth)
+                files_with_principals.contains(file_path)
             })
             .collect()
     };
