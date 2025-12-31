@@ -1,0 +1,138 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "informationUri": "https://github.com/xbow-engineering/parsentry",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "shortDescription": {
+                "text": "User input used directly to access database objects without ownership verification"
+              },
+              "fullDescription": {
+                "text": "The application constructs database queries using user-supplied object identifiers (params[:id]) without verifying that the authenticated user has authorization to access that specific object. This allows attackers to directly reference and access/modify objects belonging to other users by guessing or incrementing object IDs."
+              },
+              "help": {
+                "text": "Remediation:\n1. Always verify object ownership before returning or modifying data\n2. Use current_user context to scope queries: Message.where(id: params[:id], user_id: current_user.id).first\n3. Implement authorization checks: authorize_resource! or pundit policies\n4. Use indirect references (UUIDs instead of sequential IDs) as defense-in-depth\n5. Add audit logging for sensitive object access\n\nExample fix:\n```ruby\ndef show\n  @message = current_user.messages.find(params[:id])\nrescue ActiveRecord::RecordNotFound\n  redirect_to user_messages_path, alert: 'Message not found'\nend\n```"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "owasp-a01",
+                  "cwe-639",
+                  "cwe-284"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Insecure Direct Object Reference in show method - Message object accessed without ownership verification",
+            "markdown": "## IDOR Vulnerability: show method\n\n**Principal**: Authenticated user via `params[:id]`\n**Action**: Direct object reference without authorization check\n**Resource**: Message record in database\n\nThe `show` method retrieves a message using only the message ID without verifying that the current user owns or has permission to view that message.\n\n**Impact**: An attacker can view any message in the system by manipulating the `id` parameter.\n\n**Attack Path**:\n1. Attacker authenticates as User A\n2. Attacker requests `/messages/999` (a message belonging to User B)\n3. Query executes: `Message.where(id: 999).first`\n4. Without ownership check, User B's message is returned to attacker\n\n**CWE**: CWE-639 (Authorization Through User-Controlled Key), CWE-284 (Improper Access Control)\n**OWASP**: A01:2021 - Broken Access Control"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/messages_controller.rb"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 14,
+                  "startColumn": 5,
+                  "endColumn": 40
+                },
+                "snippet": {
+                  "text": "def show\n    @message = Message.where(id: params[:id]).first\n  end"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "severity": "high",
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken_Access_Control"
+            ],
+            "mitre_attack": [
+              "T1087",
+              "T1526"
+            ],
+            "par_framework": {
+              "principal": "params[:id] - untrusted user input",
+              "action": "database query without authorization",
+              "resource": "Message records"
+            }
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Insecure Direct Object Reference in destroy method - Message deletion without ownership verification",
+            "markdown": "## IDOR Vulnerability: destroy method\n\n**Principal**: Authenticated user via `params[:id]`\n**Action**: Direct object reference without authorization check\n**Resource**: Message record deletion in database\n\nThe `destroy` method retrieves and deletes a message using only the message ID without verifying that the current user owns that message.\n\n**Impact**: An attacker can delete any message in the system by manipulating the `id` parameter.\n\n**Attack Path**:\n1. Attacker authenticates as User A\n2. Attacker sends DELETE request to `/messages/999` (a message belonging to User B)\n3. Query executes: `Message.where(id: 999).first`\n4. Without ownership check, User B's message is deleted\n5. Flash message confirms successful deletion to attacker\n\n**CWE**: CWE-639 (Authorization Through User-Controlled Key), CWE-284 (Improper Access Control)\n**OWASP**: A01:2021 - Broken Access Control\n\n**Additional Risk**: Information disclosure through flash message (`'Your message has been deleted'`) confirms the attacker successfully accessed another user's resource."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/controllers/messages_controller.rb"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 26,
+                  "startColumn": 5,
+                  "endColumn": 7
+                },
+                "snippet": {
+                  "text": "def destroy\n    message = Message.where(id: params[:id]).first\n\n    if message.destroy\n      flash[:success] = \"Your message has been deleted.\"\n      redirect_to user_messages_path(user_id: current_user.id)\n    else\n      flash[:error] = \"Could not delete message.\"\n    end\n  end"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "severity": "critical",
+            "cwe": [
+              "CWE-639",
+              "CWE-284"
+            ],
+            "owasp": [
+              "A01:2021-Broken_Access_Control"
+            ],
+            "mitre_attack": [
+              "T1485",
+              "T1561"
+            ],
+            "par_framework": {
+              "principal": "params[:id] - untrusted user input",
+              "action": "database delete without authorization",
+              "resource": "Message records"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

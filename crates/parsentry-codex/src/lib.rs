@@ -6,12 +6,12 @@
 mod executor;
 mod parser;
 mod prompt;
-mod stream;
+pub mod stream;
 
-pub use executor::{CodexExecutor, CodexOutput};
+pub use executor::{CodexExecutor, CodexOutput, FileOutputResult};
 pub use parser::{CodexResponse, ParAnalysis, VulnerabilityInfo};
 pub use prompt::{PromptBuilder, PatternContext};
-pub use stream::{ResultMessage, StreamCallback, StreamEvent};
+pub use stream::{ChannelCallback, NoOpCallback, ResultMessage, StreamCallback, StreamEvent};
 
 use std::path::PathBuf;
 
@@ -63,7 +63,7 @@ impl CodexConfig {
 
     /// Set the maximum number of concurrent requests.
     pub fn with_max_concurrent(mut self, max: usize) -> Self {
-        self.max_concurrent = max.min(50); // Cap at 50
+        self.max_concurrent = max.min(10); // Cap at 10 (matching Claude Code)
         self
     }
 
@@ -115,6 +115,6 @@ mod tests {
     #[test]
     fn test_config_max_concurrent_capped() {
         let config = CodexConfig::default().with_max_concurrent(100);
-        assert_eq!(config.max_concurrent, 50);
+        assert_eq!(config.max_concurrent, 10);
     }
 }

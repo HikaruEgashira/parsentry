@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution via Command Line Arguments",
+              "shortDescription": {
+                "text": "Untrusted data from command line arguments used in code execution context"
+              },
+              "fullDescription": {
+                "text": "This rule detects when ARGV or other command line argument sources are used without proper validation in contexts that could lead to remote code execution. MITRE ATT&CK T1059 and T1204 are relevant when command line injection or code execution vulnerabilities are present."
+              },
+              "help": {
+                "text": "Remediation: Avoid using command line arguments directly in dynamic code execution. Always validate and sanitize input. Use allowlists for permitted values. Consider using environment variables or configuration files for sensitive configuration instead of command line arguments."
+              },
+              "properties": {
+                "cwe": [
+                  "CWE-78",
+                  "CWE-94"
+                ],
+                "owasp": [
+                  "A03:2021 - Injection"
+                ],
+                "mitre_attack": [
+                  "T1059",
+                  "T1204"
+                ]
+              }
+            }
+          ],
+          "organization": "OWASP Parsentry"
+        }
+      },
+      "results": [],
+      "properties": {
+        "analysisDate": "2025-12-31T00:00:00Z",
+        "analysisContext": "Static security analysis of KeyManagement model - Command line arguments pattern detection"
+      }
+    }
+  ]
+}

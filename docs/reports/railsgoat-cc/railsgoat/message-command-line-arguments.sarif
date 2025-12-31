@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "informationUri": "https://github.com/OWASP/parsentry",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "shortDescription": {
+                "text": "Missing authorization check allows direct access to user objects"
+              },
+              "fullDescription": {
+                "text": "The creator_name method retrieves user objects by ID without any authorization checks. An attacker can enumerate valid user IDs and access the full_name of any user in the system."
+              },
+              "help": {
+                "text": "Add authorization checks to verify that the current user has permission to access the requested user object. Example: `current_user.id == creator_id or current_user.is_admin?`"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "access-control"
+                ]
+              }
+            }
+          ],
+          "version": "0.13.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Insecure Direct Object Reference: User object accessed without authorization check",
+            "markdown": "## Insecure Direct Object Reference (IDOR)\n\nThe `creator_name` method in the `Message` model retrieves user information by ID without verifying that the current user has permission to access that user's data.\n\n### Vulnerable Code\n```ruby\ndef creator_name\n  if creator = User.where(id: self.creator_id).first\n    creator.full_name\n  else\n    \"Name unavailable\"\n  end\nend\n```\n\n### Security Issue\n- An attacker can enumerate valid user IDs in the system\n- The method returns `full_name` for any valid user ID without authorization checks\n- No validation that the caller should have access to this user's data\n- Enables user enumeration and information disclosure attacks\n\n### Remediation\n1. Add authorization checks before returning user data\n2. Verify the current user has permission to access this information\n3. Consider using scopes or policies to restrict data access\n4. Use `authorize!` from Pundit or similar authorization library\n\n### Example Fix\n```ruby\ndef creator_name\n  if creator = User.where(id: self.creator_id).first\n    # Verify authorization\n    raise Pundit::NotAuthorizedError unless current_user.can_view?(creator)\n    creator.full_name\n  else\n    \"Name unavailable\"\n  end\nend\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/models/message.rb"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 12,
+                  "startColumn": 3,
+                  "endColumn": 7,
+                  "snippet": {
+                    "text": "def creator_name\n    if creator = User.where(id: self.creator_id).first\n      creator.full_name\n    else\n      \"Name unavailable\"\n    end\n  end"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "cwe": [
+              "CWE-639"
+            ],
+            "owasp": [
+              "A01:2021 - Broken Access Control",
+              "A04:2017 - Insecure Direct Object References"
+            ],
+            "mitre_attack": [
+              "T1526 - Reconnaissance",
+              "T1589 - Gather Victim Identity Information"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "scanTimestamp": "2025-12-31T00:00:00Z"
+      }
+    }
+  ]
+}
