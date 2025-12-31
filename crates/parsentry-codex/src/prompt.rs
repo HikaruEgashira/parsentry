@@ -413,21 +413,18 @@ Use these exact values:
         )
     }
 
-    /// Build a security analysis prompt using file references only.
-    ///
-    /// This is optimized for agents (Claude Code, Codex) that can read files themselves,
-    /// reducing context size by passing only file paths instead of full content.
+    /// Build a prompt using file references only.
     pub fn build_file_reference_prompt(
         &self,
         file_path: &Path,
         pattern_context: Option<&PatternContext>,
-        related_functions: Option<&[(&str, &str, usize)]>, // (name, path, line)
+        related_functions: Option<&[(&str, &str, usize)]>,
     ) -> String {
         let related_section = if let Some(functions) = related_functions {
             if functions.is_empty() {
                 String::new()
             } else {
-                let mut section = String::from("\n## Related Functions (in call graph)\n");
+                let mut section = String::from("\n## Related Functions\n");
                 for (name, path, line) in functions {
                     section.push_str(&format!("{}:{} {}\n", path, line, name));
                 }

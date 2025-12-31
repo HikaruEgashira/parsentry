@@ -14,9 +14,7 @@ pub struct Definition {
     pub start_byte: usize,
     pub end_byte: usize,
     pub source: String,
-    /// Absolute file path where this definition is located.
     pub file_path: Option<PathBuf>,
-    /// Line number (1-based) where this definition starts.
     pub line_number: Option<usize>,
 }
 
