@@ -11,9 +11,17 @@ async fn main() -> Result<()> {
     // Handle Ctrl+C gracefully
     tokio::select! {
         result = RootCommand::execute() => result,
-        _ = tokio::signal::ctrl_c() => {
-            eprintln!("\nInterrupted by user");
-            std::process::exit(130);
+        ctrl_c_result = tokio::signal::ctrl_c() => {
+            match ctrl_c_result {
+                Ok(()) => {
+                    eprintln!("\nInterrupted by user");
+                    std::process::exit(130);
+                }
+                Err(e) => {
+                    eprintln!("Failed to listen for ctrl-c signal: {}", e);
+                    Err(anyhow::anyhow!("Signal handler setup failed: {}", e))
+                }
+            }
         }
     }
 }
