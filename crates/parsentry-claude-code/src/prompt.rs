@@ -273,6 +273,145 @@ Respond with the same JSON format as the initial analysis, but with:
             analysis = analysis,
         )
     }
+
+    /// Build a prompt for direct SARIF output mode.
+    /// The LLM will output SARIF JSON directly to a file.
+    pub fn build_sarif_output_prompt(
+        &self,
+        file_path: &Path,
+        content: &str,
+        sarif_output_path: &Path,
+        pattern_context: Option<&PatternContext>,
+    ) -> String {
+        let file_ops_instruction = if self.enable_file_ops {
+            r#"
+## Deep Context Analysis
+
+You have access to file operations. Use them to:
+- Read imported modules to understand function implementations
+- Search for security-related patterns in the codebase
+- Trace call chains to identify complete attack paths
+- Read configuration files that may affect security"#
+        } else {
+            ""
+        };
+
+        let poc_instruction = if self.enable_poc {
+            r#"
+## PoC Verification
+
+If a vulnerability is confirmed:
+1. Create a minimal PoC demonstrating the vulnerability
+2. Execute the PoC in a safe, read-only manner if possible
+3. Document the actual behavior observed"#
+        } else {
+            ""
+        };
+
+        let pattern_section = if let Some(ctx) = pattern_context {
+            format!(
+                r#"
+## Pattern Context
+
+- **Pattern Type**: {}
+- **Description**: {}
+- **Matched Code**:
+```
+{}
+```
+- **Attack Vectors**: {}
+"#,
+                ctx.pattern_type,
+                ctx.description,
+                ctx.matched_code,
+                ctx.attack_vectors.join(", ")
+            )
+        } else {
+            String::new()
+        };
+
+        let safe_file_path = sanitize_for_prompt(&file_path.display().to_string());
+        let safe_content = sanitize_for_prompt(content);
+        let safe_sarif_path = sarif_output_path.display().to_string();
+
+        format!(
+            r#"You are a security vulnerability analyzer. Analyze the code and output results in SARIF format.
+
+## Analysis Target
+
+File: {file_path}
+{pattern_section}
+
+## Source Code
+
+```
+{content}
+```
+
+## Instructions
+
+Analyze this code for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
+
+1. **Identify Principals**: Find untrusted data sources (user input, external APIs, file uploads)
+2. **Identify Resources**: Find sensitive operations (database queries, file system, command execution)
+3. **Evaluate Actions**: Assess security controls between principals and resources
+4. **Detect Policy Violations**: Identify paths where untrusted data reaches resources without proper validation
+{file_ops_instruction}
+{poc_instruction}
+
+## Output Instructions
+
+**IMPORTANT**: Output SARIF JSON directly. Use the Write tool to save to: `{sarif_path}`
+
+The SARIF file MUST follow SARIF v2.1.0 schema with this structure:
+
+- $schema: https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
+- version: 2.1.0
+- runs[0].tool.driver.name: Parsentry
+- runs[0].tool.driver.version: 0.13.0
+- runs[0].tool.driver.rules: Array of rule definitions
+- runs[0].results: Array of findings
+
+Each result must have:
+- ruleId: One of SQLI, XSS, RCE, LFI, SSRF, AFO, IDOR
+- ruleIndex: Index of the rule in rules array
+- level: error (confidence >= 90), warning (>= 70), note (>= 50)
+- message.text: Brief description
+- message.markdown: Detailed analysis
+- locations[0].physicalLocation.artifactLocation.uri: File path
+- locations[0].physicalLocation.region.startLine: Line number
+- locations[0].physicalLocation.region.snippet.text: Matched code
+- properties.confidence: Float 0.0-1.0
+- properties.cwe: Array of CWE IDs
+- properties.owasp: Array of OWASP categories
+- properties.mitre_attack: Array of MITRE ATT&CK IDs
+
+## Vulnerability Types (ruleId)
+
+Use these exact values:
+- SQLI: SQL Injection
+- XSS: Cross-Site Scripting
+- RCE: Remote Code Execution
+- LFI: Local File Inclusion
+- SSRF: Server-Side Request Forgery
+- AFO: Arbitrary File Operation
+- IDOR: Insecure Direct Object Reference
+
+## Important Notes
+
+- If no vulnerability found or confidence < 0.5, output empty results array
+- Only report vulnerabilities with confidence >= 0.7
+- Include CWE, OWASP, and MITRE ATT&CK mappings when applicable
+- The help field in rules should contain remediation guidance
+"#,
+            file_path = safe_file_path,
+            content = safe_content,
+            pattern_section = pattern_section,
+            file_ops_instruction = file_ops_instruction,
+            poc_instruction = poc_instruction,
+            sarif_path = safe_sarif_path,
+        )
+    }
 }
 
 /// Context information about a security pattern match.
@@ -356,5 +495,45 @@ mod tests {
 
         assert!(prompt.contains("Execute the PoC"));
         assert!(prompt.contains("Safety Constraints"));
+    }
+
+    #[test]
+    fn test_build_sarif_output_prompt() {
+        let builder = PromptBuilder::new();
+        let output_path = std::path::PathBuf::from("/tmp/output.sarif");
+        let prompt = builder.build_sarif_output_prompt(
+            &std::path::PathBuf::from("test.rs"),
+            "fn main() { let x = 1; }",
+            &output_path,
+            None,
+        );
+
+        assert!(prompt.contains("SARIF"));
+        assert!(prompt.contains("/tmp/output.sarif"));
+        assert!(prompt.contains("test.rs"));
+        assert!(prompt.contains("SQLI"));
+        assert!(prompt.contains("XSS"));
+    }
+
+    #[test]
+    fn test_build_sarif_output_prompt_with_pattern_context() {
+        let builder = PromptBuilder::new();
+        let output_path = std::path::PathBuf::from("/tmp/output.sarif");
+        let pattern_context = PatternContext::new(
+            "sql_injection",
+            "Potential SQL injection",
+            "query = f\"SELECT * FROM users WHERE id = {user_id}\"",
+        );
+
+        let prompt = builder.build_sarif_output_prompt(
+            &std::path::PathBuf::from("app.py"),
+            "query = f\"SELECT * FROM users WHERE id = {user_id}\"",
+            &output_path,
+            Some(&pattern_context),
+        );
+
+        assert!(prompt.contains("Pattern Context"));
+        assert!(prompt.contains("sql_injection"));
+        assert!(prompt.contains("Potential SQL injection"));
     }
 }

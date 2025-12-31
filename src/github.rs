@@ -3,6 +3,7 @@ use octocrab::Octocrab;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::io::Write;
+use std::path::Path;
 use std::process::{Command, Stdio};
 use tracing::debug;
 
@@ -19,6 +20,63 @@ pub struct SearchResult {
 
 pub struct GitHubSearchClient {
     client: Octocrab,
+}
+
+/// Get verified git binary path from trusted locations
+fn get_verified_git_path() -> Option<String> {
+    let git_path = Command::new("which")
+        .arg("git")
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8(o.stdout).ok().map(|s| s.trim().to_string())
+            } else {
+                None
+            }
+        })?;
+
+    // Verify git is from a trusted location
+    // Allow: /usr/*, /opt/*, ~/.nix-profile/*, /nix/store/*
+    let is_trusted = git_path.starts_with("/usr/")
+        || git_path.starts_with("/opt/")
+        || git_path.contains(".nix-profile/")
+        || git_path.starts_with("/nix/store/");
+
+    if !is_trusted {
+        debug!("git binary not in trusted location: {}", git_path);
+        return None;
+    }
+
+    Some(git_path)
+}
+
+/// Clone a GitHub repository to the specified destination
+///
+/// # Arguments
+/// * `repo` - Repository in "owner/repo" format
+/// * `dest` - Destination directory path
+pub fn clone_repo(repo: &str, dest: &Path) -> Result<()> {
+    if dest.exists() {
+        anyhow::bail!("Destination directory already exists");
+    }
+
+    let url = format!("https://github.com/{}.git", repo);
+
+    // Use verified git path if available, otherwise fall back to "git"
+    let git_cmd = get_verified_git_path().unwrap_or_else(|| "git".to_string());
+
+    let output = Command::new(&git_cmd)
+        .args(["clone", "--depth", "1", &url])
+        .arg(dest)
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git clone failed: {}", stderr);
+    }
+
+    Ok(())
 }
 
 impl GitHubSearchClient {
@@ -44,24 +102,7 @@ impl GitHubSearchClient {
 
     /// Get GitHub token from git credential helper
     fn get_token_from_credential_helper() -> Option<String> {
-        // Security: Verify git binary path to prevent PATH manipulation attacks
-        let git_path = std::process::Command::new("which")
-            .arg("git")
-            .output()
-            .ok()
-            .and_then(|o| {
-                if o.status.success() {
-                    String::from_utf8(o.stdout).ok().map(|s| s.trim().to_string())
-                } else {
-                    None
-                }
-            })?;
-
-        // Verify git is from a trusted location
-        if !git_path.starts_with("/usr/") && !git_path.starts_with("/opt/") {
-            debug!("git binary not in trusted location: {}", git_path);
-            return None;
-        }
+        let git_path = get_verified_git_path()?;
 
         let mut child = Command::new(&git_path)
             .args(["credential", "fill"])

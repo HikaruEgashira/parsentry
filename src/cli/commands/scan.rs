@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
@@ -12,12 +13,13 @@ use crate::config::ParsentryConfig;
 use crate::mvra::{MvraRepositoryResult, MvraResults, MvraScanner};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
 use crate::pattern_generator_codex::generate_custom_patterns_with_codex;
-use crate::repo::{clone_github_repo, RepoOps};
-use crate::response::{from_claude_code_response, from_codex_response, Response, ResponseExt, VulnType};
+use crate::github::clone_repo;
+use crate::repo::RepoOps;
+use crate::response::{from_codex_response, Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_cache::Cache;
-use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder};
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
 use parsentry_codex::{CodexConfig, CodexExecutor};
 use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
@@ -26,48 +28,56 @@ use parsentry_reports::{
 };
 use parsentry_utils::FileClassifier;
 
-/// Cache mode for LLM responses
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CacheMode {
-    /// Normal mode: use cache if available, otherwise call LLM
+/// Cache mode for LLM response caching
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CacheMode {
+    /// Use cache (read and write)
     Normal,
-    /// Cache only: only use cache, never call LLM
-    CacheOnly,
-    /// No cache: always call LLM, don't use cache
+    /// No cache at all
     NoCache,
+    /// Only use cache (fail on cache miss)
+    CacheOnly,
 }
 
 impl CacheMode {
-    pub fn from_flags(cache: bool, no_cache: bool, cache_only: bool) -> Self {
+    fn from_flags(cache: bool, cache_only: bool) -> Self {
         if cache_only {
             CacheMode::CacheOnly
-        } else if no_cache {
-            CacheMode::NoCache
         } else if cache {
             CacheMode::Normal
         } else {
-            // Default: cache is enabled
-            CacheMode::Normal
+            CacheMode::NoCache
         }
     }
 }
 
-/// Analyze a pattern using Claude Code CLI with streaming output and caching
-async fn analyze_with_claude_code(
+/// Analyze a pattern using Claude Code CLI with direct SARIF output.
+/// Claude Code will write the SARIF JSON directly to a file using the Write tool.
+/// If the SARIF file already exists (cache hit), skip the analysis.
+async fn analyze_with_claude_code<C: StreamCallback>(
     executor: &ClaudeCodeExecutor,
-    cache: Option<&Cache>,
-    cache_mode: CacheMode,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
-    _working_dir: &PathBuf,
+    sarif_output_path: &PathBuf,
     printer: &StatusPrinter,
-    streaming_display: &Arc<StreamingDisplay>,
-) -> Result<Option<Response>> {
+    streaming_callback: &C,
+) -> Result<bool> {
     let file_name = file_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
+
+    // Check if SARIF file already exists (cache hit)
+    if sarif_output_path.exists() {
+        info!(
+            "SARIF cache hit for {}: {}",
+            file_path.display(),
+            sarif_output_path.display()
+        );
+        printer.status("Cached", &file_name);
+        return Ok(true);
+    }
 
     let content = tokio::fs::read_to_string(file_path).await?;
 
@@ -79,73 +89,56 @@ async fn analyze_with_claude_code(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
+    // Build prompt for SARIF output
+    let prompt = prompt_builder.build_sarif_output_prompt(
+        file_path,
+        &content,
+        sarif_output_path,
+        Some(&pattern_context),
+    );
 
-    let model = "claude-code";
-    let provider = "claude-code";
+    printer.status("Analyzing", &file_name);
 
-    // Try cache first (unless NoCache mode)
-    if cache_mode != CacheMode::NoCache {
-        if let Some(cache) = cache {
-            if let Ok(Some(cached_response)) = cache.get(&prompt, model, provider) {
-                // Parse cached response
-                if let Ok(parsed) = serde_json::from_str::<parsentry_claude_code::ClaudeCodeResponse>(&cached_response) {
-                    printer.status("Cache hit", &file_name);
-                    let mut response = from_claude_code_response(
-                        parsed,
-                        file_path.to_string_lossy().to_string(),
-                    );
-                    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
-                    response.matched_source_code = Some(pattern_match.matched_text.clone());
-                    return Ok(Some(response));
-                }
-            }
-        }
-    }
-
-    // If cache-only mode and no cache hit, return None
-    if cache_mode == CacheMode::CacheOnly {
-        debug!("Cache-only mode: no cache hit for {}", file_path.display());
-        return Ok(None);
-    }
-
-    // Use streaming execution for real-time output (shared display across parallel tasks)
-    streaming_display.set_current_file(&file_name);
-    let output = executor
-        .execute_streaming_with_retry(&prompt, streaming_display.as_ref(), 2)
+    // Execute with streaming file output mode
+    let result = executor
+        .execute_streaming_file_output(&prompt, streaming_callback)
         .await;
 
-    match output {
+    match result {
         Ok(output) => {
-            info!("Claude Code succeeded for {}", file_path.display());
-
-            // Store in cache (unless NoCache mode)
-            if cache_mode != CacheMode::NoCache {
-                if let Some(cache) = cache {
-                    if let Ok(response_json) = serde_json::to_string(&output.response) {
-                        if let Err(e) = cache.set(&prompt, model, provider, &response_json) {
-                            debug!("Failed to cache response: {}", e);
-                        }
-                    }
-                }
+            if output.success && sarif_output_path.exists() {
+                info!(
+                    "Claude Code SARIF output succeeded for {}: {}ms",
+                    file_path.display(),
+                    output.duration_ms.unwrap_or(0)
+                );
+                printer.status("Completed", &file_name);
+                Ok(true)
+            } else if output.success {
+                info!(
+                    "Claude Code completed but no SARIF file created for {}",
+                    file_path.display()
+                );
+                printer.status("No findings", &file_name);
+                Ok(false)
+            } else {
+                printer.error("Failed", &format!("{}: non-zero exit", file_name));
+                error!(
+                    "Claude Code SARIF output failed for {}: stderr={}",
+                    file_path.display(),
+                    output.stderr
+                );
+                Ok(false)
             }
-
-            let mut response = from_claude_code_response(
-                output.response,
-                file_path.to_string_lossy().to_string(),
-            );
-            response.pattern_description = Some(pattern_match.pattern_config.description.clone());
-            response.matched_source_code = Some(pattern_match.matched_text.clone());
-            Ok(Some(response))
         }
         Err(e) => {
             printer.error("Failed", &format!("{}: {}", file_name, e));
             error!(
-                "Claude Code execution error for {}: {}",
+                "Claude Code SARIF output error for {}: {}",
                 file_path.display(),
                 e
             );
-            Err(anyhow::anyhow!("Claude Code failed: {}", e))
+            Err(anyhow::anyhow!("Claude Code SARIF output failed: {}", e))
         }
     }
 }
@@ -317,7 +310,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                 })?;
             }
             printer.status("Cloning", &format!("{} → {}", target, dest.display()));
-            clone_github_repo(target, &dest).map_err(|e| {
+            clone_repo(target, &dest).map_err(|e| {
                 anyhow::anyhow!(
                     "{}: {}",
                     messages
@@ -345,14 +338,14 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     if final_args.generate_patterns {
         printer.status("Generating", "custom security patterns");
 
-        if config.provider.is_claude_code() {
-            let claude_path = config.provider.path.clone()
+        if config.agent.is_claude_code() {
+            let claude_path = config.agent.path.clone()
                 .unwrap_or_else(|| PathBuf::from("claude"));
             let log_dir = final_args.output_dir.as_ref().map(|d| d.join("claude_code_logs"));
             let claude_config = parsentry_claude_code::ClaudeCodeConfig {
                 claude_path,
-                max_concurrent: config.provider.max_concurrent.min(10),
-                timeout_secs: config.provider.timeout_secs,
+                max_concurrent: config.agent.max_concurrent.min(10),
+                timeout_secs: config.agent.timeout_secs,
                 enable_poc: false,
                 working_dir: root_dir.clone(),
                 log_dir,
@@ -374,13 +367,13 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             }
 
             printer.success("Generated", &format!("{} patterns", result.patterns_generated));
-        } else if config.provider.is_codex() {
-            let codex_path = config.provider.path.clone();
+        } else if config.agent.is_codex() {
+            let codex_path = config.agent.path.clone();
             let log_dir = final_args.output_dir.as_ref().map(|d| d.join("codex_logs"));
             let codex_config = CodexConfig {
                 codex_path,
-                max_concurrent: config.provider.max_concurrent.min(10),
-                timeout_secs: config.provider.timeout_secs,
+                max_concurrent: config.agent.max_concurrent.min(10),
+                timeout_secs: config.agent.timeout_secs,
                 enable_poc: false,
                 working_dir: root_dir.clone(),
                 log_dir,
@@ -466,13 +459,12 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let model = final_args.model.clone();
     let files = files.clone();
     let verbosity = final_args.verbosity;
-    let use_claude_code = config.provider.is_claude_code();
-    let use_codex = config.provider.is_codex();
+    let use_claude_code = config.agent.is_claude_code();
+    let use_codex = config.agent.is_codex();
 
     // Initialize cache
     let cache_mode = CacheMode::from_flags(
         args.cache,
-        args.no_cache,
         args.cache_only,
     );
 
@@ -480,7 +472,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         match Cache::new(&config.cache.directory) {
             Ok(cache) => Some(Arc::new(cache)),
             Err(e) => {
-                debug!("Cache initialization failed: {}", e);
+                tracing::debug!("Cache initialization failed: {}", e);
                 None
             }
         }
@@ -494,23 +486,23 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let max_concurrent = if use_claude_code {
         progress_bar.set_message("analyzing with Claude Code");
-        config.provider.max_concurrent.min(10)
+        config.agent.max_concurrent.min(10)
     } else if use_codex {
         progress_bar.set_message("analyzing with Codex");
-        config.provider.max_concurrent.min(10)
+        config.agent.max_concurrent.min(10)
     } else {
         progress_bar.set_message("analyzing patterns");
-        config.provider.max_concurrent.min(50)
+        config.agent.max_concurrent.min(50)
     };
 
     let claude_executor = if use_claude_code {
-        let claude_path = config.provider.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
-            max_concurrent: config.provider.max_concurrent.min(10),
-            timeout_secs: config.provider.timeout_secs,
-            enable_poc: config.provider.enable_poc,
+            max_concurrent: config.agent.max_concurrent.min(10),
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: config.agent.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir: log_dir.clone(),
             model: Some("haiku".to_string()),
@@ -524,13 +516,13 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     };
 
     let codex_executor = if use_codex {
-        let codex_path = config.provider.path.clone();
+        let codex_path = config.agent.path.clone();
         let log_dir = output_dir.as_ref().map(|d| d.join("codex_logs"));
         let codex_config = CodexConfig {
             codex_path,
-            max_concurrent: config.provider.max_concurrent.min(10),
-            timeout_secs: config.provider.timeout_secs,
-            enable_poc: config.provider.enable_poc,
+            max_concurrent: config.agent.max_concurrent.min(10),
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: config.agent.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir,
             model: model.clone(),
@@ -545,7 +537,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let prompt_builder = Arc::new(
         PromptBuilder::new()
-            .with_poc(config.provider.enable_poc)
+            .with_poc(config.agent.enable_poc)
             .with_language(&final_args.language)
     );
 
@@ -573,7 +565,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let printer = Arc::clone(&printer);
             let streaming_display = Arc::clone(&streaming_display);
             let cache = cache.clone();
-            let cache_mode = cache_mode;
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -593,25 +584,86 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                     println!("{}", "=".repeat(80));
                 }
 
-                // Choose analysis method based on mode
                 let analysis_result = if use_claude_code {
                     if let Some(ref executor) = claude_executor {
+                        let sarif_filename = format!(
+                            "{}-{}.sarif",
+                            file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
+                            pattern_match.pattern_config.description.replace(' ', "-").to_lowercase()
+                        );
+                        let sarif_output_path = output_dir
+                            .clone()
+                            .unwrap_or_else(|| PathBuf::from("./reports"))
+                            .join(&sarif_filename);
+
+                        if let Some(parent) = sarif_output_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+
                         match analyze_with_claude_code(
                             executor,
-                            cache.as_deref(),
-                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
-                            &_root_dir,
+                            &sarif_output_path,
                             &printer,
-                            &streaming_display,
+                            streaming_display.as_ref(),
                         )
                         .await
                         {
-                            Ok(Some(res)) => res,
-                            Ok(None) => {
-                                info!("Claude Code returned None for {}", file_path.display());
+                            Ok(true) => {
+                                match parsentry_reports::SarifReport::from_file(&sarif_output_path) {
+                                    Ok(sarif) => {
+                                        let _summary_md = sarif.to_summary_markdown();
+                                        info!("SARIF analysis complete: {}", sarif_output_path.display());
+
+                                        let first_result = sarif.runs.first()
+                                            .and_then(|r| r.results.first());
+
+                                        if let Some(result) = first_result {
+                                            let confidence = result.properties.as_ref()
+                                                .and_then(|p| p.confidence)
+                                                .map(|c| (c * 100.0) as i32)
+                                                .unwrap_or(0);
+
+                                            Response {
+                                                scratchpad: String::new(),
+                                                analysis: result.message.markdown.clone()
+                                                    .unwrap_or_else(|| result.message.text.clone()),
+                                                poc: String::new(),
+                                                confidence_score: confidence,
+                                                vulnerability_types: vec![
+                                                    VulnType::from_str(&result.rule_id).unwrap_or(VulnType::Other(result.rule_id.clone()))
+                                                ],
+                                                par_analysis: parsentry_core::ParAnalysis {
+                                                    principals: vec![],
+                                                    actions: vec![],
+                                                    resources: vec![],
+                                                    policy_violations: vec![],
+                                                },
+                                                remediation_guidance: parsentry_core::RemediationGuidance {
+                                                    policy_enforcement: vec![],
+                                                },
+                                                file_path: Some(file_path.to_string_lossy().to_string()),
+                                                pattern_description: Some(pattern_match.pattern_config.description.clone()),
+                                                matched_source_code: Some(pattern_match.matched_text.clone()),
+                                                full_source_code: None,
+                                            }
+                                        } else {
+                                            info!("No vulnerabilities found in SARIF for {}", file_path.display());
+                                            progress_bar.inc(1);
+                                            return None;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to read SARIF file {}: {}", sarif_output_path.display(), e);
+                                        progress_bar.inc(1);
+                                        return None;
+                                    }
+                                }
+                            }
+                            Ok(false) => {
+                                info!("Claude Code SARIF output failed for {}", file_path.display());
                                 progress_bar.inc(1);
                                 return None;
                             }
@@ -920,7 +972,7 @@ async fn run_mvra_scan(args: ScanArgs) -> Result<()> {
         mvra_config.cache_dir = cache_dir.clone();
     }
 
-    if args.mvra_no_cache {
+    if !args.mvra_cache {
         mvra_config.use_cache = false;
     }
 
@@ -1120,13 +1172,12 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let model = final_args.model.clone();
     let files = files.clone();
     let verbosity = final_args.verbosity;
-    let use_claude_code = config.provider.is_claude_code();
-    let use_codex = config.provider.is_codex();
+    let use_claude_code = config.agent.is_claude_code();
+    let use_codex = config.agent.is_codex();
 
     // Initialize cache for MVRA scans
     let cache_mode = CacheMode::from_flags(
         args.cache,
-        args.no_cache,
         args.cache_only,
     );
 
@@ -1139,21 +1190,21 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let mut summary = AnalysisSummary::new();
 
     let max_concurrent = if use_claude_code {
-        config.provider.max_concurrent.min(10)
+        config.agent.max_concurrent.min(10)
     } else if use_codex {
-        config.provider.max_concurrent.min(10)
+        config.agent.max_concurrent.min(10)
     } else {
-        config.provider.max_concurrent.min(50)
+        config.agent.max_concurrent.min(50)
     };
 
     let claude_executor = if use_claude_code {
-        let claude_path = config.provider.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
-            max_concurrent: config.provider.max_concurrent.min(10),
-            timeout_secs: config.provider.timeout_secs,
-            enable_poc: config.provider.enable_poc,
+            max_concurrent: config.agent.max_concurrent.min(10),
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: config.agent.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir: log_dir.clone(),
             model: Some("haiku".to_string()),
@@ -1165,13 +1216,13 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     };
 
     let codex_executor = if use_codex {
-        let codex_path = config.provider.path.clone();
+        let codex_path = config.agent.path.clone();
         let log_dir = output_dir.as_ref().map(|d| d.join("codex_logs"));
         let codex_config = CodexConfig {
             codex_path,
-            max_concurrent: config.provider.max_concurrent.min(10),
-            timeout_secs: config.provider.timeout_secs,
-            enable_poc: config.provider.enable_poc,
+            max_concurrent: config.agent.max_concurrent.min(10),
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: config.agent.enable_poc,
             working_dir: root_dir.as_ref().clone(),
             log_dir,
             model: model.clone(),
@@ -1184,7 +1235,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
 
     let prompt_builder = Arc::new(
         PromptBuilder::new()
-            .with_poc(config.provider.enable_poc)
+            .with_poc(config.agent.enable_poc)
             .with_language(&final_args.language)
     );
 
@@ -1209,29 +1260,79 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let use_claude_code = use_claude_code;
             let use_codex = use_codex;
             let printer = Arc::clone(&printer);
-            let verbosity = verbosity;
             let cache = cache.clone();
-            let cache_mode = cache_mode;
 
             async move {
-                // Choose analysis method based on mode
                 let analysis_result = if use_claude_code {
                     if let Some(ref executor) = claude_executor {
+                        let sarif_filename = format!(
+                            "{}-{}.sarif",
+                            file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
+                            pattern_match.pattern_config.description.replace(' ', "-").to_lowercase()
+                        );
+                        let sarif_output_path = output_dir
+                            .clone()
+                            .unwrap_or_else(|| PathBuf::from("./reports"))
+                            .join(&sarif_filename);
+
+                        if let Some(parent) = sarif_output_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+
                         match analyze_with_claude_code(
                             executor,
-                            cache.as_deref(),
-                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
-                            &_root_dir,
+                            &sarif_output_path,
                             &printer,
-                            &streaming_display,
+                            streaming_display.as_ref(),
                         )
                         .await
                         {
-                            Ok(Some(res)) => res,
-                            Ok(None) | Err(_) => return None,
+                            Ok(true) => {
+                                match parsentry_reports::SarifReport::from_file(&sarif_output_path) {
+                                    Ok(sarif) => {
+                                        let first_result = sarif.runs.first()
+                                            .and_then(|r| r.results.first());
+
+                                        if let Some(result) = first_result {
+                                            let confidence = result.properties.as_ref()
+                                                .and_then(|p| p.confidence)
+                                                .map(|c| (c * 100.0) as i32)
+                                                .unwrap_or(0);
+
+                                            Response {
+                                                scratchpad: String::new(),
+                                                analysis: result.message.markdown.clone()
+                                                    .unwrap_or_else(|| result.message.text.clone()),
+                                                poc: String::new(),
+                                                confidence_score: confidence,
+                                                vulnerability_types: vec![
+                                                    VulnType::from_str(&result.rule_id).unwrap_or(VulnType::Other(result.rule_id.clone()))
+                                                ],
+                                                par_analysis: parsentry_core::ParAnalysis {
+                                                    principals: vec![],
+                                                    actions: vec![],
+                                                    resources: vec![],
+                                                    policy_violations: vec![],
+                                                },
+                                                remediation_guidance: parsentry_core::RemediationGuidance {
+                                                    policy_enforcement: vec![],
+                                                },
+                                                file_path: Some(file_path.to_string_lossy().to_string()),
+                                                pattern_description: Some(pattern_match.pattern_config.description.clone()),
+                                                matched_source_code: Some(pattern_match.matched_text.clone()),
+                                                full_source_code: None,
+                                            }
+                                        } else {
+                                            return None;
+                                        }
+                                    }
+                                    Err(_) => return None,
+                                }
+                            }
+                            Ok(false) | Err(_) => return None,
                         }
                     } else {
                         return None;

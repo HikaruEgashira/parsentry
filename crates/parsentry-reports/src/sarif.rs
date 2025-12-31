@@ -273,6 +273,185 @@ impl SarifReport {
         std::fs::write(path, json)?;
         Ok(())
     }
+
+    /// Load SARIF report from file
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let report: SarifReport = serde_json::from_str(&content)?;
+        Ok(report)
+    }
+
+    /// Load SARIF report from JSON string
+    pub fn from_json(json: &str) -> Result<Self> {
+        let report: SarifReport = serde_json::from_str(json)?;
+        Ok(report)
+    }
+
+    /// Generate markdown report from SARIF
+    pub fn to_markdown(&self) -> String {
+        let mut md = String::new();
+
+        md.push_str("# Security Analysis Report\n\n");
+
+        for run in &self.runs {
+            let tool_name = &run.tool.driver.name;
+            let tool_version = &run.tool.driver.version;
+            md.push_str(&format!("**Tool**: {} v{}\n\n", tool_name, tool_version));
+
+            if run.results.is_empty() {
+                md.push_str("No vulnerabilities detected.\n\n");
+                continue;
+            }
+
+            md.push_str(&format!("**Total findings**: {}\n\n", run.results.len()));
+
+            for (i, result) in run.results.iter().enumerate() {
+                md.push_str(&format!("## Finding {}: {}\n\n", i + 1, result.rule_id));
+
+                let level_emoji = match result.level.as_str() {
+                    "error" => "🔴",
+                    "warning" => "🟠",
+                    "note" => "🟡",
+                    _ => "⚪",
+                };
+                md.push_str(&format!("**Severity**: {} {}\n\n", level_emoji, result.level));
+
+                if let Some(location) = result.locations.first() {
+                    let uri = &location.physical_location.artifact_location.uri;
+                    md.push_str(&format!("**File**: `{}`\n", uri));
+
+                    if let Some(region) = &location.physical_location.region {
+                        md.push_str(&format!("**Line**: {}\n", region.start_line));
+                        if let Some(snippet) = &region.snippet {
+                            md.push_str("\n**Snippet**:\n```\n");
+                            md.push_str(&snippet.text);
+                            md.push_str("\n```\n");
+                        }
+                    }
+                    md.push('\n');
+                }
+
+                md.push_str("### Analysis\n\n");
+                if let Some(markdown_text) = &result.message.markdown {
+                    md.push_str(markdown_text);
+                } else {
+                    md.push_str(&result.message.text);
+                }
+                md.push_str("\n\n");
+
+                if let Some(props) = &result.properties {
+                    if let Some(confidence) = props.confidence {
+                        md.push_str(&format!(
+                            "**Confidence**: {:.0}%\n",
+                            confidence * 100.0
+                        ));
+                    }
+                    if let Some(cwe) = &props.cwe {
+                        if !cwe.is_empty() {
+                            md.push_str(&format!("**CWE**: {}\n", cwe.join(", ")));
+                        }
+                    }
+                    if let Some(owasp) = &props.owasp {
+                        if !owasp.is_empty() {
+                            md.push_str(&format!("**OWASP**: {}\n", owasp.join(", ")));
+                        }
+                    }
+                    if let Some(mitre) = &props.mitre_attack {
+                        if !mitre.is_empty() {
+                            md.push_str(&format!("**MITRE ATT&CK**: {}\n", mitre.join(", ")));
+                        }
+                    }
+                    md.push('\n');
+                }
+
+                if let Some(rules) = &run.tool.driver.rules {
+                    if let Some(rule) = rules.iter().find(|r| r.id == result.rule_id) {
+                        if let Some(help) = &rule.help {
+                            md.push_str("### Remediation\n\n");
+                            if let Some(markdown_help) = &help.markdown {
+                                md.push_str(markdown_help);
+                            } else {
+                                md.push_str(&help.text);
+                            }
+                            md.push_str("\n\n");
+                        }
+                    }
+                }
+
+                md.push_str("---\n\n");
+            }
+        }
+
+        md
+    }
+
+    /// Generate summary markdown from SARIF
+    pub fn to_summary_markdown(&self) -> String {
+        let mut md = String::new();
+
+        md.push_str("# Security Analysis Summary\n\n");
+
+        for run in &self.runs {
+            if run.results.is_empty() {
+                md.push_str("No vulnerabilities detected.\n");
+                return md;
+            }
+
+            let mut error_count = 0;
+            let mut warning_count = 0;
+            let mut note_count = 0;
+
+            for result in &run.results {
+                match result.level.as_str() {
+                    "error" => error_count += 1,
+                    "warning" => warning_count += 1,
+                    _ => note_count += 1,
+                }
+            }
+
+            md.push_str("## Overview\n\n");
+            md.push_str(&format!("| Severity | Count |\n"));
+            md.push_str(&format!("|----------|-------|\n"));
+            if error_count > 0 {
+                md.push_str(&format!("| 🔴 Error | {} |\n", error_count));
+            }
+            if warning_count > 0 {
+                md.push_str(&format!("| 🟠 Warning | {} |\n", warning_count));
+            }
+            if note_count > 0 {
+                md.push_str(&format!("| 🟡 Note | {} |\n", note_count));
+            }
+            md.push_str(&format!("| **Total** | **{}** |\n\n", run.results.len()));
+
+            md.push_str("## Findings\n\n");
+            md.push_str("| File | Vulnerability | Severity | Confidence |\n");
+            md.push_str("|------|---------------|----------|------------|\n");
+
+            for result in &run.results {
+                let file = result
+                    .locations
+                    .first()
+                    .map(|l| l.physical_location.artifact_location.uri.as_str())
+                    .unwrap_or("unknown");
+
+                let confidence = result
+                    .properties
+                    .as_ref()
+                    .and_then(|p| p.confidence)
+                    .map(|c| format!("{:.0}%", c * 100.0))
+                    .unwrap_or_else(|| "-".to_string());
+
+                md.push_str(&format!(
+                    "| `{}` | {} | {} | {} |\n",
+                    file, result.rule_id, result.level, confidence
+                ));
+            }
+
+            md.push('\n');
+        }
+
+        md
+    }
 }
 
 fn create_rule_for_vuln_type(vuln_type: &VulnType) -> SarifRule {
@@ -524,5 +703,107 @@ mod tests {
 
         let content = std::fs::read_to_string(&sarif_path).unwrap();
         assert!(content.contains("Parsentry"));
+    }
+
+    #[test]
+    fn test_sarif_from_file() {
+        let dir = tempdir().unwrap();
+        let sarif_path = dir.path().join("test.sarif");
+
+        let summary = AnalysisSummary::new();
+        let original = SarifReport::from_analysis_summary(&summary, "0.9.2");
+        original.save_to_file(&sarif_path).unwrap();
+
+        let loaded = SarifReport::from_file(&sarif_path).unwrap();
+        assert_eq!(loaded.version, "2.1.0");
+        assert_eq!(loaded.runs.len(), 1);
+    }
+
+    #[test]
+    fn test_sarif_from_json() {
+        let json = r#"{
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{
+                "tool": {
+                    "driver": {
+                        "name": "Parsentry",
+                        "version": "0.13.0"
+                    }
+                },
+                "results": []
+            }]
+        }"#;
+
+        let sarif = SarifReport::from_json(json).unwrap();
+        assert_eq!(sarif.version, "2.1.0");
+        assert_eq!(sarif.runs[0].tool.driver.name, "Parsentry");
+    }
+
+    #[test]
+    fn test_sarif_to_markdown() {
+        let mut summary = AnalysisSummary::new();
+        let response = Response {
+            scratchpad: "Analysis notes".to_string(),
+            analysis: "SQL injection found".to_string(),
+            poc: "'; DROP TABLE users; --".to_string(),
+            confidence_score: 90,
+            vulnerability_types: vec![VulnType::SQLI],
+            par_analysis: ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: RemediationGuidance {
+                policy_enforcement: vec![],
+            },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
+        };
+        summary.add_result(PathBuf::from("vulnerable.py"), response, "vulnerable.py.md".to_string());
+
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.13.0");
+        let markdown = sarif.to_markdown();
+
+        assert!(markdown.contains("Security Analysis Report"));
+        assert!(markdown.contains("SQLI"));
+        assert!(markdown.contains("vulnerable.py"));
+    }
+
+    #[test]
+    fn test_sarif_to_summary_markdown() {
+        let mut summary = AnalysisSummary::new();
+        let response = Response {
+            scratchpad: "Notes".to_string(),
+            analysis: "XSS vulnerability".to_string(),
+            poc: "<script>alert(1)</script>".to_string(),
+            confidence_score: 85,
+            vulnerability_types: vec![VulnType::XSS],
+            par_analysis: ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: RemediationGuidance {
+                policy_enforcement: vec![],
+            },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
+        };
+        summary.add_result(PathBuf::from("app.js"), response, "app.js.md".to_string());
+
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.13.0");
+        let summary_md = sarif.to_summary_markdown();
+
+        assert!(summary_md.contains("Security Analysis Summary"));
+        assert!(summary_md.contains("XSS"));
+        assert!(summary_md.contains("app.js"));
+        assert!(summary_md.contains("| File |"));
     }
 }

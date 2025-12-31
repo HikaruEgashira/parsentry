@@ -6,11 +6,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use crate::cli::args::{GenerateArgs, Provider};
-use crate::github::GitHubSearchClient;
+use crate::cli::args::{GenerateArgs, Agent};
+use crate::github::{clone_repo, GitHubSearchClient};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
 use crate::pattern_generator_codex::generate_custom_patterns_with_codex;
-use crate::repo::clone_github_repo;
 use parsentry_analyzer::generate_custom_patterns;
 use parsentry_claude_code::ClaudeCodeConfig;
 use parsentry_codex::CodexConfig;
@@ -160,7 +159,7 @@ async fn process_single_target(target: &str, args: &GenerateArgs) -> Result<Benc
         } else {
             println!("📥 クローン中: {}", target);
             fs::create_dir_all(temp_dir.parent().unwrap())?;
-            clone_github_repo(target, &temp_dir)?;
+            clone_repo(target, &temp_dir)?;
         }
         temp_dir
     } else {
@@ -170,15 +169,15 @@ async fn process_single_target(target: &str, args: &GenerateArgs) -> Result<Benc
     // Generate patterns
     println!("🔧 パターン生成中...");
 
-    match args.provider {
-        Provider::ClaudeCode => {
+    match args.agent {
+        Agent::ClaudeCode => {
             let claude_config = ClaudeCodeConfig {
                 working_dir: local_path.clone(),
                 ..ClaudeCodeConfig::default()
             };
             generate_custom_patterns_with_claude_code(&local_path, claude_config).await?;
         }
-        Provider::Codex => {
+        Agent::Codex => {
             let codex_config = CodexConfig {
                 working_dir: local_path.clone(),
                 model: args.model.clone(),
@@ -186,7 +185,7 @@ async fn process_single_target(target: &str, args: &GenerateArgs) -> Result<Benc
             };
             generate_custom_patterns_with_codex(&local_path, codex_config).await?;
         }
-        Provider::Genai => {
+        Agent::Genai => {
             generate_custom_patterns(&local_path, &args.model, args.api_base_url.as_deref()).await?;
         }
     }

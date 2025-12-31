@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::cli::args::{Provider, ScanArgs};
+use crate::cli::args::{Agent, ScanArgs};
 use crate::mvra::MvraConfig;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -30,7 +30,7 @@ pub struct ParsentryConfig {
     pub call_graph: CallGraphConfigToml,
 
     #[serde(default)]
-    pub provider: ProviderConfig,
+    pub agent: AgentConfig,
 
     #[serde(default)]
     pub mvra: MvraConfig,
@@ -39,22 +39,22 @@ pub struct ParsentryConfig {
     pub cache: CacheConfig,
 }
 
-/// Provider configuration for LLM analysis
+/// Agent configuration for LLM analysis
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ProviderConfig {
-    /// Provider type: "genai" (default) or "claude-code"
-    #[serde(default = "default_provider_type")]
-    pub provider_type: String,
+pub struct AgentConfig {
+    /// Agent type: "genai" (default) or "claude-code"
+    #[serde(default = "default_agent_type")]
+    pub agent_type: String,
 
-    /// Path to provider binary (for claude-code)
+    /// Path to agent binary (for claude-code)
     pub path: Option<PathBuf>,
 
     /// Maximum concurrent processes
-    #[serde(default = "default_provider_max_concurrent")]
+    #[serde(default = "default_agent_max_concurrent")]
     pub max_concurrent: usize,
 
     /// Timeout in seconds (for claude-code)
-    #[serde(default = "default_provider_timeout")]
+    #[serde(default = "default_agent_timeout")]
     pub timeout_secs: u64,
 
     /// Enable PoC execution (for claude-code)
@@ -62,41 +62,41 @@ pub struct ProviderConfig {
     pub enable_poc: bool,
 }
 
-fn default_provider_type() -> String {
+fn default_agent_type() -> String {
     "genai".to_string()
 }
 
-fn default_provider_max_concurrent() -> usize {
+fn default_agent_max_concurrent() -> usize {
     10
 }
 
-fn default_provider_timeout() -> u64 {
+fn default_agent_timeout() -> u64 {
     300
 }
 
-impl ProviderConfig {
-    /// Check if Claude Code provider is enabled
+impl AgentConfig {
+    /// Check if Claude Code agent is enabled
     pub fn is_claude_code(&self) -> bool {
-        self.provider_type == "claude-code"
+        self.agent_type == "claude-code"
     }
 
-    /// Check if Codex provider is enabled
+    /// Check if Codex agent is enabled
     pub fn is_codex(&self) -> bool {
-        self.provider_type == "codex"
+        self.agent_type == "codex"
     }
 
-    /// Get the Provider enum value
-    pub fn get_provider(&self) -> Provider {
-        match self.provider_type.as_str() {
-            "claude-code" => Provider::ClaudeCode,
-            "codex" => Provider::Codex,
-            "genai" => Provider::Genai,
+    /// Get the Agent enum value
+    pub fn get_agent(&self) -> Agent {
+        match self.agent_type.as_str() {
+            "claude-code" => Agent::ClaudeCode,
+            "codex" => Agent::Codex,
+            "genai" => Agent::Genai,
             unknown => {
                 tracing::warn!(
-                    "Unknown provider type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code', 'codex'",
+                    "Unknown agent type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code', 'codex'",
                     unknown
                 );
-                Provider::Genai
+                Agent::Genai
             }
         }
     }
@@ -390,13 +390,13 @@ impl Default for CallGraphConfigToml {
     }
 }
 
-impl Default for ProviderConfig {
+impl Default for AgentConfig {
     fn default() -> Self {
         Self {
-            provider_type: default_provider_type(),
+            agent_type: default_agent_type(),
             path: None,
-            max_concurrent: default_provider_max_concurrent(),
-            timeout_secs: default_provider_timeout(),
+            max_concurrent: default_agent_max_concurrent(),
+            timeout_secs: default_agent_timeout(),
             enable_poc: false,
         }
     }
@@ -412,7 +412,7 @@ impl Default for ParsentryConfig {
             repo: RepoConfig::default(),
             generation: GenerationConfig::default(),
             call_graph: CallGraphConfigToml::default(),
-            provider: ProviderConfig::default(),
+            agent: AgentConfig::default(),
             mvra: MvraConfig::default(),
             cache: CacheConfig::default(),
         }
@@ -499,21 +499,21 @@ impl ParsentryConfig {
             self.call_graph.security_focus = other.call_graph.security_focus;
         }
 
-        // Provider config
-        if other.provider.provider_type != default_provider_type() {
-            self.provider.provider_type = other.provider.provider_type.clone();
+        // Agent config
+        if other.agent.agent_type != default_agent_type() {
+            self.agent.agent_type = other.agent.agent_type.clone();
         }
-        if other.provider.path.is_some() {
-            self.provider.path = other.provider.path.clone();
+        if other.agent.path.is_some() {
+            self.agent.path = other.agent.path.clone();
         }
-        if other.provider.max_concurrent != default_provider_max_concurrent() {
-            self.provider.max_concurrent = other.provider.max_concurrent;
+        if other.agent.max_concurrent != default_agent_max_concurrent() {
+            self.agent.max_concurrent = other.agent.max_concurrent;
         }
-        if other.provider.timeout_secs != default_provider_timeout() {
-            self.provider.timeout_secs = other.provider.timeout_secs;
+        if other.agent.timeout_secs != default_agent_timeout() {
+            self.agent.timeout_secs = other.agent.timeout_secs;
         }
-        if other.provider.enable_poc {
-            self.provider.enable_poc = other.provider.enable_poc;
+        if other.agent.enable_poc {
+            self.agent.enable_poc = other.agent.enable_poc;
         }
 
         // MVRA config
@@ -593,9 +593,9 @@ max_depth = 10
 detect_cycles = false
 security_focus = false
 
-[provider]
-# Provider type: "genai" (default) or "claude-code"
-provider_type = "genai"
+[agent]
+# Agent type: "genai" (default) or "claude-code"
+agent_type = "genai"
 # path = "/usr/local/bin/claude"  # Only for claude-code
 max_concurrent = 10
 timeout_secs = 300
@@ -851,33 +851,29 @@ use_cache = true
             self.generation.generate_patterns = args.generate_patterns;
         }
 
-        match args.provider {
-            Provider::ClaudeCode => {
-                self.provider.provider_type = "claude-code".to_string();
+        match args.agent {
+            Agent::ClaudeCode => {
+                self.agent.agent_type = "claude-code".to_string();
             }
-            Provider::Codex => {
-                self.provider.provider_type = "codex".to_string();
+            Agent::Codex => {
+                self.agent.agent_type = "codex".to_string();
             }
-            Provider::Genai => {
-                self.provider.provider_type = "genai".to_string();
+            Agent::Genai => {
+                self.agent.agent_type = "genai".to_string();
             }
         }
-        if let Some(ref path) = args.provider_path {
-            self.provider.path = Some(path.clone());
+        if let Some(ref path) = args.agent_path {
+            self.agent.path = Some(path.clone());
         }
-        if args.provider_concurrency != default_provider_max_concurrent() {
-            self.provider.max_concurrent = args.provider_concurrency.min(50);
+        if args.agent_concurrency != default_agent_max_concurrent() {
+            self.agent.max_concurrent = args.agent_concurrency.min(50);
         }
-        if args.provider_poc {
-            self.provider.enable_poc = true;
+        if args.agent_poc {
+            self.agent.enable_poc = true;
         }
 
-        // Apply cache flags
-        if args.no_cache {
-            self.cache.enabled = false;
-        } else if args.cache {
-            self.cache.enabled = true;
-        }
+        // Apply cache flag
+        self.cache.enabled = args.cache;
 
         Ok(())
     }
@@ -978,18 +974,17 @@ use_cache = true
             language: self.analysis.language.clone(),
             config: None,
             generate_config: false,
-            provider: self.provider.get_provider(),
-            provider_path: self.provider.path.clone(),
-            provider_concurrency: self.provider.max_concurrent,
-            provider_poc: self.provider.enable_poc,
+            agent: self.agent.get_agent(),
+            agent_path: self.agent.path.clone(),
+            agent_concurrency: self.agent.max_concurrent,
+            agent_poc: self.agent.enable_poc,
             mvra: false,
             mvra_search_query: self.mvra.search_query.clone(),
             mvra_code_query: self.mvra.code_query.clone(),
             mvra_max_repos: self.mvra.max_repos,
             mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
-            mvra_no_cache: !self.mvra.use_cache,
+            mvra_cache: self.mvra.use_cache,
             cache: self.cache.enabled,
-            no_cache: false,  // CLI flags are applied in scan command
             cache_only: false,  // CLI flags are applied in scan command
         }
     }
@@ -1098,14 +1093,14 @@ target = "test"
     }
 
     #[test]
-    fn test_provider_enum_default() {
-        assert_eq!(Provider::default(), Provider::Genai);
+    fn test_agent_enum_default() {
+        assert_eq!(Agent::default(), Agent::Genai);
     }
 
     #[test]
-    fn test_provider_config_default() {
-        let config = ProviderConfig::default();
-        assert_eq!(config.provider_type, "genai");
+    fn test_agent_config_default() {
+        let config = AgentConfig::default();
+        assert_eq!(config.agent_type, "genai");
         assert_eq!(config.path, None);
         assert_eq!(config.max_concurrent, 10);
         assert_eq!(config.timeout_secs, 300);
@@ -1113,38 +1108,38 @@ target = "test"
     }
 
     #[test]
-    fn test_provider_config_is_claude_code() {
-        let mut config = ProviderConfig::default();
+    fn test_agent_config_is_claude_code() {
+        let mut config = AgentConfig::default();
         assert!(!config.is_claude_code());
 
-        config.provider_type = "claude-code".to_string();
+        config.agent_type = "claude-code".to_string();
         assert!(config.is_claude_code());
 
-        config.provider_type = "genai".to_string();
+        config.agent_type = "genai".to_string();
         assert!(!config.is_claude_code());
     }
 
     #[test]
-    fn test_provider_config_get_provider() {
-        let mut config = ProviderConfig::default();
-        assert_eq!(config.get_provider(), Provider::Genai);
+    fn test_agent_config_get_agent() {
+        let mut config = AgentConfig::default();
+        assert_eq!(config.get_agent(), Agent::Genai);
 
-        config.provider_type = "claude-code".to_string();
-        assert_eq!(config.get_provider(), Provider::ClaudeCode);
+        config.agent_type = "claude-code".to_string();
+        assert_eq!(config.get_agent(), Agent::ClaudeCode);
 
-        config.provider_type = "genai".to_string();
-        assert_eq!(config.get_provider(), Provider::Genai);
+        config.agent_type = "genai".to_string();
+        assert_eq!(config.get_agent(), Agent::Genai);
 
-        // Unknown provider falls back to Genai (with warning logged)
-        config.provider_type = "unknown-provider".to_string();
-        assert_eq!(config.get_provider(), Provider::Genai);
+        // Unknown agent falls back to Genai (with warning logged)
+        config.agent_type = "unknown-agent".to_string();
+        assert_eq!(config.get_agent(), Agent::Genai);
     }
 
     #[test]
-    fn test_provider_toml_parsing() {
+    fn test_agent_toml_parsing() {
         let toml_content = r#"
-[provider]
-provider_type = "claude-code"
+[agent]
+agent_type = "claude-code"
 path = "/usr/local/bin/claude"
 max_concurrent = 5
 timeout_secs = 600
@@ -1152,34 +1147,34 @@ enable_poc = true
 "#;
 
         let config: ParsentryConfig = toml::from_str(toml_content).unwrap();
-        assert_eq!(config.provider.provider_type, "claude-code");
-        assert_eq!(config.provider.path, Some(PathBuf::from("/usr/local/bin/claude")));
-        assert_eq!(config.provider.max_concurrent, 5);
-        assert_eq!(config.provider.timeout_secs, 600);
-        assert!(config.provider.enable_poc);
-        assert!(config.provider.is_claude_code());
+        assert_eq!(config.agent.agent_type, "claude-code");
+        assert_eq!(config.agent.path, Some(PathBuf::from("/usr/local/bin/claude")));
+        assert_eq!(config.agent.max_concurrent, 5);
+        assert_eq!(config.agent.timeout_secs, 600);
+        assert!(config.agent.enable_poc);
+        assert!(config.agent.is_claude_code());
     }
 
     #[test]
-    fn test_provider_to_args_conversion() {
+    fn test_agent_to_args_conversion() {
         let mut config = ParsentryConfig::default();
 
-        // Test genai provider
-        config.provider.provider_type = "genai".to_string();
+        // Test genai agent
+        config.agent.agent_type = "genai".to_string();
         let args = config.to_args();
-        assert_eq!(args.provider, Provider::Genai);
+        assert_eq!(args.agent, Agent::Genai);
 
-        // Test claude-code provider
-        config.provider.provider_type = "claude-code".to_string();
-        config.provider.path = Some(PathBuf::from("/custom/claude"));
-        config.provider.max_concurrent = 8;
-        config.provider.enable_poc = true;
+        // Test claude-code agent
+        config.agent.agent_type = "claude-code".to_string();
+        config.agent.path = Some(PathBuf::from("/custom/claude"));
+        config.agent.max_concurrent = 8;
+        config.agent.enable_poc = true;
 
         let args = config.to_args();
-        assert_eq!(args.provider, Provider::ClaudeCode);
-        assert_eq!(args.provider_path, Some(PathBuf::from("/custom/claude")));
-        assert_eq!(args.provider_concurrency, 8);
-        assert!(args.provider_poc);
+        assert_eq!(args.agent, Agent::ClaudeCode);
+        assert_eq!(args.agent_path, Some(PathBuf::from("/custom/claude")));
+        assert_eq!(args.agent_concurrency, 8);
+        assert!(args.agent_poc);
     }
 
     #[test]
@@ -1196,8 +1191,8 @@ verbosity = 2
 [paths]
 target = "custom-target"
 
-[provider]
-provider_type = "claude-code"
+[agent]
+agent_type = "claude-code"
 max_concurrent = 5
 "#).unwrap();
 
@@ -1208,8 +1203,8 @@ max_concurrent = 5
         assert_eq!(base.analysis.min_confidence, 90);
         assert_eq!(base.analysis.verbosity, 2);
         assert_eq!(base.paths.target, Some("custom-target".to_string()));
-        assert_eq!(base.provider.provider_type, "claude-code");
-        assert_eq!(base.provider.max_concurrent, 5);
+        assert_eq!(base.agent.agent_type, "claude-code");
+        assert_eq!(base.agent.max_concurrent, 5);
 
         // Verify default values are preserved where not overridden
         assert_eq!(base.analysis.language, "ja");

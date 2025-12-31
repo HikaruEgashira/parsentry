@@ -5,7 +5,8 @@ use crate::call_graph::{CallGraphBuilder, CallGraphConfig};
 use crate::call_graph_output::{CallGraphRenderer, OutputFormat, CallGraphFilter};
 use crate::cli::args::GraphArgs;
 use crate::parser::CodeParser;
-use crate::repo::{RepoOps, clone_github_repo};
+use crate::github::clone_repo;
+use crate::repo::RepoOps;
 
 pub async fn run_graph_command(args: GraphArgs) -> Result<()> {
     println!("📊 Starting call graph generation...");
@@ -19,7 +20,7 @@ pub async fn run_graph_command(args: GraphArgs) -> Result<()> {
                 })?;
             }
             println!("🛠️  Cloning GitHub repository: {} → {}", target, dest.display());
-            clone_github_repo(target, &dest).map_err(|e| {
+            clone_repo(target, &dest).map_err(|e| {
                 anyhow::anyhow!("Failed to clone GitHub repository: {}", e)
             })?;
 

@@ -2,6 +2,7 @@
 //!
 //! Inspired by: cargo, ripgrep, bat, fd
 
+use std::io::IsTerminal;
 
 /// ANSI color codes for terminal styling
 pub mod colors {
@@ -33,7 +34,7 @@ pub fn colors_enabled() -> bool {
         return false;
     }
     // Check if stderr is a terminal
-    atty::is(atty::Stream::Stderr)
+    std::io::stderr().is_terminal()
 }
 
 /// Get terminal width, defaulting to 80

@@ -17,7 +17,6 @@ impl CacheStorage {
     pub fn new<P: AsRef<Path>>(cache_dir: P) -> Result<Self> {
         let cache_dir = cache_dir.as_ref().to_path_buf();
 
-        // Create cache directory if it doesn't exist
         if !cache_dir.exists() {
             fs::create_dir_all(&cache_dir)
                 .with_context(|| format!("Failed to create cache directory: {}", cache_dir.display()))?;
@@ -30,7 +29,7 @@ impl CacheStorage {
     ///
     /// Uses first 2 characters as subdirectory for distribution
     /// Example: abc123... -> cache_dir/genai/gpt-4/ab/abc123....json
-    fn get_cache_path(&self, provider: &str, model: &str, hash: &str) -> PathBuf {
+    fn get_cache_path(&self, agent: &str, model: &str, hash: &str) -> PathBuf {
         let prefix = if hash.len() >= 2 {
             &hash[..2]
         } else {
@@ -38,21 +37,21 @@ impl CacheStorage {
         };
 
         self.cache_dir
-            .join(provider)
+            .join(agent)
             .join(model)
             .join(prefix)
             .join(format!("{}.json", hash))
     }
 
     /// Check if a cache entry exists
-    pub fn exists(&self, provider: &str, model: &str, hash: &str) -> bool {
-        let path = self.get_cache_path(provider, model, hash);
+    pub fn exists(&self, agent: &str, model: &str, hash: &str) -> bool {
+        let path = self.get_cache_path(agent, model, hash);
         path.exists()
     }
 
     /// Get a cache entry by hash
-    pub fn get(&self, provider: &str, model: &str, hash: &str) -> Result<Option<CacheEntry>> {
-        let path = self.get_cache_path(provider, model, hash);
+    pub fn get(&self, agent: &str, model: &str, hash: &str) -> Result<Option<CacheEntry>> {
+        let path = self.get_cache_path(agent, model, hash);
 
         if !path.exists() {
             return Ok(None);
@@ -64,10 +63,8 @@ impl CacheStorage {
         let mut entry: CacheEntry = serde_json::from_str(&content)
             .with_context(|| format!("Failed to parse cache entry: {}", path.display()))?;
 
-        // Update access metadata
         entry.record_access();
 
-        // Write back updated metadata
         let updated_content = serde_json::to_string_pretty(&entry)?;
         fs::write(&path, updated_content)
             .with_context(|| format!("Failed to update cache metadata: {}", path.display()))?;
@@ -77,15 +74,13 @@ impl CacheStorage {
 
     /// Set a cache entry
     pub fn set(&self, entry: &CacheEntry) -> Result<()> {
-        let path = self.get_cache_path(&entry.provider, &entry.model, &entry.prompt_hash);
+        let path = self.get_cache_path(&entry.agent, &entry.model, &entry.prompt_hash);
 
-        // Create parent directories
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("Failed to create cache subdirectory: {}", parent.display()))?;
         }
 
-        // Write entry to file
         let content = serde_json::to_string_pretty(entry)
             .context("Failed to serialize cache entry")?;
 
@@ -98,8 +93,8 @@ impl CacheStorage {
     }
 
     /// Delete a cache entry
-    pub fn delete(&self, provider: &str, model: &str, hash: &str) -> Result<()> {
-        let path = self.get_cache_path(provider, model, hash);
+    pub fn delete(&self, agent: &str, model: &str, hash: &str) -> Result<()> {
+        let path = self.get_cache_path(agent, model, hash);
 
         if path.exists() {
             fs::remove_file(&path)

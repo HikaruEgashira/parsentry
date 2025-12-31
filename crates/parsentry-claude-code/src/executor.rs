@@ -56,6 +56,19 @@ pub struct ClaudeCodeOutput {
     pub raw_output: String,
 }
 
+/// Result from direct file output execution (no JSON parsing).
+#[derive(Debug, Clone)]
+pub struct FileOutputResult {
+    /// Whether the execution was successful.
+    pub success: bool,
+    /// Duration in milliseconds.
+    pub duration_ms: Option<u64>,
+    /// Raw stdout output for debugging.
+    pub stdout: String,
+    /// Raw stderr output for debugging.
+    pub stderr: String,
+}
+
 /// Executor for Claude Code CLI with semaphore-based concurrency control.
 pub struct ClaudeCodeExecutor {
     claude_path: PathBuf,
@@ -336,6 +349,203 @@ impl ClaudeCodeExecutor {
         }
 
         Err(last_error.unwrap())
+    }
+
+    /// Execute with streaming output and file output mode (no JSON parsing).
+    /// Claude Code will write the analysis directly to a file, while streaming progress.
+    pub async fn execute_streaming_file_output<C: StreamCallback>(
+        &self,
+        prompt: &str,
+        callback: &C,
+    ) -> Result<FileOutputResult, ClaudeCodeError> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
+
+        debug!("Acquired semaphore permit, executing Claude Code (streaming file output mode)");
+
+        timeout(
+            Duration::from_secs(self.timeout_secs),
+            self.spawn_claude_process_streaming_file_output(prompt, callback),
+        )
+        .await
+        .map_err(|_| ClaudeCodeError::Timeout {
+            timeout_secs: self.timeout_secs,
+        })?
+    }
+
+    /// Spawn Claude Code process with streaming output for file output mode.
+    async fn spawn_claude_process_streaming_file_output<C: StreamCallback>(
+        &self,
+        prompt: &str,
+        callback: &C,
+    ) -> Result<FileOutputResult, ClaudeCodeError> {
+        let mut cmd = Command::new(&self.claude_path);
+
+        cmd.arg("--print")
+            .arg("--verbose")
+            .arg("--output-format")
+            .arg("stream-json");
+
+        if let Some(ref model) = self.model {
+            cmd.arg("--model").arg(model);
+        }
+
+        cmd.current_dir(&self.working_dir)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+
+        debug!("Spawning Claude Code process (streaming file output): {:?}", cmd);
+
+        let start = std::time::Instant::now();
+
+        let mut child = cmd.spawn().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
+            } else {
+                ClaudeCodeError::SpawnError(e)
+            }
+        })?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(ClaudeCodeError::SpawnError)?;
+            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
+            drop(stdin);
+        }
+
+        let stdout = child.stdout.take().ok_or_else(|| {
+            ClaudeCodeError::SpawnError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to capture stdout",
+            ))
+        })?;
+
+        let stderr = child.stderr.take().ok_or_else(|| {
+            ClaudeCodeError::SpawnError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to capture stderr",
+            ))
+        })?;
+
+        let (stdout_result, stderr_output) = tokio::join!(
+            self.process_stdout_stream_for_file_output(stdout, callback),
+            self.process_stderr_stream(stderr, callback),
+        );
+
+        let status = child.wait().await.map_err(ClaudeCodeError::SpawnError)?;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+
+        if let Some(ref log_dir) = self.log_dir {
+            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
+            let log_file = log_dir.join(format!("claude_code_streaming_file_output_{}.log", timestamp));
+            let log_content = format!(
+                "=== Claude Code Streaming File Output Execution Log ===\n\
+                 Timestamp: {}\n\
+                 Working Dir: {}\n\
+                 Duration: {}ms\n\
+                 Status: {:?}\n\
+                 \n\
+                 === STDERR ===\n\
+                 {}\n",
+                chrono::Utc::now().to_rfc3339(),
+                self.working_dir.display(),
+                duration_ms,
+                status,
+                stderr_output
+            );
+            if let Err(e) = std::fs::write(&log_file, &log_content) {
+                warn!("Failed to write Claude Code log: {}", e);
+            } else {
+                info!("Claude Code log saved: {}", log_file.display());
+            }
+        }
+
+        Ok(FileOutputResult {
+            success: status.success(),
+            duration_ms: Some(duration_ms),
+            stdout: stdout_result,
+            stderr: stderr_output,
+        })
+    }
+
+    /// Process NDJSON stdout stream for file output mode (no JSON parsing of result).
+    async fn process_stdout_stream_for_file_output<C: StreamCallback>(
+        &self,
+        stdout: tokio::process::ChildStdout,
+        callback: &C,
+    ) -> String {
+        let reader = BufReader::new(stdout);
+        let mut lines = reader.lines();
+        let mut raw_output = String::new();
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            raw_output.push_str(&line);
+            raw_output.push('\n');
+
+            match serde_json::from_str::<StreamMessage>(&line) {
+                Ok(msg) => match msg {
+                    StreamMessage::System(system) => {
+                        if let Some(ref message) = system.message {
+                            callback.on_event(StreamEvent::Progress(message.clone()));
+                        }
+                    }
+                    StreamMessage::Assistant(assistant) => {
+                        if let Some(ref message) = assistant.message {
+                            for block in &message.content {
+                                match block {
+                                    ContentBlock::Text { text } => {
+                                        callback.on_event(StreamEvent::Text(text.clone()));
+                                    }
+                                    ContentBlock::ToolUse { name, input, .. } => {
+                                        callback.on_event(StreamEvent::ToolUse {
+                                            name: name.clone(),
+                                            input: input.clone(),
+                                        });
+                                    }
+                                    ContentBlock::ToolResult {
+                                        tool_use_id,
+                                        is_error,
+                                        ..
+                                    } => {
+                                        let name = tool_use_id
+                                            .clone()
+                                            .unwrap_or_else(|| "unknown".to_string());
+                                        let success = !is_error.unwrap_or(false);
+                                        callback.on_event(StreamEvent::ToolComplete {
+                                            name,
+                                            success,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    StreamMessage::Result(result) => {
+                        callback.on_event(StreamEvent::Complete(result));
+                    }
+                },
+                Err(e) => {
+                    debug!(
+                        "Failed to parse stream message: {} - line: {}",
+                        e,
+                        &line[..line.len().min(100)]
+                    );
+                }
+            }
+        }
+
+        raw_output
     }
 
     /// Spawn the Claude Code process and return raw result string.

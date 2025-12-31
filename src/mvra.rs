@@ -165,7 +165,7 @@ impl MvraScanner {
 
         // Clone the repository
         println!("⬇ Cloning repository: {}", repo.full_name);
-        crate::repo::clone_github_repo(&repo.full_name, &repo_path)?;
+        crate::github::clone_repo(&repo.full_name, &repo_path)?;
 
         Ok(repo_path)
     }
