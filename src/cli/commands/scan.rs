@@ -146,6 +146,80 @@ async fn analyze_with_claude_code(
     }
 }
 
+/// Analyze a pattern using Claude Code CLI with direct file output (no JSON parsing).
+/// Claude Code will write the analysis directly to a markdown file using the Write tool.
+async fn analyze_with_claude_code_direct_output(
+    executor: &ClaudeCodeExecutor,
+    prompt_builder: &PromptBuilder,
+    file_path: &PathBuf,
+    pattern_match: &PatternMatch,
+    output_path: &PathBuf,
+    output_dir: &PathBuf,
+    scripts_dir: &PathBuf,
+    printer: &StatusPrinter,
+) -> Result<bool> {
+    let file_name = file_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let content = tokio::fs::read_to_string(file_path).await?;
+
+    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
+    let pattern_context = PatternContext::new(
+        &pattern_type_str,
+        &pattern_match.pattern_config.description,
+        &pattern_match.matched_text,
+    )
+    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
+
+    // Build prompt for direct file output
+    let prompt = prompt_builder.build_direct_file_output_prompt(
+        file_path,
+        &content,
+        output_path,
+        output_dir,
+        scripts_dir,
+        Some(&pattern_context),
+    );
+
+    printer.status("Analyzing (direct output)", &file_name);
+
+    // Execute with file output mode (no JSON parsing)
+    let result = executor.execute_with_file_output(&prompt).await;
+
+    match result {
+        Ok(output) => {
+            if output.success {
+                info!(
+                    "Claude Code direct output succeeded for {}: {}ms",
+                    file_path.display(),
+                    output.duration_ms.unwrap_or(0)
+                );
+                printer.status("Completed", &file_name);
+                Ok(true)
+            } else {
+                printer.error("Failed", &format!("{}: non-zero exit", file_name));
+                error!(
+                    "Claude Code direct output failed for {}: stderr={}",
+                    file_path.display(),
+                    output.stderr
+                );
+                Ok(false)
+            }
+        }
+        Err(e) => {
+            printer.error("Failed", &format!("{}: {}", file_name, e));
+            error!(
+                "Claude Code direct output error for {}: {}",
+                file_path.display(),
+                e
+            );
+            Err(anyhow::anyhow!("Claude Code direct output failed: {}", e))
+        }
+    }
+}
+
 pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     // Auto-detect MVRA mode based on target pattern
     if !args.mvra && args.target.is_some() {
