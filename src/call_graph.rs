@@ -1,4 +1,5 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
+use parsentry_core::Language;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -489,4 +490,46 @@ impl CallGraphBuilder {
             }
         });
     }
+}
+
+/// Filter definitions to only those in the call graph starting from security-relevant functions.
+///
+/// # Arguments
+/// * `parser` - CodeParser with loaded files (consumed)
+/// * `definitions` - All definitions extracted from the codebase
+/// * `security_functions` - Function names that are security-relevant (Principal/Resource)
+/// * `max_depth` - Maximum depth to traverse in the call graph
+///
+/// # Returns
+/// Filtered definitions that are within the call graph of security functions.
+pub fn filter_definitions_by_call_graph(
+    parser: CodeParser,
+    definitions: &[(Definition, Language)],
+    security_functions: &[String],
+    max_depth: usize,
+) -> Result<Vec<(Definition, Language)>> {
+    if security_functions.is_empty() {
+        return Ok(definitions.to_vec());
+    }
+
+    let config = CallGraphConfig {
+        start_functions: security_functions.to_vec(),
+        max_depth: Some(max_depth),
+        detect_cycles: false,
+        security_focus: true,
+        ..Default::default()
+    };
+
+    let mut builder = CallGraphBuilder::new(parser);
+    let graph = builder.build(&config)?;
+
+    let graph_functions: HashSet<&str> = graph.nodes.keys().map(|s| s.as_str()).collect();
+
+    let filtered: Vec<_> = definitions
+        .iter()
+        .filter(|(def, _)| graph_functions.contains(def.name.as_str()))
+        .cloned()
+        .collect();
+
+    Ok(filtered)
 }
