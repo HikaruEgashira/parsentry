@@ -213,11 +213,14 @@ async fn analyze_definitions_with_codex(
 
         let mut definitions_context = String::new();
         for (idx, def) in chunk.iter().enumerate() {
+            let location = def.file_path.as_ref()
+                .map(|p| format!("{}:{}", p.display(), def.line_number.unwrap_or(0)))
+                .unwrap_or_else(|| "unknown".to_string());
             definitions_context.push_str(&format!(
-                "Definition {}: {}\nCode:\n{}\n\n",
+                "Definition {}: {}\nLocation: {}\n\n",
                 idx + 1,
                 def.name,
-                def.source
+                location
             ));
         }
 
@@ -331,11 +334,14 @@ async fn analyze_references_with_codex(
 
         let mut references_context = String::new();
         for (idx, ref_def) in chunk.iter().enumerate() {
+            let location = ref_def.file_path.as_ref()
+                .map(|p| format!("{}:{}", p.display(), ref_def.line_number.unwrap_or(0)))
+                .unwrap_or_else(|| "unknown".to_string());
             references_context.push_str(&format!(
-                "Reference {}: {}\nCode:\n{}\n\n",
+                "Reference {}: {}\nLocation: {}\n\n",
                 idx + 1,
                 ref_def.name,
-                ref_def.source
+                location
             ));
         }
 

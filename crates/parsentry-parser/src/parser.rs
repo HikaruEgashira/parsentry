@@ -14,6 +14,10 @@ pub struct Definition {
     pub start_byte: usize,
     pub end_byte: usize,
     pub source: String,
+    /// Absolute file path where this definition is located.
+    pub file_path: Option<PathBuf>,
+    /// Line number (1-based) where this definition starts.
+    pub line_number: Option<usize>,
 }
 
 /// Context containing definitions and references from parsed code.
@@ -204,11 +208,14 @@ impl CodeParser {
                 let end_byte = def_node.end_byte();
                 let source = def_node.utf8_text(content.as_bytes())?.to_string();
 
+                let line_number = content[..start_byte].matches('\n').count() + 1;
                 let definition = Definition {
                     name: name.to_string(),
                     start_byte,
                     end_byte,
                     source,
+                    file_path: Some(source_file.to_path_buf()),
+                    line_number: Some(line_number),
                 };
                 return Ok(Some((source_file.to_path_buf(), definition)));
             }
@@ -281,6 +288,7 @@ impl CodeParser {
                             let start_byte = node.start_byte();
                             let end_byte = node.end_byte();
                             let source = name.to_string();
+                            let line_number = content[..start_byte].matches('\n').count() + 1;
 
                             results.push((
                                 file_path.clone(),
@@ -289,6 +297,8 @@ impl CodeParser {
                                     start_byte,
                                     end_byte,
                                     source,
+                                    file_path: Some(file_path.clone()),
+                                    line_number: Some(line_number),
                                 },
                                 capture_name.to_string(),
                             ));
@@ -383,11 +393,14 @@ impl CodeParser {
                     let start_byte = def_node.start_byte();
                     let end_byte = def_node.end_byte();
                     let source = def_node.utf8_text(file_content.as_bytes())?.to_string();
+                    let line_number = file_content[..start_byte].matches('\n').count() + 1;
                     definitions.push(Definition {
                         name: name.clone(),
                         start_byte,
                         end_byte,
                         source,
+                        file_path: Some(start_path.to_path_buf()),
+                        line_number: Some(line_number),
                     });
                     collected.insert(name.clone());
                     to_visit.push((start_path.to_path_buf(), name));
@@ -438,12 +451,15 @@ impl CodeParser {
                     let start_byte = node.start_byte();
                     let end_byte = node.end_byte();
                     let source = node.utf8_text(file_content.as_bytes())?.to_string();
+                    let line_number = file_content[..start_byte].matches('\n').count() + 1;
 
                     references.push(Definition {
                         name,
                         start_byte,
                         end_byte,
                         source,
+                        file_path: Some(start_path.to_path_buf()),
+                        line_number: Some(line_number),
                     });
                 }
             }

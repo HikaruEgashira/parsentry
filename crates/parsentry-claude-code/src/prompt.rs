@@ -412,6 +412,134 @@ Use these exact values:
             sarif_path = safe_sarif_path,
         )
     }
+
+    /// Build a security analysis prompt using file references only.
+    ///
+    /// This is optimized for agents (Claude Code, Codex) that can read files themselves,
+    /// reducing context size by passing only file paths instead of full content.
+    pub fn build_file_reference_prompt(
+        &self,
+        file_path: &Path,
+        pattern_context: Option<&PatternContext>,
+        related_functions: Option<&[FunctionReference]>,
+    ) -> String {
+        let pattern_section = if let Some(ctx) = pattern_context {
+            format!(
+                r#"
+## Pattern Context
+- **Pattern Type**: {}
+- **Description**: {}
+- **Matched Code**:
+```
+{}
+```
+- **Attack Vectors**: {}
+"#,
+                ctx.pattern_type,
+                ctx.description,
+                ctx.matched_code,
+                ctx.attack_vectors.join(", ")
+            )
+        } else {
+            String::new()
+        };
+
+        let related_section = if let Some(functions) = related_functions {
+            if functions.is_empty() {
+                String::new()
+            } else {
+                let mut section = String::from("\n## Related Functions\n");
+                for func in functions {
+                    section.push_str(&format!(
+                        "{}:{} {}\n",
+                        func.file_path.display(),
+                        func.line_number,
+                        func.name
+                    ));
+                }
+                section
+            }
+        } else {
+            String::new()
+        };
+
+        let lang_instruction = if self.language == "ja" {
+            "Respond in Japanese."
+        } else {
+            "Respond in English."
+        };
+
+        let safe_file_path = sanitize_for_prompt(&file_path.display().to_string());
+
+        format!(
+            r#"You are a security vulnerability analyzer.
+
+## Analysis Target
+{file_path}
+{pattern_section}{related_section}
+## Instructions
+
+Analyze the target for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
+
+1. **Identify Principals**: Find untrusted data sources (user input, external APIs, file uploads)
+2. **Identify Resources**: Find sensitive operations (database queries, file system, command execution)
+3. **Evaluate Actions**: Assess security controls between principals and resources
+4. **Detect Policy Violations**: Identify paths where untrusted data reaches resources without proper validation
+
+## PAR Analysis Framework
+
+- **Principal**: Untrusted data sources (user input, external APIs, environment variables)
+- **Action**: Security controls (validation, sanitization, authentication, authorization)
+- **Resource**: Sensitive operations (DB, file system, command execution, network)
+
+## Output Format
+
+{lang_instruction}
+
+Respond with a JSON object containing:
+
+```json
+{{
+  "scratchpad": "Your analysis reasoning and notes",
+  "analysis": "Comprehensive security assessment",
+  "poc": "Proof of concept code if vulnerability found",
+  "confidence_score": 0-100,
+  "vulnerability_types": ["LFI", "RCE", "SSRF", "AFO", "SQLI", "XSS", "IDOR"],
+  "par_analysis": {{
+    "principals": [...],
+    "actions": [...],
+    "resources": [...],
+    "policy_violations": [...]
+  }},
+  "remediation_guidance": {{
+    "policy_enforcement": [...]
+  }}
+}}
+```
+
+## Important Notes
+
+- confidence_score: Set to 0 if no vulnerability is found
+- Normalize confidence_score to multiples of 10 (0, 10, 20, ..., 100)
+- Only report vulnerabilities with high confidence (>= 70)
+"#,
+            file_path = safe_file_path,
+            pattern_section = pattern_section,
+            related_section = related_section,
+            lang_instruction = lang_instruction,
+        )
+    }
+}
+
+/// Reference to a function with location information.
+#[derive(Debug, Clone)]
+pub struct FunctionReference {
+    /// Function name.
+    pub name: String,
+    /// Absolute file path.
+    pub file_path: std::path::PathBuf,
+    /// Line number (1-based).
+    pub line_number: usize,
 }
 
 /// Context information about a security pattern match.
