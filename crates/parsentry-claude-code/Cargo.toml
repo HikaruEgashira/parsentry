@@ -14,8 +14,6 @@ async-trait.workspace = true
 thiserror.workspace = true
 tracing = "0.1"
 chrono = "0.4"
-parsentry-core = { path = "../parsentry-core" }
-parsentry-parser = { path = "../parsentry-parser" }
 
 [dev-dependencies]
 tokio-test = "0.4"
