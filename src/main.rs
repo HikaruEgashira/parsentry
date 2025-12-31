@@ -8,5 +8,12 @@ async fn main() -> Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    RootCommand::execute().await
+    // Handle Ctrl+C gracefully
+    tokio::select! {
+        result = RootCommand::execute() => result,
+        _ = tokio::signal::ctrl_c() => {
+            eprintln!("\nInterrupted by user");
+            std::process::exit(130);
+        }
+    }
 }
