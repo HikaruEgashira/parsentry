@@ -65,14 +65,13 @@ async fn analyze_with_claude_code<C: StreamCallback>(
     sarif_output_path: &PathBuf,
     printer: &StatusPrinter,
     streaming_callback: &C,
-    related_principals: &[(String, String, usize)], // (name, path, line)
+    related_principals: &[(String, String, usize)],
 ) -> Result<bool> {
     let file_name = file_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    // Check if SARIF file already exists (cache hit)
     if sarif_output_path.exists() {
         info!(
             "SARIF cache hit for {}: {}",
@@ -91,13 +90,11 @@ async fn analyze_with_claude_code<C: StreamCallback>(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    // Convert related_principals to the format expected by prompt builder
     let related_refs: Vec<(&str, &str, usize)> = related_principals
         .iter()
         .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
         .collect();
 
-    // Build prompt using file reference only (agent reads file itself)
     let prompt = prompt_builder.build_file_reference_prompt(
         file_path,
         Some(&pattern_context),
@@ -161,7 +158,7 @@ async fn analyze_with_codex(
     _working_dir: &PathBuf,
     printer: &StatusPrinter,
     streaming_display: &Arc<StreamingDisplay>,
-    related_principals: &[(String, String, usize)], // (name, path, line)
+    related_principals: &[(String, String, usize)],
 ) -> Result<Option<Response>> {
     let file_name = file_path
         .file_name()
@@ -176,13 +173,11 @@ async fn analyze_with_codex(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    // Convert related_principals to the format expected by prompt builder
     let related_refs: Vec<(&str, &str, usize)> = related_principals
         .iter()
         .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
         .collect();
 
-    // Build prompt using file reference only (agent reads file itself)
     let prompt = prompt_builder.build_file_reference_prompt(
         file_path,
         Some(&pattern_context),
