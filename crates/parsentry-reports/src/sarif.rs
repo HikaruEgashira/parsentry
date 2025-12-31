@@ -308,7 +308,6 @@ impl SarifReport {
             for (i, result) in run.results.iter().enumerate() {
                 md.push_str(&format!("## Finding {}: {}\n\n", i + 1, result.rule_id));
 
-                // Level/Severity
                 let level_emoji = match result.level.as_str() {
                     "error" => "🔴",
                     "warning" => "🟠",
@@ -317,7 +316,6 @@ impl SarifReport {
                 };
                 md.push_str(&format!("**Severity**: {} {}\n\n", level_emoji, result.level));
 
-                // Location
                 if let Some(location) = result.locations.first() {
                     let uri = &location.physical_location.artifact_location.uri;
                     md.push_str(&format!("**File**: `{}`\n", uri));
@@ -333,7 +331,6 @@ impl SarifReport {
                     md.push('\n');
                 }
 
-                // Message/Analysis
                 md.push_str("### Analysis\n\n");
                 if let Some(markdown_text) = &result.message.markdown {
                     md.push_str(markdown_text);
@@ -342,7 +339,6 @@ impl SarifReport {
                 }
                 md.push_str("\n\n");
 
-                // Properties (confidence, CWE, OWASP, MITRE)
                 if let Some(props) = &result.properties {
                     if let Some(confidence) = props.confidence {
                         md.push_str(&format!(
@@ -368,7 +364,6 @@ impl SarifReport {
                     md.push('\n');
                 }
 
-                // Get rule help text if available
                 if let Some(rules) = &run.tool.driver.rules {
                     if let Some(rule) = rules.iter().find(|r| r.id == result.rule_id) {
                         if let Some(help) = &rule.help {
@@ -402,7 +397,6 @@ impl SarifReport {
                 return md;
             }
 
-            // Count by severity
             let mut error_count = 0;
             let mut warning_count = 0;
             let mut note_count = 0;
@@ -429,7 +423,6 @@ impl SarifReport {
             }
             md.push_str(&format!("| **Total** | **{}** |\n\n", run.results.len()));
 
-            // Results table
             md.push_str("## Findings\n\n");
             md.push_str("| File | Vulnerability | Severity | Confidence |\n");
             md.push_str("|------|---------------|----------|------------|\n");
