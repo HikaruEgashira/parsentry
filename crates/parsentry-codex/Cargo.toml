@@ -15,8 +15,6 @@ thiserror.workspace = true
 tracing = "0.1"
 chrono = "0.4"
 reqwest = { version = "0.12", features = ["json"] }
-parsentry-core = { path = "../parsentry-core" }
-parsentry-parser = { path = "../parsentry-parser" }
 
 [dev-dependencies]
 tokio-test = "0.4"
