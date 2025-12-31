@@ -863,12 +863,8 @@ use_cache = true
             self.agent.enable_poc = true;
         }
 
-        // Apply cache flags
-        if args.no_cache {
-            self.cache.enabled = false;
-        } else if args.cache {
-            self.cache.enabled = true;
-        }
+        // Apply cache flag
+        self.cache.enabled = args.cache;
 
         Ok(())
     }
@@ -978,9 +974,8 @@ use_cache = true
             mvra_code_query: self.mvra.code_query.clone(),
             mvra_max_repos: self.mvra.max_repos,
             mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
-            mvra_no_cache: !self.mvra.use_cache,
+            mvra_cache: self.mvra.use_cache,
             cache: self.cache.enabled,
-            no_cache: false,  // CLI flags are applied in scan command
             cache_only: false,  // CLI flags are applied in scan command
         }
     }
