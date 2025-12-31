@@ -8,7 +8,7 @@ mod parser;
 mod prompt;
 pub mod stream;
 
-pub use executor::{CodexExecutor, CodexOutput, FileOutputResult};
+pub use executor::{CodexError, CodexExecutor, CodexOutput, FileOutputResult};
 pub use parser::{CodexResponse, ParAnalysis, VulnerabilityInfo};
 pub use prompt::{PromptBuilder, PatternContext};
 pub use stream::{ChannelCallback, NoOpCallback, ResultMessage, StreamCallback, StreamEvent};
