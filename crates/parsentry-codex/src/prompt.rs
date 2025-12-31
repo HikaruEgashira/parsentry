@@ -1,5 +1,7 @@
-//! Prompt builder for Claude Code security analysis.
+//! Prompt builder for Codex security analysis.
 
+use parsentry_core::Language;
+use parsentry_parser::Definition;
 use std::path::Path;
 
 /// Sanitize input to prevent prompt injection attacks.
@@ -540,6 +542,38 @@ pub struct FunctionReference {
     pub file_path: std::path::PathBuf,
     /// Line number (1-based).
     pub line_number: usize,
+}
+
+impl FunctionReference {
+    /// Create from a Definition.
+    pub fn from_definition(def: &Definition) -> Option<Self> {
+        def.file_path.as_ref().map(|path| Self {
+            name: def.name.clone(),
+            file_path: path.clone(),
+            line_number: def.line_number.unwrap_or(0),
+        })
+    }
+
+    /// Format as "path:line name" for compact representation.
+    pub fn to_location_string(&self) -> String {
+        format!(
+            "{}:{} {}",
+            self.file_path.display(),
+            self.line_number,
+            self.name
+        )
+    }
+}
+
+/// Convert definitions to file references (path + line only).
+///
+/// This is useful for agents that can read files themselves,
+/// as it reduces context size while still providing location information.
+pub fn to_file_references(definitions: &[(Definition, Language)]) -> Vec<FunctionReference> {
+    definitions
+        .iter()
+        .filter_map(|(def, _)| FunctionReference::from_definition(def))
+        .collect()
 }
 
 /// Context information about a security pattern match.
