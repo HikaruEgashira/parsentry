@@ -485,9 +485,9 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
-            let streaming_display = Arc::clone(&streaming_display);
-            let cache = cache.clone();
-            let cache_mode = cache_mode;
+            let _streaming_display = Arc::clone(&streaming_display);
+            let _cache = cache.clone();
+            let _cache_mode = cache_mode;
 
             async move {
                 let file_name = file_path.display().to_string();
