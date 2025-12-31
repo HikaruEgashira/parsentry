@@ -146,16 +146,14 @@ async fn analyze_with_claude_code(
     }
 }
 
-/// Analyze a pattern using Claude Code CLI with direct file output (no JSON parsing).
-/// Claude Code will write the analysis directly to a markdown file using the Write tool.
-async fn analyze_with_claude_code_direct_output(
+/// Analyze a pattern using Claude Code CLI with direct SARIF output.
+/// Claude Code will write the SARIF JSON directly to a file using the Write tool.
+async fn analyze_with_claude_code_sarif_output(
     executor: &ClaudeCodeExecutor,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
-    output_path: &PathBuf,
-    output_dir: &PathBuf,
-    scripts_dir: &PathBuf,
+    sarif_output_path: &PathBuf,
     printer: &StatusPrinter,
 ) -> Result<bool> {
     let file_name = file_path
@@ -173,26 +171,24 @@ async fn analyze_with_claude_code_direct_output(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    // Build prompt for direct file output
-    let prompt = prompt_builder.build_direct_file_output_prompt(
+    // Build prompt for SARIF output
+    let prompt = prompt_builder.build_sarif_output_prompt(
         file_path,
         &content,
-        output_path,
-        output_dir,
-        scripts_dir,
+        sarif_output_path,
         Some(&pattern_context),
     );
 
-    printer.status("Analyzing (direct output)", &file_name);
+    printer.status("Analyzing (SARIF output)", &file_name);
 
-    // Execute with file output mode (no JSON parsing)
+    // Execute with file output mode (no JSON parsing from stdout)
     let result = executor.execute_with_file_output(&prompt).await;
 
     match result {
         Ok(output) => {
             if output.success {
                 info!(
-                    "Claude Code direct output succeeded for {}: {}ms",
+                    "Claude Code SARIF output succeeded for {}: {}ms",
                     file_path.display(),
                     output.duration_ms.unwrap_or(0)
                 );
@@ -201,7 +197,7 @@ async fn analyze_with_claude_code_direct_output(
             } else {
                 printer.error("Failed", &format!("{}: non-zero exit", file_name));
                 error!(
-                    "Claude Code direct output failed for {}: stderr={}",
+                    "Claude Code SARIF output failed for {}: stderr={}",
                     file_path.display(),
                     output.stderr
                 );
@@ -211,11 +207,11 @@ async fn analyze_with_claude_code_direct_output(
         Err(e) => {
             printer.error("Failed", &format!("{}: {}", file_name, e));
             error!(
-                "Claude Code direct output error for {}: {}",
+                "Claude Code SARIF output error for {}: {}",
                 file_path.display(),
                 e
             );
-            Err(anyhow::anyhow!("Claude Code direct output failed: {}", e))
+            Err(anyhow::anyhow!("Claude Code SARIF output failed: {}", e))
         }
     }
 }
