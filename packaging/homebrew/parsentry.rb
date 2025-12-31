@@ -12,7 +12,7 @@
 class Parsentry < Formula
   desc "PAR-based security scanner using LLMs and static code analysis"
   homepage "https://github.com/HikaruEgashira/parsentry"
-  version "0.12.0"
+  version "0.14.0"
   license "AGPL-3.0-only"
 
   on_macos do
