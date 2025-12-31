@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.14.0] - 2025-12-31
+
+### 🎉 New Features
+- **キャッシュデフォルト有効化**: キャッシュがデフォルトで有効になり、CLIベストプラクティスに準拠
+- **SARIF出力統一**: Claude Code agentの出力をSARIF形式に統一
+- **ファイル直接出力モード**: claude-code agentに直接ファイル出力モードを追加
+
+### 🐛 Bug Fixes
+- SARIFファイル読み込み前の存在確認を追加
+- Ctrl+Cシグナルハンドリングの改善
+- nix-profile git binaryのcredential helper対応
+- ログメッセージから不要な括弧を削除
+- 未使用変数の警告を抑制
+
+### 🔧 Improvements
+- GitHub操作をgithub.rsモジュールに統合
+- レガシーなanalyze_with_claude_code関数を削除
+- LLMキャッシュファイルをgit管理から除外
+
+---
+
 ## [0.11.0] - 2025-12-27
 
 ### 🎉 New Features
