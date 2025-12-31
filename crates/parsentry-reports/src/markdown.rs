@@ -59,13 +59,8 @@ pub fn to_markdown(response: &Response) -> String {
         md.push_str("### Principals (データ源)\n\n");
         for principal in &response.par_analysis.principals {
             md.push_str(&format!(
-                "- **{}**: {:?}\n",
+                "- **{}** - {:?}\n",
                 principal.identifier, principal.trust_level
-            ));
-            md.push_str(&format!("  - Context: {}\n", principal.source_context));
-            md.push_str(&format!(
-                "  - Risk Factors: {}\n",
-                principal.risk_factors.join(", ")
             ));
         }
         md.push('\n');
@@ -75,17 +70,8 @@ pub fn to_markdown(response: &Response) -> String {
         md.push_str("### Actions (セキュリティ制御)\n\n");
         for action in &response.par_analysis.actions {
             md.push_str(&format!(
-                "- **{}**: {:?}\n",
+                "- **{}** - {:?}\n",
                 action.identifier, action.implementation_quality
-            ));
-            md.push_str(&format!("  - Function: {}\n", action.security_function));
-            md.push_str(&format!(
-                "  - Weaknesses: {}\n",
-                action.detected_weaknesses.join(", ")
-            ));
-            md.push_str(&format!(
-                "  - Bypass Vectors: {}\n",
-                action.bypass_vectors.join(", ")
             ));
         }
         md.push('\n');
@@ -95,13 +81,8 @@ pub fn to_markdown(response: &Response) -> String {
         md.push_str("### Resources (操作対象)\n\n");
         for resource in &response.par_analysis.resources {
             md.push_str(&format!(
-                "- **{}**: {:?}\n",
+                "- **{}** - {:?}\n",
                 resource.identifier, resource.sensitivity_level
-            ));
-            md.push_str(&format!("  - Operation: {}\n", resource.operation_type));
-            md.push_str(&format!(
-                "  - Protection: {}\n",
-                resource.protection_mechanisms.join(", ")
             ));
         }
         md.push('\n');
@@ -111,23 +92,44 @@ pub fn to_markdown(response: &Response) -> String {
         md.push_str("### Policy Violations\n\n");
         for violation in &response.par_analysis.policy_violations {
             md.push_str(&format!(
-                "#### {}: {}\n\n",
-                violation.rule_id, violation.rule_description
+                "- **{}**: {}\n",
+                violation.rule_id, violation.violation_path
             ));
-            md.push_str(&format!("- **Path**: {}\n", violation.violation_path));
-            md.push_str(&format!("- **Severity**: {}\n", violation.severity));
             md.push_str(&format!(
-                "- **Confidence**: {:.2}\n\n",
-                violation.confidence
+                "  - Severity: {} | Confidence: {:.0}%\n",
+                violation.severity,
+                violation.confidence * 100.0
             ));
         }
+        md.push('\n');
     }
 
     // Source code sections
     if let Some(matched_code) = &response.matched_source_code {
         if !matched_code.trim().is_empty() {
+            let lang = response.file_path.as_ref()
+                .and_then(|p| p.split('.').last())
+                .map(|ext| match ext {
+                    "rb" => "ruby",
+                    "py" => "python",
+                    "js" => "javascript",
+                    "ts" => "typescript",
+                    "go" => "go",
+                    "rs" => "rust",
+                    "java" => "java",
+                    "c" | "h" => "c",
+                    "cpp" | "cc" | "cxx" | "hpp" => "cpp",
+                    "php" => "php",
+                    "sh" | "bash" => "bash",
+                    "tf" => "hcl",
+                    "yaml" | "yml" => "yaml",
+                    "json" => "json",
+                    _ => ext,
+                })
+                .unwrap_or("text");
+
             md.push_str("## マッチしたソースコード\n\n");
-            md.push_str("```code\n");
+            md.push_str(&format!("```{}\n", lang));
             md.push_str(matched_code);
             md.push_str("\n```\n\n");
         }

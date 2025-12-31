@@ -95,10 +95,42 @@ async fn analyze_with_claude_code<C: StreamCallback>(
         .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
         .collect();
 
-    let prompt = prompt_builder.build_file_reference_prompt(
+    let base_prompt = prompt_builder.build_file_reference_prompt(
         file_path,
         Some(&pattern_context),
         if related_refs.is_empty() { None } else { Some(&related_refs) },
+    );
+
+    let prompt = format!(
+        r#"{}
+
+## SARIF Output Instructions
+
+**IMPORTANT**: After completing the analysis, output the results in SARIF v2.1.0 format.
+Use the Write tool to save the SARIF JSON to: `{}`
+
+The SARIF file MUST include:
+- $schema: https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
+- version: 2.1.0
+- runs[0].tool.driver.name: Parsentry
+- runs[0].results: Array of vulnerability findings
+
+Each result must have:
+- ruleId: One of SQLI, XSS, RCE, LFI, SSRF, AFO, IDOR
+- level: error (confidence >= 90), warning (>= 70), note (>= 50)
+- message.text: Brief description
+- message.markdown: Detailed analysis in the requested language
+- locations[0].physicalLocation with file path and line numbers
+- properties.confidence: Float 0.0-1.0
+- properties.principal: The untrusted data source
+- properties.action: Security control status
+- properties.resource: The sensitive operation target
+- properties.data_flow: The flow from source to sink
+
+If no vulnerability is found or confidence < 0.7, create an empty results array.
+"#,
+        base_prompt,
+        sarif_output_path.display()
     );
 
     printer.status("Analyzing", &file_name);
@@ -707,12 +739,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                                                 vulnerability_types: vec![
                                                     VulnType::from_str(&result.rule_id).unwrap_or(VulnType::Other(result.rule_id.clone()))
                                                 ],
-                                                par_analysis: parsentry_core::ParAnalysis {
-                                                    principals: vec![],
-                                                    actions: vec![],
-                                                    resources: vec![],
-                                                    policy_violations: vec![],
-                                                },
+                                                par_analysis: extract_par_from_sarif_result(result),
                                                 remediation_guidance: parsentry_core::RemediationGuidance {
                                                     policy_enforcement: vec![],
                                                 },
@@ -1421,12 +1448,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                                                 vulnerability_types: vec![
                                                     VulnType::from_str(&result.rule_id).unwrap_or(VulnType::Other(result.rule_id.clone()))
                                                 ],
-                                                par_analysis: parsentry_core::ParAnalysis {
-                                                    principals: vec![],
-                                                    actions: vec![],
-                                                    resources: vec![],
-                                                    policy_violations: vec![],
-                                                },
+                                                par_analysis: extract_par_from_sarif_result(result),
                                                 remediation_guidance: parsentry_core::RemediationGuidance {
                                                     policy_enforcement: vec![],
                                                 },
@@ -1608,4 +1630,75 @@ fn generate_mvra_report(results: &MvraResults) -> String {
     }
 
     report
+}
+
+/// Extract PAR (Principal-Action-Resource) information from SARIF result properties.
+fn extract_par_from_sarif_result(result: &parsentry_reports::SarifResult) -> parsentry_core::ParAnalysis {
+    let mut principals = Vec::new();
+    let mut actions = Vec::new();
+    let mut resources = Vec::new();
+    let mut policy_violations = Vec::new();
+
+    if let Some(props) = &result.properties {
+        // Extract principal information
+        if let Some(principal) = &props.principal {
+            principals.push(parsentry_core::PrincipalInfo {
+                identifier: principal.clone(),
+                trust_level: parsentry_core::TrustLevel::Untrusted,
+                source_context: String::new(), // Let the analysis speak for itself
+                risk_factors: vec![],
+            });
+        }
+
+        // Extract action information
+        if let Some(action) = &props.action {
+            let quality = if action.to_lowercase().contains("なし")
+                || action.to_lowercase().contains("no ")
+                || action.to_lowercase().contains("missing")
+                || action.to_lowercase().contains("欠落") {
+                parsentry_core::SecurityFunctionQuality::Missing
+            } else if action.to_lowercase().contains("insufficient")
+                || action.to_lowercase().contains("不十分") {
+                parsentry_core::SecurityFunctionQuality::Insufficient
+            } else {
+                parsentry_core::SecurityFunctionQuality::Bypassed
+            };
+
+            actions.push(parsentry_core::ActionInfo {
+                identifier: action.clone(),
+                security_function: String::new(),
+                implementation_quality: quality,
+                detected_weaknesses: vec![],
+                bypass_vectors: vec![],
+            });
+        }
+
+        // Extract resource information
+        if let Some(resource) = &props.resource {
+            resources.push(parsentry_core::ResourceInfo {
+                identifier: resource.clone(),
+                sensitivity_level: parsentry_core::SensitivityLevel::Critical,
+                operation_type: String::new(),
+                protection_mechanisms: vec![],
+            });
+        }
+
+        // Create policy violation from data flow
+        if let Some(data_flow) = &props.data_flow {
+            policy_violations.push(parsentry_core::PolicyViolation {
+                rule_id: result.rule_id.clone(),
+                rule_description: format!("Unsafe data flow: {}", data_flow),
+                violation_path: data_flow.clone(),
+                severity: result.level.clone(),
+                confidence: props.confidence.unwrap_or(0.0),
+            });
+        }
+    }
+
+    parsentry_core::ParAnalysis {
+        principals,
+        actions,
+        resources,
+        policy_violations,
+    }
 }
