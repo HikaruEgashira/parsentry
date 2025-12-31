@@ -248,9 +248,7 @@ impl CodexExecutor {
         if !output.status.success() {
             let code = output.status.code().unwrap_or(-1);
             let err = CodexError::from_stderr(&stderr, code);
-            if err.is_rate_limit() {
-                warn!("Codex rate limit exceeded: {}", err);
-            } else {
+            if !err.is_rate_limit() {
                 error!("Codex process failed with code {}: {}", code, stderr);
             }
             return Err(err);
@@ -328,17 +326,23 @@ impl CodexExecutor {
         for attempt in 0..=max_retries {
             if attempt > 0 {
                 let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
-                warn!("Retry attempt {} after {:?}", attempt, delay);
+                debug!("Retry attempt {} after {:?}", attempt, delay);
                 tokio::time::sleep(delay).await;
             }
 
             match self.execute(prompt).await {
                 Ok(output) => {
-                    info!("Codex execution succeeded on attempt {}", attempt + 1);
+                    if attempt > 0 {
+                        debug!("Codex succeeded on attempt {}", attempt + 1);
+                    }
                     return Ok(output);
                 }
                 Err(e) => {
-                    error!("Codex execution failed on attempt {}: {}", attempt + 1, e);
+                    // Rate limit errors should not retry - fail immediately
+                    if e.is_rate_limit() {
+                        return Err(e);
+                    }
+                    debug!("Codex attempt {} failed: {}", attempt + 1, e);
                     last_error = Some(e);
                 }
             }
@@ -604,20 +608,23 @@ impl CodexExecutor {
         for attempt in 0..=max_retries {
             if attempt > 0 {
                 let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
-                warn!("Retry attempt {} after {:?}", attempt, delay);
+                debug!("Retry attempt {} after {:?}", attempt, delay);
                 tokio::time::sleep(delay).await;
             }
 
             match self.execute_streaming(prompt, callback).await {
                 Ok(output) => {
-                    info!(
-                        "Codex streaming execution succeeded on attempt {}",
-                        attempt + 1
-                    );
+                    if attempt > 0 {
+                        debug!("Codex succeeded on attempt {}", attempt + 1);
+                    }
                     return Ok(output);
                 }
                 Err(e) => {
-                    error!("Codex streaming execution failed: {}", e);
+                    // Rate limit errors should not retry - fail immediately
+                    if e.is_rate_limit() {
+                        return Err(e);
+                    }
+                    debug!("Codex attempt {} failed: {}", attempt + 1, e);
                     callback.on_event(StreamEvent::Error(format!("Attempt {}: {}", attempt + 1, e)));
                     last_error = Some(e);
                 }
@@ -713,9 +720,7 @@ impl CodexExecutor {
         if !status.success() {
             let code = status.code().unwrap_or(-1);
             let err = CodexError::from_stderr(&stderr_output, code);
-            if err.is_rate_limit() {
-                warn!("Codex rate limit exceeded: {}", err);
-            } else {
+            if !err.is_rate_limit() {
                 error!("Codex streaming execution failed: {}", err);
             }
             return Err(err);
