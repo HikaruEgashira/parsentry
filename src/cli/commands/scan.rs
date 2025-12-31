@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use crate::cli::args::{validate_scan_args, ScanArgs};
 use crate::cli::streaming_ui::StreamingDisplay;
@@ -17,8 +17,7 @@ use crate::repo::RepoOps;
 use crate::response::{Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
-use parsentry_cache::Cache;
-use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder};
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
 use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{
@@ -26,43 +25,33 @@ use parsentry_reports::{
 };
 use parsentry_utils::FileClassifier;
 
-/// Cache mode for LLM responses
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CacheMode {
-    /// Normal mode: use cache if available, otherwise call LLM
-    Normal,
-    /// Cache only: only use cache, never call LLM
-    CacheOnly,
-    /// No cache: always call LLM, don't use cache
-    NoCache,
-}
-
-impl CacheMode {
-    pub fn from_flags(cache: bool, cache_only: bool) -> Self {
-        if cache_only {
-            CacheMode::CacheOnly
-        } else if cache {
-            CacheMode::Normal
-        } else {
-            CacheMode::NoCache
-        }
-    }
-}
-
 /// Analyze a pattern using Claude Code CLI with direct SARIF output.
 /// Claude Code will write the SARIF JSON directly to a file using the Write tool.
-async fn analyze_with_claude_code(
+/// If the SARIF file already exists (cache hit), skip the analysis.
+async fn analyze_with_claude_code<C: StreamCallback>(
     executor: &ClaudeCodeExecutor,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
     sarif_output_path: &PathBuf,
     printer: &StatusPrinter,
+    streaming_callback: &C,
 ) -> Result<bool> {
     let file_name = file_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
+
+    // Check if SARIF file already exists (cache hit)
+    if sarif_output_path.exists() {
+        info!(
+            "SARIF cache hit for {}: {}",
+            file_path.display(),
+            sarif_output_path.display()
+        );
+        printer.status("Cached", &file_name);
+        return Ok(true);
+    }
 
     let content = tokio::fs::read_to_string(file_path).await?;
 
@@ -84,12 +73,14 @@ async fn analyze_with_claude_code(
 
     printer.status("Analyzing", &file_name);
 
-    // Execute with file output mode (no JSON parsing from stdout)
-    let result = executor.execute_with_file_output(&prompt).await;
+    // Execute with streaming file output mode
+    let result = executor
+        .execute_streaming_file_output(&prompt, streaming_callback)
+        .await;
 
     match result {
         Ok(output) => {
-            if output.success {
+            if output.success && sarif_output_path.exists() {
                 info!(
                     "Claude Code SARIF output succeeded for {}: {}ms",
                     file_path.display(),
@@ -97,6 +88,13 @@ async fn analyze_with_claude_code(
                 );
                 printer.status("Completed", &file_name);
                 Ok(true)
+            } else if output.success {
+                info!(
+                    "Claude Code completed but no SARIF file created for {}",
+                    file_path.display()
+                );
+                printer.status("No findings", &file_name);
+                Ok(false)
             } else {
                 printer.error("Failed", &format!("{}: non-zero exit", file_name));
                 error!(
@@ -311,21 +309,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     let verbosity = final_args.verbosity;
     let use_claude_code = config.agent.is_claude_code();
 
-    // Initialize cache
-    let cache_mode = CacheMode::from_flags(args.cache, args.cache_only);
-
-    let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
-        match Cache::new(&config.cache.directory) {
-            Ok(cache) => Some(Arc::new(cache)),
-            Err(e) => {
-                debug!("Cache initialization failed: {}", e);
-                None
-            }
-        }
-    } else {
-        None
-    };
-
     let mut summary = AnalysisSummary::new();
 
     let progress_bar = ui::progress::create_bar(total as u64);
@@ -384,9 +367,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
-            let _streaming_display = Arc::clone(&streaming_display);
-            let _cache = cache.clone();
-            let _cache_mode = cache_mode;
+            let streaming_display = Arc::clone(&streaming_display);
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -406,10 +387,8 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                     println!("{}", "=".repeat(80));
                 }
 
-                // Choose analysis method based on mode
                 let analysis_result = if use_claude_code {
                     if let Some(ref executor) = claude_executor {
-                        // Use SARIF direct output mode for claude-code agent
                         let sarif_filename = format!(
                             "{}-{}.sarif",
                             file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
@@ -420,7 +399,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             .unwrap_or_else(|| PathBuf::from("./reports"))
                             .join(&sarif_filename);
 
-                        // Ensure output directory exists
                         if let Some(parent) = sarif_output_path.parent() {
                             let _ = std::fs::create_dir_all(parent);
                         }
@@ -432,18 +410,16 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &pattern_match,
                             &sarif_output_path,
                             &printer,
+                            streaming_display.as_ref(),
                         )
                         .await
                         {
                             Ok(true) => {
-                                // SARIF file was created, read it and convert to Response
                                 match parsentry_reports::SarifReport::from_file(&sarif_output_path) {
                                     Ok(sarif) => {
-                                        // Generate summary from SARIF
                                         let _summary_md = sarif.to_summary_markdown();
                                         info!("SARIF analysis complete: {}", sarif_output_path.display());
 
-                                        // Create a minimal Response from SARIF for compatibility
                                         let first_result = sarif.runs.first()
                                             .and_then(|r| r.results.first());
 
@@ -477,7 +453,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                                                 full_source_code: None,
                                             }
                                         } else {
-                                            // No findings in SARIF
                                             info!("No vulnerabilities found in SARIF for {}", file_path.display());
                                             progress_bar.inc(1);
                                             return None;
@@ -964,15 +939,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let verbosity = final_args.verbosity;
     let use_claude_code = config.agent.is_claude_code();
 
-    // Initialize cache for MVRA scans
-    let cache_mode = CacheMode::from_flags(args.cache, args.cache_only);
-
-    let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
-        Cache::new(&config.cache.directory).ok().map(Arc::new)
-    } else {
-        None
-    };
-
     let mut summary = AnalysisSummary::new();
 
     let max_concurrent = if use_claude_code {
@@ -1020,19 +986,14 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let files = files.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
-            let _streaming_display = Arc::clone(&streaming_display);
+            let streaming_display = Arc::clone(&streaming_display);
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
-            let _verbosity = verbosity;
-            let _cache = cache.clone();
-            let _cache_mode = cache_mode;
 
             async move {
-                // Choose analysis method based on mode
                 let analysis_result = if use_claude_code {
                     if let Some(ref executor) = claude_executor {
-                        // Use SARIF direct output mode for claude-code agent
                         let sarif_filename = format!(
                             "{}-{}.sarif",
                             file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
@@ -1043,7 +1004,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             .unwrap_or_else(|| PathBuf::from("./reports"))
                             .join(&sarif_filename);
 
-                        // Ensure output directory exists
                         if let Some(parent) = sarif_output_path.parent() {
                             let _ = std::fs::create_dir_all(parent);
                         }
@@ -1055,11 +1015,11 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &pattern_match,
                             &sarif_output_path,
                             &printer,
+                            streaming_display.as_ref(),
                         )
                         .await
                         {
                             Ok(true) => {
-                                // SARIF file was created, read it and convert to Response
                                 match parsentry_reports::SarifReport::from_file(&sarif_output_path) {
                                     Ok(sarif) => {
                                         let first_result = sarif.runs.first()
