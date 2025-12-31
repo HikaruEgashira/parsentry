@@ -82,8 +82,6 @@ async fn analyze_with_claude_code<C: StreamCallback>(
         return Ok(true);
     }
 
-    let content = tokio::fs::read_to_string(file_path).await?;
-
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
     let pattern_context = PatternContext::new(
         &pattern_type_str,
@@ -92,12 +90,11 @@ async fn analyze_with_claude_code<C: StreamCallback>(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    // Build prompt for SARIF output
-    let prompt = prompt_builder.build_sarif_output_prompt(
+    // Build prompt using file reference only (agent reads file itself)
+    let prompt = prompt_builder.build_file_reference_prompt(
         file_path,
-        &content,
-        sarif_output_path,
         Some(&pattern_context),
+        None, // related_functions - TODO: integrate call graph filtering
     );
 
     printer.status("Analyzing", &file_name);
@@ -163,8 +160,6 @@ async fn analyze_with_codex(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    let content = tokio::fs::read_to_string(file_path).await?;
-
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
     let pattern_context = PatternContext::new(
         &pattern_type_str,
@@ -173,7 +168,12 @@ async fn analyze_with_codex(
     )
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
+    // Build prompt using file reference only (agent reads file itself)
+    let prompt = prompt_builder.build_file_reference_prompt(
+        file_path,
+        Some(&pattern_context),
+        None, // related_functions - TODO: integrate call graph filtering
+    );
 
     let model = "codex";
     let provider = "codex";
