@@ -19,7 +19,8 @@ use crate::response::{Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
-use parsentry_codex::{CodexConfig, CodexExecutor};
+#[allow(unused_imports)]
+use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
 use parsentry_i18n::{get_messages, Language};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_reports::{
@@ -206,6 +207,16 @@ async fn analyze_with_codex(
             Ok(Some(response))
         }
         Err(e) => {
+            // Handle rate limit errors gracefully - skip this analysis
+            if e.is_rate_limit() {
+                printer.warning("Rate limit", &format!("{}: {}", file_name, e));
+                info!(
+                    "Codex rate limit exceeded for {}, skipping",
+                    file_path.display()
+                );
+                return Ok(None);
+            }
+
             printer.error("Failed", &format!("{}: {}", file_name, e));
             error!(
                 "Codex execution error for {}: {}",

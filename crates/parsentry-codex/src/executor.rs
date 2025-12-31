@@ -34,6 +34,55 @@ pub enum CodexError {
 
     #[error("Semaphore acquisition failed: max concurrent limit reached")]
     ConcurrencyLimit,
+
+    #[error("Rate limit exceeded: {message}")]
+    RateLimitExceeded { message: String },
+}
+
+impl CodexError {
+    /// Check if this error is a rate limit error that should be skipped
+    pub fn is_rate_limit(&self) -> bool {
+        matches!(self, CodexError::RateLimitExceeded { .. })
+    }
+
+    /// Check if the error message indicates a rate limit
+    pub fn from_stderr(stderr: &str, code: i32) -> Self {
+        // Check for rate limit patterns
+        if stderr.contains("429")
+            || stderr.contains("usage_limit_reached")
+            || stderr.contains("Too Many Requests")
+            || stderr.contains("rate limit")
+            || stderr.contains("rate_limit")
+        {
+            CodexError::RateLimitExceeded {
+                message: extract_rate_limit_message(stderr),
+            }
+        } else {
+            CodexError::ProcessError {
+                code,
+                message: stderr.to_string(),
+            }
+        }
+    }
+}
+
+/// Extract a user-friendly rate limit message from stderr
+fn extract_rate_limit_message(stderr: &str) -> String {
+    // Try to extract resets_in_seconds from JSON
+    if let Some(start) = stderr.find("resets_in_seconds\":") {
+        let rest = &stderr[start + 19..];
+        if let Some(end) = rest.find(|c: char| !c.is_ascii_digit()) {
+            if let Ok(secs) = rest[..end].parse::<u64>() {
+                let hours = secs / 3600;
+                let mins = (secs % 3600) / 60;
+                return format!(
+                    "Usage limit reached. Resets in {}h {}m",
+                    hours, mins
+                );
+            }
+        }
+    }
+    "Usage limit reached".to_string()
 }
 
 /// Output from a Codex execution.
@@ -198,11 +247,13 @@ impl CodexExecutor {
 
         if !output.status.success() {
             let code = output.status.code().unwrap_or(-1);
-            error!("Codex process failed with code {}: {}", code, stderr);
-            return Err(CodexError::ProcessError {
-                code,
-                message: stderr,
-            });
+            let err = CodexError::from_stderr(&stderr, code);
+            if err.is_rate_limit() {
+                warn!("Codex rate limit exceeded: {}", err);
+            } else {
+                error!("Codex process failed with code {}: {}", code, stderr);
+            }
+            return Err(err);
         }
 
         // Parse JSONL output - look for the last message with content
@@ -661,11 +712,13 @@ impl CodexExecutor {
 
         if !status.success() {
             let code = status.code().unwrap_or(-1);
-            error!("Codex process failed with code {}: {}", code, stderr_output);
-            return Err(CodexError::ProcessError {
-                code,
-                message: stderr_output,
-            });
+            let err = CodexError::from_stderr(&stderr_output, code);
+            if err.is_rate_limit() {
+                warn!("Codex rate limit exceeded: {}", err);
+            } else {
+                error!("Codex streaming execution failed: {}", err);
+            }
+            return Err(err);
         }
 
         stdout_result
@@ -956,5 +1009,47 @@ That's it."#;
         let input = r#"Result: {"analysis": "test"}"#;
         let result = extract_json_from_markdown(input);
         assert_eq!(result, r#"{"analysis": "test"}"#);
+    }
+
+    #[test]
+    fn test_rate_limit_detection_429() {
+        let stderr = r#"Reading prompt from stdin...
+    2025-12-31T10:16:57.078346Z ERROR codex_api::endpoint::responses: error=http 429 Too Many Requests"#;
+        let err = CodexError::from_stderr(stderr, 1);
+        assert!(err.is_rate_limit());
+    }
+
+    #[test]
+    fn test_rate_limit_detection_usage_limit() {
+        let stderr = r#"{"error":{"type":"usage_limit_reached","message":"The usage limit has been reached","plan_type":"plus","resets_at":1767193212,"resets_in_seconds":16995}}"#;
+        let err = CodexError::from_stderr(stderr, 1);
+        assert!(err.is_rate_limit());
+        // Check that the message includes time info
+        match err {
+            CodexError::RateLimitExceeded { message } => {
+                assert!(message.contains("Resets in"));
+            }
+            _ => panic!("Expected RateLimitExceeded"),
+        }
+    }
+
+    #[test]
+    fn test_non_rate_limit_error() {
+        let stderr = "Some other error occurred";
+        let err = CodexError::from_stderr(stderr, 1);
+        assert!(!err.is_rate_limit());
+        match err {
+            CodexError::ProcessError { code, .. } => {
+                assert_eq!(code, 1);
+            }
+            _ => panic!("Expected ProcessError"),
+        }
+    }
+
+    #[test]
+    fn test_extract_rate_limit_message() {
+        let stderr = r#"{"resets_in_seconds":16995}"#;
+        let message = extract_rate_limit_message(stderr);
+        assert!(message.contains("4h 43m") || message.contains("Resets in"));
     }
 }
