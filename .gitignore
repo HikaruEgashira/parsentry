@@ -18,3 +18,4 @@ benchmarks
 # Only intentionally vulnerable sample applications may be committed
 # See Security section in README.md for details
 .parsentry-cache
+.parsentry/cache/
