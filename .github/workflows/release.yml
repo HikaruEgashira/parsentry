@@ -190,14 +190,31 @@ jobs:
             sed -i "s|sha256sums=('[a-f0-9]\{64\}')|sha256sums=('${HASHES[x86_64-unknown-linux-gnu]}')|" packaging/aur/PKGBUILD
           fi
 
-      - name: Commit and push changes
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          BRANCH="chore/update-packaging-v${VERSION}"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packaging/
-          if git diff --staged --quiet; then
+
+          # Check if there are changes
+          if git diff --quiet; then
             echo "No changes to commit"
-          else
-            git commit -m "chore: update packaging SHA256 for v${{ needs.release.outputs.version }}"
-            git push
+            exit 0
           fi
+
+          # Create branch and commit
+          git checkout -b "$BRANCH"
+          git add packaging/
+          git commit -m "chore: update packaging SHA256 for v${VERSION}"
+          git push -u origin "$BRANCH"
+
+          # Create PR
+          gh pr create \
+            --title "chore: update packaging SHA256 for v${VERSION}" \
+            --body "Automated PR to update packaging files with SHA256 checksums for release v${VERSION}." \
+            --base main \
+            --head "$BRANCH"
