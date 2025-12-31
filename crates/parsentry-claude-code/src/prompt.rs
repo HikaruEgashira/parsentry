@@ -496,4 +496,44 @@ mod tests {
         assert!(prompt.contains("Execute the PoC"));
         assert!(prompt.contains("Safety Constraints"));
     }
+
+    #[test]
+    fn test_build_sarif_output_prompt() {
+        let builder = PromptBuilder::new();
+        let output_path = std::path::PathBuf::from("/tmp/output.sarif");
+        let prompt = builder.build_sarif_output_prompt(
+            &std::path::PathBuf::from("test.rs"),
+            "fn main() { let x = 1; }",
+            &output_path,
+            None,
+        );
+
+        assert!(prompt.contains("SARIF"));
+        assert!(prompt.contains("/tmp/output.sarif"));
+        assert!(prompt.contains("test.rs"));
+        assert!(prompt.contains("SQLI"));
+        assert!(prompt.contains("XSS"));
+    }
+
+    #[test]
+    fn test_build_sarif_output_prompt_with_pattern_context() {
+        let builder = PromptBuilder::new();
+        let output_path = std::path::PathBuf::from("/tmp/output.sarif");
+        let pattern_context = PatternContext::new(
+            "sql_injection",
+            "Potential SQL injection",
+            "query = f\"SELECT * FROM users WHERE id = {user_id}\"",
+        );
+
+        let prompt = builder.build_sarif_output_prompt(
+            &std::path::PathBuf::from("app.py"),
+            "query = f\"SELECT * FROM users WHERE id = {user_id}\"",
+            &output_path,
+            Some(&pattern_context),
+        );
+
+        assert!(prompt.contains("Pattern Context"));
+        assert!(prompt.contains("sql_injection"));
+        assert!(prompt.contains("Potential SQL injection"));
+    }
 }
