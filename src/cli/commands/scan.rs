@@ -14,7 +14,7 @@ use crate::mvra::{MvraRepositoryResult, MvraResults, MvraScanner};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
 use crate::github::clone_repo;
 use crate::repo::RepoOps;
-use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
+use crate::response::{Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_cache::Cache;
@@ -49,110 +49,9 @@ impl CacheMode {
     }
 }
 
-/// Analyze a pattern using Claude Code CLI with streaming output and caching
-/// Note: This function is kept for backward compatibility but is no longer used.
-/// Use analyze_with_claude_code_sarif_output instead.
-#[allow(dead_code)]
-async fn analyze_with_claude_code(
-    executor: &ClaudeCodeExecutor,
-    cache: Option<&Cache>,
-    cache_mode: CacheMode,
-    prompt_builder: &PromptBuilder,
-    file_path: &PathBuf,
-    pattern_match: &PatternMatch,
-    _working_dir: &PathBuf,
-    printer: &StatusPrinter,
-    streaming_display: &Arc<StreamingDisplay>,
-) -> Result<Option<Response>> {
-    let file_name = file_path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| "unknown".to_string());
-
-    let content = tokio::fs::read_to_string(file_path).await?;
-
-    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
-    let pattern_context = PatternContext::new(
-        &pattern_type_str,
-        &pattern_match.pattern_config.description,
-        &pattern_match.matched_text,
-    )
-    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
-
-    let prompt = prompt_builder.build_security_analysis_prompt(file_path, &content, Some(&pattern_context));
-
-    let model = "claude-code";
-    let agent = "claude-code";
-
-    // Try cache first (unless NoCache mode)
-    if cache_mode != CacheMode::NoCache {
-        if let Some(cache) = cache {
-            if let Ok(Some(cached_response)) = cache.get(&prompt, model, agent) {
-                // Parse cached response
-                if let Ok(parsed) = serde_json::from_str::<parsentry_claude_code::ClaudeCodeResponse>(&cached_response) {
-                    printer.status("Cache hit", &file_name);
-                    let mut response = from_claude_code_response(
-                        parsed,
-                        file_path.to_string_lossy().to_string(),
-                    );
-                    response.pattern_description = Some(pattern_match.pattern_config.description.clone());
-                    response.matched_source_code = Some(pattern_match.matched_text.clone());
-                    return Ok(Some(response));
-                }
-            }
-        }
-    }
-
-    // If cache-only mode and no cache hit, return None
-    if cache_mode == CacheMode::CacheOnly {
-        debug!("Cache-only mode: no cache hit for {}", file_path.display());
-        return Ok(None);
-    }
-
-    // Use streaming execution for real-time output (shared display across parallel tasks)
-    streaming_display.set_current_file(&file_name);
-    let output = executor
-        .execute_streaming_with_retry(&prompt, streaming_display.as_ref(), 2)
-        .await;
-
-    match output {
-        Ok(output) => {
-            info!("Claude Code succeeded for {}", file_path.display());
-
-            // Store in cache (unless NoCache mode)
-            if cache_mode != CacheMode::NoCache {
-                if let Some(cache) = cache {
-                    if let Ok(response_json) = serde_json::to_string(&output.response) {
-                        if let Err(e) = cache.set(&prompt, model, agent, &response_json) {
-                            debug!("Failed to cache response: {}", e);
-                        }
-                    }
-                }
-            }
-
-            let mut response = from_claude_code_response(
-                output.response,
-                file_path.to_string_lossy().to_string(),
-            );
-            response.pattern_description = Some(pattern_match.pattern_config.description.clone());
-            response.matched_source_code = Some(pattern_match.matched_text.clone());
-            Ok(Some(response))
-        }
-        Err(e) => {
-            printer.error("Failed", &format!("{}: {}", file_name, e));
-            error!(
-                "Claude Code execution error for {}: {}",
-                file_path.display(),
-                e
-            );
-            Err(anyhow::anyhow!("Claude Code failed: {}", e))
-        }
-    }
-}
-
 /// Analyze a pattern using Claude Code CLI with direct SARIF output.
 /// Claude Code will write the SARIF JSON directly to a file using the Write tool.
-async fn analyze_with_claude_code_sarif_output(
+async fn analyze_with_claude_code(
     executor: &ClaudeCodeExecutor,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
@@ -526,7 +425,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             let _ = std::fs::create_dir_all(parent);
                         }
 
-                        match analyze_with_claude_code_sarif_output(
+                        match analyze_with_claude_code(
                             executor,
                             &prompt_builder,
                             &file_path,
@@ -1149,7 +1048,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             let _ = std::fs::create_dir_all(parent);
                         }
 
-                        match analyze_with_claude_code_sarif_output(
+                        match analyze_with_claude_code(
                             executor,
                             &prompt_builder,
                             &file_path,
