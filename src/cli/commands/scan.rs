@@ -20,7 +20,7 @@ use crate::response::{from_codex_response, Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_cache::Cache;
-use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder};
 #[allow(unused_imports)]
 use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
 
@@ -54,17 +54,16 @@ use parsentry_reports::{
 };
 use parsentry_utils::FileClassifier;
 
-/// Analyze a pattern using Claude Code CLI with direct SARIF output.
+/// Analyze a pattern using Claude Code with ACP protocol.
 /// Claude Code will write the SARIF JSON directly to a file using the Write tool.
 /// If the SARIF file already exists (cache hit), skip the analysis.
-async fn analyze_with_claude_code<C: StreamCallback>(
+async fn analyze_with_claude_code(
     executor: &ClaudeCodeExecutor,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
     sarif_output_path: &PathBuf,
     printer: &StatusPrinter,
-    streaming_callback: &C,
     related_principals: &[(String, String, usize)],
 ) -> Result<bool> {
     let file_name = file_path
@@ -95,43 +94,65 @@ async fn analyze_with_claude_code<C: StreamCallback>(
         .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
         .collect();
 
-    let prompt = prompt_builder.build_file_reference_prompt(
+    let base_prompt = prompt_builder.build_file_reference_prompt(
         file_path,
         Some(&pattern_context),
         if related_refs.is_empty() { None } else { Some(&related_refs) },
     );
 
+    let prompt = format!(
+        r#"{}
+
+## SARIF Output Instructions
+
+**IMPORTANT**: After completing the analysis, output the results in SARIF v2.1.0 format.
+Use the Write tool to save the SARIF JSON to: `{}`
+
+The SARIF file MUST include:
+- $schema: https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
+- version: 2.1.0
+- runs[0].tool.driver.name: Parsentry
+- runs[0].results: Array of vulnerability findings
+
+Each result must have:
+- ruleId: One of SQLI, XSS, RCE, LFI, SSRF, AFO, IDOR
+- level: error (confidence >= 90), warning (>= 70), note (>= 50)
+- message.text: Brief description
+- message.markdown: Detailed analysis in the requested language
+- locations[0].physicalLocation with file path and line numbers
+- properties.confidence: Float 0.0-1.0
+- properties.principal: The untrusted data source
+- properties.action: Security control status
+- properties.resource: The sensitive operation target
+- properties.data_flow: The flow from source to sink
+
+If no vulnerability is found or confidence < 0.7, create an empty results array.
+"#,
+        base_prompt,
+        sarif_output_path.display()
+    );
+
     printer.status("Analyzing", &file_name);
 
-    // Execute with streaming file output mode
-    let result = executor
-        .execute_streaming_file_output(&prompt, streaming_callback)
-        .await;
+    // Execute via ACP protocol
+    let result = executor.execute_raw_with_retry(&prompt, 2).await;
 
     match result {
-        Ok(output) => {
-            if output.success && sarif_output_path.exists() {
+        Ok(_response) => {
+            // Check if the SARIF file was created
+            if sarif_output_path.exists() {
                 info!(
-                    "Claude Code SARIF output succeeded for {}: {}ms",
+                    "Claude Code SARIF output succeeded for {}",
                     file_path.display(),
-                    output.duration_ms.unwrap_or(0)
                 );
                 printer.status("Completed", &file_name);
                 Ok(true)
-            } else if output.success {
+            } else {
                 info!(
                     "Claude Code completed but no SARIF file created for {}",
                     file_path.display()
                 );
                 printer.status("No findings", &file_name);
-                Ok(false)
-            } else {
-                printer.error("Failed", &format!("{}: non-zero exit", file_name));
-                error!(
-                    "Claude Code SARIF output failed for {}: stderr={}",
-                    file_path.display(),
-                    output.stderr
-                );
                 Ok(false)
             }
         }
@@ -678,7 +699,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &pattern_match,
                             &sarif_output_path,
                             &printer,
-                            streaming_display.as_ref(),
                             &related,
                         )
                         .await
@@ -1395,7 +1415,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &pattern_match,
                             &sarif_output_path,
                             &printer,
-                            streaming_display.as_ref(),
                             &related,
                         )
                         .await

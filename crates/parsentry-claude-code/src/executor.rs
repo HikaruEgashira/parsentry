@@ -1,4 +1,4 @@
-//! Claude Code CLI executor with parallel execution support.
+//! Claude Code executor with ACP (Agent Client Protocol) support.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -6,16 +6,12 @@ use std::time::Duration;
 
 use anyhow::Result;
 use thiserror::Error;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::Command;
+use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 
-use crate::stream::{
-    ContentBlock, ResultMessage, StreamCallback, StreamEvent, StreamMessage,
-};
-
+use crate::acp::AcpConnection;
 use crate::parser::ClaudeCodeResponse;
 use crate::ClaudeCodeConfig;
 
@@ -28,8 +24,8 @@ pub enum ClaudeCodeError {
     #[error("Claude Code timed out after {timeout_secs} seconds")]
     Timeout { timeout_secs: u64 },
 
-    #[error("Claude Code exited with code {code}: {stderr}")]
-    NonZeroExit { code: i32, stderr: String },
+    #[error("ACP connection error: {0}")]
+    AcpError(String),
 
     #[error("Failed to parse Claude Code output: {0}")]
     ParseError(String),
@@ -39,6 +35,15 @@ pub enum ClaudeCodeError {
 
     #[error("Semaphore acquisition failed: max concurrent limit reached")]
     ConcurrencyLimit,
+
+    #[error("No active session")]
+    NoSession,
+}
+
+impl From<anyhow::Error> for ClaudeCodeError {
+    fn from(e: anyhow::Error) -> Self {
+        ClaudeCodeError::AcpError(e.to_string())
+    }
 }
 
 /// Output from a Claude Code execution.
@@ -52,33 +57,17 @@ pub struct ClaudeCodeOutput {
     pub duration_ms: Option<u64>,
     /// Session ID (if available).
     pub session_id: Option<String>,
-    /// Raw output for debugging.
-    pub raw_output: String,
 }
 
-/// Result from direct file output execution (no JSON parsing).
-#[derive(Debug, Clone)]
-pub struct FileOutputResult {
-    /// Whether the execution was successful.
-    pub success: bool,
-    /// Duration in milliseconds.
-    pub duration_ms: Option<u64>,
-    /// Raw stdout output for debugging.
-    pub stdout: String,
-    /// Raw stderr output for debugging.
-    pub stderr: String,
-}
-
-/// Executor for Claude Code CLI with semaphore-based concurrency control.
+/// Executor for Claude Code with ACP protocol and semaphore-based concurrency control.
 pub struct ClaudeCodeExecutor {
     claude_path: PathBuf,
     timeout_secs: u64,
     semaphore: Arc<Semaphore>,
     working_dir: PathBuf,
-    #[allow(dead_code)]
-    enable_poc: bool,
-    log_dir: Option<PathBuf>,
     model: Option<String>,
+    /// Shared ACP connection (lazily initialized).
+    connection: Arc<Mutex<Option<AcpConnection>>>,
 }
 
 impl ClaudeCodeExecutor {
@@ -86,20 +75,38 @@ impl ClaudeCodeExecutor {
     pub fn new(config: ClaudeCodeConfig) -> Result<Self> {
         let semaphore = Arc::new(Semaphore::new(config.max_concurrent));
 
-        // Create log directory if specified
-        if let Some(ref log_dir) = config.log_dir {
-            std::fs::create_dir_all(log_dir).ok();
-        }
-
         Ok(Self {
             claude_path: config.claude_path,
             timeout_secs: config.timeout_secs,
             semaphore,
             working_dir: config.working_dir,
-            enable_poc: config.enable_poc,
-            log_dir: config.log_dir,
             model: config.model,
+            connection: Arc::new(Mutex::new(None)),
         })
+    }
+
+    /// Ensure ACP connection is initialized.
+    async fn ensure_connection(&self) -> Result<(), ClaudeCodeError> {
+        let mut conn_guard = self.connection.lock().await;
+
+        if conn_guard.is_none() {
+            info!("Initializing ACP connection to Claude Code");
+
+            let mut conn = AcpConnection::spawn(
+                &self.claude_path,
+                &self.working_dir,
+                self.model.as_deref(),
+            )
+            .await?;
+
+            conn.initialize().await?;
+            conn.new_session().await?;
+
+            *conn_guard = Some(conn);
+            info!("ACP connection established");
+        }
+
+        Ok(())
     }
 
     /// Execute a prompt and return the parsed output.
@@ -110,16 +117,56 @@ impl ClaudeCodeExecutor {
             .await
             .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
 
-        debug!("Acquired semaphore permit, executing Claude Code");
+        debug!("Acquired semaphore permit, executing via ACP");
 
-        timeout(
+        let start = std::time::Instant::now();
+
+        let result = timeout(
             Duration::from_secs(self.timeout_secs),
-            self.spawn_claude_process(prompt),
+            self.execute_acp(prompt),
         )
         .await
         .map_err(|_| ClaudeCodeError::Timeout {
             timeout_secs: self.timeout_secs,
-        })?
+        })?;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+
+        result.map(|mut output| {
+            output.duration_ms = Some(duration_ms);
+            output
+        })
+    }
+
+    /// Execute prompt via ACP protocol.
+    async fn execute_acp(&self, prompt: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
+        self.ensure_connection().await?;
+
+        let mut conn_guard = self.connection.lock().await;
+        let conn = conn_guard.as_mut().ok_or(ClaudeCodeError::NoSession)?;
+
+        // prompt() now returns the accumulated text directly
+        let result_text = conn.prompt(prompt).await?;
+
+        // Parse the response as ClaudeCodeResponse
+        let parsed: ClaudeCodeResponse = serde_json::from_str(&result_text).or_else(|_| {
+            // Try to extract JSON from markdown
+            Self::extract_json_from_markdown(&result_text)
+                .ok_or_else(|| ClaudeCodeError::ParseError("No JSON found".to_string()))
+                .and_then(|json| {
+                    serde_json::from_str(&json)
+                        .map_err(|e| ClaudeCodeError::ParseError(e.to_string()))
+                })
+        })?;
+
+        let session_id = conn.session_id().map(|s| format!("{:?}", s));
+
+        Ok(ClaudeCodeOutput {
+            response: parsed,
+            cost_usd: None,
+            duration_ms: None,
+            session_id,
+        })
     }
 
     /// Execute with retry logic using exponential backoff.
@@ -135,6 +182,12 @@ impl ClaudeCodeExecutor {
                 let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
                 warn!("Retry attempt {} after {:?}", attempt, delay);
                 tokio::time::sleep(delay).await;
+
+                // Reset connection on retry
+                let mut conn_guard = self.connection.lock().await;
+                if let Some(mut conn) = conn_guard.take() {
+                    conn.close().await.ok();
+                }
             }
 
             match self.execute(prompt).await {
@@ -152,129 +205,76 @@ impl ClaudeCodeExecutor {
         Err(last_error.unwrap())
     }
 
-    /// Spawn the Claude Code process and capture output.
-    async fn spawn_claude_process(&self, prompt: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError>
-    {
-        let mut cmd = Command::new(&self.claude_path);
+    /// Execute a prompt and return raw result string without parsing as ClaudeCodeResponse.
+    pub async fn execute_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
 
-        cmd.arg("--print")
-            .arg("--output-format")
-            .arg("json");
+        debug!("Acquired semaphore permit, executing raw via ACP");
 
-        // Add model argument if specified
-        if let Some(ref model) = self.model {
-            cmd.arg("--model").arg(model);
-        }
-
-        cmd.current_dir(&self.working_dir)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped());
-
-        debug!("Spawning Claude Code process: {:?}", cmd);
-
-        let mut child = cmd.spawn().map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
-            } else {
-                ClaudeCodeError::SpawnError(e)
-            }
-        })?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(prompt.as_bytes())
-                .await
-                .map_err(ClaudeCodeError::SpawnError)?;
-            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
-        }
-
-        let output = child.wait_with_output().await.map_err(ClaudeCodeError::SpawnError)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            return Err(ClaudeCodeError::NonZeroExit {
-                code: output.status.code().unwrap_or(-1),
-                stderr,
-            });
-        }
-
-        let raw_output = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr_output = String::from_utf8_lossy(&output.stderr).to_string();
-
-        // Save log if log_dir is configured
-        if let Some(ref log_dir) = self.log_dir {
-            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
-            let log_file = log_dir.join(format!("claude_code_{}.log", timestamp));
-            let log_content = format!(
-                "=== Claude Code Execution Log ===\n\
-                 Timestamp: {}\n\
-                 Working Dir: {}\n\
-                 \n\
-                 === STDOUT ===\n\
-                 {}\n\
-                 \n\
-                 === STDERR ===\n\
-                 {}\n",
-                chrono::Utc::now().to_rfc3339(),
-                self.working_dir.display(),
-                raw_output,
-                stderr_output
-            );
-            if let Err(e) = std::fs::write(&log_file, &log_content) {
-                warn!("Failed to write Claude Code log: {}", e);
-            } else {
-                info!("Claude Code log saved: {}", log_file.display());
-            }
-        }
-
-        if !stderr_output.is_empty() {
-            warn!("Claude Code stderr: {}", stderr_output);
-        }
-
-        if raw_output.is_empty() {
-            debug!("Claude Code returned empty output");
-            return Err(ClaudeCodeError::ParseError("Empty output from Claude Code".to_string()));
-        }
-
-        self.parse_output(&raw_output)
+        timeout(
+            Duration::from_secs(self.timeout_secs),
+            self.execute_acp_raw(prompt),
+        )
+        .await
+        .map_err(|_| ClaudeCodeError::Timeout {
+            timeout_secs: self.timeout_secs,
+        })?
     }
 
-    /// Parse the JSON output from Claude Code.
-    fn parse_output(&self, raw_output: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let parsed: serde_json::Value = serde_json::from_str(raw_output)
-            .map_err(|e| ClaudeCodeError::ParseError(format!("JSON parse error: {}", e)))?;
+    /// Execute raw prompt via ACP protocol.
+    async fn execute_acp_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
+        self.ensure_connection().await?;
 
-        let cost_usd = parsed.get("total_cost_usd").and_then(|v| v.as_f64());
-        let duration_ms = parsed.get("duration_ms").and_then(|v| v.as_u64());
-        let session_id = parsed
-            .get("session_id")
-            .and_then(|v| v.as_str())
-            .map(String::from);
+        let mut conn_guard = self.connection.lock().await;
+        let conn = conn_guard.as_mut().ok_or(ClaudeCodeError::NoSession)?;
 
-        let result_str = if let Some(result) = parsed.get("result") {
-            if let Some(s) = result.as_str() {
-                s.to_string()
-            } else {
-                result.to_string()
+        // prompt() now returns the accumulated text directly
+        let result_text = conn.prompt(prompt).await?;
+
+        Ok(result_text)
+    }
+
+    /// Execute raw with retry logic.
+    pub async fn execute_raw_with_retry(
+        &self,
+        prompt: &str,
+        max_retries: u32,
+    ) -> Result<String, ClaudeCodeError> {
+        let mut last_error = None;
+
+        for attempt in 0..=max_retries {
+            if attempt > 0 {
+                let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
+                warn!("Retry attempt {} after {:?}", attempt, delay);
+                tokio::time::sleep(delay).await;
+
+                // Reset connection on retry
+                let mut conn_guard = self.connection.lock().await;
+                if let Some(mut conn) = conn_guard.take() {
+                    conn.close().await.ok();
+                }
             }
-        } else {
-            raw_output.to_string()
-        };
 
-        let json_str = Self::extract_json_from_markdown(&result_str)
-            .unwrap_or_else(|| result_str.clone());
+            match self.execute_raw(prompt).await {
+                Ok(output) => {
+                    info!(
+                        "Claude Code raw execution succeeded on attempt {}",
+                        attempt + 1
+                    );
+                    return Ok(output);
+                }
+                Err(e) => {
+                    error!("Claude Code raw execution failed: {}", e);
+                    last_error = Some(e);
+                }
+            }
+        }
 
-        let response: ClaudeCodeResponse = serde_json::from_str(&json_str)
-            .map_err(|e| ClaudeCodeError::ParseError(format!("Response parse error: {} - Content: {}", e, &json_str.chars().take(200).collect::<String>())))?;
-
-        Ok(ClaudeCodeOutput {
-            response,
-            cost_usd,
-            duration_ms,
-            session_id,
-            raw_output: raw_output.to_string(),
-        })
+        Err(last_error.unwrap())
     }
 
     /// Extract JSON from markdown code blocks.
@@ -300,671 +300,13 @@ impl ClaudeCodeExecutor {
         self.semaphore.available_permits()
     }
 
-    /// Execute a prompt and return raw result string without parsing as ClaudeCodeResponse.
-    /// Useful for pattern generation that uses custom JSON structures.
-    pub async fn execute_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
-        let _permit = self
-            .semaphore
-            .acquire()
-            .await
-            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
-
-        debug!("Acquired semaphore permit, executing Claude Code (raw mode)");
-
-        timeout(
-            Duration::from_secs(self.timeout_secs),
-            self.spawn_claude_process_raw(prompt),
-        )
-        .await
-        .map_err(|_| ClaudeCodeError::Timeout {
-            timeout_secs: self.timeout_secs,
-        })?
-    }
-
-    /// Execute raw with retry logic.
-    pub async fn execute_raw_with_retry(
-        &self,
-        prompt: &str,
-        max_retries: u32,
-    ) -> Result<String, ClaudeCodeError> {
-        let mut last_error = None;
-
-        for attempt in 0..=max_retries {
-            if attempt > 0 {
-                let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
-                warn!("Retry attempt {} after {:?}", attempt, delay);
-                tokio::time::sleep(delay).await;
-            }
-
-            match self.execute_raw(prompt).await {
-                Ok(output) => {
-                    info!("Claude Code raw execution succeeded on attempt {}", attempt + 1);
-                    return Ok(output);
-                }
-                Err(e) => {
-                    error!("Claude Code raw execution failed: {}", e);
-                    last_error = Some(e);
-                }
-            }
+    /// Close the ACP connection.
+    pub async fn close(&self) -> Result<(), ClaudeCodeError> {
+        let mut conn_guard = self.connection.lock().await;
+        if let Some(mut conn) = conn_guard.take() {
+            conn.close().await?;
         }
-
-        Err(last_error.unwrap())
-    }
-
-    /// Execute with streaming output and file output mode (no JSON parsing).
-    /// Claude Code will write the analysis directly to a file, while streaming progress.
-    pub async fn execute_streaming_file_output<C: StreamCallback>(
-        &self,
-        prompt: &str,
-        callback: &C,
-    ) -> Result<FileOutputResult, ClaudeCodeError> {
-        let _permit = self
-            .semaphore
-            .acquire()
-            .await
-            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
-
-        debug!("Acquired semaphore permit, executing Claude Code (streaming file output mode)");
-
-        timeout(
-            Duration::from_secs(self.timeout_secs),
-            self.spawn_claude_process_streaming_file_output(prompt, callback),
-        )
-        .await
-        .map_err(|_| ClaudeCodeError::Timeout {
-            timeout_secs: self.timeout_secs,
-        })?
-    }
-
-    /// Spawn Claude Code process with streaming output for file output mode.
-    async fn spawn_claude_process_streaming_file_output<C: StreamCallback>(
-        &self,
-        prompt: &str,
-        callback: &C,
-    ) -> Result<FileOutputResult, ClaudeCodeError> {
-        let mut cmd = Command::new(&self.claude_path);
-
-        cmd.arg("--print")
-            .arg("--verbose")
-            .arg("--output-format")
-            .arg("stream-json");
-
-        if let Some(ref model) = self.model {
-            cmd.arg("--model").arg(model);
-        }
-
-        cmd.current_dir(&self.working_dir)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped());
-
-        debug!("Spawning Claude Code process (streaming file output): {:?}", cmd);
-
-        let start = std::time::Instant::now();
-
-        let mut child = cmd.spawn().map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
-            } else {
-                ClaudeCodeError::SpawnError(e)
-            }
-        })?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(prompt.as_bytes())
-                .await
-                .map_err(ClaudeCodeError::SpawnError)?;
-            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
-            drop(stdin);
-        }
-
-        let stdout = child.stdout.take().ok_or_else(|| {
-            ClaudeCodeError::SpawnError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Failed to capture stdout",
-            ))
-        })?;
-
-        let stderr = child.stderr.take().ok_or_else(|| {
-            ClaudeCodeError::SpawnError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Failed to capture stderr",
-            ))
-        })?;
-
-        let (stdout_result, stderr_output) = tokio::join!(
-            self.process_stdout_stream_for_file_output(stdout, callback),
-            self.process_stderr_stream(stderr, callback),
-        );
-
-        let status = child.wait().await.map_err(ClaudeCodeError::SpawnError)?;
-
-        let duration_ms = start.elapsed().as_millis() as u64;
-
-        if let Some(ref log_dir) = self.log_dir {
-            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
-            let log_file = log_dir.join(format!("claude_code_streaming_file_output_{}.log", timestamp));
-            let log_content = format!(
-                "=== Claude Code Streaming File Output Execution Log ===\n\
-                 Timestamp: {}\n\
-                 Working Dir: {}\n\
-                 Duration: {}ms\n\
-                 Status: {:?}\n\
-                 \n\
-                 === STDERR ===\n\
-                 {}\n",
-                chrono::Utc::now().to_rfc3339(),
-                self.working_dir.display(),
-                duration_ms,
-                status,
-                stderr_output
-            );
-            if let Err(e) = std::fs::write(&log_file, &log_content) {
-                warn!("Failed to write Claude Code log: {}", e);
-            } else {
-                info!("Claude Code log saved: {}", log_file.display());
-            }
-        }
-
-        Ok(FileOutputResult {
-            success: status.success(),
-            duration_ms: Some(duration_ms),
-            stdout: stdout_result,
-            stderr: stderr_output,
-        })
-    }
-
-    /// Process NDJSON stdout stream for file output mode (no JSON parsing of result).
-    async fn process_stdout_stream_for_file_output<C: StreamCallback>(
-        &self,
-        stdout: tokio::process::ChildStdout,
-        callback: &C,
-    ) -> String {
-        let reader = BufReader::new(stdout);
-        let mut lines = reader.lines();
-        let mut raw_output = String::new();
-
-        while let Ok(Some(line)) = lines.next_line().await {
-            if line.trim().is_empty() {
-                continue;
-            }
-
-            raw_output.push_str(&line);
-            raw_output.push('\n');
-
-            match serde_json::from_str::<StreamMessage>(&line) {
-                Ok(msg) => match msg {
-                    StreamMessage::System(system) => {
-                        if let Some(ref message) = system.message {
-                            callback.on_event(StreamEvent::Progress(message.clone()));
-                        }
-                    }
-                    StreamMessage::Assistant(assistant) => {
-                        if let Some(ref message) = assistant.message {
-                            for block in &message.content {
-                                match block {
-                                    ContentBlock::Text { text } => {
-                                        callback.on_event(StreamEvent::Text(text.clone()));
-                                    }
-                                    ContentBlock::ToolUse { name, input, .. } => {
-                                        callback.on_event(StreamEvent::ToolUse {
-                                            name: name.clone(),
-                                            input: input.clone(),
-                                        });
-                                    }
-                                    ContentBlock::ToolResult {
-                                        tool_use_id,
-                                        is_error,
-                                        ..
-                                    } => {
-                                        let name = tool_use_id
-                                            .clone()
-                                            .unwrap_or_else(|| "unknown".to_string());
-                                        let success = !is_error.unwrap_or(false);
-                                        callback.on_event(StreamEvent::ToolComplete {
-                                            name,
-                                            success,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    StreamMessage::Result(result) => {
-                        callback.on_event(StreamEvent::Complete(result));
-                    }
-                },
-                Err(e) => {
-                    debug!(
-                        "Failed to parse stream message: {} - line: {}",
-                        e,
-                        &line[..line.len().min(100)]
-                    );
-                }
-            }
-        }
-
-        raw_output
-    }
-
-    /// Spawn the Claude Code process and return raw result string.
-    async fn spawn_claude_process_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
-        let mut cmd = Command::new(&self.claude_path);
-
-        cmd.arg("--print")
-            .arg("--output-format")
-            .arg("json");
-
-        // Add model argument if specified
-        if let Some(ref model) = self.model {
-            cmd.arg("--model").arg(model);
-        }
-
-        cmd.current_dir(&self.working_dir)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped());
-
-        debug!("Spawning Claude Code process (raw): {:?}", cmd);
-
-        let mut child = cmd.spawn().map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
-            } else {
-                ClaudeCodeError::SpawnError(e)
-            }
-        })?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(prompt.as_bytes())
-                .await
-                .map_err(ClaudeCodeError::SpawnError)?;
-            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
-        }
-
-        let output = child.wait_with_output().await.map_err(ClaudeCodeError::SpawnError)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            return Err(ClaudeCodeError::NonZeroExit {
-                code: output.status.code().unwrap_or(-1),
-                stderr,
-            });
-        }
-
-        let raw_output = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr_output = String::from_utf8_lossy(&output.stderr).to_string();
-
-        // Save log if log_dir is configured
-        if let Some(ref log_dir) = self.log_dir {
-            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
-            let log_file = log_dir.join(format!("claude_code_raw_{}.log", timestamp));
-            let log_content = format!(
-                "=== Claude Code Raw Execution Log ===\n\
-                 Timestamp: {}\n\
-                 Working Dir: {}\n\
-                 \n\
-                 === STDOUT ===\n\
-                 {}\n\
-                 \n\
-                 === STDERR ===\n\
-                 {}\n",
-                chrono::Utc::now().to_rfc3339(),
-                self.working_dir.display(),
-                raw_output,
-                stderr_output
-            );
-            if let Err(e) = std::fs::write(&log_file, &log_content) {
-                warn!("Failed to write Claude Code log: {}", e);
-            } else {
-                info!("Claude Code log saved: {}", log_file.display());
-            }
-        }
-
-        if !stderr_output.is_empty() {
-            warn!("Claude Code stderr: {}", stderr_output);
-        }
-
-        if raw_output.is_empty() {
-            debug!("Claude Code returned empty output");
-            return Err(ClaudeCodeError::ParseError("Empty output from Claude Code".to_string()));
-        }
-
-        // Parse JSON to extract just the result field
-        let parsed: serde_json::Value = serde_json::from_str(&raw_output)
-            .map_err(|e| ClaudeCodeError::ParseError(format!("JSON parse error: {}", e)))?;
-
-        let result_str = if let Some(result) = parsed.get("result") {
-            if let Some(s) = result.as_str() {
-                s.to_string()
-            } else {
-                result.to_string()
-            }
-        } else {
-            raw_output
-        };
-
-        Ok(result_str)
-    }
-
-    /// Execute with streaming output and callbacks
-    pub async fn execute_streaming<C: StreamCallback>(
-        &self,
-        prompt: &str,
-        callback: &C,
-    ) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let _permit = self
-            .semaphore
-            .acquire()
-            .await
-            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
-
-        debug!("Acquired semaphore permit, executing Claude Code with streaming");
-
-        timeout(
-            Duration::from_secs(self.timeout_secs),
-            self.spawn_claude_process_streaming(prompt, callback),
-        )
-        .await
-        .map_err(|_| ClaudeCodeError::Timeout {
-            timeout_secs: self.timeout_secs,
-        })?
-    }
-
-    /// Execute with streaming and retry logic
-    pub async fn execute_streaming_with_retry<C: StreamCallback>(
-        &self,
-        prompt: &str,
-        callback: &C,
-        max_retries: u32,
-    ) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let mut last_error = None;
-
-        for attempt in 0..=max_retries {
-            if attempt > 0 {
-                let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
-                warn!("Retry attempt {} after {:?}", attempt, delay);
-                tokio::time::sleep(delay).await;
-            }
-
-            match self.execute_streaming(prompt, callback).await {
-                Ok(output) => {
-                    info!(
-                        "Claude Code streaming execution succeeded on attempt {}",
-                        attempt + 1
-                    );
-                    return Ok(output);
-                }
-                Err(e) => {
-                    error!("Claude Code streaming execution failed: {}", e);
-                    callback.on_event(StreamEvent::Error(format!("Attempt {}: {}", attempt + 1, e)));
-                    last_error = Some(e);
-                }
-            }
-        }
-
-        Err(last_error.unwrap())
-    }
-
-    /// Spawn process with streaming output handling
-    async fn spawn_claude_process_streaming<C: StreamCallback>(
-        &self,
-        prompt: &str,
-        callback: &C,
-    ) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let mut cmd = Command::new(&self.claude_path);
-
-        cmd.arg("--print")
-            .arg("--verbose")
-            .arg("--output-format")
-            .arg("stream-json");
-
-        if let Some(ref model) = self.model {
-            cmd.arg("--model").arg(model);
-        }
-
-        cmd.current_dir(&self.working_dir)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped());
-
-        debug!("Spawning Claude Code process with streaming: {:?}", cmd);
-
-        let mut child = cmd.spawn().map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                ClaudeCodeError::BinaryNotFound(self.claude_path.clone())
-            } else {
-                ClaudeCodeError::SpawnError(e)
-            }
-        })?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(prompt.as_bytes())
-                .await
-                .map_err(ClaudeCodeError::SpawnError)?;
-            stdin.flush().await.map_err(ClaudeCodeError::SpawnError)?;
-            drop(stdin);
-        }
-
-        let stdout = child.stdout.take().ok_or_else(|| {
-            ClaudeCodeError::SpawnError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Failed to capture stdout",
-            ))
-        })?;
-
-        let stderr = child.stderr.take().ok_or_else(|| {
-            ClaudeCodeError::SpawnError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Failed to capture stderr",
-            ))
-        })?;
-
-        let (stdout_result, stderr_output) = tokio::join!(
-            self.process_stdout_stream(stdout, callback),
-            self.process_stderr_stream(stderr, callback),
-        );
-
-        let status = child.wait().await.map_err(ClaudeCodeError::SpawnError)?;
-
-        if let Some(ref log_dir) = self.log_dir {
-            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
-            let log_file = log_dir.join(format!("claude_code_streaming_{}.log", timestamp));
-            let log_content = format!(
-                "=== Claude Code Streaming Execution Log ===\n\
-                 Timestamp: {}\n\
-                 Working Dir: {}\n\
-                 Status: {:?}\n\
-                 \n\
-                 === STDERR ===\n\
-                 {}\n",
-                chrono::Utc::now().to_rfc3339(),
-                self.working_dir.display(),
-                status,
-                stderr_output
-            );
-            if let Err(e) = std::fs::write(&log_file, &log_content) {
-                warn!("Failed to write Claude Code streaming log: {}", e);
-            } else {
-                info!("Claude Code streaming log saved: {}", log_file.display());
-            }
-        }
-
-        if !status.success() {
-            return Err(ClaudeCodeError::NonZeroExit {
-                code: status.code().unwrap_or(-1),
-                stderr: stderr_output,
-            });
-        }
-
-        stdout_result
-    }
-
-    /// Process NDJSON stdout stream
-    async fn process_stdout_stream<C: StreamCallback>(
-        &self,
-        stdout: tokio::process::ChildStdout,
-        callback: &C,
-    ) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let reader = BufReader::new(stdout);
-        let mut lines = reader.lines();
-
-        let mut accumulated_text = String::new();
-        let mut final_result: Option<ResultMessage> = None;
-
-        while let Ok(Some(line)) = lines.next_line().await {
-            if line.trim().is_empty() {
-                continue;
-            }
-
-            match serde_json::from_str::<StreamMessage>(&line) {
-                Ok(msg) => match msg {
-                    StreamMessage::System(system) => {
-                        if let Some(ref message) = system.message {
-                            callback.on_event(StreamEvent::Progress(message.clone()));
-                        }
-                        if let Some(ref session_id) = system.session_id {
-                            debug!("Stream init: session_id={}", session_id);
-                        }
-                    }
-                    StreamMessage::Assistant(assistant) => {
-                        if let Some(ref message) = assistant.message {
-                            for block in &message.content {
-                                match block {
-                                    ContentBlock::Text { text } => {
-                                        accumulated_text.push_str(text);
-                                        callback.on_event(StreamEvent::Text(text.clone()));
-                                    }
-                                    ContentBlock::ToolUse { name, input, .. } => {
-                                        callback.on_event(StreamEvent::ToolUse {
-                                            name: name.clone(),
-                                            input: input.clone(),
-                                        });
-                                    }
-                                    ContentBlock::ToolResult {
-                                        tool_use_id,
-                                        is_error,
-                                        ..
-                                    } => {
-                                        let name = tool_use_id
-                                            .clone()
-                                            .unwrap_or_else(|| "unknown".to_string());
-                                        let success = !is_error.unwrap_or(false);
-                                        callback.on_event(StreamEvent::ToolComplete {
-                                            name,
-                                            success,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    StreamMessage::Result(result) => {
-                        callback.on_event(StreamEvent::Complete(result.clone()));
-                        final_result = Some(result);
-                    }
-                },
-                Err(e) => {
-                    warn!(
-                        "Failed to parse stream message: {} - line: {}",
-                        e,
-                        &line[..line.len().min(100)]
-                    );
-                }
-            }
-        }
-
-        // Parse final result
-        if let Some(result) = final_result {
-            self.parse_stream_result(&result, &accumulated_text)
-        } else if !accumulated_text.is_empty() {
-            // Fallback: try to parse accumulated text as JSON
-            self.parse_accumulated_text(&accumulated_text)
-        } else {
-            Err(ClaudeCodeError::ParseError(
-                "No final result in stream".to_string(),
-            ))
-        }
-    }
-
-    /// Process stderr for progress messages
-    async fn process_stderr_stream<C: StreamCallback>(
-        &self,
-        stderr: tokio::process::ChildStderr,
-        callback: &C,
-    ) -> String {
-        let reader = BufReader::new(stderr);
-        let mut lines = reader.lines();
-        let mut stderr_output = String::new();
-
-        while let Ok(Some(line)) = lines.next_line().await {
-            stderr_output.push_str(&line);
-            stderr_output.push('\n');
-
-            // Emit progress events for stderr lines
-            callback.on_event(StreamEvent::Progress(line));
-        }
-
-        stderr_output
-    }
-
-    /// Parse the final stream result into ClaudeCodeOutput
-    fn parse_stream_result(
-        &self,
-        result: &ResultMessage,
-        _accumulated_text: &str,
-    ) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let result_str = result
-            .result
-            .clone()
-            .unwrap_or_else(|| "{}".to_string());
-
-        let json_str =
-            Self::extract_json_from_markdown(&result_str).unwrap_or_else(|| result_str.clone());
-
-        let response: ClaudeCodeResponse = serde_json::from_str(&json_str).map_err(|e| {
-            ClaudeCodeError::ParseError(format!(
-                "Response parse error: {} - Content: {}",
-                e,
-                &json_str.chars().take(200).collect::<String>()
-            ))
-        })?;
-
-        Ok(ClaudeCodeOutput {
-            response,
-            cost_usd: result.cost_usd.or(result.total_cost_usd),
-            duration_ms: result.duration_ms,
-            session_id: result.session_id.clone(),
-            raw_output: result_str,
-        })
-    }
-
-    /// Fallback: parse accumulated text when no result message received
-    fn parse_accumulated_text(
-        &self,
-        accumulated_text: &str,
-    ) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let json_str = Self::extract_json_from_markdown(accumulated_text)
-            .unwrap_or_else(|| accumulated_text.to_string());
-
-        let response: ClaudeCodeResponse = serde_json::from_str(&json_str).map_err(|e| {
-            ClaudeCodeError::ParseError(format!(
-                "Accumulated text parse error: {} - Content: {}",
-                e,
-                &json_str.chars().take(200).collect::<String>()
-            ))
-        })?;
-
-        Ok(ClaudeCodeOutput {
-            response,
-            cost_usd: None,
-            duration_ms: None,
-            session_id: None,
-            raw_output: accumulated_text.to_string(),
-        })
+        Ok(())
     }
 }
 
@@ -980,22 +322,23 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_output_structure() {
-        let executor = ClaudeCodeExecutor::new(ClaudeCodeConfig::default()).unwrap();
+    fn test_extract_json_from_markdown() {
+        let text = r#"Here is the result:
 
-        let json_output = r#"{
-            "result": "{\"analysis\": \"Test analysis\", \"confidence_score\": 80, \"vulnerability_types\": [\"XSS\"], \"par_analysis\": {\"principals\": [], \"actions\": [], \"resources\": [], \"policy_violations\": []}}",
-            "total_cost_usd": 0.01,
-            "duration_ms": 1500,
-            "session_id": "test-session"
-        }"#;
+```json
+{"key": "value"}
+```
 
-        let result = executor.parse_output(json_output);
-        assert!(result.is_ok());
+Done."#;
 
-        let output = result.unwrap();
-        assert_eq!(output.cost_usd, Some(0.01));
-        assert_eq!(output.duration_ms, Some(1500));
-        assert_eq!(output.session_id, Some("test-session".to_string()));
+        let result = ClaudeCodeExecutor::extract_json_from_markdown(text);
+        assert_eq!(result, Some(r#"{"key": "value"}"#.to_string()));
+    }
+
+    #[test]
+    fn test_extract_json_from_markdown_no_json() {
+        let text = "No JSON here";
+        let result = ClaudeCodeExecutor::extract_json_from_markdown(text);
+        assert_eq!(result, None);
     }
 }

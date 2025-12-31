@@ -1,23 +1,17 @@
-//! Claude Code CLI integration for Parsentry security scanner.
+//! Claude Code ACP integration for Parsentry security scanner.
 //!
-//! This crate provides functionality to execute Claude Code CLI for
-//! security vulnerability analysis with parallel execution support.
-//!
-//! ## Streaming Support
-//!
-//! This crate supports real-time streaming output from Claude Code CLI
-//! using `--output-format stream-json`. Use `execute_streaming` methods
-//! with a `StreamCallback` implementation to receive events in real-time.
+//! This crate provides functionality to execute Claude Code via ACP
+//! (Agent Client Protocol) for security vulnerability analysis with
+//! parallel execution support.
 
+pub mod acp;
 mod executor;
 mod parser;
 mod prompt;
-pub mod stream;
 
-pub use executor::{ClaudeCodeExecutor, ClaudeCodeOutput, FileOutputResult};
+pub use executor::{ClaudeCodeError, ClaudeCodeExecutor, ClaudeCodeOutput};
 pub use parser::{ClaudeCodeResponse, ParAnalysis, VulnerabilityInfo};
 pub use prompt::{PatternContext, PromptBuilder};
-pub use stream::{ChannelCallback, NoOpCallback, ResultMessage, StreamCallback, StreamEvent, StreamMessage};
 
 use std::path::PathBuf;
 

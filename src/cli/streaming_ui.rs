@@ -1,13 +1,12 @@
-//! Streaming UI component for real-time Claude Code output display
+//! Streaming UI component for real-time output display
 //!
 //! Provides callback implementations for displaying streaming output
-//! from Claude Code CLI in real-time.
+//! from Codex CLI in real-time.
 
 use std::collections::VecDeque;
 use std::io::{stderr, Write};
 use std::sync::Mutex;
 
-use parsentry_claude_code::{ResultMessage as ClaudeCodeResultMessage, StreamCallback as ClaudeCodeStreamCallback, StreamEvent as ClaudeCodeStreamEvent};
 use parsentry_codex::{StreamCallback as CodexStreamCallback, StreamEvent as CodexStreamEvent};
 
 use crate::cli::ui::{colors, colors_enabled, StatusPrinter};
@@ -24,7 +23,7 @@ mod ansi {
 /// Streaming output display for terminal with scroll buffer
 ///
 /// Implements `StreamCallback` to receive and display streaming events
-/// from Claude Code execution in real-time. Maintains a buffer of the last
+/// from execution in real-time. Maintains a buffer of the last
 /// 3 lines and scrolls them as new content arrives, clearing old lines.
 pub struct StreamingDisplay {
     printer: StatusPrinter,
@@ -126,39 +125,17 @@ impl StreamingDisplay {
             *displayed = buffer.len();
         }
     }
-}
 
-impl ClaudeCodeStreamCallback for StreamingDisplay {
-    fn on_event(&self, event: ClaudeCodeStreamEvent) {
-        match event {
-            ClaudeCodeStreamEvent::Text(_) => {
-                // Token streaming is handled via Progress events
-            }
-            ClaudeCodeStreamEvent::ToolUse { name, .. } => {
-                self.add_line_with_scroll(format!("Tool Using {}", name));
-            }
-            ClaudeCodeStreamEvent::ToolComplete { .. } => {
-                // Tool completion is silent - next ToolUse will replace it
-            }
-            ClaudeCodeStreamEvent::Progress(msg) => {
-                let trimmed = msg.trim();
-                if !trimmed.is_empty() {
-                    self.add_line_with_scroll(trimmed.to_string());
-                }
-            }
-            ClaudeCodeStreamEvent::Complete(_) => {
-                self.clear_display();
-                if let Ok(file) = self.current_file.lock() {
-                    if let Some(ref f) = *file {
-                        self.printer.success("Analyzed", f);
-                    }
-                }
-            }
-            ClaudeCodeStreamEvent::Error(err) => {
-                self.clear_display();
-                self.printer.error("Error", &err);
-            }
-        }
+    /// Handle success completion
+    pub fn complete_success(&self, file: &str) {
+        self.clear_display();
+        self.printer.success("Analyzed", file);
+    }
+
+    /// Handle error
+    pub fn complete_error(&self, err: &str) {
+        self.clear_display();
+        self.printer.error("Error", err);
     }
 }
 
@@ -217,28 +194,6 @@ impl Default for MinimalStreamingDisplay {
     }
 }
 
-impl ClaudeCodeStreamCallback for MinimalStreamingDisplay {
-    fn on_event(&self, event: ClaudeCodeStreamEvent) {
-        match event {
-            ClaudeCodeStreamEvent::Progress(msg) => {
-                // Only show significant progress messages
-                let trimmed = msg.trim();
-                if trimmed.contains("Analyzing")
-                    || trimmed.contains("Processing")
-                    || trimmed.contains("Scanning")
-                {
-                    self.printer.dim(trimmed);
-                }
-            }
-            ClaudeCodeStreamEvent::Error(err) => {
-                self.printer.error("Error", &err);
-            }
-            ClaudeCodeStreamEvent::Complete(_) => {}
-            _ => {}
-        }
-    }
-}
-
 impl CodexStreamCallback for MinimalStreamingDisplay {
     fn on_event(&self, event: CodexStreamEvent) {
         match event {
@@ -265,7 +220,7 @@ impl CodexStreamCallback for MinimalStreamingDisplay {
 ///
 /// Useful for testing or when you want to process events programmatically.
 pub struct SilentStreamingDisplay {
-    events: Mutex<Vec<ClaudeCodeStreamEvent>>,
+    events: Mutex<Vec<CodexStreamEvent>>,
 }
 
 impl SilentStreamingDisplay {
@@ -276,7 +231,7 @@ impl SilentStreamingDisplay {
     }
 
     /// Get all collected events
-    pub fn events(&self) -> Vec<ClaudeCodeStreamEvent> {
+    pub fn events(&self) -> Vec<CodexStreamEvent> {
         self.events
             .lock()
             .map(|e| e.clone())
@@ -297,24 +252,9 @@ impl Default for SilentStreamingDisplay {
     }
 }
 
-impl ClaudeCodeStreamCallback for SilentStreamingDisplay {
-    fn on_event(&self, event: ClaudeCodeStreamEvent) {
-        self.events.lock().unwrap().push(event);
-    }
-}
-
 impl CodexStreamCallback for SilentStreamingDisplay {
     fn on_event(&self, event: CodexStreamEvent) {
-        // Convert Codex events to Claude Code events for storage
-        let cc_event = match event {
-            CodexStreamEvent::Text(s) => ClaudeCodeStreamEvent::Text(s),
-            CodexStreamEvent::ToolUse { name, input } => ClaudeCodeStreamEvent::ToolUse { name, input },
-            CodexStreamEvent::ToolComplete { name, success } => ClaudeCodeStreamEvent::ToolComplete { name, success },
-            CodexStreamEvent::Progress(s) => ClaudeCodeStreamEvent::Progress(s),
-            CodexStreamEvent::Complete(_) => ClaudeCodeStreamEvent::Complete(ClaudeCodeResultMessage::default()),
-            CodexStreamEvent::Error(s) => ClaudeCodeStreamEvent::Error(s),
-        };
-        self.events.lock().unwrap().push(cc_event);
+        self.events.lock().unwrap().push(event);
     }
 }
 
@@ -331,8 +271,8 @@ mod tests {
     #[test]
     fn test_silent_display_collects_events() {
         let display = SilentStreamingDisplay::new();
-        ClaudeCodeStreamCallback::on_event(&display, ClaudeCodeStreamEvent::Text("hello".to_string()));
-        ClaudeCodeStreamCallback::on_event(&display, ClaudeCodeStreamEvent::Progress("working".to_string()));
+        CodexStreamCallback::on_event(&display, CodexStreamEvent::Text("hello".to_string()));
+        CodexStreamCallback::on_event(&display, CodexStreamEvent::Progress("working".to_string()));
 
         let events = display.events();
         assert_eq!(events.len(), 2);
