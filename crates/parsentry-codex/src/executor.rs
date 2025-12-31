@@ -14,7 +14,7 @@ use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 
 use crate::parser::CodexResponse;
-use crate::stream::{ResultMessage, StreamCallback, StreamEvent};
+use crate::stream::{ContentBlock, ResultMessage, StreamCallback, StreamEvent, StreamMessage};
 use crate::CodexConfig;
 
 /// Errors that can occur during Codex execution.
@@ -41,10 +41,27 @@ pub enum CodexError {
 pub struct CodexOutput {
     /// The parsed response from Codex.
     pub response: CodexResponse,
+    /// Cost in USD (if available).
+    pub cost_usd: Option<f64>,
     /// Duration in milliseconds.
     pub duration_ms: Option<u64>,
+    /// Session ID (if available).
+    pub session_id: Option<String>,
     /// Raw output for debugging.
     pub raw_output: String,
+}
+
+/// Result from direct file output execution (no JSON parsing).
+#[derive(Debug, Clone)]
+pub struct FileOutputResult {
+    /// Whether the execution was successful.
+    pub success: bool,
+    /// Duration in milliseconds.
+    pub duration_ms: Option<u64>,
+    /// Raw stdout output for debugging.
+    pub stdout: String,
+    /// Raw stderr output for debugging.
+    pub stderr: String,
 }
 
 /// Executor for Codex CLI with semaphore-based concurrency control.
@@ -193,7 +210,9 @@ impl CodexExecutor {
 
         Ok(CodexOutput {
             response,
+            cost_usd: None,
             duration_ms: None,
+            session_id: None,
             raw_output: stdout,
         })
     }
@@ -329,6 +348,197 @@ impl CodexExecutor {
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// Execute with streaming output and file output mode (no JSON parsing).
+    /// Codex will write the analysis directly to a file, while streaming progress.
+    pub async fn execute_streaming_file_output<C: StreamCallback>(
+        &self,
+        prompt: &str,
+        callback: &C,
+    ) -> Result<FileOutputResult, CodexError> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| CodexError::ConcurrencyLimit)?;
+
+        debug!("Acquired semaphore permit, executing Codex (streaming file output mode)");
+
+        timeout(
+            Duration::from_secs(self.timeout_secs),
+            self.spawn_codex_process_streaming_file_output(prompt, callback),
+        )
+        .await
+        .map_err(|_| CodexError::Timeout {
+            timeout_secs: self.timeout_secs,
+        })?
+    }
+
+    /// Spawn Codex process with streaming output for file output mode.
+    async fn spawn_codex_process_streaming_file_output<C: StreamCallback>(
+        &self,
+        prompt: &str,
+        callback: &C,
+    ) -> Result<FileOutputResult, CodexError> {
+        let mut cmd = Command::new(&self.codex_path);
+
+        cmd.arg("exec");
+
+        // Only pass model if explicitly configured (non-empty)
+        if !self.model.is_empty() {
+            cmd.arg("-m").arg(&self.model);
+        }
+
+        cmd.arg("-C")
+            .arg(&self.working_dir)
+            .arg("--full-auto")
+            .arg("--json")
+            .arg("--skip-git-repo-check")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        debug!("Spawning Codex process (streaming file output): {:?}", cmd);
+
+        let start = std::time::Instant::now();
+
+        let mut child = cmd.spawn()?;
+
+        // Write prompt to stdin
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(prompt.as_bytes()).await?;
+            stdin.flush().await?;
+            drop(stdin);
+        }
+
+        let stdout = child.stdout.take().ok_or_else(|| {
+            CodexError::SpawnError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to capture stdout",
+            ))
+        })?;
+
+        let stderr = child.stderr.take().ok_or_else(|| {
+            CodexError::SpawnError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to capture stderr",
+            ))
+        })?;
+
+        let (stdout_result, stderr_output) = tokio::join!(
+            self.process_stdout_stream_for_file_output(stdout, callback),
+            self.process_stderr_stream(stderr, callback),
+        );
+
+        let status = child.wait().await?;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+
+        if let Some(ref log_dir) = self.log_dir {
+            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f");
+            let log_file = log_dir.join(format!("codex_streaming_file_output_{}.log", timestamp));
+            let log_content = format!(
+                "=== Codex Streaming File Output Execution Log ===\n\
+                 Timestamp: {}\n\
+                 Working Dir: {}\n\
+                 Duration: {}ms\n\
+                 Status: {:?}\n\
+                 \n\
+                 === STDERR ===\n\
+                 {}\n",
+                chrono::Utc::now().to_rfc3339(),
+                self.working_dir.display(),
+                duration_ms,
+                status,
+                stderr_output
+            );
+            if let Err(e) = std::fs::write(&log_file, &log_content) {
+                warn!("Failed to write Codex log: {}", e);
+            } else {
+                info!("Codex log saved: {}", log_file.display());
+            }
+        }
+
+        Ok(FileOutputResult {
+            success: status.success(),
+            duration_ms: Some(duration_ms),
+            stdout: stdout_result,
+            stderr: stderr_output,
+        })
+    }
+
+    /// Process JSONL stdout stream for file output mode (no JSON parsing of result).
+    async fn process_stdout_stream_for_file_output<C: StreamCallback>(
+        &self,
+        stdout: tokio::process::ChildStdout,
+        callback: &C,
+    ) -> String {
+        let reader = BufReader::new(stdout);
+        let mut lines = reader.lines();
+        let mut raw_output = String::new();
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            raw_output.push_str(&line);
+            raw_output.push('\n');
+
+            match serde_json::from_str::<StreamMessage>(&line) {
+                Ok(msg) => match msg {
+                    StreamMessage::System(system) => {
+                        if let Some(ref message) = system.message {
+                            callback.on_event(StreamEvent::Progress(message.clone()));
+                        }
+                    }
+                    StreamMessage::Assistant(assistant) => {
+                        if let Some(ref message) = assistant.message {
+                            for block in &message.content {
+                                match block {
+                                    ContentBlock::Text { text } => {
+                                        callback.on_event(StreamEvent::Text(text.clone()));
+                                    }
+                                    ContentBlock::ToolUse { name, input, .. } => {
+                                        callback.on_event(StreamEvent::ToolUse {
+                                            name: name.clone(),
+                                            input: input.clone(),
+                                        });
+                                    }
+                                    ContentBlock::ToolResult {
+                                        tool_use_id,
+                                        is_error,
+                                        ..
+                                    } => {
+                                        let name = tool_use_id
+                                            .clone()
+                                            .unwrap_or_else(|| "unknown".to_string());
+                                        let success = !is_error.unwrap_or(false);
+                                        callback.on_event(StreamEvent::ToolComplete {
+                                            name,
+                                            success,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    StreamMessage::Result(result) => {
+                        callback.on_event(StreamEvent::Complete(result));
+                    }
+                },
+                Err(e) => {
+                    debug!(
+                        "Failed to parse stream message: {} - line: {}",
+                        e,
+                        &line[..line.len().min(100)]
+                    );
+                }
+            }
+        }
+
+        raw_output
     }
 
     /// Execute with streaming and retry logic
@@ -471,7 +681,8 @@ impl CodexExecutor {
         let mut lines = reader.lines();
 
         let mut accumulated_output = String::new();
-        let mut last_content: Option<String> = None;
+        let mut accumulated_text = String::new();
+        let mut final_result: Option<ResultMessage> = None;
 
         while let Ok(Some(line)) = lines.next_line().await {
             if line.trim().is_empty() {
@@ -481,72 +692,183 @@ impl CodexExecutor {
             accumulated_output.push_str(&line);
             accumulated_output.push('\n');
 
-            // Parse the JSONL line
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
-                // Look for message events with assistant content
-                if let Some(msg_type) = json.get("type").and_then(|t| t.as_str()) {
-                    match msg_type {
-                        "message" | "assistant" => {
-                            if let Some(content) = json.get("content").and_then(|c| c.as_str()) {
-                                last_content = Some(content.to_string());
-                                callback.on_event(StreamEvent::Text(content.to_string()));
-                            } else if let Some(text) = json.get("text").and_then(|t| t.as_str()) {
-                                last_content = Some(text.to_string());
-                                callback.on_event(StreamEvent::Text(text.to_string()));
+            // Parse using StreamMessage enum (like Claude Code)
+            match serde_json::from_str::<StreamMessage>(&line) {
+                Ok(msg) => match msg {
+                    StreamMessage::System(system) => {
+                        if let Some(ref message) = system.message {
+                            callback.on_event(StreamEvent::Progress(message.clone()));
+                        }
+                        if let Some(ref session_id) = system.session_id {
+                            debug!("Stream init: session_id={}", session_id);
+                        }
+                    }
+                    StreamMessage::Assistant(assistant) => {
+                        if let Some(ref message) = assistant.message {
+                            for block in &message.content {
+                                match block {
+                                    ContentBlock::Text { text } => {
+                                        accumulated_text.push_str(text);
+                                        callback.on_event(StreamEvent::Text(text.clone()));
+                                    }
+                                    ContentBlock::ToolUse { name, input, .. } => {
+                                        callback.on_event(StreamEvent::ToolUse {
+                                            name: name.clone(),
+                                            input: input.clone(),
+                                        });
+                                    }
+                                    ContentBlock::ToolResult {
+                                        tool_use_id,
+                                        is_error,
+                                        ..
+                                    } => {
+                                        let name = tool_use_id
+                                            .clone()
+                                            .unwrap_or_else(|| "unknown".to_string());
+                                        let success = !is_error.unwrap_or(false);
+                                        callback.on_event(StreamEvent::ToolComplete {
+                                            name,
+                                            success,
+                                        });
+                                    }
+                                }
                             }
                         }
-                        "tool_use" => {
-                            let name = json.get("name")
-                                .and_then(|n| n.as_str())
-                                .unwrap_or("unknown")
-                                .to_string();
-                            let input = json.get("input").cloned().unwrap_or(serde_json::Value::Null);
-                            callback.on_event(StreamEvent::ToolUse { name, input });
-                        }
-                        "tool_result" => {
-                            let name = json.get("tool_use_id")
-                                .and_then(|n| n.as_str())
-                                .unwrap_or("unknown")
-                                .to_string();
-                            let success = !json.get("is_error")
-                                .and_then(|e| e.as_bool())
-                                .unwrap_or(false);
-                            callback.on_event(StreamEvent::ToolComplete { name, success });
-                        }
-                        _ => {}
                     }
-                }
-
-                // Also check for direct content field
-                if let Some(content) = json.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_str()) {
-                    last_content = Some(content.to_string());
+                    StreamMessage::Result(result) => {
+                        callback.on_event(StreamEvent::Complete(result.clone()));
+                        final_result = Some(result);
+                    }
+                },
+                Err(e) => {
+                    // Fallback: try parsing as generic JSON for backwards compatibility
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
+                        if let Some(msg_type) = json.get("type").and_then(|t| t.as_str()) {
+                            match msg_type {
+                                "message" | "assistant" => {
+                                    if let Some(content) = json.get("content").and_then(|c| c.as_str()) {
+                                        accumulated_text.push_str(content);
+                                        callback.on_event(StreamEvent::Text(content.to_string()));
+                                    } else if let Some(text) = json.get("text").and_then(|t| t.as_str()) {
+                                        accumulated_text.push_str(text);
+                                        callback.on_event(StreamEvent::Text(text.to_string()));
+                                    }
+                                }
+                                "tool_use" => {
+                                    let name = json.get("name")
+                                        .and_then(|n| n.as_str())
+                                        .unwrap_or("unknown")
+                                        .to_string();
+                                    let input = json.get("input").cloned().unwrap_or(serde_json::Value::Null);
+                                    callback.on_event(StreamEvent::ToolUse { name, input });
+                                }
+                                "tool_result" => {
+                                    let name = json.get("tool_use_id")
+                                        .and_then(|n| n.as_str())
+                                        .unwrap_or("unknown")
+                                        .to_string();
+                                    let success = !json.get("is_error")
+                                        .and_then(|e| e.as_bool())
+                                        .unwrap_or(false);
+                                    callback.on_event(StreamEvent::ToolComplete { name, success });
+                                }
+                                _ => {}
+                            }
+                        }
+                    } else {
+                        debug!(
+                            "Failed to parse stream message: {} - line: {}",
+                            e,
+                            &line[..line.len().min(100)]
+                        );
+                    }
                 }
             }
         }
 
-        // Parse the final response
-        let content = last_content.unwrap_or_else(|| accumulated_output.clone());
-        let json_str = extract_json_from_markdown(&content);
+        // Parse final result
+        if let Some(result) = final_result {
+            self.parse_stream_result(&result, &accumulated_text, &accumulated_output)
+        } else if !accumulated_text.is_empty() {
+            // Fallback: try to parse accumulated text as JSON
+            self.parse_accumulated_text(&accumulated_text, &accumulated_output)
+        } else {
+            // Last fallback: parse the raw output
+            let content = accumulated_output.clone();
+            let json_str = extract_json_from_markdown(&content);
 
-        let response = match serde_json::from_str::<CodexResponse>(&json_str) {
-            Ok(resp) => resp,
-            Err(_) => CodexResponse {
-                analysis: content.clone(),
+            let response = match serde_json::from_str::<CodexResponse>(&json_str) {
+                Ok(resp) => resp,
+                Err(_) => CodexResponse {
+                    analysis: content.clone(),
+                    ..Default::default()
+                },
+            };
+
+            // Emit completion event
+            callback.on_event(StreamEvent::Complete(ResultMessage::default()));
+
+            Ok(CodexOutput {
+                response,
+                cost_usd: None,
+                duration_ms: None,
+                session_id: None,
+                raw_output: accumulated_output,
+            })
+        }
+    }
+
+    /// Parse the final stream result into CodexOutput
+    fn parse_stream_result(
+        &self,
+        result: &ResultMessage,
+        _accumulated_text: &str,
+        accumulated_output: &str,
+    ) -> Result<CodexOutput, CodexError> {
+        let result_str = result
+            .result
+            .clone()
+            .unwrap_or_else(|| "{}".to_string());
+
+        let json_str = extract_json_from_markdown(&result_str);
+
+        let response: CodexResponse = serde_json::from_str(&json_str).unwrap_or_else(|_| {
+            CodexResponse {
+                analysis: result_str.clone(),
                 ..Default::default()
-            },
-        };
-
-        // Emit completion event
-        callback.on_event(StreamEvent::Complete(ResultMessage {
-            result: Some(content),
-            duration_ms: None,
-            is_error: Some(false),
-        }));
+            }
+        });
 
         Ok(CodexOutput {
             response,
+            cost_usd: result.cost_usd.or(result.total_cost_usd),
+            duration_ms: result.duration_ms,
+            session_id: result.session_id.clone(),
+            raw_output: accumulated_output.to_string(),
+        })
+    }
+
+    /// Fallback: parse accumulated text when no result message received
+    fn parse_accumulated_text(
+        &self,
+        accumulated_text: &str,
+        accumulated_output: &str,
+    ) -> Result<CodexOutput, CodexError> {
+        let json_str = extract_json_from_markdown(accumulated_text);
+
+        let response: CodexResponse = serde_json::from_str(&json_str).unwrap_or_else(|_| {
+            CodexResponse {
+                analysis: accumulated_text.to_string(),
+                ..Default::default()
+            }
+        });
+
+        Ok(CodexOutput {
+            response,
+            cost_usd: None,
             duration_ms: None,
-            raw_output: accumulated_output,
+            session_id: None,
+            raw_output: accumulated_output.to_string(),
         })
     }
 

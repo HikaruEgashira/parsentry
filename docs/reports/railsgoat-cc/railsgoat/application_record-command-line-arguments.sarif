@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "shortDescription": {
+                "text": "Detects potential command execution vulnerabilities"
+              },
+              "fullDescription": {
+                "text": "Identifies command line arguments or code execution patterns that could lead to remote code execution attacks."
+              },
+              "help": {
+                "text": "Avoid using ARGV directly in system calls, use Shell.escape or parameterized commands instead."
+              },
+              "properties": {
+                "tags": ["security", "rce", "command-execution"]
+              }
+            }
+          ],
+          "properties": {
+            "analysisTarget": "repo/app/models/application_record.rb",
+            "patternType": "ARGV reference detection"
+          }
+        }
+      },
+      "results": [],
+      "properties": {
+        "analysisMethod": "PAR-based static analysis",
+        "analysisDate": "2025-12-31T00:00:00Z",
+        "summary": "No vulnerabilities detected in application_record.rb. The file contains only a base class definition with no external input processing, command execution, or resource access patterns that would indicate security vulnerabilities."
+      }
+    }
+  ]
+}

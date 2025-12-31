@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "informationUri": "https://github.com/OWASP/parsentry",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution via Command Line Arguments",
+              "shortDescription": {
+                "text": "Detection of unsafe command-line argument usage that could lead to command injection"
+              },
+              "fullDescription": {
+                "text": "Command-line arguments (ARGV) or similar untrusted command construction patterns can be exploited to execute arbitrary commands if not properly sanitized."
+              },
+              "help": {
+                "text": "Avoid using ARGV or user input directly in system commands. Use parameterized/safe command execution APIs that prevent injection. Always validate and sanitize command arguments. Use allowlists for command names and options."
+              },
+              "properties": {
+                "tags": ["security", "command-injection"],
+                "cwe": ["CWE-78", "CWE-94"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [],
+      "properties": {
+        "scanStartTime": "2025-12-31T00:00:00Z",
+        "scanEndTime": "2025-12-31T00:00:00Z",
+        "analysisTarget": "repo/app/models/paid_time_off.rb",
+        "analysisConclusion": "No vulnerabilities detected. File contains only data model definitions with arithmetic operations. No ARGV usage, command execution, or other security-relevant patterns found."
+      }
+    }
+  ]
+}

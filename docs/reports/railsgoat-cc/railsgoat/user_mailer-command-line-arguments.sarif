@@ -1,0 +1,136 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "rules": [
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting via URL Parameters",
+              "shortDescription": {
+                "text": "Unsanitized data in URL parameters can lead to XSS vulnerabilities"
+              },
+              "fullDescription": {
+                "text": "User-controlled token data is directly embedded in a URL string without proper encoding or validation. If this URL is rendered in HTML context (e.g., in email body with auto-linking), it could be exploited for XSS attacks."
+              },
+              "help": {
+                "text": "Remediation: Use proper URL encoding for parameters. In Rails, use h() helper or url_encode() to sanitize values before embedding them in URLs. Better approach: Use Rails routing helpers with safe parameter passing.",
+                "markdown": "### Remediation Steps\n\n1. **Use URL encoding helpers**: \n```ruby\nrequire 'cgi'\n@url = url_for(...) + \"?token=#{CGI.escape(token)}\"\n```\n\n2. **Better approach - Use Rails routing with parameters**:\n```ruby\nreset_url = password_reset_url(token: token)\n```\n\n3. **Validate token format**: Ensure tokens match expected pattern (alphanumeric, specific length)\n\n4. **In email templates**: If token is displayed in HTML, use `<%= h(@token) %>`"
+              },
+              "properties": {
+                "tags": ["xss", "injection", "url-encoding"]
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference - Unauthorized Password Reset",
+              "shortDescription": {
+                "text": "Missing authorization check in password reset functionality"
+              },
+              "fullDescription": {
+                "text": "The forgot_password() method accepts any email address and sends a password reset token without verifying that the caller is authorized to reset that user's password. An attacker can reset any user's password by calling this method with an arbitrary email address."
+              },
+              "help": {
+                "text": "Remediation: Verify that the user requesting the password reset has the right to reset that specific account. This typically involves:\n1. Checking user identity via session or authentication\n2. Verifying email ownership before sending reset token\n3. Implementing rate limiting to prevent brute force attempts",
+                "markdown": "### Remediation Steps\n\n1. **Verify request context**:\n```ruby\ndef forgot_password(email, token)\n  # Verify user is authenticated if resetting own password\n  # Or implement email verification flow\n  user = User.find_by(email: email)\n  return if user.nil?  # Don't reveal if email exists\n  \n  # Additional: Rate limit by email to prevent abuse\n  @token = token\n  @url = password_reset_url(token: token)\n  mail(to: email, subject: \"Reset your MetaCorp password\")\nend\n```\n\n2. **Implement email verification**: Send verification before allowing reset\n\n3. **Add rate limiting**: Prevent multiple reset requests for same email\n\n4. **Log and monitor**: Track password reset requests for security audit"
+              },
+              "properties": {
+                "tags": ["idor", "authorization", "authentication"]
+              }
+            }
+          ],
+          "supportedConfigurationKinds": ["default"],
+          "associatedComponent": {
+            "name": "Parsentry"
+          }
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Token parameter embedded in URL without proper encoding",
+            "markdown": "The `token` parameter is directly interpolated into the URL string at line 7 using `#{token}`. This can lead to XSS if the URL is rendered in HTML context within the email or elsewhere without proper escaping."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/mailers/user_mailer.rb"
+                },
+                "region": {
+                  "startLine": 7,
+                  "snippet": {
+                    "text": "@url = url_for(controller: \"password_resets\", action: \"reset_password\", only_path: false) + \"?token=#{token}\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.72,
+            "cwe": [
+              "CWE-79"
+            ],
+            "owasp": [
+              "A03:2021 - Injection",
+              "A07:2021 - Cross-Site Scripting (XSS)"
+            ],
+            "mitre_attack": [
+              "T1059",
+              "T1204"
+            ]
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Missing authorization check for password reset functionality",
+            "markdown": "The `forgot_password()` method accepts any email address without verifying that the caller is authorized to reset that account. An unauthenticated attacker could trigger password resets for any user account."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/mailers/user_mailer.rb"
+                },
+                "region": {
+                  "startLine": 5,
+                  "snippet": {
+                    "text": "def forgot_password(email, token)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "cwe": [
+              "CWE-639",
+              "CWE-863"
+            ],
+            "owasp": [
+              "A01:2021 - Broken Access Control",
+              "A04:2021 - Insecure Direct Object References"
+            ],
+            "mitre_attack": [
+              "T1548",
+              "T1114"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "runSuccessful": true
+      }
+    }
+  ]
+}

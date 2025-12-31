@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "informationUri": "https://github.com/xbow-engineering/parsentry",
+          "rules": [
+            {
+              "id": "RCE",
+              "shortDescription": {
+                "text": "Remote Code Execution via Command Line Arguments"
+              },
+              "fullDescription": {
+                "text": "Potential Remote Code Execution vulnerability where untrusted input from command-line arguments (ARGV) could be passed to dangerous functions without proper validation."
+              },
+              "help": {
+                "text": "To remediate this vulnerability:\n1. Never pass user input directly to system commands\n2. Validate and sanitize all command-line arguments\n3. Use safe APIs instead of shell execution (e.g., Ruby's Process module with array arguments)\n4. Implement allowlists for accepted command patterns\n5. Use parameterized commands when possible\n\nReference: OWASP Code Injection, CWE-78 (Improper Neutralization of Special Elements used in an OS Command)"
+              },
+              "properties": {
+                "vulnerability_type": "RCE",
+                "cwes": [78, 94, 95],
+                "owasp": ["A03:2021 - Injection"],
+                "mitre_attack": ["T1059", "T1204"]
+              }
+            }
+          ]
+        }
+      },
+      "results": []
+    }
+  ]
+}
