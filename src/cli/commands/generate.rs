@@ -7,9 +7,8 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use crate::cli::args::{GenerateArgs, Agent};
-use crate::github::GitHubSearchClient;
+use crate::github::{clone_repo, GitHubSearchClient};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
-use crate::repo::clone_github_repo;
 use parsentry_analyzer::generate_custom_patterns;
 use parsentry_claude_code::ClaudeCodeConfig;
 
@@ -158,7 +157,7 @@ async fn process_single_target(target: &str, args: &GenerateArgs) -> Result<Benc
         } else {
             println!("📥 クローン中: {}", target);
             fs::create_dir_all(temp_dir.parent().unwrap())?;
-            clone_github_repo(target, &temp_dir)?;
+            clone_repo(target, &temp_dir)?;
         }
         temp_dir
     } else {

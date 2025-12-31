@@ -11,7 +11,8 @@ use crate::cli::ui::{self, StatusPrinter, SummaryRow, SummaryTable};
 use crate::config::ParsentryConfig;
 use crate::mvra::{MvraRepositoryResult, MvraResults, MvraScanner};
 use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
-use crate::repo::{clone_github_repo, RepoOps};
+use crate::github::clone_repo;
+use crate::repo::RepoOps;
 use crate::response::{from_claude_code_response, Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
@@ -214,7 +215,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                 })?;
             }
             printer.status("Cloning", &format!("{} → {}", target, dest.display()));
-            clone_github_repo(target, &dest).map_err(|e| {
+            clone_repo(target, &dest).map_err(|e| {
                 anyhow::anyhow!(
                     "{}: {}",
                     messages
