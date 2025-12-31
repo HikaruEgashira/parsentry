@@ -91,11 +91,7 @@ async fn analyze_with_claude_code<C: StreamCallback>(
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
     // Build prompt using file reference only (agent reads file itself)
-    let prompt = prompt_builder.build_file_reference_prompt(
-        file_path,
-        Some(&pattern_context),
-        None, // related_functions - TODO: integrate call graph filtering
-    );
+    let prompt = prompt_builder.build_file_reference_prompt(file_path, Some(&pattern_context));
 
     printer.status("Analyzing", &file_name);
 
@@ -169,11 +165,7 @@ async fn analyze_with_codex(
     .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
     // Build prompt using file reference only (agent reads file itself)
-    let prompt = prompt_builder.build_file_reference_prompt(
-        file_path,
-        Some(&pattern_context),
-        None, // related_functions - TODO: integrate call graph filtering
-    );
+    let prompt = prompt_builder.build_file_reference_prompt(file_path, Some(&pattern_context));
 
     let model = "codex";
     let provider = "codex";
