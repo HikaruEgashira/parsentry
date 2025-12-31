@@ -420,7 +420,6 @@ Use these exact values:
         &self,
         file_path: &Path,
         pattern_context: Option<&PatternContext>,
-        related_functions: Option<&[FunctionReference]>,
     ) -> String {
         let pattern_section = if let Some(ctx) = pattern_context {
             format!(
@@ -443,25 +442,6 @@ Use these exact values:
             String::new()
         };
 
-        let related_section = if let Some(functions) = related_functions {
-            if functions.is_empty() {
-                String::new()
-            } else {
-                let mut section = String::from("\n## Related Functions\n");
-                for func in functions {
-                    section.push_str(&format!(
-                        "{}:{} {}\n",
-                        func.file_path.display(),
-                        func.line_number,
-                        func.name
-                    ));
-                }
-                section
-            }
-        } else {
-            String::new()
-        };
-
         let lang_instruction = if self.language == "ja" {
             "Respond in Japanese."
         } else {
@@ -475,7 +455,7 @@ Use these exact values:
 
 ## Analysis Target
 {file_path}
-{pattern_section}{related_section}
+{pattern_section}
 ## Instructions
 
 Analyze the target for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
@@ -524,21 +504,9 @@ Respond with a JSON object containing:
 "#,
             file_path = safe_file_path,
             pattern_section = pattern_section,
-            related_section = related_section,
             lang_instruction = lang_instruction,
         )
     }
-}
-
-/// Reference to a function with location information.
-#[derive(Debug, Clone)]
-pub struct FunctionReference {
-    /// Function name.
-    pub name: String,
-    /// Absolute file path.
-    pub file_path: std::path::PathBuf,
-    /// Line number (1-based).
-    pub line_number: usize,
 }
 
 /// Context information about a security pattern match.
