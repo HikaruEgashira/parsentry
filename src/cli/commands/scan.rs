@@ -183,7 +183,7 @@ async fn analyze_with_claude_code_sarif_output(
         Some(&pattern_context),
     );
 
-    printer.status("Analyzing (SARIF output)", &file_name);
+    printer.status("Analyzing", &file_name);
 
     // Execute with file output mode (no JSON parsing from stdout)
     let result = executor.execute_with_file_output(&prompt).await;
