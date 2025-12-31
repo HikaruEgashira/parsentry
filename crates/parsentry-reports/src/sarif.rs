@@ -711,4 +711,106 @@ mod tests {
         let content = std::fs::read_to_string(&sarif_path).unwrap();
         assert!(content.contains("Parsentry"));
     }
+
+    #[test]
+    fn test_sarif_from_file() {
+        let dir = tempdir().unwrap();
+        let sarif_path = dir.path().join("test.sarif");
+
+        let summary = AnalysisSummary::new();
+        let original = SarifReport::from_analysis_summary(&summary, "0.9.2");
+        original.save_to_file(&sarif_path).unwrap();
+
+        let loaded = SarifReport::from_file(&sarif_path).unwrap();
+        assert_eq!(loaded.version, "2.1.0");
+        assert_eq!(loaded.runs.len(), 1);
+    }
+
+    #[test]
+    fn test_sarif_from_json() {
+        let json = r#"{
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{
+                "tool": {
+                    "driver": {
+                        "name": "Parsentry",
+                        "version": "0.13.0"
+                    }
+                },
+                "results": []
+            }]
+        }"#;
+
+        let sarif = SarifReport::from_json(json).unwrap();
+        assert_eq!(sarif.version, "2.1.0");
+        assert_eq!(sarif.runs[0].tool.driver.name, "Parsentry");
+    }
+
+    #[test]
+    fn test_sarif_to_markdown() {
+        let mut summary = AnalysisSummary::new();
+        let response = Response {
+            scratchpad: "Analysis notes".to_string(),
+            analysis: "SQL injection found".to_string(),
+            poc: "'; DROP TABLE users; --".to_string(),
+            confidence_score: 90,
+            vulnerability_types: vec![VulnType::SQLI],
+            par_analysis: ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: RemediationGuidance {
+                policy_enforcement: vec![],
+            },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
+        };
+        summary.add_result(PathBuf::from("vulnerable.py"), response, "vulnerable.py.md".to_string());
+
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.13.0");
+        let markdown = sarif.to_markdown();
+
+        assert!(markdown.contains("Security Analysis Report"));
+        assert!(markdown.contains("SQLI"));
+        assert!(markdown.contains("vulnerable.py"));
+    }
+
+    #[test]
+    fn test_sarif_to_summary_markdown() {
+        let mut summary = AnalysisSummary::new();
+        let response = Response {
+            scratchpad: "Notes".to_string(),
+            analysis: "XSS vulnerability".to_string(),
+            poc: "<script>alert(1)</script>".to_string(),
+            confidence_score: 85,
+            vulnerability_types: vec![VulnType::XSS],
+            par_analysis: ParAnalysis {
+                principals: vec![],
+                actions: vec![],
+                resources: vec![],
+                policy_violations: vec![],
+            },
+            remediation_guidance: RemediationGuidance {
+                policy_enforcement: vec![],
+            },
+            file_path: None,
+            pattern_description: None,
+            matched_source_code: None,
+            full_source_code: None,
+        };
+        summary.add_result(PathBuf::from("app.js"), response, "app.js.md".to_string());
+
+        let sarif = SarifReport::from_analysis_summary(&summary, "0.13.0");
+        let summary_md = sarif.to_summary_markdown();
+
+        assert!(summary_md.contains("Security Analysis Summary"));
+        assert!(summary_md.contains("XSS"));
+        assert!(summary_md.contains("app.js"));
+        assert!(summary_md.contains("| File |"));
+    }
 }

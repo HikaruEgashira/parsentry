@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
@@ -49,6 +50,9 @@ impl CacheMode {
 }
 
 /// Analyze a pattern using Claude Code CLI with streaming output and caching
+/// Note: This function is kept for backward compatibility but is no longer used.
+/// Use analyze_with_claude_code_sarif_output instead.
+#[allow(dead_code)]
 async fn analyze_with_claude_code(
     executor: &ClaudeCodeExecutor,
     cache: Option<&Cache>,
@@ -506,22 +510,89 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                 // Choose analysis method based on mode
                 let analysis_result = if use_claude_code {
                     if let Some(ref executor) = claude_executor {
-                        match analyze_with_claude_code(
+                        // Use SARIF direct output mode for claude-code agent
+                        let sarif_filename = format!(
+                            "{}-{}.sarif",
+                            file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
+                            pattern_match.pattern_config.description.replace(' ', "-").to_lowercase()
+                        );
+                        let sarif_output_path = output_dir
+                            .clone()
+                            .unwrap_or_else(|| PathBuf::from("./reports"))
+                            .join(&sarif_filename);
+
+                        // Ensure output directory exists
+                        if let Some(parent) = sarif_output_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+
+                        match analyze_with_claude_code_sarif_output(
                             executor,
-                            cache.as_deref(),
-                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
-                            &_root_dir,
+                            &sarif_output_path,
                             &printer,
-                            &streaming_display,
                         )
                         .await
                         {
-                            Ok(Some(res)) => res,
-                            Ok(None) => {
-                                info!("Claude Code returned None for {}", file_path.display());
+                            Ok(true) => {
+                                // SARIF file was created, read it and convert to Response
+                                match parsentry_reports::SarifReport::from_file(&sarif_output_path) {
+                                    Ok(sarif) => {
+                                        // Generate summary from SARIF
+                                        let _summary_md = sarif.to_summary_markdown();
+                                        info!("SARIF analysis complete: {}", sarif_output_path.display());
+
+                                        // Create a minimal Response from SARIF for compatibility
+                                        let first_result = sarif.runs.first()
+                                            .and_then(|r| r.results.first());
+
+                                        if let Some(result) = first_result {
+                                            let confidence = result.properties.as_ref()
+                                                .and_then(|p| p.confidence)
+                                                .map(|c| (c * 100.0) as i32)
+                                                .unwrap_or(0);
+
+                                            Response {
+                                                scratchpad: String::new(),
+                                                analysis: result.message.markdown.clone()
+                                                    .unwrap_or_else(|| result.message.text.clone()),
+                                                poc: String::new(),
+                                                confidence_score: confidence,
+                                                vulnerability_types: vec![
+                                                    VulnType::from_str(&result.rule_id).unwrap_or(VulnType::Other(result.rule_id.clone()))
+                                                ],
+                                                par_analysis: parsentry_core::ParAnalysis {
+                                                    principals: vec![],
+                                                    actions: vec![],
+                                                    resources: vec![],
+                                                    policy_violations: vec![],
+                                                },
+                                                remediation_guidance: parsentry_core::RemediationGuidance {
+                                                    policy_enforcement: vec![],
+                                                },
+                                                file_path: Some(file_path.to_string_lossy().to_string()),
+                                                pattern_description: Some(pattern_match.pattern_config.description.clone()),
+                                                matched_source_code: Some(pattern_match.matched_text.clone()),
+                                                full_source_code: None,
+                                            }
+                                        } else {
+                                            // No findings in SARIF
+                                            info!("No vulnerabilities found in SARIF for {}", file_path.display());
+                                            progress_bar.inc(1);
+                                            return None;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to read SARIF file {}: {}", sarif_output_path.display(), e);
+                                        progress_bar.inc(1);
+                                        return None;
+                                    }
+                                }
+                            }
+                            Ok(false) => {
+                                info!("Claude Code SARIF output failed for {}", file_path.display());
                                 progress_bar.inc(1);
                                 return None;
                             }
@@ -1050,33 +1121,88 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let files = files.clone();
             let language = language.clone();
             let claude_executor = claude_executor.clone();
-            let streaming_display = Arc::clone(&streaming_display);
+            let _streaming_display = Arc::clone(&streaming_display);
             let prompt_builder = prompt_builder.clone();
             let use_claude_code = use_claude_code;
             let printer = Arc::clone(&printer);
-            let verbosity = verbosity;
-            let cache = cache.clone();
-            let cache_mode = cache_mode;
+            let _verbosity = verbosity;
+            let _cache = cache.clone();
+            let _cache_mode = cache_mode;
 
             async move {
                 // Choose analysis method based on mode
                 let analysis_result = if use_claude_code {
                     if let Some(ref executor) = claude_executor {
-                        match analyze_with_claude_code(
+                        // Use SARIF direct output mode for claude-code agent
+                        let sarif_filename = format!(
+                            "{}-{}.sarif",
+                            file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
+                            pattern_match.pattern_config.description.replace(' ', "-").to_lowercase()
+                        );
+                        let sarif_output_path = output_dir
+                            .clone()
+                            .unwrap_or_else(|| PathBuf::from("./reports"))
+                            .join(&sarif_filename);
+
+                        // Ensure output directory exists
+                        if let Some(parent) = sarif_output_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+
+                        match analyze_with_claude_code_sarif_output(
                             executor,
-                            cache.as_deref(),
-                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
-                            &_root_dir,
+                            &sarif_output_path,
                             &printer,
-                            &streaming_display,
                         )
                         .await
                         {
-                            Ok(Some(res)) => res,
-                            Ok(None) | Err(_) => return None,
+                            Ok(true) => {
+                                // SARIF file was created, read it and convert to Response
+                                match parsentry_reports::SarifReport::from_file(&sarif_output_path) {
+                                    Ok(sarif) => {
+                                        let first_result = sarif.runs.first()
+                                            .and_then(|r| r.results.first());
+
+                                        if let Some(result) = first_result {
+                                            let confidence = result.properties.as_ref()
+                                                .and_then(|p| p.confidence)
+                                                .map(|c| (c * 100.0) as i32)
+                                                .unwrap_or(0);
+
+                                            Response {
+                                                scratchpad: String::new(),
+                                                analysis: result.message.markdown.clone()
+                                                    .unwrap_or_else(|| result.message.text.clone()),
+                                                poc: String::new(),
+                                                confidence_score: confidence,
+                                                vulnerability_types: vec![
+                                                    VulnType::from_str(&result.rule_id).unwrap_or(VulnType::Other(result.rule_id.clone()))
+                                                ],
+                                                par_analysis: parsentry_core::ParAnalysis {
+                                                    principals: vec![],
+                                                    actions: vec![],
+                                                    resources: vec![],
+                                                    policy_violations: vec![],
+                                                },
+                                                remediation_guidance: parsentry_core::RemediationGuidance {
+                                                    policy_enforcement: vec![],
+                                                },
+                                                file_path: Some(file_path.to_string_lossy().to_string()),
+                                                pattern_description: Some(pattern_match.pattern_config.description.clone()),
+                                                matched_source_code: Some(pattern_match.matched_text.clone()),
+                                                full_source_code: None,
+                                            }
+                                        } else {
+                                            return None;
+                                        }
+                                    }
+                                    Err(_) => return None,
+                                }
+                            }
+                            Ok(false) | Err(_) => return None,
                         }
                     } else {
                         return None;
