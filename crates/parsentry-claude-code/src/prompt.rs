@@ -420,7 +420,21 @@ Use these exact values:
         &self,
         file_path: &Path,
         pattern_context: Option<&PatternContext>,
+        related_functions: Option<&[(&str, &str, usize)]>, // (name, path, line)
     ) -> String {
+        let related_section = if let Some(functions) = related_functions {
+            if functions.is_empty() {
+                String::new()
+            } else {
+                let mut section = String::from("\n## Related Functions (in call graph)\n");
+                for (name, path, line) in functions {
+                    section.push_str(&format!("{}:{} {}\n", path, line, name));
+                }
+                section
+            }
+        } else {
+            String::new()
+        };
         let pattern_section = if let Some(ctx) = pattern_context {
             format!(
                 r#"
@@ -455,7 +469,7 @@ Use these exact values:
 
 ## Analysis Target
 {file_path}
-{pattern_section}
+{pattern_section}{related_section}
 ## Instructions
 
 Analyze the target for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
@@ -504,6 +518,7 @@ Respond with a JSON object containing:
 "#,
             file_path = safe_file_path,
             pattern_section = pattern_section,
+            related_section = related_section,
             lang_instruction = lang_instruction,
         )
     }
