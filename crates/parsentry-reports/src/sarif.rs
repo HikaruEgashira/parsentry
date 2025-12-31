@@ -45,7 +45,8 @@ pub struct SarifDriver {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SarifRule {
     pub id: String,
-    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub short_description: Option<SarifMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,10 +87,11 @@ pub struct SarifMessage {
 pub struct SarifResult {
     #[serde(rename = "ruleId")]
     pub rule_id: String,
-    #[serde(rename = "ruleIndex")]
-    pub rule_index: usize,
+    #[serde(rename = "ruleIndex", skip_serializing_if = "Option::is_none")]
+    pub rule_index: Option<usize>,
     pub level: String,
     pub message: SarifMessage,
+    #[serde(default)]
     pub locations: Vec<SarifLocation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fingerprints: Option<HashMap<String, String>>,
@@ -107,6 +109,15 @@ pub struct SarifResultProperties {
     pub cwe: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub owasp: Option<Vec<String>>,
+    // PAR (Principal-Action-Resource) fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub principal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_flow: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -212,7 +223,7 @@ impl SarifReport {
 
                 results.push(SarifResult {
                     rule_id: rule_id.clone(),
-                    rule_index,
+                    rule_index: Some(rule_index),
                     level: confidence_to_level(response.confidence_score),
                     message: SarifMessage {
                         text: format!("{}: {}", vuln_type, response.analysis),
@@ -233,6 +244,15 @@ impl SarifReport {
                         mitre_attack: Some(vuln_type.mitre_attack_ids()),
                         cwe: Some(vuln_type.cwe_ids()),
                         owasp: Some(vuln_type.owasp_categories()),
+                        // Extract PAR information from response
+                        principal: response.par_analysis.principals.first()
+                            .map(|p| p.identifier.clone()),
+                        action: response.par_analysis.actions.first()
+                            .map(|a| a.identifier.clone()),
+                        resource: response.par_analysis.resources.first()
+                            .map(|r| r.identifier.clone()),
+                        data_flow: response.par_analysis.policy_violations.first()
+                            .map(|v| v.violation_path.clone()),
                     }),
                 });
             }
@@ -516,7 +536,7 @@ fn create_rule_for_vuln_type(vuln_type: &VulnType) -> SarifRule {
 
     SarifRule {
         id: vuln_type.to_string(),
-        name: name.clone(),
+        name: Some(name.clone()),
         short_description: Some(SarifMessage {
             text: description.clone(),
             markdown: None,

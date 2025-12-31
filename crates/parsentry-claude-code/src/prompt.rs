@@ -120,7 +120,7 @@ Do NOT execute the PoC - only generate the code."#
         };
 
         let lang_instruction = if self.language == "ja" {
-            "Respond in Japanese."
+            "Respond in Japanese. All analysis text, descriptions, and explanations MUST be written in Japanese (日本語)."
         } else {
             "Respond in English."
         };
@@ -454,7 +454,7 @@ Use these exact values:
         };
 
         let lang_instruction = if self.language == "ja" {
-            "Respond in Japanese."
+            "Respond in Japanese. All analysis text, descriptions, and explanations MUST be written in Japanese (日本語)."
         } else {
             "Respond in English."
         };
