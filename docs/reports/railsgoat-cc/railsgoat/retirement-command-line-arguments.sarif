@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "informationUri": "https://github.com/xbow-engineering/parsentry",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution via Command Line Arguments",
+              "shortDescription": {
+                "text": "Potential command line argument injection vulnerability"
+              },
+              "fullDescription": {
+                "text": "This rule detects potential Remote Code Execution vulnerabilities where command line arguments (ARGV) are passed to system commands or evaluated without proper sanitization."
+              },
+              "help": {
+                "text": "To remediate RCE vulnerabilities via command line arguments:\n1. Avoid using ARGV directly in system calls\n2. Use parameterized or safe command execution methods\n3. Validate and sanitize all command line inputs\n4. Use allowlists for expected values\n5. Use Open3.popen3 or similar safe alternatives to backticks or system()"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "rce",
+                  "command-injection"
+                ]
+              }
+            }
+          ],
+          "rules": []
+        }
+      },
+      "results": [],
+      "properties": {
+        "analysisTarget": "repo/app/models/retirement.rb",
+        "analysisType": "PAR-based security analysis",
+        "timestamp": "2025-12-31T00:00:00Z"
+      }
+    }
+  ]
+}

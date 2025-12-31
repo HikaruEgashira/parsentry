@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.13.0",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "Insecure Direct Object Reference",
+              "shortDescription": {
+                "text": "User object retrieval without authorization check"
+              },
+              "fullDescription": {
+                "text": "The reviewer_name method retrieves User objects based on the 'reviewer' field without verifying authorization. An attacker could potentially access full names of any user by manipulating the Performance record's reviewer field."
+              },
+              "help": {
+                "text": "Add authorization checks to ensure the requesting user has permission to access the target user's information. Implement checks such as:\n1. Verify the requesting user owns the performance record\n2. Verify the requesting user has admin privileges\n3. Use cancancan or pundit gem for fine-grained authorization"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Insecure Direct Object Reference: User.find_by_id retrieves user without authorization check",
+            "markdown": "## Insecure Direct Object Reference (IDOR)\n\n### Vulnerability Description\nThe `reviewer_name` method retrieves User objects based on the `self.reviewer` field without verifying that the requesting user has authorization to access that user's information.\n\n### Attack Path\n1. Attacker accesses a Performance record they control\n2. Attacker manipulates the `reviewer` field to point to any user ID\n3. Method returns the full name of the target user\n4. Attacker can enumerate all user full names in the system\n\n### Code Location\n```ruby\ndef reviewer_name\n  u = User.find_by_id(self.reviewer)  # No authorization check\n  u.full_name if u.respond_to?(\"fullname\")\nend\n```\n\n### Remediation\nAdd authorization checks before retrieving user information:\n- Verify the requesting user has permission to view this user's details\n- Implement role-based access control\n- Use authorization gems like Pundit or CanCanCan"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app/models/performance.rb"
+                },
+                "region": {
+                  "startLine": 6,
+                  "snippet": {
+                    "text": "   u = User.find_by_id(self.reviewer)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "cwe": [
+              "CWE-639",
+              "CWE-863"
+            ],
+            "owasp": [
+              "A01:2021 – Broken Access Control",
+              "A04:2021 – Insecure Design"
+            ],
+            "mitre_attack": [
+              "T1087",
+              "T1526"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
