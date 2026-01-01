@@ -550,6 +550,37 @@ impl SecurityRiskPatterns {
             }
         }
 
+        // Load CI/CD platform patterns and merge into Yaml language
+        let cicd_patterns = [
+            include_str!("patterns/yaml.yml"),        // GitHub Actions (existing)
+            include_str!("patterns/gitlab-ci.yml"),
+            include_str!("patterns/circleci.yml"),
+            include_str!("patterns/travis.yml"),
+            include_str!("patterns/jenkins.yml"),
+        ];
+
+        let mut merged_yaml_patterns = LanguagePatterns {
+            principals: Some(Vec::new()),
+            actions: Some(Vec::new()),
+            resources: Some(Vec::new()),
+        };
+
+        for content in cicd_patterns {
+            if let Ok(patterns) = serde_yaml::from_str::<LanguagePatterns>(content) {
+                if let Some(principals) = patterns.principals {
+                    merged_yaml_patterns.principals.as_mut().unwrap().extend(principals);
+                }
+                if let Some(actions) = patterns.actions {
+                    merged_yaml_patterns.actions.as_mut().unwrap().extend(actions);
+                }
+                if let Some(resources) = patterns.resources {
+                    merged_yaml_patterns.resources.as_mut().unwrap().extend(resources);
+                }
+            }
+        }
+
+        map.insert(Yaml, merged_yaml_patterns);
+
         Self::load_custom_patterns(&mut map, root_dir);
 
         map
@@ -582,6 +613,10 @@ impl SecurityRiskPatterns {
                                     "CloudFormation" => Language::CloudFormation,
                                     "Kubernetes" => Language::Kubernetes,
                                     "YAML" => Language::Yaml,
+                                    "GitLabCI" => Language::Yaml,
+                                    "CircleCI" => Language::Yaml,
+                                    "TravisCI" => Language::Yaml,
+                                    "Jenkins" => Language::Yaml,
                                     "Bash" => Language::Bash,
                                     "Shell" => Language::Shell,
                                     "Php" | "PHP" => Language::Php,

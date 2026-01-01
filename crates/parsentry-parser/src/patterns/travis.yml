@@ -1,0 +1,54 @@
+# Travis CI Security Patterns (PAR Framework)
+
+principals:
+  # Language runtime (execution environment)
+  - pattern: "language:\\s*\\w+"
+    description: "Language runtime specification"
+    attack_vector:
+      - "T1059"  # Command and Scripting Interpreter
+
+actions:
+  # Installation commands
+  - pattern: "install:.*pip\\s+install"
+    description: "Python package installation"
+    attack_vector:
+      - "T1195.001"  # Supply Chain Compromise
+      - "T1105"      # Ingress Tool Transfer
+
+  - pattern: "install:.*npm\\s+install"
+    description: "NPM package installation"
+    attack_vector:
+      - "T1195.001"  # Supply Chain Compromise
+
+  # Script execution
+  - pattern: "script:"
+    description: "Script execution"
+    attack_vector:
+      - "T1059.004"  # Unix Shell
+
+  # After success hooks
+  - pattern: "after_success:"
+    description: "After success hook"
+    attack_vector:
+      - "T1059"  # Command Execution
+
+resources:
+  # Cache access
+  - pattern: "cache:\\s*pip"
+    description: "Pip cache configuration"
+    attack_vector:
+      - "T1005"  # Data from Local System
+      - "T1020"  # Automated Exfiltration
+
+  # Environment variables
+  - pattern: "env:"
+    description: "Environment variables"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+
+  # Deploy configuration
+  - pattern: "deploy:"
+    description: "Deployment configuration"
+    attack_vector:
+      - "T1078"  # Valid Accounts
+      - "T1565"  # Data Manipulation

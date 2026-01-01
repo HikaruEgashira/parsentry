@@ -1,0 +1,88 @@
+# Jenkins Security Patterns (PAR Framework)
+# Note: Uses regex patterns for Groovy DSL detection
+
+principals:
+  # Agent specification
+  - pattern: "agent\\s+any"
+    description: "Any agent execution (uncontrolled environment)"
+    attack_vector:
+      - "T1609"  # Container Administration
+      - "T1611"  # Escape to Host
+
+  # Credential bindings
+  - pattern: "withCredentials\\s*\\["
+    description: "Credential binding usage"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1078"  # Valid Accounts
+
+  # Git repository access
+  - pattern: "git\\s+url:"
+    description: "Git repository access"
+    attack_vector:
+      - "T1199"  # Trusted Relationship
+      - "T1195"  # Supply Chain Compromise
+
+actions:
+  # Credential access patterns
+  - pattern: "usernamePassword\\("
+    description: "Username/password credential type"
+    attack_vector:
+      - "T1552.001"  # Credentials In Files
+      - "T1078"      # Valid Accounts
+
+  - pattern: "credentialsId:\\s*['\"]\\w+"
+    description: "Credentials ID reference"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+
+  - pattern: "passwordVariable:"
+    description: "Password variable binding"
+    attack_vector:
+      - "T1552.001"  # Credentials In Files
+
+  # Shell execution
+  - pattern: "sh\\s+['\"]"
+    description: "Shell command execution"
+    attack_vector:
+      - "T1059.004"  # Unix Shell
+
+  - pattern: "bat\\s+['\"]"
+    description: "Batch command execution"
+    attack_vector:
+      - "T1059.003"  # Windows Command Shell
+
+  # Docker operations
+  - pattern: "docker\\.build"
+    description: "Docker build operation"
+    attack_vector:
+      - "T1610"  # Deploy Container
+      - "T1195"  # Supply Chain Compromise
+
+resources:
+  # Environment variables
+  - pattern: "environment\\s*\\{"
+    description: "Environment block"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+
+  # SSH keys
+  - pattern: "sshagent\\s*\\["
+    description: "SSH agent usage"
+    attack_vector:
+      - "T1552.004"  # Private Keys
+      - "T1021.004"  # SSH
+
+  # Properties (credentials storage)
+  - pattern: "folderCredentialsProperty"
+    description: "Folder-level credentials"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1078"  # Valid Accounts
+
+  # Remote Jenkinsfile
+  - pattern: "remoteJenkinsFile"
+    description: "Remote Jenkinsfile execution"
+    attack_vector:
+      - "T1195"  # Supply Chain Compromise
+      - "T1199"  # Trusted Relationship
