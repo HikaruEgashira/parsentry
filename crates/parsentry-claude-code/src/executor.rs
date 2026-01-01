@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 use thiserror::Error;
-use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
+use tokio::task::LocalSet;
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 
@@ -66,8 +66,6 @@ pub struct ClaudeCodeExecutor {
     semaphore: Arc<Semaphore>,
     working_dir: PathBuf,
     model: Option<String>,
-    /// Shared ACP connection (lazily initialized).
-    connection: Arc<Mutex<Option<AcpConnection>>>,
 }
 
 impl ClaudeCodeExecutor {
@@ -81,72 +79,14 @@ impl ClaudeCodeExecutor {
             semaphore,
             working_dir: config.working_dir,
             model: config.model,
-            connection: Arc::new(Mutex::new(None)),
         })
-    }
-
-    /// Ensure ACP connection is initialized.
-    async fn ensure_connection(&self) -> Result<(), ClaudeCodeError> {
-        let mut conn_guard = self.connection.lock().await;
-
-        if conn_guard.is_none() {
-            info!("Initializing ACP connection to Claude Code");
-
-            let mut conn = AcpConnection::spawn(
-                &self.claude_path,
-                &self.working_dir,
-                self.model.as_deref(),
-            )
-            .await?;
-
-            conn.initialize().await?;
-            conn.new_session().await?;
-
-            *conn_guard = Some(conn);
-            info!("ACP connection established");
-        }
-
-        Ok(())
     }
 
     /// Execute a prompt and return the parsed output.
     pub async fn execute(&self, prompt: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        let _permit = self
-            .semaphore
-            .acquire()
-            .await
-            .map_err(|_| ClaudeCodeError::ConcurrencyLimit)?;
-
-        debug!("Acquired semaphore permit, executing via ACP");
-
         let start = std::time::Instant::now();
-
-        let result = timeout(
-            Duration::from_secs(self.timeout_secs),
-            self.execute_acp(prompt),
-        )
-        .await
-        .map_err(|_| ClaudeCodeError::Timeout {
-            timeout_secs: self.timeout_secs,
-        })?;
-
+        let result_text = self.execute_raw(prompt).await?;
         let duration_ms = start.elapsed().as_millis() as u64;
-
-        result.map(|mut output| {
-            output.duration_ms = Some(duration_ms);
-            output
-        })
-    }
-
-    /// Execute prompt via ACP protocol.
-    async fn execute_acp(&self, prompt: &str) -> Result<ClaudeCodeOutput, ClaudeCodeError> {
-        self.ensure_connection().await?;
-
-        let mut conn_guard = self.connection.lock().await;
-        let conn = conn_guard.as_mut().ok_or(ClaudeCodeError::NoSession)?;
-
-        // prompt() now returns the accumulated text directly
-        let result_text = conn.prompt(prompt).await?;
 
         // Parse the response as ClaudeCodeResponse
         let parsed: ClaudeCodeResponse = serde_json::from_str(&result_text).or_else(|_| {
@@ -159,13 +99,11 @@ impl ClaudeCodeExecutor {
                 })
         })?;
 
-        let session_id = conn.session_id().map(|s| format!("{:?}", s));
-
         Ok(ClaudeCodeOutput {
             response: parsed,
             cost_usd: None,
-            duration_ms: None,
-            session_id,
+            duration_ms: Some(duration_ms),
+            session_id: None,
         })
     }
 
@@ -182,12 +120,6 @@ impl ClaudeCodeExecutor {
                 let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
                 warn!("Retry attempt {} after {:?}", attempt, delay);
                 tokio::time::sleep(delay).await;
-
-                // Reset connection on retry
-                let mut conn_guard = self.connection.lock().await;
-                if let Some(mut conn) = conn_guard.take() {
-                    conn.close().await.ok();
-                }
             }
 
             match self.execute(prompt).await {
@@ -215,27 +147,45 @@ impl ClaudeCodeExecutor {
 
         debug!("Acquired semaphore permit, executing raw via ACP");
 
-        timeout(
-            Duration::from_secs(self.timeout_secs),
-            self.execute_acp_raw(prompt),
-        )
-        .await
-        .map_err(|_| ClaudeCodeError::Timeout {
-            timeout_secs: self.timeout_secs,
-        })?
-    }
+        let timeout_secs = self.timeout_secs;
+        let claude_path = self.claude_path.clone();
+        let working_dir = self.working_dir.clone();
+        let model = self.model.clone();
+        let prompt = prompt.to_string();
 
-    /// Execute raw prompt via ACP protocol.
-    async fn execute_acp_raw(&self, prompt: &str) -> Result<String, ClaudeCodeError> {
-        self.ensure_connection().await?;
+        // Run ACP operations in LocalSet to support spawn_local
+        let local = LocalSet::new();
+        let result = local
+            .run_until(async move {
+                timeout(Duration::from_secs(timeout_secs), async {
+                    // Create fresh connection within LocalSet context
+                    let mut conn = AcpConnection::spawn(&claude_path, &working_dir, model.as_deref())
+                        .await
+                        .map_err(|e| ClaudeCodeError::AcpError(e.to_string()))?;
 
-        let mut conn_guard = self.connection.lock().await;
-        let conn = conn_guard.as_mut().ok_or(ClaudeCodeError::NoSession)?;
+                    conn.initialize()
+                        .await
+                        .map_err(|e| ClaudeCodeError::AcpError(e.to_string()))?;
+                    conn.new_session()
+                        .await
+                        .map_err(|e| ClaudeCodeError::AcpError(e.to_string()))?;
 
-        // prompt() now returns the accumulated text directly
-        let result_text = conn.prompt(prompt).await?;
+                    let result = conn
+                        .prompt(&prompt)
+                        .await
+                        .map_err(|e| ClaudeCodeError::AcpError(e.to_string()))?;
 
-        Ok(result_text)
+                    conn.close()
+                        .await
+                        .map_err(|e| ClaudeCodeError::AcpError(e.to_string()))?;
+
+                    Ok::<String, ClaudeCodeError>(result)
+                })
+                .await
+            })
+            .await;
+
+        result.map_err(|_| ClaudeCodeError::Timeout { timeout_secs })?
     }
 
     /// Execute raw with retry logic.
@@ -251,12 +201,6 @@ impl ClaudeCodeExecutor {
                 let delay = Duration::from_millis(1000 * (1 << attempt.min(5)));
                 warn!("Retry attempt {} after {:?}", attempt, delay);
                 tokio::time::sleep(delay).await;
-
-                // Reset connection on retry
-                let mut conn_guard = self.connection.lock().await;
-                if let Some(mut conn) = conn_guard.take() {
-                    conn.close().await.ok();
-                }
             }
 
             match self.execute_raw(prompt).await {
@@ -298,15 +242,6 @@ impl ClaudeCodeExecutor {
     /// Get the number of available permits.
     pub fn available_permits(&self) -> usize {
         self.semaphore.available_permits()
-    }
-
-    /// Close the ACP connection.
-    pub async fn close(&self) -> Result<(), ClaudeCodeError> {
-        let mut conn_guard = self.connection.lock().await;
-        if let Some(mut conn) = conn_guard.take() {
-            conn.close().await?;
-        }
-        Ok(())
     }
 }
 
