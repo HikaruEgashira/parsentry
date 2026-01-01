@@ -378,8 +378,9 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         printer.status("Generating", "custom security patterns");
 
         if config.agent.is_claude_code() {
+            // Use claude-code-acp by default (npm install -g @zed-industries/claude-code-acp)
             let claude_path = config.agent.path.clone()
-                .unwrap_or_else(|| PathBuf::from("claude"));
+                .unwrap_or_else(|| PathBuf::from("claude-code-acp"));
             let log_dir = final_args.output_dir.as_ref().map(|d| d.join("claude_code_logs"));
             let claude_config = parsentry_claude_code::ClaudeCodeConfig {
                 claude_path,
@@ -583,7 +584,8 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     };
 
     let claude_executor = if use_claude_code {
-        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        // Use claude-code-acp by default (npm install -g @zed-industries/claude-code-acp)
+        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude-code-acp"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
@@ -1324,7 +1326,8 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     };
 
     let claude_executor = if use_claude_code {
-        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        // Use claude-code-acp by default (npm install -g @zed-industries/claude-code-acp)
+        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude-code-acp"));
         let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),

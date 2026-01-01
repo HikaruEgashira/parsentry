@@ -26,7 +26,7 @@ pub struct AcpConnection {
 }
 
 impl AcpConnection {
-    /// Spawn a new Claude Code process with ACP mode.
+    /// Spawn a new Claude Code ACP process.
     pub async fn spawn(
         claude_path: &Path,
         working_dir: &Path,
@@ -34,9 +34,8 @@ impl AcpConnection {
     ) -> Result<Self> {
         let mut cmd = Command::new(claude_path);
 
-        // Claude Code ACP mode arguments
-        cmd.arg("--acp");
-
+        // claude-code-acp does not require --acp flag (it's already ACP mode)
+        // Only pass model if specified
         if let Some(model) = model {
             cmd.arg("--model").arg(model);
         }

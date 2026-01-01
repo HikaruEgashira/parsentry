@@ -37,7 +37,8 @@ pub struct ClaudeCodeConfig {
 impl Default for ClaudeCodeConfig {
     fn default() -> Self {
         Self {
-            claude_path: PathBuf::from("claude"),
+            // Use claude-code-acp as default (npm install -g @zed-industries/claude-code-acp)
+            claude_path: PathBuf::from("claude-code-acp"),
             max_concurrent: 10,
             timeout_secs: 300,
             enable_poc: false,
