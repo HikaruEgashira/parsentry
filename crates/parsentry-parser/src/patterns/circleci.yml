@@ -1,0 +1,75 @@
+# CircleCI Security Patterns (PAR Framework)
+
+principals:
+  # Machine executor (higher privilege)
+  - pattern: "machine:"
+    description: "Machine executor usage"
+    attack_vector:
+      - "T1609"  # Container Administration Command
+      - "T1611"  # Escape to Host
+
+  # Parameters (external input)
+  - pattern: "parameters:"
+    description: "Pipeline parameters"
+    attack_vector:
+      - "T1134"  # Access Token Manipulation
+      - "T1055"  # Process Injection
+
+actions:
+  # Credential exposure
+  - pattern: "\\$DOCKER_USERNAME"
+    description: "Docker username environment variable"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+
+  - pattern: "\\$DOCKER_PASSWORD"
+    description: "Docker password environment variable"
+    attack_vector:
+      - "T1552.001"  # Credentials In Files
+
+  - pattern: "docker\\s+login.*-p"
+    description: "Docker login with password"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1610"  # Deploy Container
+
+  # Docker build operations
+  - pattern: "docker\\s+buildx\\s+build"
+    description: "Docker buildx build"
+    attack_vector:
+      - "T1610"  # Deploy Container
+      - "T1195"  # Supply Chain Compromise
+
+  - pattern: "docker\\s+push"
+    description: "Docker push operation"
+    attack_vector:
+      - "T1195"  # Supply Chain Compromise
+      - "T1105"  # Ingress Tool Transfer
+
+resources:
+  # Context access (credentials)
+  - pattern: "context:"
+    description: "CircleCI context usage"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1078"  # Valid Accounts
+
+  # Environment variables
+  - pattern: "environment:"
+    description: "Environment variable configuration"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+
+  # Artifact storage
+  - pattern: "store_artifacts:"
+    description: "Artifact storage"
+    attack_vector:
+      - "T1105"  # Ingress Tool Transfer
+      - "T1020"  # Automated Exfiltration
+
+  # SSH access
+  - pattern: "add_ssh_keys:"
+    description: "SSH key addition"
+    attack_vector:
+      - "T1552.004"  # Private Keys
+      - "T1021.004"  # SSH
