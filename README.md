@@ -89,6 +89,7 @@ Multi-Repository Variant Analysis (MVRA):
 - [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js
 - [OWASP/railsgoat](docs/reports/railsgoat/summary.md) - Ruby on Rails
 - [dolevf/Damn-Vulnerable-GraphQL-Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL
+- [cider-security-research/cicd-goat](docs/reports/cicd-goat/parsentry-results.sarif) - CI/CD Pipeline (analyzed with `--agent claude-code`)
 
 ### Security
 

@@ -5,6 +5,20 @@ pub struct FileClassifier;
 impl FileClassifier {
     /// Classifies a file based on filename and content
     pub fn classify(filename: &str, content: &str) -> Language {
+        // CI/CD platform detection
+        if Self::is_gitlab_ci(filename, content) {
+            return Language::Yaml;
+        }
+        if Self::is_circleci(filename, content) {
+            return Language::Yaml;
+        }
+        if Self::is_travis_ci(filename, content) {
+            return Language::Yaml;
+        }
+        if Self::is_jenkinsfile(filename, content) {
+            return Language::Yaml;
+        }
+
         // GitHub Actions workflows
         if Self::is_github_actions_workflow(filename, content) {
             return Language::Yaml;
@@ -115,6 +129,50 @@ impl FileClassifier {
             .iter()
             .any(|&pattern| content.contains(pattern))
     }
+
+    fn is_gitlab_ci(filename: &str, content: &str) -> bool {
+        // Path-based detection
+        if !filename.ends_with(".gitlab-ci.yml") {
+            return false;
+        }
+
+        // Content-based validation
+        let gitlab_patterns = ["stages:", "script:", "image:", "stage:"];
+        gitlab_patterns.iter().any(|&p| content.contains(p))
+    }
+
+    fn is_circleci(filename: &str, content: &str) -> bool {
+        // Path-based detection
+        if !filename.contains(".circleci/config.yml") {
+            return false;
+        }
+
+        // Content-based validation
+        let circleci_patterns = ["version:", "jobs:", "workflows:"];
+        circleci_patterns.iter().all(|&p| content.contains(p))
+    }
+
+    fn is_travis_ci(filename: &str, content: &str) -> bool {
+        // Path-based detection
+        if !filename.ends_with(".travis.yml") {
+            return false;
+        }
+
+        // Content-based validation
+        let travis_patterns = ["language:", "script:"];
+        travis_patterns.iter().any(|&p| content.contains(p))
+    }
+
+    fn is_jenkinsfile(filename: &str, content: &str) -> bool {
+        // Path-based detection
+        if !filename.ends_with("Jenkinsfile") && !filename.ends_with(".groovy") {
+            return false;
+        }
+
+        // Content-based validation for Jenkinsfile
+        let jenkins_patterns = ["pipeline {", "stage(", "steps {", "agent "];
+        jenkins_patterns.iter().any(|&p| content.contains(p))
+    }
 }
 
 #[cfg(test)]
@@ -180,5 +238,76 @@ services:
         ));
 
         assert!(FileClassifier::is_docker_compose("services.yml", content));
+    }
+
+    #[test]
+    fn test_gitlab_ci_detection() {
+        let content = r#"
+image: "python:3.9"
+stages:
+  - test
+  - deploy
+test-job:
+  stage: test
+  script:
+    - pytest
+        "#;
+        assert!(FileClassifier::is_gitlab_ci(".gitlab-ci.yml", content));
+
+        // Should not match non-GitLab CI YAML
+        assert!(!FileClassifier::is_gitlab_ci("config.yml", content));
+    }
+
+    #[test]
+    fn test_circleci_detection() {
+        let content = r#"
+version: 2.1
+jobs:
+  ci:
+    steps:
+      - checkout
+workflows:
+  version: 2
+        "#;
+        assert!(FileClassifier::is_circleci(".circleci/config.yml", content));
+
+        // Should not match non-CircleCI YAML
+        assert!(!FileClassifier::is_circleci("config.yml", content));
+    }
+
+    #[test]
+    fn test_travis_detection() {
+        let content = r#"
+language: python
+install:
+  - pip install .
+script:
+  - pytest
+        "#;
+        assert!(FileClassifier::is_travis_ci(".travis.yml", content));
+
+        // Should not match non-Travis YAML
+        assert!(!FileClassifier::is_travis_ci("config.yml", content));
+    }
+
+    #[test]
+    fn test_jenkinsfile_detection() {
+        let content = r#"
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                sh 'make'
+            }
+        }
+    }
+}
+        "#;
+        assert!(FileClassifier::is_jenkinsfile("Jenkinsfile", content));
+        assert!(FileClassifier::is_jenkinsfile("awesome_app.groovy", content));
+
+        // Should not match non-Jenkins files
+        assert!(!FileClassifier::is_jenkinsfile("script.sh", content));
     }
 }

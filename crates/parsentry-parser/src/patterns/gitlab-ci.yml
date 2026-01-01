@@ -1,0 +1,95 @@
+# GitLab CI Security Patterns (PAR Framework)
+
+principals:
+  # External image sources
+  - pattern: "image:\\s*[^:]+:latest"
+    description: "Container image without version pinning"
+    attack_vector:
+      - "T1195.001"  # Supply Chain Compromise
+      - "T1610"      # Deploy Container
+
+  # Trigger sources that accept external input
+  - pattern: "only:\\s*-\\s*external_pull_requests"
+    description: "External pull request trigger"
+    attack_vector:
+      - "T1134"  # Access Token Manipulation
+      - "T1068"  # Exploitation for Privilege Escalation
+
+actions:
+  # Credential exposure
+  - pattern: "\\$\\{?\\w*TOKEN\\}?"
+    description: "Token usage in script"
+    attack_vector:
+      - "T1552.001"  # Unsecured Credentials
+      - "T1078"      # Valid Accounts
+
+  - pattern: "\\$\\{?\\w*PASSWORD\\}?"
+    description: "Password usage in script"
+    attack_vector:
+      - "T1552.001"  # Unsecured Credentials
+      - "T1078"      # Valid Accounts
+
+  - pattern: "\\$\\{?\\w*SECRET\\}?"
+    description: "Secret usage in script"
+    attack_vector:
+      - "T1552.001"  # Unsecured Credentials
+
+  # Command injection risks
+  - pattern: "script:.*\\$CI_COMMIT_MESSAGE"
+    description: "Commit message in script (injection risk)"
+    attack_vector:
+      - "T1059.004"  # Command Injection
+      - "T1055"      # Process Injection
+
+  - pattern: "script:.*\\$CI_MERGE_REQUEST_TITLE"
+    description: "Merge request data in script (injection risk)"
+    attack_vector:
+      - "T1059.004"  # Command Injection
+
+  # Docker operations
+  - pattern: "docker\\s+login.*-p\\s+\\$"
+    description: "Docker login with credential variable"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1610"  # Deploy Container
+
+  - pattern: "docker\\s+build"
+    description: "Docker build operation"
+    attack_vector:
+      - "T1610"  # Deploy Container
+      - "T1195"  # Supply Chain Compromise
+
+resources:
+  # Registry access
+  - pattern: "\\$CI_REGISTRY"
+    description: "Container registry access"
+    attack_vector:
+      - "T1552"  # Unsecured Credentials
+      - "T1195"  # Supply Chain Compromise
+
+  # SSH access
+  - pattern: "\\$SSH_KEY"
+    description: "SSH key usage"
+    attack_vector:
+      - "T1552.004"  # Private Keys
+      - "T1021.004"  # SSH
+
+  - pattern: "ssh\\s+-i"
+    description: "SSH with identity file"
+    attack_vector:
+      - "T1552.004"  # Private Keys
+      - "T1021.004"  # SSH
+
+  # Environment variables
+  - pattern: "environment:\\s*production"
+    description: "Production environment deployment"
+    attack_vector:
+      - "T1078"  # Valid Accounts
+      - "T1565"  # Data Manipulation
+
+  # Cache access
+  - pattern: "cache:"
+    description: "Cache configuration"
+    attack_vector:
+      - "T1020"  # Automated Exfiltration
+      - "T1005"  # Data from Local System
