@@ -412,34 +412,8 @@ Use these exact values:
         )
     }
 
-    /// Build a prompt using file references only.
+    /// Build a prompt using file references.
     pub fn build_file_reference_prompt(
-        &self,
-        file_path: &Path,
-        pattern_context: Option<&PatternContext>,
-        related_functions: Option<&[(&str, &str, usize)]>,
-    ) -> String {
-        self.build_file_reference_prompt_internal(file_path, pattern_context, related_functions, None)
-    }
-
-    /// Build a prompt using file references with SARIF output.
-    pub fn build_file_reference_prompt_with_sarif(
-        &self,
-        file_path: &Path,
-        pattern_context: Option<&PatternContext>,
-        related_functions: Option<&[(&str, &str, usize)]>,
-        sarif_output_path: &Path,
-    ) -> String {
-        self.build_file_reference_prompt_internal(
-            file_path,
-            pattern_context,
-            related_functions,
-            Some(sarif_output_path),
-        )
-    }
-
-    /// Internal implementation for file reference prompts.
-    fn build_file_reference_prompt_internal(
         &self,
         file_path: &Path,
         pattern_context: Option<&PatternContext>,

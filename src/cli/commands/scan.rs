@@ -95,11 +95,11 @@ async fn analyze_with_claude_code<C: StreamCallback>(
         .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
         .collect();
 
-    let base_prompt = prompt_builder.build_file_reference_prompt_with_sarif(
+    let base_prompt = prompt_builder.build_file_reference_prompt(
         file_path,
         Some(&pattern_context),
         if related_refs.is_empty() { None } else { Some(&related_refs) },
-        sarif_output_path,
+        Some(sarif_output_path),
     );
 
     let prompt = format!(
@@ -215,6 +215,7 @@ async fn analyze_with_codex(
         file_path,
         Some(&pattern_context),
         if related_refs.is_empty() { None } else { Some(&related_refs) },
+        None,
     );
 
     let model = "codex";

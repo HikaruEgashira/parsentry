@@ -413,12 +413,13 @@ Use these exact values:
         )
     }
 
-    /// Build a prompt using file references only.
+    /// Build a prompt using file references.
     pub fn build_file_reference_prompt(
         &self,
         file_path: &Path,
         pattern_context: Option<&PatternContext>,
         related_functions: Option<&[(&str, &str, usize)]>,
+        _sarif_output_path: Option<&Path>,
     ) -> String {
         let related_section = if let Some(functions) = related_functions {
             if functions.is_empty() {
