@@ -1490,6 +1490,7 @@ dependencies = [
  "parsentry-core",
  "parsentry-i18n",
  "parsentry-parser",
+ "parsentry-prompt",
  "parsentry-reports",
  "parsentry-utils",
  "quick-xml",
