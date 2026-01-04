@@ -1,0 +1,9 @@
+[package]
+name = "parsentry-prompt"
+version.workspace = true
+edition.workspace = true
+description = "Declarative prompt builder for Parsentry security analysis"
+
+[dependencies]
+parsentry-core = { path = "../parsentry-core" }
+parsentry-i18n = { path = "../parsentry-i18n" }
