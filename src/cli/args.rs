@@ -8,9 +8,9 @@ use parsentry_reports::validate_output_directory;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
 pub enum Agent {
     /// Use GenAI API (OpenAI-compatible endpoints)
-    #[default]
     Genai,
     /// Use Claude Code CLI for analysis
+    #[default]
     ClaudeCode,
     /// Use Codex CLI for analysis
     Codex,
@@ -70,7 +70,7 @@ pub struct Args {
     pub generate_config: bool,
 
     /// LLM agent to use for analysis
-    #[arg(long, value_enum, default_value = "genai", global = true)]
+    #[arg(long, value_enum, default_value = "claude-code", global = true)]
     pub agent: Agent,
 
     /// Path to claude CLI binary (only used with --agent claude-code)

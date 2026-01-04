@@ -63,7 +63,7 @@ pub struct AgentConfig {
 }
 
 fn default_agent_type() -> String {
-    "genai".to_string()
+    "claude-code".to_string()
 }
 
 fn default_agent_max_concurrent() -> usize {
@@ -93,10 +93,10 @@ impl AgentConfig {
             "genai" => Agent::Genai,
             unknown => {
                 tracing::warn!(
-                    "Unknown agent type '{}' in config, defaulting to 'genai'. Valid values: 'genai', 'claude-code', 'codex'",
+                    "Unknown agent type '{}' in config, defaulting to 'claude-code'. Valid values: 'genai', 'claude-code', 'codex'",
                     unknown
                 );
-                Agent::Genai
+                Agent::ClaudeCode
             }
         }
     }
@@ -1094,13 +1094,13 @@ target = "test"
 
     #[test]
     fn test_agent_enum_default() {
-        assert_eq!(Agent::default(), Agent::Genai);
+        assert_eq!(Agent::default(), Agent::ClaudeCode);
     }
 
     #[test]
     fn test_agent_config_default() {
         let config = AgentConfig::default();
-        assert_eq!(config.agent_type, "genai");
+        assert_eq!(config.agent_type, "claude-code");
         assert_eq!(config.path, None);
         assert_eq!(config.max_concurrent, 10);
         assert_eq!(config.timeout_secs, 300);
@@ -1110,29 +1110,29 @@ target = "test"
     #[test]
     fn test_agent_config_is_claude_code() {
         let mut config = AgentConfig::default();
-        assert!(!config.is_claude_code());
-
-        config.agent_type = "claude-code".to_string();
         assert!(config.is_claude_code());
 
         config.agent_type = "genai".to_string();
         assert!(!config.is_claude_code());
+
+        config.agent_type = "claude-code".to_string();
+        assert!(config.is_claude_code());
     }
 
     #[test]
     fn test_agent_config_get_agent() {
         let mut config = AgentConfig::default();
-        assert_eq!(config.get_agent(), Agent::Genai);
-
-        config.agent_type = "claude-code".to_string();
         assert_eq!(config.get_agent(), Agent::ClaudeCode);
 
         config.agent_type = "genai".to_string();
         assert_eq!(config.get_agent(), Agent::Genai);
 
-        // Unknown agent falls back to Genai (with warning logged)
+        config.agent_type = "claude-code".to_string();
+        assert_eq!(config.get_agent(), Agent::ClaudeCode);
+
+        // Unknown agent falls back to ClaudeCode (with warning logged)
         config.agent_type = "unknown-agent".to_string();
-        assert_eq!(config.get_agent(), Agent::Genai);
+        assert_eq!(config.get_agent(), Agent::ClaudeCode);
     }
 
     #[test]
