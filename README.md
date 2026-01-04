@@ -2,15 +2,14 @@
 
   <img width="250" src="./logo.png" alt="Parsentry Logo">
 
-A PAR (Principal-Action-Resource) based security scanner using LLMs and static code analysis.
+**AI-only scanners are slow and miss vulnerabilities.**
 
-**Next-generation security analysis for all languages**
+Parsentry uses static analysis to enumerate patterns, then orchestrates AI agents for deep inspection.
+Scan large repositories 10x faster (or more) while catching what others miss.
 
 </div>
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/parsentry)
-
-Parsentry is a PAR (Principal-Action-Resource) based security scanner that combines static code analysis with LLMs to detect vulnerabilities across multiple languages including IaC. It provides comprehensive multi-language security analysis with AI-powered vulnerability detection.
 
 ### Features
 
