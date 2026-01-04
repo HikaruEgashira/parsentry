@@ -419,6 +419,33 @@ Use these exact values:
         pattern_context: Option<&PatternContext>,
         related_functions: Option<&[(&str, &str, usize)]>,
     ) -> String {
+        self.build_file_reference_prompt_internal(file_path, pattern_context, related_functions, None)
+    }
+
+    /// Build a prompt using file references with SARIF output.
+    pub fn build_file_reference_prompt_with_sarif(
+        &self,
+        file_path: &Path,
+        pattern_context: Option<&PatternContext>,
+        related_functions: Option<&[(&str, &str, usize)]>,
+        sarif_output_path: &Path,
+    ) -> String {
+        self.build_file_reference_prompt_internal(
+            file_path,
+            pattern_context,
+            related_functions,
+            Some(sarif_output_path),
+        )
+    }
+
+    /// Internal implementation for file reference prompts.
+    fn build_file_reference_prompt_internal(
+        &self,
+        file_path: &Path,
+        pattern_context: Option<&PatternContext>,
+        related_functions: Option<&[(&str, &str, usize)]>,
+        sarif_output_path: Option<&Path>,
+    ) -> String {
         let related_section = if let Some(functions) = related_functions {
             if functions.is_empty() {
                 String::new()
@@ -461,30 +488,83 @@ Use these exact values:
 
         let safe_file_path = sanitize_for_prompt(&file_path.display().to_string());
 
-        format!(
-            r#"You are a security vulnerability analyzer.
+        let output_section = if let Some(sarif_path) = sarif_output_path {
+            format!(
+                r#"
+## Output Instructions
 
-## Analysis Target
-{file_path}
-{pattern_section}{related_section}
-## Instructions
+**IMPORTANT**: You MUST output the analysis result as a SARIF JSON file.
 
-Analyze the target for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
+1. First, read the target file to analyze the code
+2. Perform security analysis using the PAR framework
+3. If vulnerabilities are found (confidence >= 70), use the Write tool to save SARIF JSON to: `{}`
 
-1. **Identify Principals**: Find untrusted data sources (user input, external APIs, file uploads)
-2. **Identify Resources**: Find sensitive operations (database queries, file system, command execution)
-3. **Evaluate Actions**: Assess security controls between principals and resources
-4. **Detect Policy Violations**: Identify paths where untrusted data reaches resources without proper validation
+The SARIF file MUST follow this exact structure:
 
-## PAR Analysis Framework
+```json
+{{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [{{
+    "tool": {{
+      "driver": {{
+        "name": "Parsentry",
+        "version": "0.14.0",
+        "rules": [
+          {{
+            "id": "SQLI",
+            "name": "SQL Injection",
+            "shortDescription": {{ "text": "..." }}
+          }}
+        ]
+      }}
+    }},
+    "results": [
+      {{
+        "ruleId": "SQLI",
+        "ruleIndex": 0,
+        "level": "error",
+        "message": {{ "text": "...", "markdown": "..." }},
+        "locations": [{{
+          "physicalLocation": {{
+            "artifactLocation": {{ "uri": "path/to/file.py" }},
+            "region": {{ "startLine": 42 }}
+          }}
+        }}],
+        "properties": {{ "confidence": 0.9 }}
+      }}
+    ]
+  }}]
+}}
+```
 
-- **Principal**: Untrusted data sources (user input, external APIs, environment variables)
-- **Action**: Security controls (validation, sanitization, authentication, authorization)
-- **Resource**: Sensitive operations (DB, file system, command execution, network)
+**CRITICAL REQUIRED FIELDS**:
+- Each rule in `rules` array MUST have: `id`, `name`, `shortDescription`
+- Each result MUST have: `ruleId`, `ruleIndex` (index of the rule in rules array), `level`, `message`, `locations`
+- `ruleIndex` MUST match the index of the corresponding rule in the `rules` array (0-based)
 
+Vulnerability Types (ruleId/name):
+- SQLI / SQL Injection
+- XSS / Cross-Site Scripting
+- RCE / Remote Code Execution
+- LFI / Local File Inclusion
+- SSRF / Server-Side Request Forgery
+- AFO / Arbitrary File Operation
+- IDOR / Insecure Direct Object Reference
+
+Write the detailed analysis in `message.markdown` field in {}.
+
+If no vulnerability found or confidence < 0.7, do NOT create the SARIF file.
+"#,
+                sarif_path.display(),
+                if self.language == "ja" { "Japanese" } else { "English" }
+            )
+        } else {
+            format!(
+                r#"
 ## Output Format
 
-{lang_instruction}
+{}
 
 Respond with a JSON object containing:
 
@@ -506,7 +586,32 @@ Respond with a JSON object containing:
   }}
 }}
 ```
+"#,
+                lang_instruction
+            )
+        };
 
+        format!(
+            r#"You are a security vulnerability analyzer.
+
+## Analysis Target
+{file_path}
+{pattern_section}{related_section}
+## Instructions
+
+Analyze the target for security vulnerabilities using the PAR (Principal-Action-Resource) framework:
+
+1. **Identify Principals**: Find untrusted data sources (user input, external APIs, file uploads)
+2. **Identify Resources**: Find sensitive operations (database queries, file system, command execution)
+3. **Evaluate Actions**: Assess security controls between principals and resources
+4. **Detect Policy Violations**: Identify paths where untrusted data reaches resources without proper validation
+
+## PAR Analysis Framework
+
+- **Principal**: Untrusted data sources (user input, external APIs, environment variables)
+- **Action**: Security controls (validation, sanitization, authentication, authorization)
+- **Resource**: Sensitive operations (DB, file system, command execution, network)
+{output_section}
 ## Important Notes
 
 - confidence_score: Set to 0 if no vulnerability is found
@@ -516,7 +621,7 @@ Respond with a JSON object containing:
             file_path = safe_file_path,
             pattern_section = pattern_section,
             related_section = related_section,
-            lang_instruction = lang_instruction,
+            output_section = output_section,
         )
     }
 }
