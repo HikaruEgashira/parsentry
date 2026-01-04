@@ -340,7 +340,10 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         &env_vars
     )?;
 
-    let final_args = config.to_args();
+    let mut final_args = config.to_args();
+
+    // Preserve CLI-only options that are not in config
+    final_args.filter_lang = args.filter_lang.clone();
 
     validate_scan_args(&final_args)?;
 
