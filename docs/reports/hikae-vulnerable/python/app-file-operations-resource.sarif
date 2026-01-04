@@ -1,0 +1,80 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "shortDescription": {
+                "text": "ユーザー入力がファイルパスとして直接使用され、任意のファイルを読み込める脆弱性"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "検証なしのファイル操作により、システム上の任意のファイルへのアクセスが可能"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Local File Inclusion vulnerability detected in /lfi endpoint",
+            "markdown": "### Local File Inclusion (LFI) 脆弱性\n\n**概要**: `/lfi` エンドポイントで、ユーザーが提供するファイルパスが検証なしに `open()` 関数に渡されている。\n\n**流れ**:\n1. **Principal**: `request.args.get(\"file\", \"\")` からユーザー入力を取得\n2. **Resource**: `open(file_path, 'r')` でファイルをオープンして読み込み\n3. **Action**: 入力値に対する検証がない\n   - パストラバーサル対策がない\n   - ホワイトリスト制限がない\n   - ファイルシステムアクセス制限がない\n\n**攻撃シナリオ**:\n- `/lfi?file=/etc/passwd` → システムパスワードファイル読み込み\n- `/lfi?file=/etc/hosts` → ネットワーク設定ファイル読み込み\n- `/lfi?file=../../etc/passwd` → パストラバーサルによるディレクトリ階層外のファイル読み込み\n- `/lfi?file=/proc/self/environ` → 環境変数の読み込み\n\n**影響**: \n- 機密情報の開示（設定ファイル、秘密鍵、パスワード等）\n- システム情報の漏洩\n- 他の攻撃へのステップストーン\n\n**CWE**: CWE-22 (Improper Limitation of a Pathname to a Restricted Directory), CWE-73 (External Control of File Name or Path)\n\n**CVSS**: 7.5 (High) - Confidentiality Impact: High\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py"
+                },
+                "region": {
+                  "startLine": 364
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Arbitrary File Operation vulnerability in file read operation",
+            "markdown": "### Arbitrary File Operation (AFO) 脆弱性\n\n**概要**: `/lfi` エンドポイント（356-383行目）において、ユーザー提供のパスを直接ファイル操作に使用している。\n\n**詳細分析**:\n\n**脆弱なコード**:\n```python\nfile_path = request.args.get(\"file\", \"\")  # Line 359: ユーザー入力を直接取得\n\nif file_path:\n    try:\n        with open(file_path, 'r') as f:  # Line 364: 検証なしでファイルオープン\n            content = f.read()\n    except Exception as e:\n        content = f\"Error reading file: {e}\"\n```\n\n**主な問題**:\n1. **入力検証の欠如**: ファイルパスに対する検証がない\n2. **パストラバーサル対策なし**: `../` シーケンスをフィルタリングしていない\n3. **アクセス制限なし**: 読み込み可能なディレクトリを制限していない\n4. **エラーメッセージ**: エラーメッセージでシステム情報を露出する可能性\n\n**関連する脆弱なコード**:\n- 行 359: `file_path = request.args.get(\"file\", \"\")` - 完全信頼の入力\n- 行 364: `open(file_path, 'r')` - 検証なしのファイルオープン\n- 行 381: `<p>Try: /etc/passwd, /etc/hosts, ../../etc/passwd</p>` - 脆弱性の実例を提示\n\n**推奨修正**:\n```python\nimport os\nfrom pathlib import Path\n\n# 許可されたディレクトリを制限\nALLOWED_DIRECTORY = \"/app/allowed_files/\"\n\nfile_path = request.args.get(\"file\", \"\")\nif file_path:\n    # 1. パスを絶対パスに正規化\n    real_path = Path(ALLOWED_DIRECTORY) / file_path\n    real_path = real_path.resolve()\n    \n    # 2. 許可されたディレクトリ内にあるか確認\n    if not str(real_path).startswith(str(Path(ALLOWED_DIRECTORY).resolve())):\n        content = \"Error: Access denied\"\n    else:\n        try:\n            with open(real_path, 'r') as f:\n                content = f.read()\n        except Exception as e:\n            content = \"Error reading file\"\n```\n\n**CWE**: CWE-22 (Improper Limitation of a Pathname to a Restricted Directory)\n\n**CVSS**: 7.5 (High) - Confidentiality Impact: High\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py"
+                },
+                "region": {
+                  "startLine": 356
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        }
+      ]
+    }
+  ]
+}

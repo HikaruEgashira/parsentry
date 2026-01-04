@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "shortDescription": {
+                "text": "Arbitrary Python code execution via eval() function"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution vulnerability detected",
+            "markdown": "### リモートコード実行（RCE）脆弱性\n\n**脆弱性の概要**:\nユーザーが送信するHTTPリクエストボディのJSONから取得した`code`パラメータが、入力検証なしに直接Python `eval()`関数に渡されています。\n\n**攻撃シナリオ**:\n1. 攻撃者が悪意あるPythonコード（例：`__import__('os').system('rm -rf /')` など）を含むJSONリクエストを送信\n2. サーバー上で任意のコードが実行される\n3. ファイルシステムへのアクセス、データベース操作、他のシステムコマンドの実行が可能\n\n**PAR分析**:\n- **Principal（プリンシパル）**: 外部ユーザーからのHTTPリクエスト\n- **Action（アクション）**: セキュリティ制御なし - 入力検証、サニタイゼーション、サンドボックス化が全く実施されていない\n- **Resource（リソース）**: `eval()`による任意のPythonコード実行\n\n**CVSS評価**: 極度に危険 (CVSS v3.1: 9.8)\n\n**修復方法**:\n1. `eval()`の使用を完全に廃止する\n2. ホワイトリストベースの入力検証を実装する\n3. サンドボックス環境の使用を検討する（RestrictedPythonなど）\n4. AST（Abstract Syntax Tree）を使用した安全なコード解析の実装"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/api.py"
+                },
+                "region": {
+                  "startLine": 278
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        }
+      ]
+    }
+  ]
+}

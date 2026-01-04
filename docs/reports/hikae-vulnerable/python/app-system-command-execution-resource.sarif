@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "shortDescription": {
+                "text": "Unsanitized user input passed to os.system() allows arbitrary command execution"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution via os.system() with unsanitized user input",
+            "markdown": "## コマンドインジェクション脆弱性\n\n### 脆弱性の詳細\n\n**パターン**: `os.system()` による命令実行\n\n**PAR分析結果**:\n\n#### Principal（実行主体）\n- ユーザーからのHTTPリクエストパラメータ `hostname` と `count`\n- 320-321行目で `request.args.get()` により取得\n- 信頼できないデータソース\n\n#### Resource（リソース）\n- 330行目: `os.system(f\"ping -c 1 {hostname} > {temp_file}\")`\n- 326行目: `os.popen(f\"ping -c {count} {hostname}\")`\n- システムシェルによるコマンド実行\n\n#### Action（セキュリティ制御）\n- **制御がない**: ユーザー入力に対する検証やサニタイズが完全に欠落\n- **直接埋め込み**: ユーザー入力をそのままシェルコマンドに埋め込み\n\n### 攻撃シナリオ\n\n```\nGET /cmdi?hostname=localhost;id&count=1\nGET /cmdi?hostname=localhost|whoami&count=1\nGET /cmdi?hostname=$(cat /etc/passwd)&count=1\nGET /cmdi?hostname=`rm -rf /`&count=1\n```\n\n### 脆弱性の深刻度\n\n- **CWE**: CWE-78 (Improper Neutralization of Special Elements used in an OS Command)\n- **CVSS**: 9.8 (Critical)\n- **信頼度**: 95%\n\nユーザー入力が直接OSコマンドに使用されており、完全なリモートコード実行が可能です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py"
+                },
+                "region": {
+                  "startLine": 330
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution via os.popen() with unsanitized user input",
+            "markdown": "## コマンドインジェクション脆弱性（os.popen）\n\n### 脆弱性の詳細\n\n**パターン**: `os.popen()` による命令実行\n\n**PAR分析結果**:\n\n#### Principal（実行主体）\n- ユーザーからのHTTPリクエストパラメータ `hostname` と `count`\n- 320-321行目で `request.args.get()` により取得\n\n#### Resource（リソース）\n- 326行目: `os.popen(f\"ping -c {count} {hostname}\")`\n- システムシェルによるコマンド実行\n\n#### Action（セキュリティ制御）\n- 検証なし、サニタイズなし、ホワイトリスト検証なし\n\n### 攻撃シナリオ\n\n```\nGET /cmdi?hostname=localhost;whoami&count=1\nGET /cmdi?count=1;cat /etc/passwd&hostname=localhost\n```\n\n### 脆弱性の深刻度\n\n- **CWE**: CWE-78 (OS Command Injection)\n- **CVSS**: 9.8 (Critical)\n- **信頼度**: 95%"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py"
+                },
+                "region": {
+                  "startLine": 326
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}
