@@ -458,25 +458,50 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     printer.status("Discovered", &format!("{} source files", files.len()));
 
-    // Collect all pattern matches across all files
+    // Collect all pattern matches across all files (parallel processing)
+    // Use higher concurrency for I/O-bound operations (4x CPU cores)
+    let concurrency = (num_cpus::get() * 4).max(16);
+    let root_dir_arc = Arc::new(root_dir.clone());
+    let file_results: Vec<_> = stream::iter(files.clone())
+        .map(|file_path| {
+            let root_dir = Arc::clone(&root_dir_arc);
+            async move {
+                tokio::task::spawn_blocking(move || {
+                    std::fs::read_to_string(&file_path)
+                        .ok()
+                        .and_then(|content| {
+                            // Skip files with more than 50,000 characters
+                            if content.len() > 50_000 {
+                                return None;
+                            }
+
+                            let filename = file_path.to_string_lossy();
+                            let lang = FileClassifier::classify(&filename, &content);
+
+                            let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
+                            let matches = patterns.get_pattern_matches(&content);
+
+                            Some(
+                                matches
+                                    .into_iter()
+                                    .map(|pattern_match| (file_path.clone(), pattern_match))
+                                    .collect::<Vec<_>>()
+                            )
+                        })
+                })
+                .await
+                .ok()
+                .flatten()
+            }
+        })
+        .buffer_unordered(concurrency)
+        .collect()
+        .await;
+
     let mut all_pattern_matches: Vec<(PathBuf, PatternMatch)> = Vec::new();
-
-    for file_path in &files {
-        if let Ok(content) = std::fs::read_to_string(file_path) {
-            // Skip files with more than 50,000 characters
-            if content.len() > 50_000 {
-                continue;
-            }
-
-            let filename = file_path.to_string_lossy();
-            let lang = FileClassifier::classify(&filename, &content);
-
-            let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
-            let matches = patterns.get_pattern_matches(&content);
-
-            for pattern_match in matches {
-                all_pattern_matches.push((file_path.clone(), pattern_match));
-            }
+    for results in file_results {
+        if let Some(matches) = results {
+            all_pattern_matches.extend(matches);
         }
     }
 
