@@ -5,13 +5,19 @@
 
 mod executor;
 mod parser;
-mod prompt;
 pub mod stream;
 
 pub use executor::{CodexError, CodexExecutor, CodexOutput, FileOutputResult};
 pub use parser::{CodexResponse, ParAnalysis, VulnerabilityInfo};
-pub use prompt::{PromptBuilder, PatternContext};
 pub use stream::{ChannelCallback, NoOpCallback, ResultMessage, StreamCallback, StreamEvent};
+
+// Re-export from parsentry-prompt for backward compatibility
+pub use parsentry_prompt::{
+    PatternContext, Prompt, PromptBuilder, SecurityAnalysisPrompt, VerificationPrompt,
+    FileReferencePrompt, IacAnalysisPrompt, TargetFile, PocMode, OutputFormat,
+    RelatedFunction, IacType, ComplianceFramework, IacFocusArea,
+};
+pub use parsentry_i18n::Language;
 
 use std::path::PathBuf;
 

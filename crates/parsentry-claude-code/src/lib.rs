@@ -11,13 +11,19 @@
 
 mod executor;
 mod parser;
-mod prompt;
 pub mod stream;
 
 pub use executor::{ClaudeCodeExecutor, ClaudeCodeOutput, FileOutputResult};
 pub use parser::{ClaudeCodeResponse, ParAnalysis, VulnerabilityInfo};
-pub use prompt::{PatternContext, PromptBuilder};
 pub use stream::{ChannelCallback, NoOpCallback, ResultMessage, StreamCallback, StreamEvent, StreamMessage};
+
+// Re-export from parsentry-prompt for backward compatibility
+pub use parsentry_prompt::{
+    PatternContext, Prompt, PromptBuilder, SecurityAnalysisPrompt, VerificationPrompt,
+    FileReferencePrompt, IacAnalysisPrompt, TargetFile, PocMode, OutputFormat,
+    RelatedFunction, IacType, ComplianceFramework, IacFocusArea,
+};
+pub use parsentry_i18n::Language;
 
 use std::path::PathBuf;
 

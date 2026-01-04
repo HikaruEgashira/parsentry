@@ -1550,6 +1550,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "parsentry-i18n",
+ "parsentry-prompt",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -1565,6 +1567,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "parsentry-i18n",
+ "parsentry-prompt",
  "reqwest",
  "serde",
  "serde_json",
@@ -1609,6 +1613,14 @@ dependencies = [
  "tree-sitter-ruby",
  "tree-sitter-rust",
  "tree-sitter-typescript",
+]
+
+[[package]]
+name = "parsentry-prompt"
+version = "0.14.0"
+dependencies = [
+ "parsentry-core",
+ "parsentry-i18n",
 ]
 
 [[package]]
