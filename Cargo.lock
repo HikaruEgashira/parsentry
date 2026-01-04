@@ -1482,6 +1482,7 @@ dependencies = [
  "indicatif",
  "insta",
  "log",
+ "num_cpus",
  "octocrab",
  "parsentry-analyzer",
  "parsentry-cache",
