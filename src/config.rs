@@ -986,6 +986,7 @@ use_cache = true
             mvra_cache: self.mvra.use_cache,
             cache: self.cache.enabled,
             cache_only: false,  // CLI flags are applied in scan command
+            filter_lang: None,  // CLI option only
         }
     }
 }
