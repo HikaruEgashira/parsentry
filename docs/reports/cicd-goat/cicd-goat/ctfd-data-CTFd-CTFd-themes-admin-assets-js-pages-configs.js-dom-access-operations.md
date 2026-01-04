@@ -5,7 +5,7 @@
 - **ファイルパス**: `repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js`
 - **検出パターン**: DOM access operations
 
-![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 75**
+![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 80**
 
 ## 脆弱性タイプ
 
@@ -15,20 +15,20 @@
 
 ### Principals (データ源)
 
-- **User-controlled JSON keys from theme settings editor** - Untrusted
+- **User-supplied HTML/CSS in theme header via CodeMirror editor** - Untrusted
 
 ### Actions (セキュリティ制御)
 
-- **No validation of key names before DOM selector construction** - Missing
+- **HTMLMixed mode accepts arbitrary HTML without sanitization or validation** - Bypassed
 
 ### Resources (操作対象)
 
-- **DOM element selection and manipulation** - Critical
+- **Theme configuration stored server-side and delivered to all site visitors** - Critical
 
 ### Policy Violations
 
-- **XSS**: theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])
-  - Severity: warning | Confidence: 75%
+- **XSS**: CodeMirror input → getDoc().setValue() → patch_config_list() API → Server storage → Client-side rendering
+  - Severity: warning | Confidence: 80%
 
 ## マッチしたソースコード
 
@@ -38,27 +38,47 @@ document.querySelector
 
 ## 詳細解析
 
-### DOM-based XSS 脆弱性
+## テーマヘッダーの XSS 脆弱性
 
-**箇所**: `configs.js:385`
+### 問題の説明
+Line 317-325 で `document.getElementById("theme-header")` により、HTMLMixed モードの CodeMirror エディタが初期化されています。このエディタはユーザー入力を受け付け、HTML/CSS コンテンツを管理します。
 
-**問題点**:
-```javascript
-var ctrl = form.find(`[name='${key}']`);
+### PAR フレームワーク分析
+
+**Principal (信頼できない情報源)**
+- ユーザーが CodeMirror エディタを通じて入力するテーマヘッダーHTML
+- サーバーから返されたテーマヘッダー設定値
+
+**Action (セキュリティ制御)**
+- HTMLMixed モードでの直接入力受け入れ
+- バリデーションやサニタイズが見当たらない
+- ユーザー権限チェックなし（管理者のみとしても、XSS は内部脅威になり得る）
+
+**Resource (攻撃対象)**
+- `theme_header_editor.getDoc().setValue(new_css)` (Line 431)
+- サーバー設定として保存される可能性
+- 他のユーザーに配信されるテーマコンテンツ
+
+### データフロー
+```
+ユーザー入力 (CodeMirror HTMLMixed) → 
+getValue() 取得 → 
+serializeJSON() で JSON化 → 
+CTFd.api.patch_config_list() でサーバー送信 → 
+他ユーザーが受信・レンダリング → 
+XSS 実行
 ```
 
-テーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。
+### 攻撃シナリオ
+1. 攻撃者が管理画面にアクセス
+2. テーマヘッダーエディタに悪意ある JavaScript を含むHTML を入力
+3. 例: `<style id="theme-color">\n<script>alert('xss')</script>\n</style>`
+4. 設定を保存
+5. 他のユーザーがサイトを訪問時に、テーマヘッダーが注入スクリプトを実行
 
-**攻撃ベクトル**:
-- JSONに`"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能
-- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される
-
-**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)
-
-**Action**: セレクタ構築時のバリデーション不足
-
-**Resource**: DOM操作と属性値の設定
-
-**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`
-
+### 推奨される改善
+1. HTML入力の厳密なバリデーション（ホワイトリストベース）
+2. DOMPurify ライブラリ等を使用したサニタイズ
+3. Content Security Policy (CSP) ヘッダーの導入
+4. 入力の HTML エスケープ処理
 

@@ -2,7 +2,7 @@
 
 ## ファイル情報
 
-- **ファイルパス**: `repo/ctfd/data/CTFd/utils/exports/__init__.py`
+- **ファイルパス**: `repo/ctfd/data/CTFd/__init__.py`
 - **検出パターン**: SQL execution resource
 
 ![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 80**
@@ -33,7 +33,7 @@
 ## マッチしたソースコード
 
 ```python
-side_db.engine.execute
+cursor.execute
 ```
 
 ## 詳細解析

@@ -33,7 +33,7 @@
 ## マッチしたソースコード
 
 ```javascript
-document.getElementById
+document.querySelector
 ```
 
 ## 詳細解析

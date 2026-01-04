@@ -33,7 +33,7 @@
 ## マッチしたソースコード
 
 ```python
-open(trust_bundle, "rb")
+open(cafile)
 ```
 
 ## 詳細解析
