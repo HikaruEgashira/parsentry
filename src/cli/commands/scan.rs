@@ -20,7 +20,8 @@ use crate::response::{from_codex_response, Response, ResponseExt, VulnType};
 
 use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_cache::Cache;
-use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, PatternContext, PromptBuilder, StreamCallback};
+use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, StreamCallback};
+use parsentry_prompt::{PatternContext, PromptBuilder};
 #[allow(unused_imports)]
 use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
 
