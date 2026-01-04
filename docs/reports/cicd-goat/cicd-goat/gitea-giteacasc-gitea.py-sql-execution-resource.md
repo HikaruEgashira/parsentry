@@ -33,7 +33,7 @@
 ## マッチしたソースコード
 
 ```python
-cur.execute
+con.execute
 ```
 
 ## 詳細解析

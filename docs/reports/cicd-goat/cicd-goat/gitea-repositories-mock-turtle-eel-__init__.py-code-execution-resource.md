@@ -33,7 +33,7 @@
 ## マッチしたソースコード
 
 ```python
-exec('%s = lambda *args: _mock_call("%s", args)' % (f, f), globals())
+exec('%s = lambda *args: _js_call("%s", args)' % (f, f), globals())
 ```
 
 ## 詳細解析

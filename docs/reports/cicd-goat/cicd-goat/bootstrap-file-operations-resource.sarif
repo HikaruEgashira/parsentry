@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Unvalidated file paths from directory listing can lead to arbitrary file write operations"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "ファイル操作リソースの脆弱性: os.listdir()から取得されるファイル名が直接ファイル書き込み操作に使用されている",
+            "markdown": "## 脆弱性の詳細\n\n### Principal (主体)\n`os.listdir(join(\"ci\", \"templates\"))` から取得されるファイル名\n\n### Action (セキュリティ制御)\nバリデーションなし - ファイル名は検証されずに使用されている\n\n### Resource (リソース)\n`open(join(base_path, name), \"w\")` による任意のファイル書き込み\n\n### 攻撃シナリオ\n1. **シンボリックリンク攻撃**: `ci/templates/` ディレクトリに `../../../etc/passwd` のようなシンボリックリンクが存在する場合、意図したディレクトリ外のファイルに書き込み可能\n2. **パストラバーサル**: ファイル名に `../` のような相対パスが含まれている場合、基本ディレクトリ外への書き込みが可能\n\n### データフロー\n```\nos.listdir(\"ci/templates\") → name → join(base_path, name) → open(..., \"w\") → 任意のファイル書き込み\n```\n\n### 推奨される修正\n1. ファイル名のバリデーション: `os.path.basename()` を使用して相対パス成分を除去\n2. ホワイトリスト検証: テンプレートファイルの拡張子や名前パターンの検証\n3. `os.path.realpath()` を使用して実際のパスを検証し、意図したディレクトリ内であることを確認"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/reportcov/ci/bootstrap.py"
+                },
+                "region": {
+                  "startLine": 73,
+                  "endLine": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "os.listdir() から取得されるファイル名（外部から操作可能）",
+            "action": "セキュリティ制御なし - ファイル名の検証やサニタイゼーションが実施されていない",
+            "resource": "ファイルシステムへの書き込み操作 (open(..., 'w'))",
+            "data_flow": "os.listdir(\"ci/templates\") → name → join(base_path, name) → open(..., \"w\")"
+          }
+        }
+      ]
+    }
+  ]
+}

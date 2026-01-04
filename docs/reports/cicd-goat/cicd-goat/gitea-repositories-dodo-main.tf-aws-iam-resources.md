@@ -33,42 +33,20 @@
 ## マッチしたソースコード
 
 ```hcl
-resource "aws_iam_policy" "replication" {
-  name = "tf-iam-role-policy-replication-12345"
+resource "aws_iam_role" "replication" {
+  name = "tf-iam-role-replication-12345"
 
-  policy = <<POLICY
+  assume_role_policy = <<POLICY
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Action": [
-        "s3:GetReplicationConfiguration",
-        "s3:ListBucket"
-      ],
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "s3.amazonaws.com"
+      },
       "Effect": "Allow",
-      "Resource": [
-        "${aws_s3_bucket.dodo.arn}"
-      ]
-    },
-    {
-      "Action": [
-        "s3:GetObjectVersionForReplication",
-        "s3:GetObjectVersionAcl",
-         "s3:GetObjectVersionTagging"
-      ],
-      "Effect": "Allow",
-      "Resource": [
-        "${aws_s3_bucket.dodo.arn}/*"
-      ]
-    },
-    {
-      "Action": [
-        "s3:ReplicateObject",
-        "s3:ReplicateDelete",
-        "s3:ReplicateTags"
-      ],
-      "Effect": "Allow",
-      "Resource": "${aws_s3_bucket.backup.arn}/*"
+      "Sid": ""
     }
   ]
 }

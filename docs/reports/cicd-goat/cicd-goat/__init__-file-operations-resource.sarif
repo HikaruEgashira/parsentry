@@ -1,0 +1,65 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "LFI",
+              "name": "Local File Inclusion",
+              "shortDescription": {
+                "text": "Unvalidated path parameter allows reading arbitrary files from the filesystem"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Local File Inclusion vulnerability: User-supplied path parameter is used without proper validation",
+            "markdown": "## Local File Inclusion (LFI) 脆弱性\n\n**脅威分類:** T1083 (ファイルおよびディレクトリの発見), T1005 (データソースの収集)\n\n### 脆弱性の詳細\n\n`init()` 関数の `path` パラメータがユーザー入力を受け取っており、これが適切に検証されないまま `os.walk()` で処理されています。\n\n### PAR 分析\n\n**Principal（主体）:**\n- `init()` 関数の `path` 引数：呼び出し元から任意の値を受け取る\n\n**Action（アクション）:**\n- `_get_real_path()` による絶対パス変換\n- `allowed_extensions` による拡張子フィルタリング\n- しかし、パス入力自体に対する検証がない\n\n**Resource（リソース）:**\n- ローカルファイルシステムの読取\n- 拡張子が `.js`, `.html`, `.txt`, `.htm`, `.xhtml`, `.vue` のファイル内容を読取可能\n\n### 攻撃パス\n\n```\nユーザー入力（path）\n    ↓\ninit(path) 関数\n    ↓\n_get_real_path(path) → os.path.abspath(path)\n    ↓\nos.walk(root_path)\n    ↓\nopen(os.path.join(root, name))\n    ↓\nファイル内容の読取と処理\n```\n\n### 具体例\n\n攻撃者は以下のように呼び出すことで、プロジェクト外のファイルを読み込める可能性があります：\n```python\ninit('../../etc')  # または init('..\\\\..\\\\sensitive')\n```\n\n許可された拡張子のファイル（例：`.txt` ファイル）が存在すれば、その内容を読み込まれます。\n\n### リスク評価\n\n- **信頼度:** 70%\n- **影響度:** 中程度（許可された拡張子のファイルのみ読取可能だが、機密情報が含まれる可能性）\n- **実現性:** 中程度（アプリケーションが `init()` をユーザー入力で呼び出す場合に発生）\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mock-turtle/eel/__init__.py"
+                },
+                "region": {
+                  "startLine": 104,
+                  "endLine": 134
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mock-turtle/eel/__init__.py"
+                },
+                "region": {
+                  "startLine": 116
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7,
+            "principal": "init() 関数の 'path' パラメータ（ユーザー入力）",
+            "action": "拡張子フィルタリングのみ。パス検証なし。",
+            "resource": "ローカルファイルシステムの読取（open() 操作）",
+            "data_flow": "path → _get_real_path() → os.walk() → open(os.path.join(root, name))",
+            "attack_vector": ["T1083", "T1005"]
+          }
+        }
+      ]
+    }
+  ]
+}
