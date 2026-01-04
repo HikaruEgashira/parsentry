@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "shortDescription": {
+                "text": "Unvalidated user input directly embedded in SQL queries"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL Injection vulnerability detected in LIKE clause",
+            "markdown": "## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py"
+                },
+                "region": {
+                  "startLine": 232
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL Injection vulnerability detected in ORDER BY clause",
+            "markdown": "## SQL Injection - ORDER BY句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`order_by`がORDER BY句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `order` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\nORDER BY句での盲目的なSQL Injectionが可能：\n```\norder=id; DROP TABLE users; --\norder=(CASE WHEN (SELECT COUNT(*) FROM users) > 0 THEN 1 ELSE 0 END)\n```\n\n### 推奨される修正方法\n1. ホワイトリストベースの入力検証\n2. 許可されたカラム名のマッピング\n3. パラメータ化クエリの使用\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery2 = f\"SELECT * FROM users ORDER BY {order_by}\"\nresults2 = cursor.execute(query2).fetchall()\n\n# 修正されたコード\nallowed_columns = ['id', 'username', 'email']\nif order_by not in allowed_columns:\n    order_by = 'id'\nquery2 = f\"SELECT * FROM users ORDER BY {order_by}\"\nresults2 = cursor.execute(query2).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py"
+                },
+                "region": {
+                  "startLine": 233
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        }
+      ]
+    }
+  ]
+}

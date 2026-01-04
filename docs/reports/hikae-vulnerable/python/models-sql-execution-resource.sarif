@@ -1,0 +1,169 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "shortDescription": {
+                "text": "SQL injection vulnerability detected where untrusted user input is concatenated into SQL queries without parameterization"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability: User input 'username' and 'password' are directly interpolated into SQL query using string formatting",
+            "markdown": "## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py"
+                },
+                "region": {
+                  "startLine": 92
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability: User input 'user_id' is directly concatenated into SQL query without parameterization",
+            "markdown": "## get_user_by_id()におけるSQL Injection\n\n**Principal**: ユーザー入力（`user_id`パラメータ）\n\n**Action**: セキュリティ制御なし\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n119行目でユーザー提供の`user_id`が直接SQL文に挿入されている。攻撃者は任意のSQLコードを注入可能。\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py"
+                },
+                "region": {
+                  "startLine": 119
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability: User input 'query' is directly interpolated in LIKE clause without parameterization",
+            "markdown": "## search_documents()におけるSQL Injection\n\n**Principal**: ユーザー入力（検索クエリ`query`パラメータ）\n\n**Action**: セキュリティ制御なし。authorization checkも不在（IDOR脆弱性も併存）\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n172行目でユーザー提供の`query`が直接LIKE句に挿入されている。SQLインジェクションで全ドキュメント取得、IDORで他ユーザーのドキュメント取得が可能。\n\n**推奨修正**:\nパラメータ化クエリを使用し、owner_idの確認も追加してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py"
+                },
+                "region": {
+                  "startLine": 172
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability: User input 'doc_id' is directly concatenated into SQL query without parameterization",
+            "markdown": "## get_document_content()におけるSQL Injection\n\n**Principal**: ユーザー入力（`doc_id`パラメータ）\n\n**Action**: セキュリティ制御なし\n\n**Resource**: SQLデータベース（cursor.execute()）およびファイルシステム（open()）\n\n**脆弱性の詳細**:\n201行目でユーザー提供の`doc_id`が直接SQL文に挿入されている。さらに、取得したファイルパスに対する検証がないため、Path Traversalと組み合わされて任意ファイル読取が可能。\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py"
+                },
+                "region": {
+                  "startLine": 201
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability: User input 'action', 'details', 'ip_address' are directly concatenated into INSERT statement without parameterization",
+            "markdown": "## log_action()におけるSQL Injection\n\n**Principal**: ユーザー入力（`action`, `details`, `ip_address`パラメータ）\n\n**Action**: セキュリティ制御なし\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n250-253行目でユーザー提供の値が直接INSERT文に挿入されている。複数の注入ポイントが存在し、監査ログの改ざんが可能。\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py"
+                },
+                "region": {
+                  "startLine": 250
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability: User input 'user_id' is directly concatenated into SQL query without parameterization",
+            "markdown": "## get_user_logs()におけるSQL Injection\n\n**Principal**: ユーザー入力（`user_id`パラメータ）\n\n**Action**: セキュリティ制御なし\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n269行目でユーザー提供の`user_id`が直接SQL文に挿入されている。全監査ログの取得、他ユーザーのログアクセスが可能。\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py"
+                },
+                "region": {
+                  "startLine": 269
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        }
+      ]
+    }
+  ]
+}

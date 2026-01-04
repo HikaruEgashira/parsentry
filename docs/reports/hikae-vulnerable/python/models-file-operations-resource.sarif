@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [{
+    "tool": {
+      "driver": {
+        "name": "Parsentry",
+        "version": "0.14.0",
+        "rules": [
+          {
+            "id": "LFI",
+            "name": "Local File Inclusion",
+            "shortDescription": { "text": "Arbitrary file read through unsanitized file path from database" }
+          },
+          {
+            "id": "SQLI",
+            "name": "SQL Injection",
+            "shortDescription": { "text": "SQL injection enabling path traversal attacks" }
+          }
+        ]
+      }
+    },
+    "results": [
+      {
+        "ruleId": "LFI",
+        "ruleIndex": 0,
+        "level": "error",
+        "message": {
+          "text": "Local File Inclusion vulnerability detected",
+          "markdown": "## Local File Inclusion (LFI) 脆弱性\n\n### 位置\nモデルファイルの`get_document_content`メソッド（195行目）\n\n### 脆弱性の詳細\nデータベースから取得したファイルパスに対する検証が行われずに`open()`関数で直接使用されています。\n\n```python\nwith open(file_path, 'r') as f:  # 211行目\n    return f.read()\n```\n\n### PAR分析\n**Principal**: ユーザー入力の`doc_id`（信頼できない）\n**Action**: セキュリティ制御なし。入力値に対するバリデーションや正規化がない\n**Resource**: ファイルシステム（`open()`操作）\n\n### 攻撃ベクトル\n1. SQLインジェクション（200行目）でデータベースクエリを改竄\n2. 任意のファイルパスをレスポンスとして返させる\n3. サーバー上の任意のファイル（/etc/passwd等）を読み込み可能\n\n### 影響\n- システムファイルの読取\n- 認証情報やAPIキーの露出\n- 機密情報の漏洩\n\n### 推奨される修正\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. ファイルパスのホワイトリスト検証\n3. ディレクトリトラバーサル対策（os.path.realpath()で正規化し、許可ディレクトリ内であることを確認）"
+        },
+        "locations": [{
+          "physicalLocation": {
+            "artifactLocation": { "uri": "repo/models.py" },
+            "region": { "startLine": 211 }
+          }
+        }],
+        "properties": { "confidence": 0.9 }
+      },
+      {
+        "ruleId": "SQLI",
+        "ruleIndex": 1,
+        "level": "error",
+        "message": {
+          "text": "SQL Injection vulnerability in get_document_content",
+          "markdown": "## SQL Injection (SQLI) 脆弱性\n\n### 位置\nモデルファイルの`get_document_content`メソッド（195行目）\n\n### 脆弱性の詳細\nユーザー入力の`doc_id`が直接SQLクエリに埋め込まれています。\n\n```python\nquery = f\"SELECT file_path FROM documents WHERE id = {doc_id}\"  # 201行目\ncursor.execute(query)\n```\n\n### PAR分析\n**Principal**: ユーザー入力の`doc_id`（型：文字列、信頼できない）\n**Action**: セキュリティ制御なし。パラメータ化クエリが使用されていない\n**Resource**: データベースクエリの実行（`cursor.execute()`）\n\n### 攻撃シナリオ\n```\nPOST /documents/read\ndoc_id=999 UNION SELECT '/etc/passwd'\n\n改竄後のクエリ：\nSELECT file_path FROM documents WHERE id = 999 UNION SELECT '/etc/passwd'\n```\n\n### 連鎖攻撃\nこのSQLインジェクションにより：\n1. 任意のファイルパスを結果に含められる\n2. その後のLFI脆弱性（211行目）により、任意のファイルが読み込まれる\n3. システムファイルの読取が可能になる\n\n### 影響\n- データベース内容の無許可アクセス\n- ファイルシステムの無許可アクセス（LFIとの組み合わせ）\n- システム情報の漏洩\n\n### 推奨される修正\nパラメータ化クエリ（プリペアドステートメント）を使用：\n```python\nquery = \"SELECT file_path FROM documents WHERE id = ?\"\ncursor.execute(query, (doc_id,))\n```"
+        },
+        "locations": [{
+          "physicalLocation": {
+            "artifactLocation": { "uri": "repo/models.py" },
+            "region": { "startLine": 201 }
+          }
+        }],
+        "properties": { "confidence": 0.9 }
+      }
+    ]
+  }]
+}
