@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Unvalidated file path may allow arbitrary file access"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Unvalidated file path in _is_key_file_encrypted function",
+            "markdown": "## ローカルファイルインクルージョン脆弱性\n\n### 概要\n`_is_key_file_encrypted()` 関数 (558行) が、検証されていない `key_file` パラメータを直接 `open()` で使用しています。\n\n### 脆弱性の詳細\n\n**Principal (実行主体)**:\n- `ssl_wrap_socket()` 関数の呼び出し側から提供される `keyfile` パラメータ\n- 信頼性: 実装によっては不正な入力を受け入れる可能性\n\n**Action (セキュリティ制御)**: \n- **入力検証**: なし - ファイルパス文字列の妥当性チェックがない\n- **パストラバーサル対策**: なし - `../` や絶対パスの検証がない  \n- **シンボリックリンク検証**: なし - `os.path.islink()` でのチェックがない\n- **権限チェック**: なし - ファイルアクセス権限の確認がない\n\n**Resource (リソース)**:\n- ファイルシステム (`open(key_file)`)\n- ログインユーザーの読み込み権限で任意のファイルを読める\n\n### 攻撃シナリオ\n\n1. **パストラバーサル攻撃**:\n   ```python\n   # 攻撃者が以下を入力\n   ssl_wrap_socket(sock, keyfile=\"../../../etc/passwd\")\n   ```\n   - `/etc/passwd` などの機密ファイルが読み込まれる\n   - ファイル内容の一部が例外メッセージに含まれる\n\n2. **ファイル存在確認**:\n   - 例外の有無でファイル存在を判定可能\n   - T1083: ファイルシステムの列挙\n\n3. **情報開示**:\n   - エラーメッセージからファイルパス情報が露出\n   - ファイルアクセス権限の情報が推測可能\n\n### 影響範囲\n- HTTPSクライアント実装\n- リバースプロキシ / TLS in TLSの実装\n- カスタムSSL設定を使用する環境\n\n### 改善提案\n\n1. **入力検証**:\n   ```python\n   import os\n   def _is_key_file_encrypted(key_file: str) -> bool:\n       # 絶対パスに正規化\n       key_file = os.path.abspath(key_file)\n       # シンボリックリンク検証\n       if os.path.islink(key_file):\n           raise ValueError(f\"Key file must not be a symbolic link: {key_file}\")\n   ```\n\n2. **パストラバーサル対策**:\n   ```python\n   # 許可されたディレクトリ配下にあるか確認\n   allowed_dir = os.path.abspath(\"/etc/ssl/private\")\n   if not key_file.startswith(allowed_dir):\n       raise ValueError(f\"Key file outside allowed directory: {key_file}\")\n   ```\n\n3. **例外処理の強化**:\n   ```python\n   try:\n       with open(key_file) as f:\n           for line in f:\n               if \"ENCRYPTED\" in line:\n                   return True\n   except (OSError, IOError) as e:\n       # スタックトレースで情報露出を防ぐ\n       raise SSLError(f\"Failed to read key file\") from e\n   ```\n\n### データフロー\n`ssl_wrap_socket(keyfile)` → `_is_key_file_encrypted(key_file)` → `open(key_file)` → ファイルシステム\n\n### 参考\n- T1005: Data from Local System\n- T1083: File and Directory Discovery  \n- CWE-22: Improper Limitation of a Pathname to a Restricted Directory\n- CWE-426: Untrusted Search Path\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/util/ssl_.py"
+                },
+                "region": {
+                  "startLine": 558
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7,
+            "principal": "keyfile parameter from ssl_wrap_socket() function",
+            "action": "No input validation, path traversal checks, or symlink verification",
+            "resource": "File system access via open(key_file)",
+            "data_flow": "ssl_wrap_socket(keyfile) → _is_key_file_encrypted(key_file) → open(key_file)"
+          }
+        }
+      ]
+    }
+  ]
+}

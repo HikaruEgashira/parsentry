@@ -1,0 +1,83 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Untrusted input used directly in file operations without validation"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Arbitrary File Operation via command-line argument",
+            "markdown": "## 脆弱性分析\n\n### Principal (実行主体)\nコマンドライン引数 `sys.argv[1]` - 完全に信頼できないユーザー入力\n\n### Action (セキュリティ制御)\n入力ファイルパスに対する検証やサニタイゼーションが存在しません。以下の制御が欠落しています：\n- パストラバーサル攻撃への対策\n- ファイルパスの正規化\n- ホワイトリストベースの検証\n\n### Resource (対象リソース)\n`open(sys.argv[1], \"wb\")` - ファイルシステムへの直接的な書き込み操作\n\n### 攻撃フロー\n1. 攻撃者が `python export.py \"../../../etc/passwd\"` を実行\n2. `sys.argv[1]` に制御されたパストラバーサルシーケンスが格納される\n3. バリデーションなくファイルが開かれ、CTFエクスポートデータが任意の場所に書き込まれる\n4. システムの重要なファイルが上書きされたり、権限昇格が発生する可能性\n\n### リスク\n- 任意の場所へのファイル上書き\n- 重要なシステムファイルの破損\n- 権限がある場合、システムの整合性侵害\n- 情報漏洩（既存ファイルを指定した場合）"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/export.py"
+                },
+                "region": {
+                  "startLine": 18,
+                  "endLine": 19
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "principal": "sys.argv[1] - コマンドライン引数（ユーザー入力）",
+            "action": "検証なし - セキュリティ制御が欠落",
+            "resource": "ファイルシステムへの書き込み操作",
+            "data_flow": "sys.argv[1] → open() → ファイル書き込み"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Potential Arbitrary File Operation via config.ctf_name()",
+            "markdown": "## 脆弱性分析\n\n### Principal (実行主体)\n設定値 `config.ctf_name()` - 設定ファイルやデータベースから取得される値\n\n### Action (セキュリティ制御)\n`config.ctf_name()` の出力に対するパストの正規化が行われていません。設定値がパストトラバーサルシーケンスを含む場合、そのまま使用されます。\n\n### Resource (対象リソース)\n`open(full_name, \"wb\")` - ファイルシステムへの書き込み操作\n\n### 攻撃フロー\n1. 攻撃者が CTF名設定を `\"../../../tmp/malicious\"` に変更\n2. `config.ctf_name()` がこの値を返す\n3. `full_name` 変数にパストトラバーサルが含まれたパスが格納される\n4. `open()` がこのパスを直接使用して任意の場所にファイルを書き込む\n\n### リスク\n- 設定が外部から制御可能な場合、ファイルの書き込み先を操作できる\n- ただし `sys.argv[1]` の脆弱性よりは低いリスク（設定の改変が必要）"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/export.py"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 26
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6,
+            "principal": "config.ctf_name() - 設定ファイル/データベースの値",
+            "action": "パス正規化なし - セキュリティ制御が部分的に欠落",
+            "resource": "ファイルシステムへの書き込み操作",
+            "data_flow": "config.ctf_name() → full_name変数 → open() → ファイル書き込み"
+          }
+        }
+      ]
+    }
+  ]
+}

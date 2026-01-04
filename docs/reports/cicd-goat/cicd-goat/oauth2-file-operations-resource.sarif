@@ -1,0 +1,110 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Unsanitized file path parameter used in file operations"
+              }
+            },
+            {
+              "id": "INSECURE_CREDENTIAL_STORAGE",
+              "name": "Insecure Credential Storage",
+              "shortDescription": {
+                "text": "Sensitive credentials stored in plaintext without encryption"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "File path parameter is not properly validated before use in file operations",
+            "markdown": "## パス検証なしでのファイル操作\n\n`oauth2_file`パラメータが直接ファイル操作に使用されています。\n\n### 問題点:\n- `os.path.expanduser()`は使用されていますが、パストラバーサル攻撃を防ぎません\n- ユーザーが`../../../etc/passwd`のようなパスを指定できます\n- ディレクトリトラバーサル攻撃により、任意の場所にファイルを書き込む可能性があります\n\n### PAR分析:\n1. **Principal (主体)**: 関数引数 `oauth2_file` (ユーザー制御)\n2. **Action (制御)**: `os.path.expanduser()`のみ（パストラバーサル対策なし）\n3. **Resource (リソース)**: ファイルシステム書き込み操作\n\n### 影響:\n- 任意のファイルシステムロケーションへの読み書き\n- システム設定ファイルの上書き\n- 権限昇格の可能性\n\n### 対策:\n- `os.path.abspath()`で絶対パスに正規化\n- ホームディレクトリ内のみに制限\n- パストラバーサルシーケンス(`..`, `//`)の検証"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py"
+                },
+                "region": {
+                  "startLine": 120
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py"
+                },
+                "region": {
+                  "startLine": 136
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "principal": "User-controlled oauth2_file parameter",
+            "action": "Minimal path validation using os.path.expanduser() only",
+            "resource": "File system write operation (open with 'w' mode)",
+            "data_flow": "oauth2_file (parameter) -> os.path.expanduser() -> open(oauth2_file, 'w') -> filesystem"
+          }
+        },
+        {
+          "ruleId": "INSECURE_CREDENTIAL_STORAGE",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "OAuth2 credentials and secrets stored in plaintext JSON file",
+            "markdown": "## 平文での認証情報保存\n\nOAuth2トークン、クライアントシークレット、リフレッシュトークンが暗号化なしで平文JSONで保存されています。\n\n### 問題点 (Lines 114-121, 130-137):\n- `google_client_secret`が平文で保存される\n- `google_refresh_token`が平文で保存される\n- JSONファイルがアクセス可能な場合、すべての認証情報が露出\n- ユーザーホームディレクトリ内でも不十分な保護\n- ファイルパーミッションが明示的に指定されていない\n\n### PAR分析:\n1. **Principal (主体)**: ユーザー入力 (`input()`, `getpass.getpass()` で得られるOAuth2認証情報)\n2. **Action (制御)**: 検証なし、暗号化なし、アクセス制御なし\n3. **Resource (リソース)**: ローカルファイルシステム（保護されていないファイル）\n\n### 影響:\n- ファイルシステムアクセスでの認証情報窃取\n- リモートOAuth2トークンの悪用\n- Googleアカウントへのアクセス権限奪取\n- リプレイ攻撃による不正アクセス\n\n### 対策:\n- 認証情報の暗号化（AES等）\n- ファイルのパーミッション設定（0600）\n- OAuth2フローの改善\n- システムキーチェーン/シークレット管理の使用"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py"
+                },
+                "region": {
+                  "startLine": 114,
+                  "endLine": 121
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py"
+                },
+                "region": {
+                  "startLine": 130,
+                  "endLine": 137
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "principal": "User-provided OAuth2 credentials (client_secret, refresh_token, client_id, email_address)",
+            "action": "No encryption, no access control, plaintext JSON storage",
+            "resource": "Local file system (oauth2_file with oauth2_info data)",
+            "data_flow": "User input (google_client_secret, google_refresh_token, etc.) -> json.dump() -> plaintext file -> disk storage -> potential filesystem exposure"
+          }
+        }
+      ]
+    }
+  ]
+}

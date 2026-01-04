@@ -1,0 +1,90 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "shortDescription": {
+                "text": "External command execution without proper validation"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Unrestricted file write via unsanitized template filenames"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "External command execution via subprocess.check_output without proper PATH validation",
+            "markdown": "### RCE脆弱性: subprocess.check_outputによるコマンド実行\n\n**Principal（主体）**: システム環境、PATH環境変数\n\n**Resource（リソース）**: プロセス実行（subprocess.check_output）\n\n**Action（アクション）**: 検証なし\n\n**詳細分析**:\n\n1. **脆弱性箇所**: 63行目\n```python\nfor line in subprocess.check_output(['tox', '--listenvs'], universal_newlines=True).splitlines()\n```\n\n2. **攻撃シナリオ**:\n   - `tox`がインストールされていないまたはPATHに存在しない場合\n   - 攻撃者が同じ名前の悪意あるスクリプトをPATH上に配置\n   - スクリプト実行時に悪意あるコードが実行される\n\n3. **Data Flow**:\n   - システム環境（Principal）→ subprocess実行 → tox出力取得\n   - 取得した環境名を処理（64-71行目）\n   - テンプレート変数に格納（68-71行目）\n   - ファイル生成時に使用（76行目）\n\n4. **影響範囲**: CI/CDパイプラインの完全な侵害\n\n**推奨対策**:\n- 絶対パスでコマンドを指定\n- tox実行前に存在確認\n- 出力結果のサニタイズ"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/reportcov/ci/bootstrap.py"
+                },
+                "region": {
+                  "startLine": 63,
+                  "endLine": 64
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "principal": "System environment, PATH variable",
+            "action": "No validation of tox command location",
+            "resource": "subprocess.check_output process execution",
+            "data_flow": "System environment → subprocess.check_output → output processing → template variables → file generation"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Arbitrary file write due to unsanitized template filenames from os.listdir",
+            "markdown": "### AFO脆弱性: テンプレートファイル名による任意ファイル書き込み\n\n**Principal（主体）**: `ci/templates`ディレクトリ内のファイル名\n\n**Resource（リソース）**: ファイルシステム（ファイル書き込み）\n\n**Action（アクション）**: パス検証なし\n\n**詳細分析**:\n\n1. **脆弱性箇所**: 73-76行目\n```python\nfor name in os.listdir(join(\"ci\", \"templates\")):\n    with open(join(base_path, name), \"w\") as fh:\n        fh.write('# NOTE: this file is auto-generated via ci/bootstrap.py (ci/templates/%s).\\n' % name)\n        fh.write(jinja.get_template(name).render(**template_vars))\n```\n\n2. **攻撃シナリオ**:\n   - 攻撃者が`ci/templates/`ディレクトリに`../../../etc/passwd`という名前のファイルを配置\n   - スクリプト実行時に`join(base_path, \"../../../etc/passwd\")`が評価される\n   - パスを超えた任意の場所へのファイル書き込みが可能\n\n3. **Data Flow**:\n   - テンプレートディレクトリ → os.listdir（ファイル名取得）\n   - ファイル名をパスに直接結合 → open()で書き込み\n   - base_path外への書き込み可能\n\n4. **影響範囲**: \n   - リポジトリ外への任意ファイル書き込み\n   - 設定ファイルの改ざん\n   - システムファイルの破損\n\n**推奨対策**:\n- `os.path.basename()`でディレクトリ成分を除去\n- ファイル名のホワイトリスト検証\n- `pathlib.Path.resolve()`で正規化されたパスを検証"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/reportcov/ci/bootstrap.py"
+                },
+                "region": {
+                  "startLine": 73,
+                  "endLine": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70,
+            "principal": "os.listdir output from ci/templates directory",
+            "action": "No path traversal validation",
+            "resource": "File system write operation",
+            "data_flow": "ci/templates directory → os.listdir → filename → join(base_path, name) → open() write"
+          }
+        }
+      ]
+    }
+  ]
+}
