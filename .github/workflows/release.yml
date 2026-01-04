@@ -131,24 +131,6 @@ jobs:
         with:
           path: artifacts
 
-      - name: Rename artifacts with version
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          cd artifacts
-          for dir in */; do
-            target_name="${dir%/}"
-            target_name="${target_name#parsentry-}"
-
-            if [ -f "${dir}parsentry-${target_name}.tar.gz" ]; then
-              mv "${dir}parsentry-${target_name}.tar.gz" "${dir}parsentry-${VERSION}-${target_name}.tar.gz"
-            fi
-
-            if [ -f "${dir}parsentry-${target_name}.zip" ]; then
-              mv "${dir}parsentry-${target_name}.zip" "${dir}parsentry-${VERSION}-${target_name}.zip"
-            fi
-          done
-          cd ..
-
       - name: Generate SHA256 checksums
         run: |
           cd artifacts
