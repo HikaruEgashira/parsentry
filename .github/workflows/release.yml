@@ -119,7 +119,9 @@ jobs:
         id: version
         run: |
           if [ -n "${{ github.event.inputs.tag }}" ]; then
-            echo "version=${{ github.event.inputs.tag }}" | sed 's/v//' >> $GITHUB_OUTPUT
+            VERSION="${{ github.event.inputs.tag }}"
+            VERSION="${VERSION#v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
