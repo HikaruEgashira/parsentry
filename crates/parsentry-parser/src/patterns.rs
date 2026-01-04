@@ -552,7 +552,7 @@ impl SecurityRiskPatterns {
 
         // Load CI/CD platform patterns and merge into Yaml language
         let cicd_patterns = [
-            include_str!("patterns/yaml.yml"),        // GitHub Actions (existing)
+            include_str!("patterns/github-actions.yml"),  // GitHub Actions
             include_str!("patterns/gitlab-ci.yml"),
             include_str!("patterns/circleci.yml"),
             include_str!("patterns/travis.yml"),
