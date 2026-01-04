@@ -164,17 +164,14 @@ mod tests {
 
     #[test]
     fn test_from_str() {
-        // Basic language names
         assert_eq!(Language::from_str("python").unwrap(), Language::Python);
         assert_eq!(Language::from_str("rust").unwrap(), Language::Rust);
         assert_eq!(Language::from_str("javascript").unwrap(), Language::JavaScript);
 
-        // Case insensitivity
         assert_eq!(Language::from_str("PYTHON").unwrap(), Language::Python);
         assert_eq!(Language::from_str("Rust").unwrap(), Language::Rust);
         assert_eq!(Language::from_str("JavaScript").unwrap(), Language::JavaScript);
 
-        // Aliases
         assert_eq!(Language::from_str("py").unwrap(), Language::Python);
         assert_eq!(Language::from_str("js").unwrap(), Language::JavaScript);
         assert_eq!(Language::from_str("ts").unwrap(), Language::TypeScript);
@@ -183,7 +180,6 @@ mod tests {
         assert_eq!(Language::from_str("tf").unwrap(), Language::Terraform);
         assert_eq!(Language::from_str("k8s").unwrap(), Language::Kubernetes);
 
-        // Error case
         assert!(Language::from_str("unknown_lang").is_err());
         let err = Language::from_str("invalid").unwrap_err();
         assert!(err.contains("Unknown language"));

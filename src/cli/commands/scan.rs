@@ -460,38 +460,21 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     printer.status("Discovered", &format!("{} source files", files.len()));
 
-    // Parse language filter if provided
     let lang_filter: Option<HashSet<Language>> = if let Some(filter_str) = &final_args.filter_lang {
         let mut languages = HashSet::new();
-        let mut has_error = false;
-
         for lang_name in filter_str.split(',') {
             let lang_name = lang_name.trim();
-            if lang_name.is_empty() {
-                continue;
-            }
-
-            match Language::from_str(lang_name) {
-                Ok(lang) => {
-                    languages.insert(lang);
-                }
-                Err(e) => {
-                    printer.error("Invalid language", &e);
-                    has_error = true;
-                    break;
+            if !lang_name.is_empty() {
+                match Language::from_str(lang_name) {
+                    Ok(lang) => { languages.insert(lang); }
+                    Err(e) => {
+                        printer.error("Invalid language", &e);
+                        return Err(anyhow::anyhow!("Invalid language in --filter-lang option"));
+                    }
                 }
             }
         }
-
-        if has_error {
-            return Err(anyhow::anyhow!("Invalid language in --filter-lang option"));
-        }
-
         if !languages.is_empty() {
-            let lang_names: Vec<String> = languages.iter()
-                .map(|l| l.display_name().to_string())
-                .collect();
-            printer.info("Language filter", &format!("{} languages: {}", languages.len(), lang_names.join(", ")));
             Some(languages)
         } else {
             None
@@ -519,7 +502,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             let filename = file_path.to_string_lossy();
                             let lang = FileClassifier::classify(&filename, &content);
 
-                            // Skip if language filter is set and this file doesn't match
                             if let Some(filter) = lang_filter.as_ref() {
                                 if !filter.contains(&lang) {
                                     return None;
@@ -576,17 +558,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     };
 
     printer.status("Detected", &format!("{} patterns ({} files with principals)", total_before_filter, files_with_principals.len()));
-
-    // Log language filtering statistics if applied
-    if lang_filter.is_some() {
-        let analyzed_files: HashSet<PathBuf> = all_pattern_matches.iter()
-            .map(|(path, _)| path.clone())
-            .collect();
-        let filtered_count = files.len() - analyzed_files.len();
-        if filtered_count > 0 {
-            printer.info("Filtered", &format!("{} files excluded by language filter", filtered_count));
-        }
-    }
 
     // Filter: Only analyze Resource patterns in files that also have a Principal
     let filtered_pattern_matches: Vec<(PathBuf, PatternMatch)> = if files_with_principals.is_empty() {
@@ -1334,7 +1305,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
     let repo = RepoOps::new(root_dir.clone());
     let files = repo.get_relevant_files();
 
-    // Parse language filter if provided (for MVRA)
     let lang_filter: Option<HashSet<Language>> = if let Some(filter_str) = &final_args.filter_lang {
         let languages: HashSet<Language> = filter_str
             .split(',')
@@ -1361,7 +1331,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let filename = file_path.to_string_lossy();
             let lang = FileClassifier::classify(&filename, &content);
 
-            // Skip if language filter is set and this file doesn't match
             if let Some(filter) = &lang_filter {
                 if !filter.contains(&lang) {
                     continue;
