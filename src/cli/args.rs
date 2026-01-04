@@ -118,9 +118,6 @@ pub struct Args {
     pub cache_only: bool,
 
     /// Filter files by programming language (comma-separated)
-    /// Example: --filter-lang python,rust,javascript
-    /// Supported: python, javascript, rust, typescript, java, go, ruby, c, cpp,
-    /// terraform, cloudformation, kubernetes, yaml, bash, shell, php
     #[arg(long, global = true)]
     pub filter_lang: Option<String>,
 }
