@@ -1,5 +1,7 @@
 { pkgs, ... }:
 {
+  cachix.enable = false;
+
   languages.rust = {
     enable = true;
     channel = "stable";
