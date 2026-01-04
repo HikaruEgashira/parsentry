@@ -11,19 +11,13 @@ Scan large repositories 10x faster (or more) while catching what others miss.
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/parsentry)
 
-### Features
+### How it works
 
-```
-🎯 PAR Classification
-   Principal-Action-Resource framework for security issue discovery
+1. Pattern Enumeration — Tree-sitter finds security-relevant code paths
+2. AI Orchestration — Agents analyze each pattern in parallel
+3. PAR Validation — Principal-Action-Resource framework catches what rules miss
 
-🤖 AI for Security
-   Uses Large Language Models for advanced vulnerability detection
-
-🌐 Multi-Language Support
-   C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
-   powered by Tree-sitter
-```
+Supports: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
 
 ### Installation
 
