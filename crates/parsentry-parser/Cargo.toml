@@ -24,6 +24,7 @@ tree-sitter-rust = "0.23"
 tree-sitter-ruby = "0.23"
 tree-sitter-hcl = "1.1"
 tree-sitter-php = "0.23"
+tree-sitter-yaml = "0.7"
 
 # Serialization
 serde = { workspace = true }
