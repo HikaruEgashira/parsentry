@@ -459,8 +459,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     printer.status("Discovered", &format!("{} source files", files.len()));
 
-    // Collect all pattern matches across all files (parallel processing)
-    // Use higher concurrency for I/O-bound operations (4x CPU cores)
     let concurrency = (num_cpus::get() * 4).max(16);
     let root_dir_arc = Arc::new(root_dir.clone());
     let file_results: Vec<_> = stream::iter(files.clone())
@@ -471,7 +469,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                     std::fs::read_to_string(&file_path)
                         .ok()
                         .and_then(|content| {
-                            // Skip files with more than 50,000 characters
                             if content.len() > 50_000 {
                                 return None;
                             }
