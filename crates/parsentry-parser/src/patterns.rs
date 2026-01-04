@@ -174,6 +174,7 @@ impl SecurityRiskPatterns {
             Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
             Language::Terraform => tree_sitter_hcl::LANGUAGE.into(),
             Language::Php => tree_sitter_php::LANGUAGE_PHP.into(),
+            Language::Yaml => tree_sitter_yaml::LANGUAGE.into(),
             _ => tree_sitter_javascript::LANGUAGE.into(),
         }
     }
