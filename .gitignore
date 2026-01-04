@@ -19,3 +19,7 @@ benchmarks
 # See Security section in README.md for details
 .parsentry-cache
 .parsentry/cache/
+
+# Temporary analysis results and Claude Code logs
+analysis_result.json
+**/claude_code_logs/
