@@ -8,7 +8,7 @@
 #   4. Commit and push
 
 pkgname=parsentry-bin
-pkgver=0.14.0
+pkgver=0.15.0
 pkgrel=1
 pkgdesc="PAR-based security scanner using LLMs and static code analysis"
 arch=('x86_64')
