@@ -115,61 +115,16 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
-      - name: Get version
-        id: version
-        run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            VERSION="${{ github.event.inputs.tag }}"
-            VERSION="${VERSION#v}"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Rename artifacts with version
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          cd artifacts
-          for dir in */; do
-            target_name="${dir%/}"
-            target_name="${target_name#parsentry-}"
-
-            if [ -f "${dir}parsentry-${target_name}.tar.gz" ]; then
-              mv "${dir}parsentry-${target_name}.tar.gz" "${dir}parsentry-${VERSION}-${target_name}.tar.gz"
-            fi
-
-            if [ -f "${dir}parsentry-${target_name}.zip" ]; then
-              mv "${dir}parsentry-${target_name}.zip" "${dir}parsentry-${VERSION}-${target_name}.zip"
-            fi
-          done
-          cd ..
-
-      - name: Generate SHA256 checksums
-        run: |
-          cd artifacts
-          echo "# SHA256 Checksums for v${{ steps.version.outputs.version }}" > ../checksums.txt
-          echo "" >> ../checksums.txt
-          for dir in */; do
-            for file in "$dir"*; do
-              if [ -f "$file" ]; then
-                sha256sum "$file" >> ../checksums.txt
-              fi
-            done
-          done
-          cat ../checksums.txt
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            artifacts/*/*
-            checksums.txt
+          files: artifacts/*/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
