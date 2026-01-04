@@ -1,0 +1,81 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "shortDescription": {
+                "text": "SQL execution with unsanitized input"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL Injection vulnerability in KILL command execution",
+            "markdown": "### SQL Injection Vulnerability\n\n**説明**: \nSQLAlchemyのパラメータバインディングを使用せず、f-stringで直接`proc_id`をSQL文に埋め込んでいます。`proc_id`はMySQLの`SHOW PROCESSLIST`結果から取得されますが、整数値として検証されていません。\n\n**脆弱性の詳細**:\n- **Principal**: MySQL SHOW PROCESSLIST の実行結果（信頼できないデータソース）\n- **Action**: 入力検証なし - proc_id は型チェックされていない文字列値\n- **Resource**: `db.session.execute()` による直接SQL実行\n- **Data Flow**: `SHOW PROCESSLIST` → `proc.Id` → f-string補間 → `KILL` コマンド実行\n\n**攻撃ベクトル**: T1190 (Exploit Public-Facing Application)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用してください:\n```python\nfrom sqlalchemy import text\ndb.session.execute(text(\"KILL :proc_id\"), {\"proc_id\": proc_id})\n```\n\n**リスク**: MySQL のプロセス実行制御をバイパスされる可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py"
+                },
+                "region": {
+                  "startLine": 161
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "MySQL SHOW PROCESSLIST result (proc.Id field)",
+            "action": "No input validation - f-string interpolation without SQLAlchemy parameter binding",
+            "resource": "db.session.execute() - Direct SQL execution",
+            "data_flow": "SHOW PROCESSLIST → proc.Id → f-string → KILL command"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQL Injection vulnerability in PostgreSQL setval function call",
+            "markdown": "### SQL Injection Vulnerability - PostgreSQL setval\n\n**説明**: \nPostgreSQLの`setval()`関数呼び出しでテーブル名を直接文字列フォーマットで埋め込んでいます。引用符チェック（line 290）が存在しますが、SQLインジェクションの根本的な対策ではありません。\n\n**脆弱性の詳細**:\n- **Principal**: バックアップファイルから抽出されたテーブル名（信頼できないデータソース）\n- **Action**: 不完全な入力検証 - 引用符の有無チェックのみ、string.format()で埋め込み\n- **Resource**: `side_db.engine.execute()` による直接SQL実行\n- **Data Flow**: `backup.namelist()` → テーブル名抽出 → 引用符チェック → string.format() → SQL実行\n\n**攻撃ベクトル**: T1213 (Data from Information Repositories)\n\n**推奨修正**:\nSQLAlchemyのパラメータバインディングを使用するか、識別子を安全にエスケープしてください:\n```python\nfrom sqlalchemy import text, literal_column\nquery = text(\"SELECT setval(pg_get_serial_sequence(:table, 'id'), coalesce(max(id)+1,1), false) FROM :table_name\")\nside_db.engine.execute(query, {\"table\": table_name, \"table_name\": literal_column(table_name)})\n```\n\n**リスク**: データベースのシーケンス値をリセットされたり、不正に操作される可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/utils/exports/__init__.py"
+                },
+                "region": {
+                  "startLine": 291
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "principal": "Table name from backup.namelist() extraction",
+            "action": "Partial validation - Quote check only, string.format() for interpolation",
+            "resource": "side_db.engine.execute() - Direct SQL execution",
+            "data_flow": "backup.namelist() → table_name extraction → quote check → string.format() → PostgreSQL setval execution"
+          }
+        }
+      ]
+    }
+  ]
+}

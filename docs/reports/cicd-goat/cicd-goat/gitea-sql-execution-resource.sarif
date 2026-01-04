@@ -1,0 +1,119 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQL Injection",
+              "shortDescription": {
+                "text": "SQL queries constructed with unsanitized user input or variable concatenation"
+              }
+            },
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Unauthorized database file access through hardcoded path"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL Injection vulnerability in INSERT statement via string concatenation",
+            "markdown": "## SQLインジェクション脆弱性\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: ユーザー入力\n- `User.create_token()` メソッドの引数 `token` (ユーザー提供)\n- `name` パラメータ（デフォルト値 'token'）\n- `self.uid` (不正なアクセスの可能性がある)\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列連結による直接的なSQL構築\n- パラメータ化クエリなし\n- 入力値の検証なし\n\n**Resource（対象）**: SQLデータベース\n- SQLite3 `/data/gitea/gitea.db` へのDML操作\n- `access_token` テーブルへの挿入\n\n### 脆弱性の詳細:\n\n79-80行目:\n```python\ncon.execute(f\"INSERT INTO access_token VALUES ({token_id + 1}, {self.uid}, '{name}', '{token_hash}', '{salt}', \"\n            f\"'{token_last_eight}', {now}, {now})\")\n```\n\nこのコードは以下の文字列パラメータをそのまま埋め込んでいます:\n- `{name}`: シングルクォートで囲まれているがエスケープなし\n- `{token_hash}`: シングルクォートで囲まれているがエスケープなし\n- `{salt}`: シングルクォートで囲まれているがエスケープなし\n- `{token_last_eight}`: シングルクォートで囲まれているがエスケープなし\n\n### 攻撃シナリオ:\n\n`name` パラメータに `test', (SELECT * FROM users), 'x` のような値を渡すと、以下のSQL文が生成されます:\n\n```sql\nINSERT INTO access_token VALUES (1, 100, 'test', (SELECT * FROM users), 'x', 'a1b2c3d4', 1234567890, 1234567890)\n```\n\n### 影響:\n\n- データベーススキーマの改ざん\n- 権限昇格\n- 認証バイパス\n- データ漏洩\n- T1190: Exploit Public-Facing Application\n- T1213: Data from Information Repositories\n\n### 修正方法:\n\n`execute()` の代わりに `execute()` にバインドパラメータを使用:\n```python\ncon.execute(\n    \"INSERT INTO access_token VALUES (?, ?, ?, ?, ?, ?, ?, ?)\",\n    (token_id + 1, self.uid, name, token_hash, salt, token_last_eight, now, now)\n)\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/giteacasc/gitea.py"
+                },
+                "region": {
+                  "startLine": 79,
+                  "endLine": 80
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "principal": "user_input (token, name parameters)",
+            "action": "no_validation_no_parameterized_query",
+            "resource": "sqlite3_database_insert_operation",
+            "data_flow": "create_token(name, token) -> f-string -> con.execute(INSERT) -> access_token table"
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQL Injection vulnerability in UPDATE statement via string concatenation",
+            "markdown": "## SQLインジェクション脆弱性（UPDATE文）\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: 暗黙的な依存\n- 固定値ですが、パターンは一貫性がない\n\n**Action（制御）**: セキュリティ制御がない\n- 文字列リテラルですがパラメータ化されていない\n\n**Resource（対象）**: SQLiteシーケンステーブル\n- `sqlite_sequence` テーブルへの更新\n\n### 脆弱性の詳細:\n\n81行目:\n```python\ncon.execute(f\"UPDATE sqlite_sequence SET seq=1 WHERE name='access_token'\")\n```\n\nこのコードはf-stringを使用していますが、実際の変数は含まれていません。ただし、本来ハードコード値であってもパラメータ化クエリが推奨されます。\n\n### 影響:\n\n軽微ですが、パターン的にパラメータ化されていないため、将来の変更で脆弱性が生じる可能性があります。\n\n### 修正方法:\n\n```python\ncon.execute(\"UPDATE sqlite_sequence SET seq=? WHERE name=?\", (1, 'access_token'))\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/giteacasc/gitea.py"
+                },
+                "region": {
+                  "startLine": 81,
+                  "endLine": 81
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65,
+            "principal": "hardcoded_values",
+            "action": "no_parameterized_query",
+            "resource": "sqlite3_database_update_operation",
+            "data_flow": "f-string -> con.execute(UPDATE) -> sqlite_sequence table"
+          }
+        },
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Hardcoded database file path may allow unauthorized access",
+            "markdown": "## ファイルアクセス制御の欠陥\n\n### PARフレームワーク分析:\n\n**Principal（主体）**: アプリケーション実行ユーザー\n- SQLite3接続時に `/data/gitea/gitea.db` を直接アクセス\n\n**Action（制御）**: アクセス制御がない\n- ファイルパスがハードコード\n- ファイルパーミッション確認なし\n- 存在確認なし\n\n**Resource（対象）**: ファイルシステム\n- `/data/gitea/gitea.db` (Gitea SQLiteデータベース)\n\n### 脆弱性の詳細:\n\n75行目:\n```python\ncon = sqlite3.connect('/data/gitea/gitea.db')\n```\n\nハードコードされたパスで直接SQLiteデータベースに接続しています。\n\n### 影響:\n\n- ファイルシステムレベルのアクセス制御に依存\n- データベースコンテンツの直接的な改ざん可能性\n- データベース完全性の検証がない\n\n### 推奨事項:\n\n- 環境変数から設定を読み込む\n- ファイルパーミッションの検証\n- トランザクション管理の強化"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/giteacasc/gitea.py"
+                },
+                "region": {
+                  "startLine": 75,
+                  "endLine": 75
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70,
+            "principal": "application_execution_context",
+            "action": "hardcoded_path_no_verification",
+            "resource": "sqlite_database_file",
+            "data_flow": "hardcoded_path -> sqlite3.connect() -> database_operations"
+          }
+        }
+      ]
+    }
+  ]
+}

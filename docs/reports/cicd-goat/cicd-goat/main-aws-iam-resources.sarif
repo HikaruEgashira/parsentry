@@ -1,0 +1,126 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "IAM_PRIVILEGE_ESCALATION",
+              "name": "Excessive IAM Policy Permissions",
+              "shortDescription": {
+                "text": "IAM policy grants excessive permissions that could lead to privilege escalation"
+              }
+            },
+            {
+              "id": "HARDCODED_CREDENTIALS",
+              "name": "Hardcoded Credentials",
+              "shortDescription": {
+                "text": "Sensitive credentials embedded directly in infrastructure code"
+              }
+            },
+            {
+              "id": "INSUFFICIENT_ACCESS_RESTRICTION",
+              "name": "Insufficient Access Control",
+              "shortDescription": {
+                "text": "IAM permissions use overly broad resource patterns violating least privilege principle"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IAM_PRIVILEGE_ESCALATION",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "IAM policy grants excessive S3 permissions including object deletion on backup bucket",
+            "markdown": "## IAM 過度な権限付与の検出\n\n**脆弱性**: `aws_iam_policy.replication` が以下の過度な権限を許可しています:\n\n1. **削除権限の付与** (行66-72):\n   - リソース: `${aws_s3_bucket.backup.arn}/*`\n   - 権限: `s3:ReplicateObject`, `s3:ReplicateDelete`, `s3:ReplicateTags`\n   - **リスク**: バックアップバケット内のすべてのオブジェクト削除が可能\n\n2. **ACL読取権限** (行57-58):\n   - 権限: `s3:GetObjectVersionAcl`\n   - **リスク**: オブジェクトのACL情報が読取可能（メタデータ漏洩リスク）\n\n3. **ワイルドカード使用** (行62, 72):\n   - リソース: `${aws_s3_bucket.dodo.arn}/*` と `${aws_s3_bucket.backup.arn}/*`\n   - **リスク**: 権限の最小化原則に違反\n\n**攻撃シナリオ (T1078, T1484)**:\n- このロールを乗っ取った攻撃者がバックアップデータを削除可能\n- データ保護戦略の無効化\n- ランサムウェア攻撃での身代金要求リスク増加\n\n**推奨修正**:\n削除権限は別のポリシーに分離し、明確な運用プロセスの下でのみ許可してください。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf"
+                },
+                "region": {
+                  "startLine": 65,
+                  "endLine": 73
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "aws_iam_role.replication (S3 service assumed)",
+            "action": "No additional validation controls on action permissions",
+            "resource": "aws_s3_bucket.backup (all objects via wildcard)",
+            "data_flow": "Infrastructure config → IAM policy → S3 bucket permissions"
+          }
+        },
+        {
+          "ruleId": "HARDCODED_CREDENTIALS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "AWS credentials are hardcoded in Terraform provider configuration",
+            "markdown": "## ハードコード認証情報の検出\n\n**脆弱性**: AWS プロバイダー設定にダミー認証情報が埋め込まれています (行2-3):\n\n```hcl\nprovider \"aws\" {\n  access_key = \"dummy\"\n  secret_key = \"dummy\"\n  ...\n}\n```\n\n**問題点**:\n1. **認証情報の露出**: ソースコードに認証情報が平文保存\n2. **バージョン管理の危険**: Git履歴に残存\n3. **本番環境へのリスク**: 実際の認証情報で同じパターンが使用される可能性\n\n**攻撃シナリオ**:\n- リポジトリへのアクセス権を持つ者が認証情報を抽出\n- AWS アカウントへの不正アクセス\n- リソースの改ざん、削除、複製\n\n**推奨修正**:\n環境変数または IAM ロール/ポリシーを使用してください。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "principal": "Hardcoded credentials in provider configuration",
+            "action": "No secrets management control",
+            "resource": "AWS API authentication",
+            "data_flow": "Terraform config → AWS provider → API endpoints"
+          }
+        },
+        {
+          "ruleId": "INSUFFICIENT_ACCESS_RESTRICTION",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "IAM permissions violate least privilege principle with overly broad resource patterns",
+            "markdown": "## 不十分なアクセス制限の検出\n\n**脆弱性**: IAM ポリシーが過度に広範なリソースパターンを使用 (行40-76):\n\n**問題箇所**:\n\n1. **S3 オブジェクト全体への読取権限** (行45-52):\n   - リソース: `${aws_s3_bucket.dodo.arn}`\n   - バケット全体の構成にアクセス可能\n   - 権限の最小化に違反\n\n2. **バージョン管理オブジェクト全体への読取権限** (行54-63):\n   - リソース: `${aws_s3_bucket.dodo.arn}/*` ワイルドカード\n   - バケット内すべてのオブジェクトが対象\n   - T1078 (正規アカウントの悪用) の攻撃ベクトルとなる可能性\n\n**攻撃シナリオ (T1484)**:\n- S3 レプリケーション ロールが乗っ取られた場合\n- 制限されないリソース範囲により、意図しないオブジェクトへのアクセスが可能\n- データ漏洩やランサムウェア攻撃に悪用される可能性\n\n**推奨修正**:\nワイルドカードの代わりに具体的なプレフィックスを指定し、条件式で付加的な制約を追加してください。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf"
+                },
+                "region": {
+                  "startLine": 40,
+                  "endLine": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "principal": "aws_iam_role.replication service principal",
+            "action": "Wildcard resource patterns without path restrictions",
+            "resource": "S3 buckets (dodo, backup) - entire object scope",
+            "data_flow": "IAM role assumption → Policy evaluation → Unrestricted S3 access"
+          }
+        }
+      ]
+    }
+  ]
+}

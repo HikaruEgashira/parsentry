@@ -1,0 +1,119 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "AWS-S3-ENCRYPTION",
+              "name": "S3 Bucket Missing Encryption",
+              "shortDescription": {
+                "text": "AWS S3 bucket is not configured with server-side encryption"
+              }
+            },
+            {
+              "id": "AWS-S3-PUBLIC-ACCESS",
+              "name": "S3 Bucket Incomplete Public Access Control",
+              "shortDescription": {
+                "text": "AWS S3 bucket lacks explicit public access block configuration"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AWS-S3-ENCRYPTION",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "S3 bucket 'backup' is missing server-side encryption configuration",
+            "markdown": "## S3バケット暗号化欠落 (backup)\n\n### 脆弱性の詳細\nAWS S3バケット `backup` (行84-90) がサーバーサイド暗号化設定を欠いています。\n\n### PARフレームワーク分析\n- **Principal**: Terraformプロバイダー（AWS認証情報）\n- **Action**: 暗号化制御なし - `server_side_encryption_configuration`ブロックが存在しない\n- **Resource**: S3バケット（データストレージ）\n- **データフロー**: リソース定義 → 暗号化なしバケット作成\n\n### 攻撃シナリオ (T1530)\n1. 保存データの暗号化がないため、S3へのアクセスやバケット内データにアクセスした攻撃者が平文データを読取可能\n2. コンプライアンス要件（HIPAA、PCI-DSS等）への違反\n3. 継続的データ保護（CDP）とリカバリー戦略の不完全性\n\n### 修正方法\n```hcl\nresource \"aws_s3_bucket\" \"backup\" {\n  bucket = \"backup\"\n\n  versioning {\n    enabled = true\n  }\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"backup\" {\n  bucket = aws_s3_bucket.backup.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = \"AES256\"\n    }\n  }\n}\n```\n\n### リスク評価\n- **重要度**: 高（機密データ保護の基本的な要件）\n- **影響範囲**: レプリケーション先バケット（T1537対策不完全）"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf"
+                },
+                "region": {
+                  "startLine": 84,
+                  "endLine": 90
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "Terraform provider with AWS credentials",
+            "action": "No encryption configuration applied",
+            "resource": "S3 bucket 'backup' for data replication",
+            "data_flow": "Resource definition → unencrypted S3 bucket creation"
+          }
+        },
+        {
+          "ruleId": "AWS-S3-ENCRYPTION",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "S3 bucket 'dodo' is missing server-side encryption configuration",
+            "markdown": "## S3バケット暗号化欠落 (dodo)\n\n### 脆弱性の詳細\nAWS S3バケット `dodo` (行112-132) がサーバーサイド暗号化設定を欠いています。\n\n### PARフレームワーク分析\n- **Principal**: Terraformプロバイダー、外部変数 `var.bucket_name`\n- **Action**: 暗号化制御なし - `server_side_encryption_configuration`ブロックが存在しない\n- **Resource**: S3バケット（プライマリストレージ、レプリケーション元）\n- **データフロー**: var.bucket_name → ACL=\"private\" → 暗号化なしバケット\n\n### 攻撃シナリオ (T1530)\n1. バケット内の保存データが暗号化されていないため、管理者権限またはS3アクセス権を得た攻撃者が平文データを読取可能\n2. レプリケーション設定により、`backup`バケットへのデータ転送も暗号化なし\n3. コンプライアンス違反：GDPR、HIPAA等の規制要件不満足\n\n### 修正方法\n```hcl\nresource \"aws_s3_bucket\" \"dodo\" {\n  bucket = var.bucket_name\n  acl    = \"private\"\n\n  versioning {\n    enabled = true\n  }\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"dodo\" {\n  bucket = aws_s3_bucket.dodo.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm     = \"aws:kms\"\n      kms_master_key_id = aws_kms_key.s3.arn\n    }\n    bucket_key_enabled = true\n  }\n}\n```\n\n### リスク評価\n- **重要度**: 高（プライマリストレージの保護不足）\n- **影響範囲**: レプリケーション元のため、全バージョン化データが暗号化なしで保存"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf"
+                },
+                "region": {
+                  "startLine": 112,
+                  "endLine": 132
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "Terraform provider with var.bucket_name variable",
+            "action": "No encryption configuration applied despite private ACL",
+            "resource": "S3 bucket 'dodo' as primary storage and replication source",
+            "data_flow": "var.bucket_name → unencrypted S3 bucket → replication to backup bucket"
+          }
+        },
+        {
+          "ruleId": "AWS-S3-PUBLIC-ACCESS",
+          "ruleIndex": 1,
+          "level": "note",
+          "message": {
+            "text": "S3 bucket 'backup' public access block applied after bucket creation",
+            "markdown": "## パブリックアクセス制御の配置問題\n\n### 脆弱性の詳細\nS3バケット `backup` のパブリックアクセス制御ブロック (行134-141) がリソース定義の後に分離されています。\n\n### PARフレームワーク分析\n- **Principal**: Terraformプロバイダー\n- **Action**: セキュリティ制御が後付け - 構成設計の分割により一貫性が低い\n- **Resource**: S3バケットのアクセス制御\n- **データフロー**: リソース作成 → 後からアクセス制御適用\n\n### 設定状況\n✓ `block_public_acls = true` - パブリックACLをブロック\n✓ `block_public_policy = true` - パブリックポリシーをブロック\n✓ `restrict_public_buckets = true` - パブリックバケットアクセス制限\n✓ `ignore_public_acls = true` - 既存パブリックACL無視\n\n### リスク評価\n- **重要度**: 低（実際にはアクセス制御が適用されている）\n- **問題**: IaC設計の一貫性欠落\n\n### 改善提案\n```hcl\nresource \"aws_s3_bucket\" \"backup\" {\n  bucket = \"backup\"\n  versioning {\n    enabled = true\n  }\n}\n\nresource \"aws_s3_bucket_public_access_block\" \"backup\" {\n  bucket = aws_s3_bucket.backup.id\n  block_public_acls       = true\n  block_public_policy     = true\n  restrict_public_buckets = true\n  ignore_public_acls      = true\n}\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/main.tf"
+                },
+                "region": {
+                  "startLine": 84,
+                  "endLine": 90
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5,
+            "principal": "Terraform configuration management",
+            "action": "Public access block applied separately",
+            "resource": "S3 bucket public access control",
+            "data_flow": "Resource definition → separate public access block resource"
+          }
+        }
+      ]
+    }
+  ]
+}

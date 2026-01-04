@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "AFO",
+              "name": "Arbitrary File Operation",
+              "shortDescription": {
+                "text": "Untrusted file path used in file system operations without proper validation"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AFO",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Arbitrary file operation vulnerability in _evaluate_trust method",
+            "markdown": "## 脆弱性分析: 任意ファイル操作\n\n### 概要\nPrincipal（trust_bundle パラメータ）が、セキュリティコントロール不足でリソース（ファイルシステムアクセス）に到達しています。\n\n### PARフレームワークの観点\n\n**Principal**: \n- `load_verify_locations()` メソッドを通じて`cafile`パラメータとしてユーザーから供給される文字列\n- 信頼できない外部ソース：アプリケーション設定、ユーザー入力など\n\n**Action（不十分なセキュリティコントロール）**:\n- `os.path.isfile(trust_bundle)` による存在確認のみ\n- パスのサニタイゼーション、ホワイトリスト検証、パストラバーサル対策がない\n- 相対パスや `../` を含むパスの検証がない\n\n**Resource**:\n- `open(trust_bundle, \"rb\")` によるファイルシステムへの読み込みアクセス\n- 任意のファイルが読み込まれる可能性がある\n\n### 脆弱性の詳細\n\n1. **Local File Inclusion (LFI)**: ユーザーが制御可能なファイルパスが直接使用される\n2. **Path Traversal**: `../` や絶対パスを使用して、予期しないファイルへのアクセスが可能\n3. **信頼バウンダリの問題**: `load_verify_locations()` で設定されたパスが、後に検証なく使用される\n\n### 攻撃シナリオ\n\n```python\nctx = SecureTransportContext(ssl.PROTOCOL_TLS)\n# 攻撃者が任意のファイルパスを指定\nctx.load_verify_locations(cafile=\"../../../etc/passwd\")\n# 後続の接続で _evaluate_trust が呼び出され、任意ファイルが読み込まれる\n```\n\n### 推奨される修復\n\n1. **ホワイトリスト検証**: 許可されたディレクトリのみからの読み込みに制限\n2. **パス正規化**: `os.path.abspath()` と許可ディレクトリの比較\n3. **パストラバーサル対策**: パスに `../` や `..\\\\` が含まれていないことの確認\n4. **アクセス制御**: ファイルのパーミッションの検証\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/white-rabbit/src/urllib3/contrib/securetransport.py"
+                },
+                "region": {
+                  "startLine": 415,
+                  "endLine": 419
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7,
+            "principal": "trust_bundle パラメータ（load_verify_locations() を通じてユーザー提供）",
+            "action": "os.path.isfile() による存在確認のみ。パストラバーサルやパス正規化の検証なし",
+            "resource": "ファイルシステムの読み込みアクセス（open(trust_bundle, 'rb')）",
+            "data_flow": "load_verify_locations(cafile) → _trust_bundle → _custom_validate(trust_bundle) → _evaluate_trust(trust_bundle) → open(trust_bundle)"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -393,7 +393,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         if config.agent.is_claude_code() {
             let claude_path = config.agent.path.clone()
                 .unwrap_or_else(|| PathBuf::from("claude"));
-            let log_dir = final_args.output_dir.as_ref().map(|d| d.join("claude_code_logs"));
+            let log_dir = None;
             let claude_config = parsentry_claude_code::ClaudeCodeConfig {
                 claude_path,
                 max_concurrent: config.agent.max_concurrent.min(10),
@@ -597,7 +597,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let claude_executor = if use_claude_code {
         let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
-        let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
+        let log_dir = None;
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
             max_concurrent: config.agent.max_concurrent.min(10),
@@ -1334,7 +1334,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
 
     let claude_executor = if use_claude_code {
         let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
-        let log_dir = output_dir.as_ref().map(|d| d.join("claude_code_logs"));
+        let log_dir = None;
         let claude_config = ClaudeCodeConfig {
             claude_path: claude_path.clone(),
             max_concurrent: config.agent.max_concurrent.min(10),

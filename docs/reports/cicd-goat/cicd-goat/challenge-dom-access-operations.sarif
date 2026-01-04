@@ -1,0 +1,81 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "shortDescription": {
+                "text": "Unsanitized user or API-controlled data injected into DOM"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "API response data directly injected into DOM without sanitization (line 266)",
+            "markdown": "## XSS脆弱性：APIレスポンスデータの直接DOM注入\n\n### 脆弱性の詳細\n\n**PAR分析:**\n- **Principal (主体)**: CTFdバックエンドAPI（`/api/v1/challenges/` エンドポイント）からのレスポンスデータ\n- **Action (制御)**: サニタイゼーションまたはバリデーション処理がない\n- **Resource (リソース)**: DOM への直接HTML注入（`append()` メソッド経由）\n\n### 問題のコード\n```javascript\n// Line 259: APIレスポンスの view プロパティを取得\nchallenge.data = response.data;\n\n// Line 266: サニタイゼーションなしでDOM に直接注入\n$(\"#challenge-window\").append(challenge_data.view);\n```\n\n### 攻撃シナリオ\n1. 攻撃者がバックエンドAPI（管理画面のチャレンジデータベース）を侵害\n2. チャレンジの `view` フィールドにペイロードを注入: `<img src=x onerror='alert(\\\"XSS\\\")'>`\n3. 管理者がチャレンジをプレビューすると、JavaScriptコードが実行される\n4. セッショントークン、CSRF トークン、機密情報の窃取が可能\n\n### データフロー\n```\nCTFd Backend API (compromised) \n  ↓\nresponse.data.view\n  ↓\n$(\"#challenge-window\").append() [No sanitization]\n  ↓\nDOM に悪意あるHTML/JavaScript がレンダリング\n```\n\n### 推奨修正\n1. Vue.js を使用する場合は、テンプレート内で自動的にエスケープされるプロパティバインディングを使用\n2. jQuery の場合、`.text()` を使用する（HTMLではなくテキストのみを挿入）\n3. DOMPurify などのHTMLサニタイザーライブラリを使用してAPIレスポンスをクリーニング\n\n### 関連するセキュリティ標準\n- OWASP Top 10 2021: A03:2021 – Injection\n- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')\n- CVSS v3.1 Base Score: 6.1 (Medium) - Requires backend compromise, but impact is high (admin account)\n\n### 影響度\nこれは管理画面のコンテキストにあるため、影響範囲は限定されていますが、バックエンド侵害時のコード実行リスクは深刻です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/challenge.js"
+                },
+                "region": {
+                  "startLine": 266
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "API response data from CTFd backend (/api/v1/challenges/)",
+            "action": "No sanitization or validation of HTML content",
+            "resource": "DOM injection via $(\"#challenge-window\").append(challenge_data.view)",
+            "data_flow": "Backend API response → challenge_data.view → DOM append"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Challenge template HTML directly injected into DOM without sanitization (line 127)",
+            "markdown": "## XSS脆弱性：チャレンジテンプレートの直接DOM注入\n\n### 脆弱性の詳細\n\n**PAR分析:**\n- **Principal (主体)**: APIレスポンスから取得したテンプレートデータ（`challenge.create`）\n- **Action (制御)**: HTMLコンテンツのサニタイゼーション処理がない\n- **Resource (リソース)**: DOM への直接HTML注入（`.html()` メソッド経由）\n\n### 問題のコード\n```javascript\n// Line 126: APIレスポンスから template_data を取得\nlet template_data = challenge.create;\n\n// Line 127: サニタイゼーションなしで DOM に注入\n$(\"#create-chal-entry-div\").html(template_data);\n```\n\n### 攻撃シナリオ\n1. 攻撃者がバックエンドAPIを侵害し、`challenge.create` フィールドに悪意あるHTMLを注入\n2. 攻撃者がチャレンジタイプを変更するトリガーとして `.change()` イベントを発火\n3. 悪意あるスクリプトが実行され、管理者の認証情報が盗まれる可能性\n\n### データフロー\n```\nCTFd Backend API (/api/v1/challenges/types)\n  ↓\nresponse.data[type].create\n  ↓\n$(\"#create-chal-entry-div\").html() [No sanitization]\n  ↓\nDOM に悪意あるHTML/JavaScript がレンダリング\n```\n\n### 推奨修正\n1. Vue.js テンプレートを使用して自動エスケープを活用\n2. DOMPurify でHTMLコンテンツをクリーニング\n3. 可能であれば `.text()` でテキストのみを挿入\n\n### OWASP リスク評価\n- 脆弱性タイプ: Cross-Site Scripting (XSS)\n- 影響度: 高（管理者セッション乗っ取り、データ改ざん）\n- 攻撃難度: 中（バックエンド侵害が必要）\n- CWE: CWE-79\n\n### 関連する攻撃ベクトル\n- T1055: Process Injection\n- T1106: Native API Execution"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/challenge.js"
+                },
+                "region": {
+                  "startLine": 127
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "principal": "API response data from /api/v1/challenges/types endpoint",
+            "action": "No validation or sanitization of HTML template content",
+            "resource": "DOM injection via $(\"#create-chal-entry-div\").html(template_data)",
+            "data_flow": "Backend API response → challenge.create → .html() injection"
+          }
+        }
+      ]
+    }
+  ]
+}

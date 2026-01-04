@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "shortDescription": {
+                "text": "Potential XSS vulnerability through error message handling"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "note",
+          "message": {
+            "text": "Potential XSS risk in error message handling",
+            "markdown": "## DOM アクセス操作の分析結果\n\n### 概要\nファイル `team.js` の複数箇所で `document.querySelector()` による DOM アクセスが検出されました。\n\n### 検出箇所\n- **行 551**: `document.querySelector(\"#comment-box\")`\n- **行 560**: `document.querySelector(\"#team-add-modal .modal-body\")`\n\n### PAR分析\n\n**Principal（主体）**:\n- スクリプト実行主体（信頼可能）\n- グローバル変数 `window.TEAM_ID`, `window.TEAM_NAME` 経由でサーバーデータを受信\n\n**Action（制御）**:\n- DOM セレクタは hard-coded 文字列（静的）\n- ユーザー入力がセレクタに直接使用されていない\n- フォームデータは適切に JSON.stringify で送信\n\n**Resource（リソース）**:\n- DOM 要素の選択と操作\n- Vue.js コンポーネントのマウント\n- API エンドポイントへのリクエスト\n\n### リスク評価\n\n#### querySelector の使用パターン\n1. セレクタが static で hard-coded → **低リスク**\n2. ユーザー入力がセレクタに含まれない → **低リスク**\n\n#### エラーメッセージ処理の懸念\n- 行 101, 356, 458: `response.errors[key]` が `ezBadge()` に直接渡される\n- サーバーから返されるエラーメッセージのエスケープ状態が不明\n- ただし、管理画面のため信頼できるサーバーと仮定すると **リスク軽減**\n\n### 結論\n`querySelector` の使用自体はセキュアなパターンです。セレクタが静的文字列のため、DOM-based XSS のベクトルとはなりません。エラーメッセージ処理は `ezBadge` コンポーネント側での適切なエスケープに依存しますが、管理画面での信頼できるサーバーから返されるデータと考えられるため、現在の脅威度は**低**です。\n\n信頼度スコア: **50% 未満** - 実際の脆弱性ではなく、設計上の観察"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/admin/assets/js/pages/team.js"
+                },
+                "region": {
+                  "startLine": 551,
+                  "endLine": 560
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.4,
+            "principal": "Server-controlled global variables (window.TEAM_ID, window.TEAM_NAME)",
+            "action": "Static CSS selector strings (hard-coded), no dynamic selector construction",
+            "resource": "DOM element selection and Vue.js component mounting",
+            "data_flow": "No user-controlled input flows into querySelector selectors"
+          }
+        }
+      ]
+    }
+  ]
+}

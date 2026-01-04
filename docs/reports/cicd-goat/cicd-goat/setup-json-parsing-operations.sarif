@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "PARSE_ERROR",
+              "name": "Unhandled JSON Parsing Exception",
+              "shortDescription": {
+                "text": "JSON.parse() is called on untrusted data without exception handling"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PARSE_ERROR",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Unhandled JSON parsing exception from untrusted localStorage data",
+            "markdown": "## 脆弱性分析\n\n### 概要\n`JSON.parse()`がクライアント側の信頼されないデータソース（`localStorage`）から取得した値に対して直接実行されており、例外処理がありません。\n\n### Principal（信頼されないデータソース）\n- **`event.newValue`**: `storage`イベントから取得される値\n- ブラウザの`localStorage`はクライアント側で改ざん可能なため、信頼されないデータ源\n- 悪意のあるスクリプトまたはブラウザコンソールからの直接操作で変更可能\n\n### Action（セキュリティコントロール）\n現状では以下のコントロールのみ:\n```javascript\nif (event.key == \"integrations\" && event.newValue) {\n  let integration = JSON.parse(event.newValue);\n```\n\n- キー名の検証: あり（`event.key == \"integrations\"`）\n- 値の形式検証: なし\n- JSON解析時の例外処理: なし\n- パース後のデータ型チェック: なし\n\n### Resource（センシティブな操作）\n- DOM操作による UI状態の変更\n- `localStorage.removeItem()`による状態管理\n\n### 攻撃シナリオ\n1. 攻撃者が`localStorage['integrations']`に不正なJSON（例: `\"{invalid json}\"` または `\"123\"`）を設定\n2. 別のタブ/ウィンドウで`storage`イベントがトリガー\n3. `JSON.parse()`が例外を発生させ、アプリケーションが予期しない動作をする可能性\n\n### 技術的な問題\n- **例外の未処理**: `JSON.parse()`は不正なJSON形式で`SyntaxError`を発生させるが、`try-catch`ブロックがない\n- **入力値の非検証**: パース前に形式の妥当性を検証していない\n- **パース後のスキーマ検証**: パース後のオブジェクトの構造や型を検証していない\n\n### 推奨される修正\n```javascript\nwindow.addEventListener(\"storage\", function(event) {\n  if (event.key == \"integrations\" && event.newValue) {\n    try {\n      let integration = JSON.parse(event.newValue);\n      if (typeof integration === \"object\" && integration !== null && integration[\"name\"] === \"mlc\") {\n        $(\"#integration-mlc\")\n          .text(\"Already Configured\")\n          .attr(\"disabled\", true);\n        window.focus();\n        localStorage.removeItem(\"integrations\");\n      }\n    } catch (e) {\n      console.error(\"Failed to parse integration data\", e);\n      localStorage.removeItem(\"integrations\");\n    }\n  }\n});\n```"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/ctfd/data/CTFd/themes/core/assets/js/pages/setup.js"
+                },
+                "region": {
+                  "startLine": 102,
+                  "endLine": 113
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "principal": "event.newValue from window.storage event (untrusted localStorage data)",
+            "action": "Minimal validation (key check only), no JSON parsing error handling",
+            "resource": "DOM manipulation and localStorage state management",
+            "data_flow": "localStorage → storage event → JSON.parse() → DOM update"
+          }
+        }
+      ]
+    }
+  ]
+}

