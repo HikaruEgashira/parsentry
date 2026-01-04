@@ -13,11 +13,15 @@ Scan large repositories 10x faster (or more) while catching what others miss.
 
 ### How it works
 
-1. Pattern Enumeration — Tree-sitter finds security-relevant code paths
+1. Pattern Enumeration — Tree-sitter finds security-relevant code paths with PAR framework
 2. AI Orchestration — Agents analyze each pattern in parallel
-3. PAR Validation — Principal-Action-Resource framework catches what rules miss
+3. Universal — Support `C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform`
 
-Supports: C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform
+<div align="center">
+  <img src="./docs/images/run1.png" width="32%" alt="Run 1">
+  <img src="./docs/images/run2.png" width="32%" alt="Run 2">
+  <img src="./docs/images/run3.png" width="32%" alt="Run 3">
+</div>
 
 ### Installation
 
