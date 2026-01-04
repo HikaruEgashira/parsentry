@@ -116,6 +116,13 @@ pub struct Args {
     /// Use cache only (fail if cache miss)
     #[arg(long, global = true)]
     pub cache_only: bool,
+
+    /// Filter files by programming language (comma-separated)
+    /// Example: --filter-lang python,rust,javascript
+    /// Supported: python, javascript, rust, typescript, java, go, ruby, c, cpp,
+    /// terraform, cloudformation, kubernetes, yaml, bash, shell, php
+    #[arg(long, global = true)]
+    pub filter_lang: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -251,6 +258,7 @@ pub struct ScanArgs {
     pub mvra_cache: bool,
     pub cache: bool,
     pub cache_only: bool,
+    pub filter_lang: Option<String>,
 }
 
 impl From<&Args> for ScanArgs {
@@ -282,6 +290,7 @@ impl From<&Args> for ScanArgs {
             mvra_cache: args.mvra_cache,
             cache: args.cache,
             cache_only: args.cache_only,
+            filter_lang: args.filter_lang.clone(),
         }
     }
 }
