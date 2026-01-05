@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use log::warn;
+use log::{debug, info, warn};
 use parsentry_core::Language;
 use parsentry_parser::{CodeParser, Definition};
 use parsentry_reports::prompts::vuln_specific;
@@ -106,28 +106,20 @@ async fn generate_custom_patterns_impl(
     _max_parallel: usize,
     api_base_url: Option<&str>,
 ) -> Result<()> {
-    println!(
-        "📂 ディレクトリを解析してdefinitionsを抽出中: {}",
-        root_dir.display()
-    );
+    info!("Starting pattern generation");
+    debug!("Target: {}", root_dir.display());
 
     let file_discovery = FileDiscovery::new(root_dir.to_path_buf());
     let files = file_discovery.get_files()?;
-
-    println!("📁 検出されたファイル数: {}", files.len());
 
     let max_lines = 1000;
     let filtered_files = filter_files_by_size(&files, max_lines)?;
     let skipped_count = files.len() - filtered_files.len();
 
+    info!("Loading {} files for pattern analysis", filtered_files.len());
     if skipped_count > 0 {
-        println!(
-            "⚠️  {}行を超える大きなファイル{}個をスキップしました",
-            max_lines, skipped_count
-        );
+        debug!("Skipped {} files (>{} lines)", skipped_count, max_lines);
     }
-
-    println!("📁 解析対象ファイル数: {}", filtered_files.len());
 
     let mut all_definitions: Vec<(Definition, Language)> = Vec::new();
     let mut all_references: Vec<(Definition, Language)> = Vec::new();
@@ -137,11 +129,7 @@ async fn generate_custom_patterns_impl(
     for file_path in &filtered_files {
         let mut parser = CodeParser::new()?;
         if let Err(e) = parser.add_file(file_path) {
-            eprintln!(
-                "⚠️  ファイルのパース追加に失敗: {}: {}",
-                file_path.display(),
-                e
-            );
+            warn!("Failed to parse {}: {}", file_path.display(), e);
             continue;
         }
 
@@ -152,14 +140,6 @@ async fn generate_custom_patterns_impl(
                 let language = FileClassifier::classify(&filename, &content);
                 languages_found.insert(language, true);
 
-                println!(
-                    "📄 {} (言語: {:?}) から {}個のdefinitions、{}個のreferencesを検出",
-                    file_path.display(),
-                    language,
-                    context.definitions.len(),
-                    context.references.len()
-                );
-
                 for def in context.definitions {
                     seen_names.insert(def.name.clone());
                     all_definitions.push((def, language));
@@ -169,17 +149,13 @@ async fn generate_custom_patterns_impl(
                 }
             }
             Err(e) => {
-                eprintln!("⚠️  コンテキスト収集に失敗: {}: {}", file_path.display(), e);
+                warn!("Failed to collect context {}: {}", file_path.display(), e);
                 continue;
             }
         }
     }
 
-    println!(
-        "🔍 総計 {}個のdefinitions、{}個のreferencesを抽出しました",
-        all_definitions.len(),
-        all_references.len()
-    );
+    info!("Extracted {} definitions, {} references", all_definitions.len(), all_references.len());
 
     for (language, _) in languages_found {
         // Combine definitions and references for this language
@@ -200,8 +176,8 @@ async fn generate_custom_patterns_impl(
             continue;
         }
 
-        println!(
-            "🧠 {:?}言語の{}個のdefinitions、{}個のreferencesを分析中...",
+        info!(
+            "Analyzing {:?}: {} definitions, {} references",
             language,
             lang_definitions.len(),
             lang_references.len()
@@ -252,20 +228,11 @@ async fn generate_custom_patterns_impl(
 
         if !unique_patterns.is_empty() {
             write_patterns_to_file(root_dir, language, &unique_patterns)?;
-            println!(
-                "✅ {:?}言語用の{}個のパターンを生成しました",
-                language,
-                unique_patterns.len()
-            );
-        } else {
-            println!(
-                "ℹ️  {:?}言語でセキュリティパターンは検出されませんでした",
-                language
-            );
+            info!("{:?}: {} patterns generated", language, unique_patterns.len());
         }
     }
 
-    println!("🎉 カスタムパターン生成が完了しました");
+    info!("Pattern generation completed");
     Ok(())
 }
 
@@ -448,8 +415,8 @@ All fields are required for each object. Use proper tree-sitter query syntax for
         }
     }
 
-    println!(
-        "✅ 完了: 全{}個分析, リソースパターン{}個検出",
+    debug!(
+        "Analyzed {} definitions, found {} resource patterns",
         definitions.len(),
         resource_pattern_count
     );
@@ -609,8 +576,8 @@ All fields are required for each object. Use proper tree-sitter query syntax for
         }
     }
 
-    println!(
-        "✅ 完了: 全{}個参照分析, リソースパターン{}個検出",
+    debug!(
+        "Analyzed {} references, found {} resource patterns",
         references.len(),
         resource_pattern_count
     );
@@ -695,9 +662,6 @@ pub fn write_patterns_to_file(
         std::fs::write(&canonical_patterns_path, yaml_content)?;
     }
 
-    println!(
-        "📝 パターンファイルに追記: {}",
-        canonical_patterns_path.display()
-    );
+    info!("Pattern file updated: {}", canonical_patterns_path.display());
     Ok(())
 }
