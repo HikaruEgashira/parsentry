@@ -93,6 +93,7 @@ fn sanitize_input(input: &str) -> String {
 fn test_yaml_pattern_format() {
     let temp_dir = TempDir::new().unwrap();
 
+    // Only resources patterns are now generated
     let patterns = vec![
         PatternClassification {
             function_name: "test_resource".to_string(),
@@ -104,22 +105,13 @@ fn test_yaml_pattern_format() {
             attack_vector: vec!["T1059".to_string()],
         },
         PatternClassification {
-            function_name: "test_principal".to_string(),
-            pattern_type: Some("principals".to_string()),
-            query_type: "reference".to_string(),
-            query: "(call_expression function: (identifier) @func (#eq? @func \"test_principal\"))".to_string(),
-            description: "Test principal function".to_string(),
-            reasoning: "Test reasoning for principal".to_string(),
+            function_name: "test_resource2".to_string(),
+            pattern_type: Some("resources".to_string()),
+            query_type: "definition".to_string(),
+            query: "(function_definition name: (identifier) @name (#eq? @name \"test_resource2\")) @function".to_string(),
+            description: "Test resource definition".to_string(),
+            reasoning: "Test reasoning for resource definition".to_string(),
             attack_vector: vec!["T1190".to_string()],
-        },
-        PatternClassification {
-            function_name: "test_action".to_string(),
-            pattern_type: Some("actions".to_string()),
-            query_type: "reference".to_string(),
-            query: "(call_expression function: (identifier) @func (#eq? @func \"test_action\"))".to_string(),
-            description: "Test action function".to_string(),
-            reasoning: "Test reasoning for action".to_string(),
-            attack_vector: vec!["T1070".to_string()],
         },
     ];
 
@@ -132,12 +124,12 @@ fn test_yaml_pattern_format() {
 
     let content = fs::read_to_string(&yaml_path).unwrap();
     assert!(content.contains("Python:"));
-    assert!(content.contains("principals:"));
     assert!(content.contains("resources:"));
-    assert!(content.contains("actions:"));
     assert!(content.contains("test_resource"));
-    assert!(content.contains("test_principal"));
-    assert!(content.contains("test_action"));
+    assert!(content.contains("test_resource2"));
+    // principals and actions are no longer generated
+    assert!(!content.contains("principals:"));
+    assert!(!content.contains("actions:"));
 }
 
 // Integration test that doesn't require API calls
@@ -216,6 +208,7 @@ fn test_yaml_append_functionality() {
 fn test_empty_patterns_handling() {
     let temp_dir = TempDir::new().unwrap();
 
+    // Pattern without "resources" type should be ignored
     let patterns = vec![PatternClassification {
         function_name: "non_security_function".to_string(),
         pattern_type: None,
@@ -230,11 +223,9 @@ fn test_empty_patterns_handling() {
         write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
     assert!(result.is_ok());
 
+    // When there are no resource patterns, no file should be created
     let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-    let content = fs::read_to_string(&yaml_path).unwrap();
-
-    // Should only contain the language header since no valid patterns were provided
-    assert_eq!(content.trim(), "Python:");
+    assert!(!yaml_path.exists());
 }
 
 #[test]
