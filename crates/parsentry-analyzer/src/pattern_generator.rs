@@ -326,7 +326,7 @@ async fn analyze_all_definitions_at_once(
         .join("\n");
 
     let prompt = format!(
-        r#"Analyze these function definitions from a {language:?} codebase and determine which represent security patterns.
+        r#"Analyze these function definitions from a {language:?} codebase and determine which represent resource patterns.
 
 {definitions_context}
 
@@ -338,10 +338,8 @@ Consider these vulnerability types when classifying functions:
 ## Classification Guidelines
 
 For each function, determine if it should be classified as:
-- "principals": Sources that act as data entry points and should be treated as tainted/untrusted (e.g., request.args, user input, file reads, external API responses)
-- "actions": Functions that perform validation, sanitization, authorization, or security operations (e.g., input validation, SQL escaping, authentication checks)
-- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources (e.g., SQL queries, file writes, command execution)
-- "none": Not a security pattern
+- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources (e.g., SQL queries, file writes, command execution, DOM manipulation)
+- "none": Not a security-relevant resource
 
 ## Output Format
 
@@ -356,7 +354,7 @@ Return a JSON object with this structure:
 {{
   "patterns": [
     {{
-      "classification": "principals|actions|resources|none",
+      "classification": "resources|none",
       "function_name": "function_name",
       "query_type": "definition",
       "query": "(function_definition name: (identifier) @name (#eq? @name \"function_name\")) @function",
@@ -379,7 +377,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
                 "items": {
                     "type": "object",
                     "properties": {
-                        "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
+                        "classification": {"type": "string", "enum": ["resources", "none"]},
                         "function_name": {"type": "string"},
                         "query_type": {"type": "string", "enum": ["definition", "reference"]},
                         "query": {"type": "string"},
@@ -401,7 +399,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(
-            "You are a security pattern analyzer. Reply with exactly one JSON object containing a 'patterns' array with analysis for all functions. Be conservative - only classify as security patterns if clearly relevant.",
+            "You are a resource pattern analyzer. Reply with exactly one JSON object containing a 'patterns' array with analysis for all functions. Focus on identifying resource access patterns.",
         ),
         ChatMessage::user(&prompt),
     ]);
@@ -432,10 +430,11 @@ All fields are required for each object. Use proper tree-sitter query syntax for
     })?;
 
     let mut patterns = Vec::new();
-    let mut security_pattern_count = 0;
+    let mut resource_pattern_count = 0;
 
     for pattern_resp in response.patterns {
-        if pattern_resp.classification != "none" {
+        // Only include resource patterns
+        if pattern_resp.classification == "resources" {
             patterns.push(PatternClassification {
                 function_name: pattern_resp.function_name,
                 pattern_type: Some(pattern_resp.classification),
@@ -445,14 +444,14 @@ All fields are required for each object. Use proper tree-sitter query syntax for
                 reasoning: pattern_resp.reasoning,
                 attack_vector: pattern_resp.attack_vector,
             });
-            security_pattern_count += 1;
+            resource_pattern_count += 1;
         }
     }
 
     println!(
-        "✅ 完了: 全{}個分析, セキュリティパターン{}個検出",
+        "✅ 完了: 全{}個分析, リソースパターン{}個検出",
         definitions.len(),
-        security_pattern_count
+        resource_pattern_count
     );
 
     Ok(patterns)
@@ -494,7 +493,7 @@ async fn analyze_all_references_at_once(
         .join("\n");
 
     let prompt = format!(
-        r#"Analyze these function references/calls from a {language:?} codebase and determine which represent calls to security-sensitive functions.
+        r#"Analyze these function references/calls from a {language:?} codebase and determine which represent calls to resource-sensitive functions.
 
 {references_context}
 
@@ -506,10 +505,8 @@ Consider these vulnerability types when classifying function calls:
 ## Classification Guidelines
 
 For each function reference, determine if it should be classified as:
-- "principals": Functions that return or provide untrusted data that attackers can control (e.g., request.get(), input(), file read operations)
-- "actions": Functions that perform security processing (validation, sanitization, authorization) (e.g., escape(), validate(), authenticate())
-- "resources": Functions that operate on attack targets (files, databases, system commands, DOM) (e.g., execute(), open(), query(), innerHTML)
-- "none": Not a security-relevant call
+- "resources": Functions that operate on attack targets (files, databases, system commands, DOM, network) (e.g., execute(), open(), query(), innerHTML, fetch())
+- "none": Not a security-relevant resource
 
 ## Output Format
 
@@ -518,7 +515,7 @@ Return a JSON object with this structure:
 {{
   "patterns": [
     {{
-      "classification": "principals|actions|resources|none",
+      "classification": "resources|none",
       "function_name": "function_name",
       "query_type": "reference",
       "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\")) @call",
@@ -541,7 +538,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
                 "items": {
                     "type": "object",
                     "properties": {
-                        "classification": {"type": "string", "enum": ["principals", "actions", "resources", "none"]},
+                        "classification": {"type": "string", "enum": ["resources", "none"]},
                         "function_name": {"type": "string"},
                         "query_type": {"type": "string", "enum": ["definition", "reference"]},
                         "query": {"type": "string"},
@@ -563,7 +560,7 @@ All fields are required for each object. Use proper tree-sitter query syntax for
 
     let chat_req = ChatRequest::new(vec![
         ChatMessage::system(
-            "You are a security pattern analyzer for function references. Reply with exactly one JSON object containing a 'patterns' array with analysis for all function calls. Focus on calls to security-sensitive functions.",
+            "You are a resource pattern analyzer for function references. Reply with exactly one JSON object containing a 'patterns' array with analysis for all function calls. Focus on calls to resource-sensitive functions.",
         ),
         ChatMessage::user(&prompt),
     ]);
@@ -594,10 +591,11 @@ All fields are required for each object. Use proper tree-sitter query syntax for
     })?;
 
     let mut patterns = Vec::new();
-    let mut security_pattern_count = 0;
+    let mut resource_pattern_count = 0;
 
     for pattern_resp in response.patterns {
-        if pattern_resp.classification != "none" {
+        // Only include resource patterns
+        if pattern_resp.classification == "resources" {
             patterns.push(PatternClassification {
                 function_name: pattern_resp.function_name,
                 pattern_type: Some(pattern_resp.classification),
@@ -607,14 +605,14 @@ All fields are required for each object. Use proper tree-sitter query syntax for
                 reasoning: pattern_resp.reasoning,
                 attack_vector: pattern_resp.attack_vector,
             });
-            security_pattern_count += 1;
+            resource_pattern_count += 1;
         }
     }
 
     println!(
-        "✅ 完了: 全{}個参照分析, セキュリティパターン{}個検出",
+        "✅ 完了: 全{}個参照分析, リソースパターン{}個検出",
         references.len(),
-        security_pattern_count
+        resource_pattern_count
     );
 
     Ok(patterns)
@@ -648,75 +646,31 @@ pub fn write_patterns_to_file(
         Language::Other => return Ok(()),
     };
 
-    let mut principals = Vec::new();
-    let mut actions = Vec::new();
-    let mut resources = Vec::new();
+    // Only collect resource patterns
+    let resources: Vec<_> = patterns
+        .iter()
+        .filter(|p| p.pattern_type.as_deref() == Some("resources"))
+        .collect();
 
-    for pattern in patterns {
-        match pattern.pattern_type.as_deref() {
-            Some("principals") => principals.push(pattern),
-            Some("actions") => actions.push(pattern),
-            Some("resources") => resources.push(pattern),
-            _ => {}
-        }
+    if resources.is_empty() {
+        return Ok(());
     }
 
     let mut yaml_content = format!("{}:\n", lang_name);
-
-    if !principals.is_empty() {
-        yaml_content.push_str("  principals:\n");
-        for pattern in principals {
-            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
-            for line in pattern.query.lines() {
-                yaml_content.push_str(&format!("        {}\n", line));
-            }
-            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
-            yaml_content.push_str("      attack_vector:\n");
-            if !pattern.attack_vector.is_empty() {
-                for technique in &pattern.attack_vector {
-                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
-                }
-            } else {
-                yaml_content.push_str("        []\n");
-            }
+    yaml_content.push_str("  resources:\n");
+    for pattern in resources {
+        yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
+        for line in pattern.query.lines() {
+            yaml_content.push_str(&format!("        {}\n", line));
         }
-    }
-
-    if !actions.is_empty() {
-        yaml_content.push_str("  actions:\n");
-        for pattern in actions {
-            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
-            for line in pattern.query.lines() {
-                yaml_content.push_str(&format!("        {}\n", line));
+        yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
+        yaml_content.push_str("      attack_vector:\n");
+        if !pattern.attack_vector.is_empty() {
+            for technique in &pattern.attack_vector {
+                yaml_content.push_str(&format!("        - \"{}\"\n", technique));
             }
-            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
-            yaml_content.push_str("      attack_vector:\n");
-            if !pattern.attack_vector.is_empty() {
-                for technique in &pattern.attack_vector {
-                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
-                }
-            } else {
-                yaml_content.push_str("        []\n");
-            }
-        }
-    }
-
-    if !resources.is_empty() {
-        yaml_content.push_str("  resources:\n");
-        for pattern in resources {
-            yaml_content.push_str(&format!("    - {}: |\n", pattern.query_type));
-            for line in pattern.query.lines() {
-                yaml_content.push_str(&format!("        {}\n", line));
-            }
-            yaml_content.push_str(&format!("      description: \"{}\"\n", pattern.description));
-            yaml_content.push_str("      attack_vector:\n");
-            if !pattern.attack_vector.is_empty() {
-                for technique in &pattern.attack_vector {
-                    yaml_content.push_str(&format!("        - \"{}\"\n", technique));
-                }
-            } else {
-                yaml_content.push_str("        []\n");
-            }
+        } else {
+            yaml_content.push_str("        []\n");
         }
     }
 

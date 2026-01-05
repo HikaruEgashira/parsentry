@@ -259,7 +259,7 @@ async fn analyze_definitions_with_claude_code(
         let script_path_str = script_path.to_string_lossy();
 
         let prompt = format!(
-            r#"TASK: Analyze function definitions for security patterns. Write JSON, validate with script, fix errors.
+            r#"TASK: Analyze function definitions for resource patterns. Write JSON, validate with script, fix errors.
 
 LANGUAGE: {language:?}
 
@@ -267,16 +267,14 @@ DEFINITIONS:
 {definitions_context}
 
 CLASSIFICATION RULES:
-- "principals": Data entry points (user input, request data, environment vars)
-- "actions": Security controls (validation, sanitization, auth checks)
-- "resources": Sensitive operations (file/DB/network access, command execution)
-- "none": Not security-relevant
+- "resources": Functions that access, modify, or perform operations on files, databases, networks, or system resources (e.g., SQL queries, file writes, command execution, DOM manipulation)
+- "none": Not a security-relevant resource
 
 STEP 1: Write JSON to {output_path}
 {{
   "patterns": [
     {{
-      "classification": "principals|actions|resources|none",
+      "classification": "resources|none",
       "function_name": "exact_function_name",
       "query_type": "definition",
       "query": "(function_definition name: (identifier) @name (#eq? @name \"function_name\")) @function",
@@ -295,7 +293,7 @@ Repeat STEP 2 and STEP 3 until validation passes.
 REQUIREMENTS:
 - All queries must have balanced parentheses
 - All queries must contain capture names (@name, @function, etc)
-- classification must be one of: principals, actions, resources, none
+- classification must be one of: resources, none
 - query_type must be: definition
 - Include ALL functions in patterns array"#,
             language = language,
@@ -406,7 +404,7 @@ async fn analyze_references_with_claude_code(
         let script_path_str = script_path.to_string_lossy();
 
         let prompt = format!(
-            r#"TASK: Analyze function call references for security patterns. Write JSON, validate with script, fix errors.
+            r#"TASK: Analyze function call references for resource patterns. Write JSON, validate with script, fix errors.
 
 LANGUAGE: {language:?}
 
@@ -414,16 +412,14 @@ REFERENCES:
 {references_context}
 
 CLASSIFICATION RULES:
-- "principals": Functions returning untrusted/user-controlled data
-- "actions": Security processing functions (validation, sanitization, auth)
-- "resources": Sensitive operation targets (file, DB, network, DOM, exec)
-- "none": Not security-relevant
+- "resources": Functions that operate on attack targets (files, databases, system commands, DOM, network)
+- "none": Not a security-relevant resource
 
 STEP 1: Write JSON to {output_path}
 {{
   "patterns": [
     {{
-      "classification": "principals|actions|resources|none",
+      "classification": "resources|none",
       "function_name": "exact_function_name",
       "query_type": "reference",
       "query": "(call_expression function: (identifier) @name (#eq? @name \"function_name\")) @call",
@@ -442,7 +438,7 @@ Repeat STEP 2 and STEP 3 until validation passes.
 REQUIREMENTS:
 - All queries must have balanced parentheses
 - All queries must contain capture names (@name, @call, etc)
-- classification must be one of: principals, actions, resources, none
+- classification must be one of: resources, none
 - query_type must be: reference
 - Include ALL functions in patterns array"#,
             language = language,
@@ -534,7 +530,8 @@ fn parse_pattern_response(analysis: &str) -> Result<Vec<PatternClassification>> 
     let mut security_pattern_count = 0;
 
     for pattern_resp in response.patterns {
-        if pattern_resp.classification != "none" {
+        // Only include resource patterns
+        if pattern_resp.classification == "resources" {
             patterns.push(PatternClassification {
                 function_name: pattern_resp.function_name,
                 pattern_type: Some(pattern_resp.classification),
@@ -548,7 +545,7 @@ fn parse_pattern_response(analysis: &str) -> Result<Vec<PatternClassification>> 
         }
     }
 
-    log::debug!("Claude Code analysis: {} security patterns detected", security_pattern_count);
+    log::debug!("Claude Code analysis: {} resource patterns detected", security_pattern_count);
 
     Ok(patterns)
 }
