@@ -206,7 +206,13 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Threat model cache: key is derived from repo metadata (structure, languages, manifests)
     let tm_cache_mode = CacheMode::from_flags(final_args.cache, final_args.cache_only);
     let tm_cache = if config.cache.enabled && tm_cache_mode != CacheMode::NoCache {
-        Cache::new(&config.cache.directory).ok()
+        match Cache::new(&config.cache.directory) {
+            Ok(c) => Some(c),
+            Err(e) => {
+                printer.warning("Cache", &format!("failed to initialize threat-model cache: {}", e));
+                None
+            }
+        }
     } else {
         None
     };
@@ -217,9 +223,21 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Try cache first
     let cached_threat_model = if tm_cache_mode != CacheMode::NoCache {
         tm_cache.as_ref().and_then(|c| {
-            c.get(&tm_cache_prompt, tm_cache_model, tm_cache_agent).ok().flatten()
+            match c.get(&tm_cache_prompt, tm_cache_model, tm_cache_agent) {
+                Ok(v) => v,
+                Err(e) => {
+                    printer.warning("Cache", &format!("failed to read threat-model cache: {}", e));
+                    None
+                }
+            }
         }).and_then(|json| {
-            serde_json::from_str::<parsentry_threat_model::ThreatModel>(&json).ok()
+            match serde_json::from_str::<parsentry_threat_model::ThreatModel>(&json) {
+                Ok(tm) => Some(tm),
+                Err(e) => {
+                    printer.warning("Cache", &format!("corrupt threat-model cache entry, regenerating: {}", e));
+                    None
+                }
+            }
         })
     } else {
         None
@@ -416,7 +434,13 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     let cache_mode = CacheMode::from_flags(final_args.cache, final_args.cache_only);
     let cache = if config.cache.enabled && cache_mode != CacheMode::NoCache {
-        Cache::new(&config.cache.directory).ok().map(Arc::new)
+        match Cache::new(&config.cache.directory) {
+            Ok(c) => Some(Arc::new(c)),
+            Err(e) => {
+                printer.warning("Cache", &format!("failed to initialize analysis cache: {}", e));
+                None
+            }
+        }
     } else {
         None
     };
