@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -401,6 +401,20 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
     let repo = RepoOps::new(root_dir.clone());
     let files = repo.get_relevant_files();
+
+    // Filter to changed files when --diff-base is specified
+    let files = if let Some(ref diff_base) = final_args.diff_base {
+        let changed = get_diff_files(&root_dir, diff_base)?;
+        if changed.is_empty() {
+            println!("✅ No changed files found against {}", diff_base);
+            return Ok(());
+        }
+        let filtered: Vec<_> = files.into_iter().filter(|f| changed.contains(f)).collect();
+        printer.status("Diff filtered", &format!("{} changed files (base: {})", filtered.len(), diff_base));
+        filtered
+    } else {
+        files
+    };
 
     printer.status("Discovered", &format!("{} source files", files.len()));
 
@@ -1639,6 +1653,44 @@ fn generate_mvra_report(results: &MvraResults) -> String {
 }
 
 /// Extract PAR (Principal-Action-Resource) information from SARIF result properties.
+/// Get files changed since the given git ref.
+fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBuf>> {
+    let three_dot = format!("{}...HEAD", diff_base);
+    let output = std::process::Command::new("git")
+        .args(["diff", "--name-only", "--diff-filter=ACMR", &three_dot])
+        .current_dir(root_dir)
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => {
+            // Fallback to two-dot diff
+            std::process::Command::new("git")
+                .args(["diff", "--name-only", "--diff-filter=ACMR", diff_base])
+                .current_dir(root_dir)
+                .output()
+                .map_err(|e| anyhow::anyhow!("git diff failed: {}", e))?
+        }
+    };
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "git diff failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let files: HashSet<PathBuf> = stdout
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(|l| root_dir.join(l.trim()))
+        .collect();
+
+    debug!("Diff files against {}: {:?}", diff_base, files);
+    Ok(files)
+}
+
 fn extract_par_from_sarif_result(result: &parsentry_reports::SarifResult) -> parsentry_core::ParAnalysis {
     let mut principals = Vec::new();
     let mut actions = Vec::new();
