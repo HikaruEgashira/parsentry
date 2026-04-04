@@ -1,47 +1,51 @@
 name: Security Scan
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_call:
+    inputs:
+      version:
+        description: 'Parsentry version to use (e.g., v0.15.0). Defaults to latest.'
+        required: false
+        type: string
+        default: 'latest'
+      model:
+        description: 'Analysis model to use'
+        required: false
+        type: string
+        default: 'gpt-5.1-codex'
+    secrets:
+      PARSENTRY_API_KEY:
+        description: 'API key for the analysis model provider'
+        required: false
 
 permissions:
   contents: read
-
-env:
-  CARGO_TERM_COLOR: always
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force || true
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+      - name: Install parsentry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ inputs.version }}" = "latest" ]; then
+            TAG=$(gh release list --repo HikaruEgashira/parsentry --limit 1 --json tagName --jq '.[0].tagName')
+          else
+            TAG="${{ inputs.version }}"
+          fi
+          echo "Installing parsentry ${TAG}"
+          gh release download "${TAG}" \
+            --repo HikaruEgashira/parsentry \
+            --pattern 'parsentry-x86_64-unknown-linux-gnu.tar.gz' \
+            --dir /tmp
+          tar xzf /tmp/parsentry-x86_64-unknown-linux-gnu.tar.gz -C /usr/local/bin
+          chmod +x /usr/local/bin/parsentry
+          parsentry --version
 
       - name: Cache parsentry scan results
         uses: actions/cache@v4
@@ -65,19 +69,15 @@ jobs:
             echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build
-        if: steps.diff.outputs.skip != 'true'
-        run: cargo build --release
-
       - name: Run scan
         if: steps.diff.outputs.skip != 'true'
         run: |
-          ./target/release/parsentry . \
+          parsentry . \
             --diff-base origin/${{ github.base_ref }} \
             --output-dir reports \
             --cache
         env:
-          PARSENTRY_ANALYSIS_MODEL: ${{ vars.PARSENTRY_MODEL || 'gpt-5.1-codex' }}
+          PARSENTRY_ANALYSIS_MODEL: ${{ inputs.model }}
 
       - name: Upload reports
         if: steps.diff.outputs.skip != 'true'
