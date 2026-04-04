@@ -70,7 +70,7 @@ impl ThreatModelGenerator {
     }
 }
 
-const SYSTEM_PROMPT: &str = r#"You are a security threat modeler. Given repository metadata, identify concrete threats and generate tree-sitter queries to detect them.
+pub const SYSTEM_PROMPT: &str = r#"You are a security threat modeler. Given repository metadata, identify concrete threats and generate tree-sitter queries to detect them.
 
 Rules for tree-sitter queries:
 - Use valid tree-sitter S-expression syntax for the target language
@@ -84,7 +84,7 @@ PAR classification:
 - "action": Security controls (validation, sanitization, auth checks)
 - "resource": Sinks that affect system state (DB writes, file writes, command execution, network calls)"#;
 
-fn build_prompt(repo_context: &str, languages: &[String]) -> String {
+pub fn build_prompt(repo_context: &str, languages: &[String]) -> String {
     format!(
         r#"Analyze this repository and generate a threat model with tree-sitter queries.
 
@@ -124,7 +124,7 @@ Return a JSON object with this structure:
     )
 }
 
-fn threat_model_schema() -> serde_json::Value {
+pub fn threat_model_schema() -> serde_json::Value {
     serde_json::json!({
         "type": "object",
         "properties": {
@@ -205,7 +205,7 @@ fn parse_language(s: &str) -> Language {
     }
 }
 
-fn parse_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
+pub fn parse_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
     let resp: LlmResponse = serde_json::from_str(json_str)
         .map_err(|e| anyhow::anyhow!("Failed to parse threat model response: {}. Content: {}", e, json_str))?;
 

@@ -21,7 +21,11 @@ use parsentry_cache::Cache;
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, StreamCallback};
 use parsentry_core::Language;
 use parsentry_prompt::PromptBuilder;
-use parsentry_threat_model::{RepoMetadata, ThreatModelGenerator, render_threat_model_md};
+use parsentry_threat_model::{
+    RepoMetadata, ThreatModelGenerator, render_threat_model_md,
+    THREAT_MODEL_SYSTEM_PROMPT, build_threat_model_prompt,
+    parse_threat_model_response, threat_model_schema,
+};
 #[allow(unused_imports)]
 use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
 
@@ -367,8 +371,47 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     }
 
     printer.status("Threat Model", "generating threat model via LLM");
-    let threat_generator = ThreatModelGenerator::new(&final_args.model, api_base_url);
-    let threat_model = threat_generator.generate(&repo_metadata).await?;
+    let threat_model = if config.agent.is_claude_code() {
+        printer.info("Threat Model", "using Claude Code agent");
+        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+        let tm_config = ClaudeCodeConfig {
+            claude_path,
+            max_concurrent: 1,
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: false,
+            working_dir: root_dir.clone(),
+            log_dir: None,
+            model: Some("sonnet".to_string()),
+        };
+        let tm_executor = ClaudeCodeExecutor::new(tm_config)?;
+        let prompt = build_threat_model_cli_prompt(&repo_metadata);
+        let raw = tm_executor.execute_raw(&prompt).await
+            .map_err(|e| anyhow::anyhow!("Claude Code threat model generation failed: {}", e))?;
+        let json_str = extract_json_from_text(&raw)
+            .ok_or_else(|| anyhow::anyhow!("Failed to extract JSON from Claude Code response"))?;
+        parse_threat_model_response(&json_str, &root_dir.to_string_lossy())?
+    } else if config.agent.is_codex() {
+        printer.info("Threat Model", "using Codex agent");
+        let codex_config = CodexConfig {
+            codex_path: config.agent.path.clone(),
+            max_concurrent: 1,
+            timeout_secs: config.agent.timeout_secs,
+            enable_poc: false,
+            working_dir: root_dir.clone(),
+            log_dir: None,
+            model: final_args.model.clone(),
+        };
+        let tm_executor = CodexExecutor::new(codex_config)?;
+        let prompt = build_threat_model_cli_prompt(&repo_metadata);
+        let raw = tm_executor.execute_raw(&prompt).await
+            .map_err(|e| anyhow::anyhow!("Codex threat model generation failed: {}", e))?;
+        let json_str = extract_json_from_text(&raw)
+            .ok_or_else(|| anyhow::anyhow!("Failed to extract JSON from Codex response"))?;
+        parse_threat_model_response(&json_str, &root_dir.to_string_lossy())?
+    } else {
+        let threat_generator = ThreatModelGenerator::new(&final_args.model, api_base_url);
+        threat_generator.generate(&repo_metadata).await?
+    };
 
     printer.success("Threat Model", &format!(
         "{} threats identified, {} detection queries generated",
@@ -1759,4 +1802,63 @@ fn extract_par_from_sarif_result(result: &parsentry_reports::SarifResult) -> par
         resources,
         policy_violations,
     }
+}
+
+/// Build a self-contained prompt for CLI-based threat model generation.
+/// Combines system prompt, repo context, and JSON schema instructions.
+fn build_threat_model_cli_prompt(metadata: &RepoMetadata) -> String {
+    let repo_context = metadata.to_prompt_context();
+    let languages: Vec<String> = metadata
+        .languages
+        .keys()
+        .map(|l| format!("{:?}", l))
+        .collect();
+    let user_prompt = build_threat_model_prompt(&repo_context, &languages);
+    let schema = serde_json::to_string_pretty(&threat_model_schema()).unwrap_or_default();
+
+    format!(
+        "{system}\n\n{user}\n\nIMPORTANT: Return ONLY valid JSON matching this schema, with no markdown wrapping or extra text:\n{schema}",
+        system = THREAT_MODEL_SYSTEM_PROMPT,
+        user = user_prompt,
+        schema = schema,
+    )
+}
+
+/// Extract a JSON object from text that may contain markdown wrapping or surrounding prose.
+fn extract_json_from_text(text: &str) -> Option<String> {
+    // Try markdown code block first
+    if let Some(start) = text.find("```json") {
+        let json_start = start + 7;
+        if let Some(end) = text[json_start..].find("```") {
+            return Some(text[json_start..json_start + end].trim().to_string());
+        }
+    }
+    if let Some(start) = text.find("```") {
+        let json_start = start + 3;
+        // Skip optional language tag on same line
+        let json_start = text[json_start..]
+            .find('\n')
+            .map(|n| json_start + n + 1)
+            .unwrap_or(json_start);
+        if let Some(end) = text[json_start..].find("```") {
+            return Some(text[json_start..json_start + end].trim().to_string());
+        }
+    }
+    // Try finding raw JSON object
+    if let Some(start) = text.find('{') {
+        let mut depth = 0;
+        for (i, ch) in text[start..].char_indices() {
+            match ch {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(text[start..start + i + 1].to_string());
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    None
 }
