@@ -52,14 +52,17 @@ jobs:
             parsentry-cache-${{ github.base_ref }}-
             parsentry-cache-
 
-      - name: Get changed files
+      - name: Get changed source files
         id: diff
         run: |
-          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD | head -200)
+          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD \
+            | grep -E '\.(py|js|ts|jsx|tsx|go|java|rb|rs|c|cpp|cs|php|swift|kt|scala|tf|hcl|yml|yaml|sh|sql|pl|pm|lua)$' \
+            | head -200)
           if [ -z "$FILES" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "skip=false" >> $GITHUB_OUTPUT
+            echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
           fi
 
       - name: Build
