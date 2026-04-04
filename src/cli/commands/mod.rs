@@ -1,7 +1,5 @@
-pub mod scan;
-pub mod graph;
 pub mod cache;
+pub mod scan;
 
-pub use scan::run_scan_command;
-pub use graph::run_graph_command;
 pub use cache::handle_cache_command;
+pub use scan::run_scan_command;

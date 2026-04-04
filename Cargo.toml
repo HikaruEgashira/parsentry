@@ -14,13 +14,9 @@ benchmark = []
 tokio.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
 parsentry-parser = { path = "crates/parsentry-parser" }
-parsentry-i18n = { path = "crates/parsentry-i18n" }
 parsentry-utils = { path = "crates/parsentry-utils" }
 parsentry-reports = { path = "crates/parsentry-reports" }
-parsentry-analyzer = { path = "crates/parsentry-analyzer" }
 parsentry-claude-code = { path = "crates/parsentry-claude-code" }
-parsentry-codex = { path = "crates/parsentry-codex" }
-parsentry-prompt = { path = "crates/parsentry-prompt" }
 parsentry-cache = { path = "crates/parsentry-cache" }
 parsentry-threat-model = { path = "crates/parsentry-threat-model" }
 clap = { version = "4.5", features = ["derive"] }
@@ -34,9 +30,7 @@ log = "0.4"
 env_logger = "0.11"
 anyhow.workspace = true
 async-trait.workspace = true
-quick-xml = { version = "0.31", features = ["serialize"] }
 dotenvy = "0.15"
-genai = "0.4.0-alpha.15"
 futures = { version = "0.3", features = ["thread-pool"] }
 indicatif = "0.17"
 terminal_size = "0.4"

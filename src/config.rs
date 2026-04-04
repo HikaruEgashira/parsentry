@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::cli::args::{Agent, ScanArgs};
-use crate::mvra::MvraConfig;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
@@ -27,13 +26,7 @@ pub struct ParsentryConfig {
     pub generation: GenerationConfig,
 
     #[serde(default)]
-    pub call_graph: CallGraphConfigToml,
-
-    #[serde(default)]
     pub agent: AgentConfig,
-
-    #[serde(default)]
-    pub mvra: MvraConfig,
 
     #[serde(default)]
     pub cache: CacheConfig,
@@ -80,20 +73,14 @@ impl AgentConfig {
         self.agent_type == "claude-code"
     }
 
-    /// Check if Codex agent is enabled
-    pub fn is_codex(&self) -> bool {
-        self.agent_type == "codex"
-    }
-
     /// Get the Agent enum value
     pub fn get_agent(&self) -> Agent {
         match self.agent_type.as_str() {
             "claude-code" => Agent::ClaudeCode,
-            "codex" => Agent::Codex,
             "genai" => Agent::Genai,
             unknown => {
                 tracing::warn!(
-                    "Unknown agent type '{}' in config, defaulting to 'claude-code'. Valid values: 'genai', 'claude-code', 'codex'",
+                    "Unknown agent type '{}' in config, defaulting to 'claude-code'. Valid values: 'genai', 'claude-code'",
                     unknown
                 );
                 Agent::ClaudeCode
@@ -276,31 +263,6 @@ pub struct GenerationConfig {
     pub generate_patterns: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct CallGraphConfigToml {
-    #[serde(default)]
-    pub call_graph: bool,
-    
-    #[serde(default = "default_call_graph_format")]
-    pub format: String,
-    
-    pub output: Option<PathBuf>,
-    
-    pub start_functions: Option<Vec<String>>,
-    
-    #[serde(default = "default_call_graph_max_depth")]
-    pub max_depth: Option<usize>,
-    
-    pub include: Option<Vec<String>>,
-    
-    pub exclude: Option<Vec<String>>,
-    
-    #[serde(default)]
-    pub detect_cycles: bool,
-    
-    #[serde(default)]
-    pub security_focus: bool,
-}
 fn default_model() -> String {
     "gpt-5.4".to_string()
 }
@@ -313,13 +275,6 @@ fn default_language() -> String {
     "ja".to_string()
 }
 
-fn default_call_graph_format() -> String {
-    "json".to_string()
-}
-
-fn default_call_graph_max_depth() -> Option<usize> {
-    Some(10)
-}
 impl Default for AnalysisConfig {
     fn default() -> Self {
         Self {
@@ -374,22 +329,6 @@ impl Default for GenerationConfig {
     }
 }
 
-impl Default for CallGraphConfigToml {
-    fn default() -> Self {
-        Self {
-            call_graph: false,
-            format: default_call_graph_format(),
-            output: None,
-            start_functions: None,
-            max_depth: default_call_graph_max_depth(),
-            include: None,
-            exclude: None,
-            detect_cycles: false,
-            security_focus: false,
-        }
-    }
-}
-
 impl Default for AgentConfig {
     fn default() -> Self {
         Self {
@@ -411,9 +350,7 @@ impl Default for ParsentryConfig {
             api: ApiConfig::default(),
             repo: RepoConfig::default(),
             generation: GenerationConfig::default(),
-            call_graph: CallGraphConfigToml::default(),
             agent: AgentConfig::default(),
-            mvra: MvraConfig::default(),
             cache: CacheConfig::default(),
         }
     }
@@ -465,35 +402,6 @@ impl ParsentryConfig {
             self.repo.url = other.repo.url.clone();
         }
 
-        // Call graph config
-        if other.call_graph.call_graph {
-            self.call_graph.call_graph = other.call_graph.call_graph;
-        }
-        if other.call_graph.format != default_call_graph_format() {
-            self.call_graph.format = other.call_graph.format.clone();
-        }
-        if other.call_graph.output.is_some() {
-            self.call_graph.output = other.call_graph.output.clone();
-        }
-        if other.call_graph.start_functions.is_some() {
-            self.call_graph.start_functions = other.call_graph.start_functions.clone();
-        }
-        if other.call_graph.max_depth != default_call_graph_max_depth() {
-            self.call_graph.max_depth = other.call_graph.max_depth;
-        }
-        if other.call_graph.include.is_some() {
-            self.call_graph.include = other.call_graph.include.clone();
-        }
-        if other.call_graph.exclude.is_some() {
-            self.call_graph.exclude = other.call_graph.exclude.clone();
-        }
-        if other.call_graph.detect_cycles {
-            self.call_graph.detect_cycles = other.call_graph.detect_cycles;
-        }
-        if other.call_graph.security_focus {
-            self.call_graph.security_focus = other.call_graph.security_focus;
-        }
-
         // Agent config
         if other.agent.agent_type != default_agent_type() {
             self.agent.agent_type = other.agent.agent_type.clone();
@@ -509,23 +417,6 @@ impl ParsentryConfig {
         }
         if other.agent.enable_poc {
             self.agent.enable_poc = other.agent.enable_poc;
-        }
-
-        // MVRA config
-        if other.mvra.search_query.is_some() {
-            self.mvra.search_query = other.mvra.search_query.clone();
-        }
-        if other.mvra.code_query.is_some() {
-            self.mvra.code_query = other.mvra.code_query.clone();
-        }
-        if other.mvra.max_repos != 10 {
-            self.mvra.max_repos = other.mvra.max_repos;
-        }
-        if other.mvra.cache_dir != PathBuf::from(".parsentry-cache") {
-            self.mvra.cache_dir = other.mvra.cache_dir.clone();
-        }
-        if !other.mvra.use_cache {
-            self.mvra.use_cache = other.mvra.use_cache;
         }
     }
 }
@@ -577,33 +468,13 @@ verbosity = 0
 [generation]
 generate_patterns = false
 
-[call_graph]
-call_graph = false
-format = "json"
-# output = "call_graph.json"
-# start_functions = ["main"]
-max_depth = 10
-# include = ["src/**"]
-# exclude = ["test/**"]
-detect_cycles = false
-security_focus = false
-
 [agent]
-# Agent type: "genai" (default) or "claude-code"
-agent_type = "genai"
+# Agent type: "genai" or "claude-code" (default)
+agent_type = "claude-code"
 # path = "/usr/local/bin/claude"  # Only for claude-code
 max_concurrent = 10
 timeout_secs = 300
 enable_poc = false
-
-[mvra]
-# search_query = "language:python stars:>100"
-# code_query = "path:*.py import flask"
-max_repos = 10
-cache_dir = ".parsentry-cache"
-use_cache = true
-# min_stars = 100
-# repositories = ["owner/repo1", "owner/repo2"]
 "#.to_string()
         })
     }
@@ -754,36 +625,6 @@ use_cache = true
                         self.filtering.vuln_types = Some(types);
                     }
                     "API_BASE_URL" => self.api.base_url = Some(value.clone()),
-                    "CALL_GRAPH_ENABLED" => {
-                        self.call_graph.call_graph = value.parse()
-                            .map_err(|_| anyhow!("Invalid call_graph value: {}", value))?;
-                    }
-                    "CALL_GRAPH_FORMAT" => self.call_graph.format = value.clone(),
-                    "CALL_GRAPH_OUTPUT" => self.call_graph.output = Some(PathBuf::from(value)),
-                    "CALL_GRAPH_START_FUNCTIONS" => {
-                        let functions: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
-                        self.call_graph.start_functions = Some(functions);
-                    }
-                    "CALL_GRAPH_MAX_DEPTH" => {
-                        self.call_graph.max_depth = Some(value.parse()
-                            .map_err(|_| anyhow!("Invalid call_graph_max_depth value: {}", value))?);
-                    }
-                    "CALL_GRAPH_INCLUDE" => {
-                        let patterns: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
-                        self.call_graph.include = Some(patterns);
-                    }
-                    "CALL_GRAPH_EXCLUDE" => {
-                        let patterns: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
-                        self.call_graph.exclude = Some(patterns);
-                    }
-                    "CALL_GRAPH_DETECT_CYCLES" => {
-                        self.call_graph.detect_cycles = value.parse()
-                            .map_err(|_| anyhow!("Invalid detect_cycles value: {}", value))?;
-                    }
-                    "CALL_GRAPH_SECURITY_FOCUS" => {
-                        self.call_graph.security_focus = value.parse()
-                            .map_err(|_| anyhow!("Invalid security_focus value: {}", value))?;
-                    }
                     _ => {} // Ignore unknown environment variables
                 }
             }
@@ -799,14 +640,6 @@ use_cache = true
 
         if args.min_confidence != default_min_confidence() {
             self.analysis.min_confidence = args.min_confidence;
-        }
-
-        if !args.language.is_empty() && args.language != default_language() {
-            self.analysis.language = args.language.clone();
-        }
-
-        if args.evaluate {
-            self.analysis.evaluate = args.evaluate;
         }
 
         // --debug is equivalent to -vv (verbosity >= 2)
@@ -825,10 +658,6 @@ use_cache = true
             self.paths.output_dir = Some(output_dir.clone());
         }
 
-        if let Some(ref analyze) = args.analyze {
-            self.paths.analyze = Some(analyze.clone());
-        }
-
         if let Some(ref vuln_types_str) = args.vuln_types {
             let types: Vec<String> = vuln_types_str.split(',').map(|s| s.trim().to_string()).collect();
             self.filtering.vuln_types = Some(types);
@@ -841,9 +670,6 @@ use_cache = true
         match args.agent {
             Agent::ClaudeCode => {
                 self.agent.agent_type = "claude-code".to_string();
-            }
-            Agent::Codex => {
-                self.agent.agent_type = "codex".to_string();
             }
             Agent::Genai => {
                 self.agent.agent_type = "genai".to_string();
@@ -948,28 +774,19 @@ use_cache = true
     pub fn to_args(&self) -> ScanArgs {
         ScanArgs {
             target: self.paths.target.clone(),
-            analyze: self.paths.analyze.clone(),
             model: self.analysis.model.clone(),
             verbosity: self.analysis.verbosity,
-            evaluate: self.analysis.evaluate,
             output_dir: self.paths.output_dir.clone(),
             min_confidence: self.analysis.min_confidence,
             vuln_types: self.filtering.vuln_types.as_ref().map(|v| v.join(",")),
             debug: self.analysis.verbosity >= 2,  // debug is now derived from verbosity
             api_base_url: self.api.base_url.clone(),
-            language: self.analysis.language.clone(),
             config: None,
             generate_config: false,
             agent: self.agent.get_agent(),
             agent_path: self.agent.path.clone(),
             agent_concurrency: self.agent.max_concurrent,
             agent_poc: self.agent.enable_poc,
-            mvra: false,
-            mvra_search_query: self.mvra.search_query.clone(),
-            mvra_code_query: self.mvra.code_query.clone(),
-            mvra_max_repos: self.mvra.max_repos,
-            mvra_cache_dir: Some(self.mvra.cache_dir.clone()),
-            mvra_cache: self.mvra.use_cache,
             cache: self.cache.enabled,
             cache_only: false,  // CLI flags are applied in scan command
             filter_lang: None,  // CLI option only

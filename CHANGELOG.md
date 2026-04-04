@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.16.0] - 2026-04-04
+
+### 🎉 Breaking Changes
+- **Attack Surface駆動スキャン**: Threat ModelをAttack Surface列挙に刷新。エンドポイント、DBテーブル、Public API等の単位でスキャン
+- **MVRA削除**: Multi-Repository Variant Analysis機能を削除
+- **Call Graph削除**: Call Graph生成機能を削除
+- **Codex agent削除**: Claude Codeに一本化
+- **i18n削除**: 国際化機能を削除、英語ハードコード
+- **parsentry-analyzer削除**: genai直接呼び出しを廃止、Claude Code経由に統一
+- **parsentry-prompt削除**: scan.rsにインライン化
+
+### 🔧 Improvements
+- scan.rsを1,861行から752行に削減（-60%）
+- src/合計を約6,500行から3,379行に削減（-48%）
+- 依存crateを11から7に削減
+- CLIオプションを27から18に削減
+- 各AttackSurfaceにtree-sitter queryを付与し、スキャン対象をsurface locationに絞り込み
+
+---
+
 ## [0.14.0] - 2025-12-31
 
 ### 🎉 New Features

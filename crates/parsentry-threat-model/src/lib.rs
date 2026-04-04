@@ -1,7 +1,7 @@
 //! Threat modeling phase for Parsentry.
 //!
 //! Analyzes repository metadata (structure, dependencies, frameworks)
-//! and generates a threat model with tree-sitter queries for targeted scanning.
+//! and enumerates attack surfaces as scan units.
 
 mod collector;
 mod generator;
@@ -14,5 +14,5 @@ pub use generator::{
     build_prompt as build_threat_model_prompt, parse_response as parse_threat_model_response,
     threat_model_schema,
 };
-pub use model::{ThreatEntry, ThreatModel, ThreatQuery};
+pub use model::{AttackSurface, SurfaceKind, ThreatModel};
 pub use report::render_threat_model_md;

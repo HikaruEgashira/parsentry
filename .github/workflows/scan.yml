@@ -12,7 +12,7 @@ on:
         description: 'Analysis model to use'
         required: false
         type: string
-        default: 'gpt-5.1-codex'
+        default: 'gpt-5.4'
     secrets:
       PARSENTRY_API_KEY:
         description: 'API key for the analysis model provider'

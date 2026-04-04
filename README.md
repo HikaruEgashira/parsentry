@@ -4,7 +4,7 @@
 
 **AI-only scanners are slow and miss vulnerabilities.**
 
-Parsentry uses static analysis to enumerate patterns, then orchestrates AI agents for deep inspection.
+Parsentry uses static analysis to enumerate attack surfaces, then orchestrates AI agents for deep inspection.
 Scan large repositories 10x faster (or more) while catching what others miss.
 
 </div>
@@ -13,9 +13,10 @@ Scan large repositories 10x faster (or more) while catching what others miss.
 
 ### How it works
 
-1. Pattern Enumeration — Tree-sitter finds security-relevant code paths with PAR framework
-2. AI Orchestration — Agents analyze each pattern in parallel
-3. Universal — Support `C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform`
+1. Attack Surface Enumeration — LLM analyzes repo metadata and enumerates endpoints, DB tables, public APIs
+2. Pattern Matching — Tree-sitter finds security-relevant code in attack surface locations
+3. AI Analysis — Claude Code agents analyze each pattern in parallel, outputting SARIF
+4. Universal — Support `C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform`
 
 <div align="center">
   <img src="./docs/images/run1.png" width="32%" alt="Run 1">
@@ -37,14 +38,11 @@ Download the latest release for your platform from [GitHub Releases](https://git
 # Analyze a GitHub repository
 parsentry owner/repository
 
-# Analyze with Claude Code CLI
-parsentry owner/repository --agent claude-code
-
 # Analyze a local directory
 parsentry /path/to/code
 
-# Generate security patterns
-parsentry owner/repository --generate-patterns
+# Only scan changed files against a base branch
+parsentry owner/repository --diff-base origin/main
 ```
 
 ### Command Line Options
@@ -58,22 +56,22 @@ Arguments:
   [TARGET]  Target to analyze: local path or GitHub repository (owner/repo)
 
 Core Options:
-  -a, --analyze <ANALYZE>                Analysis target
   -m, --model <MODEL>                    [default: gpt-5.4]
       --output-dir <OUTPUT_DIR>          [default: ./reports]
-      --generate-patterns                Generate security patterns
-      --language <LANGUAGE>              [default: ja]
+      --min-confidence <MIN_CONFIDENCE>  [default: 70]
+      --diff-base <DIFF_BASE>            Git ref to diff against (e.g., "origin/main")
+      --filter-lang <FILTER_LANG>        Filter by language (comma-separated)
 
 Agent Options:
-      --agent <AGENT>                    [default: genai]
+      --agent <AGENT>                    [default: claude-code]
                                          Possible values: genai, claude-code
+      --agent-path <AGENT_PATH>          Path to claude CLI binary
+      --agent-concurrency <N>            Max concurrent processes [default: 10]
       --agent-poc                        Enable PoC execution
 
-Multi-Repository Variant Analysis (MVRA):
-      --mvra                             Enable multi-repository variant analysis
-      --search-query <MVRA_SEARCH_QUERY> GitHub search query for MVRA
-      --code-query <MVRA_CODE_QUERY>     Code search query for MVRA
-      --max-repos <MVRA_MAX_REPOS>       Max repos to analyze [default: 10]
+Cache Options:
+      --cache                            Enable LLM response cache [default: true]
+      --cache-only                       Use cache only (fail if cache miss)
 ```
 
 ### Example Reports
@@ -86,7 +84,7 @@ Multi-Repository Variant Analysis (MVRA):
 - [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js
 - [OWASP/railsgoat](docs/reports/railsgoat/summary.md) - Ruby on Rails
 - [dolevf/Damn-Vulnerable-GraphQL-Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL
-- [cider-security-research/cicd-goat](docs/reports/cicd-goat/parsentry-results.sarif) - CI/CD Pipeline (analyzed with `--agent claude-code`)
+- [cider-security-research/cicd-goat](docs/reports/cicd-goat/parsentry-results.sarif) - CI/CD Pipeline
 
 ### Security
 

@@ -6,8 +6,7 @@ use log::{debug, info};
 use serde::Deserialize;
 
 use crate::collector::RepoMetadata;
-use crate::model::{ThreatEntry, ThreatModel, ThreatQuery};
-use parsentry_core::Language;
+use crate::model::{AttackSurface, SurfaceKind, ThreatModel};
 
 pub struct ThreatModelGenerator {
     model: String,
@@ -43,9 +42,8 @@ impl ThreatModelGenerator {
         )?;
 
         info!(
-            "Threat model generated: {} threats, {} queries",
-            model.threats.len(),
-            model.total_queries()
+            "Threat model generated: {} attack surfaces",
+            model.total_surfaces()
         );
 
         Ok(model)
@@ -70,52 +68,58 @@ impl ThreatModelGenerator {
     }
 }
 
-pub const SYSTEM_PROMPT: &str = r#"You are a security threat modeler. Given repository metadata, identify concrete threats and generate tree-sitter queries to detect them.
+pub const SYSTEM_PROMPT: &str = r#"You are an attack surface enumerator. Given repository metadata, identify all concrete attack surfaces and generate a tree-sitter query for each to locate them in code.
 
-Rules for tree-sitter queries:
-- Use valid tree-sitter S-expression syntax for the target language
-- Always include a capture name for the match target (e.g. @call, @function, @attribute)
-- Prefer specific patterns over broad ones to reduce false positives
+Focus on listing:
+
+For web applications:
+- HTTP/gRPC/GraphQL endpoints (method + path)
+- Database tables or collections accessed
+- External service calls
+
+For libraries:
+- Public API functions/methods that accept untrusted input
+
+For CLI tools:
+- Command handlers that process user input
+- File I/O operations
+
+For Infrastructure-as-Code:
+- Cloud resources with security implications (IAM, storage, network)
+
+Rules:
+- Be specific: "POST /api/users" not "user management endpoints"
+- Include file paths where each surface is defined
+- Each surface must have a valid tree-sitter S-expression query to locate it
+- Use capture names (e.g. @func, @call) in queries
 - Use #eq? or #match? predicates to narrow matches
-- Each query must be a single valid S-expression
-
-PAR classification:
-- "principal": Sources of untrusted data (user input, HTTP params, env vars, file reads)
-- "action": Security controls (validation, sanitization, auth checks)
-- "resource": Sinks that affect system state (DB writes, file writes, command execution, network calls)"#;
+- Quality over quantity — only list surfaces that warrant security review"#;
 
 pub fn build_prompt(repo_context: &str, languages: &[String]) -> String {
     format!(
-        r#"Analyze this repository and generate a threat model with tree-sitter queries.
+        r#"Enumerate the attack surfaces of this repository.
 
 {repo_context}
 
 Languages present: {languages}
 
-For each identified threat:
-1. Explain WHY this threat applies to THIS specific repository (based on its dependencies, structure, and entry points)
-2. Generate tree-sitter queries for the relevant language to detect the principal (source), action (control), and resource (sink) patterns
-3. Focus on the most impactful threats — quality over quantity
+For each attack surface:
+1. Identify the specific surface (endpoint, table, public function, etc.)
+2. List the file(s) where it is defined or used
+3. Briefly explain why it warrants security review
 
 Return a JSON object with this structure:
 {{
+  "app_type": "web_application|library|cli|infrastructure|mixed",
   "summary": "High-level security posture summary (2-3 sentences)",
-  "threats": [
+  "surfaces": [
     {{
-      "id": "THREAT-001",
-      "category": "e.g. SQL Injection",
-      "rationale": "Why this threat applies to this repo specifically",
-      "attack_vectors": ["T1190"],
-      "attack_surface": ["src/db/", "api/handlers/"],
-      "language": "Python",
-      "queries": [
-        {{
-          "par_type": "principal|action|resource",
-          "query_type": "definition|reference",
-          "query": "(call function: (identifier) @func (#eq? @func \"execute\")) @call",
-          "description": "What this query detects"
-        }}
-      ]
+      "id": "SURFACE-001",
+      "kind": "endpoint|db_table|public_api|file_handler|external_call|iac_resource",
+      "identifier": "POST /api/users",
+      "locations": ["src/routes/users.py", "src/models/user.py"],
+      "description": "User registration endpoint accepting untrusted input",
+      "query": "(decorator (call function: (attribute attribute: (identifier) @method (#match? @method \"post|put|delete\")))) @route"
     }}
   ]
 }}"#,
@@ -128,80 +132,54 @@ pub fn threat_model_schema() -> serde_json::Value {
     serde_json::json!({
         "type": "object",
         "properties": {
+            "app_type": {"type": "string", "enum": ["web_application", "library", "cli", "infrastructure", "mixed"]},
             "summary": {"type": "string"},
-            "threats": {
+            "surfaces": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
                         "id": {"type": "string"},
-                        "category": {"type": "string"},
-                        "rationale": {"type": "string"},
-                        "attack_vectors": {"type": "array", "items": {"type": "string"}},
-                        "attack_surface": {"type": "array", "items": {"type": "string"}},
-                        "language": {"type": "string"},
-                        "queries": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "par_type": {"type": "string", "enum": ["principal", "action", "resource"]},
-                                    "query_type": {"type": "string", "enum": ["definition", "reference"]},
-                                    "query": {"type": "string"},
-                                    "description": {"type": "string"}
-                                },
-                                "required": ["par_type", "query_type", "query", "description"]
-                            }
-                        }
+                        "kind": {"type": "string", "enum": ["endpoint", "db_table", "public_api", "file_handler", "external_call", "iac_resource"]},
+                        "identifier": {"type": "string"},
+                        "locations": {"type": "array", "items": {"type": "string"}},
+                        "description": {"type": "string"},
+                        "query": {"type": "string"}
                     },
-                    "required": ["id", "category", "rationale", "attack_vectors", "attack_surface", "language", "queries"]
+                    "required": ["id", "kind", "identifier", "locations", "description", "query"]
                 }
             }
         },
-        "required": ["summary", "threats"]
+        "required": ["app_type", "summary", "surfaces"]
     })
 }
 
 #[derive(Deserialize)]
 struct LlmResponse {
+    app_type: String,
     summary: String,
-    threats: Vec<LlmThreat>,
+    surfaces: Vec<LlmSurface>,
 }
 
 #[derive(Deserialize)]
-struct LlmThreat {
+struct LlmSurface {
     id: String,
-    category: String,
-    rationale: String,
-    attack_vectors: Vec<String>,
-    attack_surface: Vec<String>,
-    language: String,
-    queries: Vec<LlmQuery>,
-}
-
-#[derive(Deserialize)]
-struct LlmQuery {
-    par_type: String,
-    query_type: String,
-    query: String,
+    kind: String,
+    identifier: String,
+    locations: Vec<String>,
     description: String,
+    query: String,
 }
 
-fn parse_language(s: &str) -> Language {
+fn parse_surface_kind(s: &str) -> SurfaceKind {
     match s.to_lowercase().as_str() {
-        "python" => Language::Python,
-        "javascript" => Language::JavaScript,
-        "typescript" => Language::TypeScript,
-        "rust" => Language::Rust,
-        "java" => Language::Java,
-        "go" => Language::Go,
-        "ruby" => Language::Ruby,
-        "c" => Language::C,
-        "cpp" | "c++" => Language::Cpp,
-        "terraform" | "hcl" => Language::Terraform,
-        "php" => Language::Php,
-        "yaml" => Language::Yaml,
-        _ => Language::Other,
+        "endpoint" => SurfaceKind::Endpoint,
+        "db_table" => SurfaceKind::DbTable,
+        "public_api" => SurfaceKind::PublicApi,
+        "file_handler" => SurfaceKind::FileHandler,
+        "external_call" => SurfaceKind::ExternalCall,
+        "iac_resource" => SurfaceKind::IacResource,
+        _ => SurfaceKind::PublicApi, // fallback
     }
 }
 
@@ -209,34 +187,25 @@ pub fn parse_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
     let resp: LlmResponse = serde_json::from_str(json_str)
         .map_err(|e| anyhow::anyhow!("Failed to parse threat model response: {}. Content: {}", e, json_str))?;
 
-    let threats: Vec<ThreatEntry> = resp
-        .threats
+    let surfaces: Vec<AttackSurface> = resp
+        .surfaces
         .into_iter()
-        .map(|t| ThreatEntry {
-            id: t.id,
-            category: t.category,
-            rationale: t.rationale,
-            attack_vectors: t.attack_vectors,
-            attack_surface: t.attack_surface,
-            language: parse_language(&t.language),
-            queries: t
-                .queries
-                .into_iter()
-                .map(|q| ThreatQuery {
-                    par_type: q.par_type,
-                    query_type: q.query_type,
-                    query: q.query,
-                    description: q.description,
-                })
-                .collect(),
+        .map(|s| AttackSurface {
+            id: s.id,
+            kind: parse_surface_kind(&s.kind),
+            identifier: s.identifier,
+            locations: s.locations,
+            description: s.description,
+            query: s.query,
         })
         .collect();
 
     Ok(ThreatModel {
         repository: repository.to_string(),
         generated_at: chrono::Utc::now().to_rfc3339(),
+        app_type: resp.app_type,
         summary: resp.summary,
-        threats,
+        surfaces,
     })
 }
 

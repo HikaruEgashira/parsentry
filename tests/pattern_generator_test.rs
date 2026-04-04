@@ -212,85 +212,64 @@ fn test_repo_metadata_prompt_context() {
 
 #[test]
 fn test_threat_model_report_rendering() {
-    use parsentry_threat_model::{ThreatEntry, ThreatModel, ThreatQuery, render_threat_model_md};
+    use parsentry_threat_model::{AttackSurface, SurfaceKind, ThreatModel, render_threat_model_md};
 
     let model = ThreatModel {
         repository: "test/repo".to_string(),
         generated_at: "2025-01-01T00:00:00Z".to_string(),
-        summary: "A Flask web app with SQL injection risks.".to_string(),
-        threats: vec![ThreatEntry {
-            id: "THREAT-001".to_string(),
-            category: "SQL Injection".to_string(),
-            rationale: "Uses raw SQL queries with string formatting.".to_string(),
-            attack_vectors: vec!["T1190".to_string()],
-            attack_surface: vec!["src/db.py".to_string()],
-            language: Language::Python,
-            queries: vec![ThreatQuery {
-                par_type: "resource".to_string(),
-                query_type: "reference".to_string(),
-                query: r#"(call function: (attribute attribute: (identifier) @attr (#eq? @attr "execute"))) @call"#.to_string(),
-                description: "SQL execute calls".to_string(),
-            }],
+        app_type: "web_application".to_string(),
+        summary: "A Flask web app with user-facing endpoints.".to_string(),
+        surfaces: vec![AttackSurface {
+            id: "SURFACE-001".to_string(),
+            kind: SurfaceKind::Endpoint,
+            identifier: "POST /api/users".to_string(),
+            locations: vec!["src/routes/users.py".to_string()],
+            description: "User registration endpoint accepting untrusted input".to_string(),
+            query: r#"(call function: (identifier) @func (#eq? @func "route")) @call"#.to_string(),
         }],
     };
 
     let md = render_threat_model_md(&model);
 
     assert!(md.contains("# Threat Model: test/repo"));
-    assert!(md.contains("THREAT-001"));
-    assert!(md.contains("SQL Injection"));
-    assert!(md.contains("execute"));
+    assert!(md.contains("SURFACE-001"));
+    assert!(md.contains("POST /api/users"));
+    assert!(md.contains("web_application"));
 }
 
 #[test]
-fn test_threat_model_queries_by_language() {
-    use parsentry_threat_model::{ThreatEntry, ThreatModel, ThreatQuery};
+fn test_threat_model_all_locations() {
+    use parsentry_threat_model::{AttackSurface, SurfaceKind, ThreatModel};
 
     let model = ThreatModel {
         repository: "test".to_string(),
         generated_at: "now".to_string(),
+        app_type: "web_application".to_string(),
         summary: "test".to_string(),
-        threats: vec![
-            ThreatEntry {
-                id: "T1".to_string(),
-                category: "SQLi".to_string(),
-                rationale: "test".to_string(),
-                attack_vectors: vec![],
-                attack_surface: vec![],
-                language: Language::Python,
-                queries: vec![
-                    ThreatQuery {
-                        par_type: "resource".to_string(),
-                        query_type: "reference".to_string(),
-                        query: "(call) @call".to_string(),
-                        description: "test".to_string(),
-                    },
-                ],
+        surfaces: vec![
+            AttackSurface {
+                id: "S1".to_string(),
+                kind: SurfaceKind::Endpoint,
+                identifier: "GET /api/users".to_string(),
+                locations: vec!["src/routes.py".to_string(), "src/models.py".to_string()],
+                description: "test".to_string(),
+                query: "(call) @call".to_string(),
             },
-            ThreatEntry {
-                id: "T2".to_string(),
-                category: "XSS".to_string(),
-                rationale: "test".to_string(),
-                attack_vectors: vec![],
-                attack_surface: vec![],
-                language: Language::JavaScript,
-                queries: vec![
-                    ThreatQuery {
-                        par_type: "resource".to_string(),
-                        query_type: "reference".to_string(),
-                        query: "(assignment_expression) @expr".to_string(),
-                        description: "test".to_string(),
-                    },
-                ],
+            AttackSurface {
+                id: "S2".to_string(),
+                kind: SurfaceKind::DbTable,
+                identifier: "users table".to_string(),
+                locations: vec!["src/models.py".to_string(), "src/db.py".to_string()],
+                description: "test".to_string(),
+                query: "(call) @call".to_string(),
             },
         ],
     };
 
-    let by_lang = model.queries_by_language();
-    assert_eq!(by_lang.len(), 2);
-    assert_eq!(by_lang[&Language::Python].len(), 1);
-    assert_eq!(by_lang[&Language::JavaScript].len(), 1);
-    assert_eq!(model.total_queries(), 2);
+    let locations = model.all_locations();
+    // Deduplicated: src/routes.py, src/models.py, src/db.py
+    assert_eq!(locations.len(), 3);
+    assert_eq!(model.total_surfaces(), 2);
 }
 
 #[test]
