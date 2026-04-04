@@ -4,7 +4,10 @@ on:
   pull_request:
     branches: [ main ]
   push:
-    branches: [ main ] # Also run on pushes to main for good measure
+    branches: [ main ]
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,8 +16,10 @@ jobs:
   build_and_test:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Free disk space
+        timeout-minutes: 5
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
@@ -25,15 +30,21 @@ jobs:
           df -h
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        timeout-minutes: 5
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
+          persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        timeout-minutes: 5
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        timeout-minutes: 5
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/bin/
@@ -41,15 +52,19 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
             ${{ runner.os }}-cargo-
 
       - name: Build
+        timeout-minutes: 15
         run: cargo build
 
       - name: Run checks
+        timeout-minutes: 5
         run: cargo check
 
       - name: Run tests
+        timeout-minutes: 10
         run: cargo test

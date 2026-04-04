@@ -6,29 +6,39 @@ on:
     paths: [ 'docs/website/**' ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 15
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      timeout-minutes: 5
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
 
     - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
+      timeout-minutes: 5
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
         bun-version: latest
 
     - name: Install dependencies
+      timeout-minutes: 5
       working-directory: docs/website
       run: bun install
 
     - name: Build
+      timeout-minutes: 5
       working-directory: docs/website
       run: bun run build
 
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+      timeout-minutes: 5
+      uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: docs/website/out

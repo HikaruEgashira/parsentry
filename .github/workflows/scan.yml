@@ -24,19 +24,25 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        timeout-minutes: 5
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install parsentry
+        timeout-minutes: 5
         env:
           GH_TOKEN: ${{ github.token }}
+          PARSENTRY_VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ inputs.version }}" = "latest" ]; then
+          if [ "${PARSENTRY_VERSION}" = "latest" ]; then
             TAG=$(gh release list --repo HikaruEgashira/parsentry --limit 1 --json tagName --jq '.[0].tagName')
           else
-            TAG="${{ inputs.version }}"
+            TAG="${PARSENTRY_VERSION}"
           fi
           echo "Installing parsentry ${TAG}"
           gh release download "${TAG}" \
@@ -48,7 +54,8 @@ jobs:
           parsentry --version
 
       - name: Cache parsentry scan results
-        uses: actions/cache@v4
+        timeout-minutes: 5
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .parsentry/cache
           key: parsentry-cache-${{ github.base_ref }}-${{ github.sha }}
@@ -58,6 +65,7 @@ jobs:
 
       - name: Get changed source files
         id: diff
+        timeout-minutes: 2
         run: |
           FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD \
             | grep -E '\.(py|js|ts|jsx|tsx|go|java|rb|rs|c|cpp|cs|php|swift|kt|scala|tf|hcl|yml|yaml|sh|sql|pl|pm|lua)$' \
@@ -71,6 +79,7 @@ jobs:
 
       - name: Run scan
         if: steps.diff.outputs.skip != 'true'
+        timeout-minutes: 20
         run: |
           parsentry . \
             --diff-base origin/${{ github.base_ref }} \
@@ -81,7 +90,8 @@ jobs:
 
       - name: Upload reports
         if: steps.diff.outputs.skip != 'true'
-        uses: actions/upload-artifact@v4
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: security-scan-reports
           path: reports/
