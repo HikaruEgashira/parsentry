@@ -203,28 +203,68 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         repo_metadata.languages.len()
     ));
 
-    printer.status("Generating", "threat model via LLM");
-    let threat_model = if config.agent.is_claude_code() {
-        let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
-        let tm_config = ClaudeCodeConfig {
-            claude_path,
-            max_concurrent: 1,
-            timeout_secs: config.agent.timeout_secs,
-            enable_poc: false,
-            working_dir: root_dir.clone(),
-            log_dir: None,
-            model: Some("sonnet".to_string()),
-        };
-        let tm_executor = ClaudeCodeExecutor::new(tm_config)?;
-        let prompt = build_threat_model_cli_prompt(&repo_metadata);
-        let raw = tm_executor.execute_raw(&prompt).await
-            .map_err(|e| anyhow::anyhow!("Claude Code threat model generation failed: {}", e))?;
-        let json_str = extract_json_from_text(&raw)
-            .ok_or_else(|| anyhow::anyhow!("Failed to extract JSON from Claude Code response"))?;
-        parse_threat_model_response(&json_str, &root_dir.to_string_lossy())?
+    // Threat model cache: key is derived from repo metadata (structure, languages, manifests)
+    let tm_cache_mode = CacheMode::from_flags(final_args.cache, final_args.cache_only);
+    let tm_cache = if config.cache.enabled && tm_cache_mode != CacheMode::NoCache {
+        Cache::new(&config.cache.directory).ok()
     } else {
-        let threat_generator = ThreatModelGenerator::new(&final_args.model, api_base_url);
-        threat_generator.generate(&repo_metadata).await?
+        None
+    };
+    let tm_cache_prompt = repo_metadata.to_prompt_context();
+    let tm_cache_model = if config.agent.is_claude_code() { "claude-code" } else { &final_args.model };
+    let tm_cache_agent = "threat-model";
+
+    // Try cache first
+    let cached_threat_model = if tm_cache_mode != CacheMode::NoCache {
+        tm_cache.as_ref().and_then(|c| {
+            c.get(&tm_cache_prompt, tm_cache_model, tm_cache_agent).ok().flatten()
+        }).and_then(|json| {
+            serde_json::from_str::<parsentry_threat_model::ThreatModel>(&json).ok()
+        })
+    } else {
+        None
+    };
+
+    let threat_model = if let Some(tm) = cached_threat_model {
+        printer.status("Cache hit", "threat model loaded from cache");
+        tm
+    } else if tm_cache_mode == CacheMode::CacheOnly {
+        return Err(anyhow::anyhow!("Threat model not found in cache (cache-only mode)"));
+    } else {
+        printer.status("Generating", "threat model via LLM");
+        let tm = if config.agent.is_claude_code() {
+            let claude_path = config.agent.path.clone().unwrap_or_else(|| PathBuf::from("claude"));
+            let tm_config = ClaudeCodeConfig {
+                claude_path,
+                max_concurrent: 1,
+                timeout_secs: config.agent.timeout_secs,
+                enable_poc: false,
+                working_dir: root_dir.clone(),
+                log_dir: None,
+                model: Some("sonnet".to_string()),
+            };
+            let tm_executor = ClaudeCodeExecutor::new(tm_config)?;
+            let prompt = build_threat_model_cli_prompt(&repo_metadata);
+            let raw = tm_executor.execute_raw(&prompt).await
+                .map_err(|e| anyhow::anyhow!("Claude Code threat model generation failed: {}", e))?;
+            let json_str = extract_json_from_text(&raw)
+                .ok_or_else(|| anyhow::anyhow!("Failed to extract JSON from Claude Code response"))?;
+            parse_threat_model_response(&json_str, &root_dir.to_string_lossy())?
+        } else {
+            let threat_generator = ThreatModelGenerator::new(&final_args.model, api_base_url);
+            threat_generator.generate(&repo_metadata).await?
+        };
+
+        // Store in cache
+        if tm_cache_mode != CacheMode::NoCache {
+            if let Some(cache) = &tm_cache {
+                if let Ok(json) = serde_json::to_string(&tm) {
+                    let _ = cache.set(&tm_cache_prompt, tm_cache_model, tm_cache_agent, &json);
+                }
+            }
+        }
+
+        tm
     };
 
     printer.success("Phase 1", &format!(
