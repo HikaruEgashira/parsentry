@@ -45,6 +45,21 @@ impl CacheKeyGenerator {
         format!("{:x}", result)
     }
 
+    /// Generate a pattern-based cache key: SHA256(model | pattern_type | matched_text).
+    pub fn generate_pattern_key(
+        pattern_type: &str,
+        matched_text: &str,
+        model: &str,
+    ) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(model.as_bytes());
+        hasher.update(b"|");
+        hasher.update(pattern_type.as_bytes());
+        hasher.update(b"|");
+        hasher.update(matched_text.as_bytes());
+        format!("{:x}", hasher.finalize())
+    }
+
     /// Get the current version
     pub fn version(&self) -> &str {
         &self.version
@@ -124,5 +139,25 @@ mod tests {
         let key = gen.generate_key("test", "gpt-4", "genai");
 
         assert_eq!(key.len(), 64, "SHA256 hash should be 64 hex characters");
+    }
+
+    #[test]
+    fn test_pattern_key_deterministic() {
+        let k1 = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
+        let k2 = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn test_pattern_key_differs_by_type() {
+        let k1 = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
+        let k2 = CacheKeyGenerator::generate_pattern_key("Principal", "execute(query)", "gpt-4");
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn test_pattern_key_is_64_chars() {
+        let key = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
+        assert_eq!(key.len(), 64);
     }
 }

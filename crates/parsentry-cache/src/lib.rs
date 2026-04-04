@@ -114,6 +114,52 @@ impl Cache {
         Ok(())
     }
 
+    /// Get a cached response by pattern key (model + pattern_type + matched_text only).
+    pub fn get_by_pattern(
+        &self,
+        pattern_type: &str,
+        matched_text: &str,
+        model: &str,
+    ) -> Result<Option<String>> {
+        if !self.enabled {
+            return Ok(None);
+        }
+        let key = CacheKeyGenerator::generate_pattern_key(pattern_type, matched_text, model);
+        log::debug!("Pattern cache lookup: key={}, model={}", &key[..8], model);
+        if let Some(entry) = self.storage.get("pattern", model, &key)? {
+            log::info!("Pattern cache hit: {}", &key[..8]);
+            Ok(Some(entry.response))
+        } else {
+            log::info!("Pattern cache miss: {}", &key[..8]);
+            Ok(None)
+        }
+    }
+
+    /// Set a cached response by pattern key (model + pattern_type + matched_text only).
+    pub fn set_by_pattern(
+        &self,
+        pattern_type: &str,
+        matched_text: &str,
+        model: &str,
+        response: &str,
+    ) -> Result<()> {
+        if !self.enabled {
+            return Ok(());
+        }
+        let key = CacheKeyGenerator::generate_pattern_key(pattern_type, matched_text, model);
+        let entry = CacheEntry::new(
+            self.key_gen.version().to_string(),
+            "pattern".to_string(),
+            model.to_string(),
+            key.clone(),
+            response.to_string(),
+            matched_text.len(),
+        );
+        self.storage.set(&entry)?;
+        log::info!("Pattern cache stored: {}", &key[..8]);
+        Ok(())
+    }
+
     /// Check if periodic cleanup should run
     pub fn should_cleanup_periodic(&self) -> Result<bool> {
         self.cleanup.should_run_periodic_cleanup()
@@ -231,6 +277,20 @@ mod tests {
         let stats = cache.stats().unwrap();
         assert_eq!(stats.total_entries, 2);
         assert!(stats.total_size_bytes > 0);
+    }
+
+    #[test]
+    fn test_cache_get_set_by_pattern() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        let result = cache.get_by_pattern("Resource", "exec(q)", "gpt-4").unwrap();
+        assert!(result.is_none());
+
+        cache.set_by_pattern("Resource", "exec(q)", "gpt-4", "resp").unwrap();
+
+        let result = cache.get_by_pattern("Resource", "exec(q)", "gpt-4").unwrap();
+        assert_eq!(result, Some("resp".to_string()));
     }
 
     #[test]

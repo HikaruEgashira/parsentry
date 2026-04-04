@@ -587,6 +587,54 @@ impl SecurityRiskPatterns {
         map
     }
 
+    /// Add dynamic queries (e.g. from threat model) at runtime.
+    /// `par_type` is "principal", "action", or "resource".
+    /// `query_type` is "definition" or "reference".
+    pub fn add_query(
+        &mut self,
+        par_type: &str,
+        query_type: &str,
+        query_str: &str,
+        description: &str,
+        attack_vector: Vec<String>,
+    ) -> bool {
+        let query = match Query::new(&self.language, query_str) {
+            Ok(q) => q,
+            Err(_) => return false,
+        };
+
+        let is_definition = query_type == "definition";
+        let pattern_query = if is_definition {
+            PatternQuery::Definition {
+                definition: query_str.to_string(),
+            }
+        } else {
+            PatternQuery::Reference {
+                reference: query_str.to_string(),
+            }
+        };
+
+        let config = PatternConfig {
+            pattern_type: pattern_query,
+            description: description.to_string(),
+            attack_vector,
+        };
+
+        self.pattern_configs.push(config);
+
+        match (par_type, is_definition) {
+            ("principal", true) => self.principal_definition_queries.push(query),
+            ("principal", false) => self.principal_reference_queries.push(query),
+            ("action", true) => self.action_definition_queries.push(query),
+            ("action", false) => self.action_reference_queries.push(query),
+            ("resource", true) => self.resource_definition_queries.push(query),
+            ("resource", false) => self.resource_reference_queries.push(query),
+            _ => return false,
+        }
+
+        true
+    }
+
     fn load_custom_patterns(map: &mut HashMap<Language, LanguagePatterns>, root_dir: Option<&Path>) {
         let vuln_patterns_path = if let Some(root) = root_dir {
             root.join("vuln-patterns.yml")

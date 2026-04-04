@@ -465,11 +465,6 @@ impl ParsentryConfig {
             self.repo.url = other.repo.url.clone();
         }
 
-        // Generation config
-        if other.generation.generate_patterns {
-            self.generation.generate_patterns = other.generation.generate_patterns;
-        }
-
         // Call graph config
         if other.call_graph.call_graph {
             self.call_graph.call_graph = other.call_graph.call_graph;
@@ -759,10 +754,6 @@ use_cache = true
                         self.filtering.vuln_types = Some(types);
                     }
                     "API_BASE_URL" => self.api.base_url = Some(value.clone()),
-                    "GENERATION_GENERATE_PATTERNS" => {
-                        self.generation.generate_patterns = value.parse()
-                            .map_err(|_| anyhow!("Invalid generate_patterns value: {}", value))?;
-                    }
                     "CALL_GRAPH_ENABLED" => {
                         self.call_graph.call_graph = value.parse()
                             .map_err(|_| anyhow!("Invalid call_graph value: {}", value))?;
@@ -845,10 +836,6 @@ use_cache = true
 
         if let Some(ref base_url) = args.api_base_url {
             self.api.base_url = Some(base_url.clone());
-        }
-
-        if args.generate_patterns {
-            self.generation.generate_patterns = args.generate_patterns;
         }
 
         match args.agent {
@@ -968,7 +955,6 @@ use_cache = true
             output_dir: self.paths.output_dir.clone(),
             min_confidence: self.analysis.min_confidence,
             vuln_types: self.filtering.vuln_types.as_ref().map(|v| v.join(",")),
-            generate_patterns: self.generation.generate_patterns,
             debug: self.analysis.verbosity >= 2,  // debug is now derived from verbosity
             api_base_url: self.api.base_url.clone(),
             language: self.analysis.language.clone(),

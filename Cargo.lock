@@ -1493,6 +1493,7 @@ dependencies = [
  "parsentry-parser",
  "parsentry-prompt",
  "parsentry-reports",
+ "parsentry-threat-model",
  "parsentry-utils",
  "quick-xml",
  "regex",
@@ -1518,6 +1519,7 @@ dependencies = [
  "async-trait",
  "genai",
  "log",
+ "parsentry-cache",
  "parsentry-core",
  "parsentry-i18n",
  "parsentry-parser",
@@ -1633,6 +1635,25 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "parsentry-threat-model"
+version = "0.15.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "genai",
+ "log",
+ "parsentry-core",
+ "parsentry-utils",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "tokio-test",
 ]
 
 [[package]]
