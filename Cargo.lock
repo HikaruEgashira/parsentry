@@ -1621,10 +1621,6 @@ dependencies = [
 [[package]]
 name = "parsentry-prompt"
 version = "0.15.0"
-dependencies = [
- "parsentry-core",
- "parsentry-i18n",
-]
 
 [[package]]
 name = "parsentry-reports"

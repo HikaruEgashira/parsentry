@@ -22,7 +22,7 @@ use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
 use parsentry_cache::Cache;
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, StreamCallback};
 use parsentry_core::Language;
-use parsentry_prompt::{PatternContext, PromptBuilder};
+use parsentry_prompt::PromptBuilder;
 #[allow(unused_imports)]
 use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
 
@@ -67,7 +67,6 @@ async fn analyze_with_claude_code<C: StreamCallback>(
     sarif_output_path: &PathBuf,
     printer: &StatusPrinter,
     streaming_callback: &C,
-    related_principals: &[(String, String, usize)],
 ) -> Result<bool> {
     let file_name = file_path
         .file_name()
@@ -85,55 +84,12 @@ async fn analyze_with_claude_code<C: StreamCallback>(
     }
 
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
-    let pattern_context = PatternContext::new(
-        &pattern_type_str,
-        &pattern_match.pattern_config.description,
-        &pattern_match.matched_text,
-    )
-    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
 
-    let related_refs: Vec<(&str, &str, usize)> = related_principals
-        .iter()
-        .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
-        .collect();
-
-    let base_prompt = prompt_builder.build_file_reference_prompt(
+    let prompt = prompt_builder.build_file_reference_prompt(
         file_path,
-        Some(&pattern_context),
-        if related_refs.is_empty() { None } else { Some(&related_refs) },
+        Some(&pattern_type_str),
+        Some(pattern_match.matched_text.as_str()),
         Some(sarif_output_path),
-    );
-
-    let prompt = format!(
-        r#"{}
-
-## SARIF Output Instructions
-
-**IMPORTANT**: After completing the analysis, output the results in SARIF v2.1.0 format.
-Use the Write tool to save the SARIF JSON to: `{}`
-
-The SARIF file MUST include:
-- $schema: https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
-- version: 2.1.0
-- runs[0].tool.driver.name: Parsentry
-- runs[0].results: Array of vulnerability findings
-
-Each result must have:
-- ruleId: One of SQLI, XSS, RCE, LFI, SSRF, AFO, IDOR
-- level: error (confidence >= 90), warning (>= 70), note (>= 50)
-- message.text: Brief description
-- message.markdown: Detailed analysis in the requested language
-- locations[0].physicalLocation with file path and line numbers
-- properties.confidence: Float 0.0-1.0
-- properties.principal: The untrusted data source
-- properties.action: Security control status
-- properties.resource: The sensitive operation target
-- properties.data_flow: The flow from source to sink
-
-If no vulnerability is found or confidence < 0.7, create an empty results array.
-"#,
-        base_prompt,
-        sarif_output_path.display()
     );
 
     printer.status("Analyzing", &file_name);
@@ -193,7 +149,6 @@ async fn analyze_with_codex(
     _working_dir: &PathBuf,
     printer: &StatusPrinter,
     streaming_display: &Arc<StreamingDisplay>,
-    related_principals: &[(String, String, usize)],
 ) -> Result<Option<Response>> {
     let file_name = file_path
         .file_name()
@@ -201,22 +156,11 @@ async fn analyze_with_codex(
         .unwrap_or_else(|| "unknown".to_string());
 
     let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
-    let pattern_context = PatternContext::new(
-        &pattern_type_str,
-        &pattern_match.pattern_config.description,
-        &pattern_match.matched_text,
-    )
-    .with_attack_vectors(pattern_match.pattern_config.attack_vector.clone());
-
-    let related_refs: Vec<(&str, &str, usize)> = related_principals
-        .iter()
-        .map(|(name, path, line)| (name.as_str(), path.as_str(), *line))
-        .collect();
 
     let prompt = prompt_builder.build_file_reference_prompt(
         file_path,
-        Some(&pattern_context),
-        if related_refs.is_empty() { None } else { Some(&related_refs) },
+        Some(&pattern_type_str),
+        Some(pattern_match.matched_text.as_str()),
         None,
     );
 
@@ -544,19 +488,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         .map(|(path, _)| path.clone())
         .collect();
 
-    // Collect Principal patterns per file for context
-    let principals_by_file: std::collections::HashMap<PathBuf, Vec<(String, String, usize)>> = {
-        let mut map: std::collections::HashMap<PathBuf, Vec<(String, String, usize)>> = std::collections::HashMap::new();
-        for (path, pm) in &all_pattern_matches {
-            if pm.pattern_type == PatternType::Principal {
-                let entry = map.entry(path.clone()).or_default();
-                let name = pm.matched_text.lines().next().unwrap_or("principal").to_string();
-                entry.push((name, path.display().to_string(), pm.start_byte));
-            }
-        }
-        map
-    };
-
     printer.status("Detected", &format!("{} patterns ({} files with principals)", total_before_filter, files_with_principals.len()));
 
     // Filter: Only analyze Resource patterns in files that also have a Principal
@@ -701,8 +632,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     // Create shared streaming display for all parallel tasks
     let streaming_display = Arc::new(StreamingDisplay::new(verbosity > 1));
 
-    let principals_by_file = Arc::new(principals_by_file);
-
     let results = stream::iter(all_pattern_matches.iter().enumerate())
         .map(|(idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
@@ -723,7 +652,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
             let streaming_display = Arc::clone(&streaming_display);
             let cache = cache.clone();
             let cache_mode = cache_mode;
-            let principals_by_file = Arc::clone(&principals_by_file);
 
             async move {
                 let file_name = file_path.display().to_string();
@@ -759,7 +687,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             let _ = std::fs::create_dir_all(parent);
                         }
 
-                        let related = principals_by_file.get(&file_path).cloned().unwrap_or_default();
                         match analyze_with_claude_code(
                             executor,
                             &prompt_builder,
@@ -768,7 +695,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &sarif_output_path,
                             &printer,
                             streaming_display.as_ref(),
-                            &related,
                         )
                         .await
                         {
@@ -842,7 +768,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                     }
                 } else if use_codex {
                     if let Some(ref executor) = codex_executor {
-                        let related = principals_by_file.get(&file_path).cloned().unwrap_or_default();
                         match analyze_with_codex(
                             executor,
                             cache.as_deref(),
@@ -853,7 +778,6 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                             &_root_dir,
                             &printer,
                             &streaming_display,
-                            &related,
                         )
                         .await
                         {
@@ -1352,19 +1276,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
         .map(|(path, _)| path.clone())
         .collect();
 
-    // Collect Principal patterns per file for context
-    let principals_by_file: std::collections::HashMap<PathBuf, Vec<(String, String, usize)>> = {
-        let mut map: std::collections::HashMap<PathBuf, Vec<(String, String, usize)>> = std::collections::HashMap::new();
-        for (path, pm) in &all_pattern_matches {
-            if pm.pattern_type == PatternType::Principal {
-                let entry = map.entry(path.clone()).or_default();
-                let name = pm.matched_text.lines().next().unwrap_or("principal").to_string();
-                entry.push((name, path.display().to_string(), pm.start_byte));
-            }
-        }
-        map
-    };
-
     // Filter: Only analyze Resource patterns in files that also have a Principal
     let all_pattern_matches: Vec<(PathBuf, PatternMatch)> = if files_with_principals.is_empty() {
         Vec::new()
@@ -1380,7 +1291,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             .collect()
     };
 
-    let principals_by_file = Arc::new(principals_by_file);
     let root_dir = Arc::new(root_dir);
     let output_dir = final_args.output_dir.clone();
     let model = final_args.model.clone();
@@ -1472,7 +1382,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
             let printer = Arc::clone(&printer);
             let cache = cache.clone();
             let cache_mode = cache_mode;
-            let principals_by_file = Arc::clone(&principals_by_file);
 
             async move {
                 let analysis_result = if use_claude_code {
@@ -1491,7 +1400,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             let _ = std::fs::create_dir_all(parent);
                         }
 
-                        let related = principals_by_file.get(&file_path).cloned().unwrap_or_default();
                         match analyze_with_claude_code(
                             executor,
                             &prompt_builder,
@@ -1500,7 +1408,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &sarif_output_path,
                             &printer,
                             streaming_display.as_ref(),
-                            &related,
                         )
                         .await
                         {
@@ -1548,7 +1455,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                     }
                 } else if use_codex {
                     if let Some(ref executor) = codex_executor {
-                        let related = principals_by_file.get(&file_path).cloned().unwrap_or_default();
                         match analyze_with_codex(
                             executor,
                             cache.as_deref(),
@@ -1559,7 +1465,6 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                             &_root_dir,
                             &printer,
                             &streaming_display,
-                            &related,
                         )
                         .await
                         {
