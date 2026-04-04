@@ -117,6 +117,10 @@ pub struct Args {
     /// Filter files by programming language (comma-separated)
     #[arg(long, global = true)]
     pub filter_lang: Option<String>,
+
+    /// Git ref to diff against (e.g., "origin/main"). Only scans changed files.
+    #[arg(long)]
+    pub diff_base: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -218,6 +222,7 @@ pub struct ScanArgs {
     pub cache: bool,
     pub cache_only: bool,
     pub filter_lang: Option<String>,
+    pub diff_base: Option<String>,
 }
 
 impl From<&Args> for ScanArgs {
@@ -249,6 +254,7 @@ impl From<&Args> for ScanArgs {
             cache: args.cache,
             cache_only: args.cache_only,
             filter_lang: args.filter_lang.clone(),
+            diff_base: args.diff_base.clone(),
         }
     }
 }

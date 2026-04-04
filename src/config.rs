@@ -973,6 +973,7 @@ use_cache = true
             cache: self.cache.enabled,
             cache_only: false,  // CLI flags are applied in scan command
             filter_lang: None,  // CLI option only
+            diff_base: None,    // CLI option only
         }
     }
 }
