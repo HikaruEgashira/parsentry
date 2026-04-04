@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.16.0] - 2026-04-04
+## [0.16.1] - 2026-04-04
 
 ### 🎉 Breaking Changes
 - **Attack Surface駆動スキャン**: Threat ModelをAttack Surface列挙に刷新。エンドポイント、DBテーブル、Public API等の単位でスキャン
