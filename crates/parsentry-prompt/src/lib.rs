@@ -1,39 +1,30 @@
-//! Declarative prompt builder for Parsentry security analysis.
+//! Minimal prompt builder for Parsentry security analysis.
 //!
-//! This crate provides a declarative API for constructing LLM prompts
-//! for security vulnerability analysis.
+//! Prompts contain only origin (where to start) and scope (what to look for).
+//! The AI agent autonomously explores the codebase using its own tools.
 //!
 //! # Example
 //!
 //! ```rust
-//! use parsentry_prompt::{Prompt, SecurityAnalysisPrompt, TargetFile, PocMode, OutputFormat};
-//! use parsentry_i18n::Language;
+//! use parsentry_prompt::{AnalysisPrompt, Origin, Scope, OutputConfig, Prompt};
+//! use std::path::PathBuf;
 //!
-//! let prompt = SecurityAnalysisPrompt {
-//!     target: TargetFile::new("src/main.rs", "fn main() {}"),
-//!     pattern: None,
-//!     language: Language::Japanese,
-//!     poc_mode: PocMode::GenerateOnly,
-//!     deep_context: true,
-//!     output_format: OutputFormat::Json,
+//! let prompt = AnalysisPrompt {
+//!     origin: Origin::pattern("src/db.py", "sql_injection", "execute(query)"),
+//!     scope: Scope::SecurityAudit,
+//!     output: OutputConfig::Sarif(PathBuf::from("/tmp/output.sarif")),
 //! };
 //!
 //! let rendered = prompt.render();
+//! // => "Analyze src/db.py for security vulnerabilities.\nsql_injection pattern detected: `execute(query)`\nWrite SARIF v2.1.0 results to /tmp/output.sarif."
 //! ```
 
 mod types;
 mod traits;
-mod security_analysis;
-mod verification;
-mod file_reference;
-mod iac;
-mod templates;
+mod analysis;
 mod builder;
 
 pub use types::*;
 pub use traits::*;
-pub use security_analysis::*;
-pub use verification::*;
-pub use file_reference::*;
-pub use iac::*;
+pub use analysis::*;
 pub use builder::PromptBuilder;
