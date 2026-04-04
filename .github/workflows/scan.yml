@@ -1,0 +1,85 @@
+name: Security Scan
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache parsentry scan results
+        uses: actions/cache@v4
+        with:
+          path: .parsentry/cache
+          key: parsentry-cache-${{ github.base_ref }}-${{ github.sha }}
+          restore-keys: |
+            parsentry-cache-${{ github.base_ref }}-
+            parsentry-cache-
+
+      - name: Get changed files
+        id: diff
+        run: |
+          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD | head -200)
+          if [ -z "$FILES" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build
+        if: steps.diff.outputs.skip != 'true'
+        run: cargo build --release
+
+      - name: Run scan
+        if: steps.diff.outputs.skip != 'true'
+        run: |
+          ./target/release/parsentry . \
+            --diff-base origin/${{ github.base_ref }} \
+            --output-dir reports \
+            --cache
+        env:
+          PARSENTRY_ANALYSIS_MODEL: ${{ vars.PARSENTRY_MODEL || 'gpt-5.1-codex' }}
+
+      - name: Upload reports
+        if: steps.diff.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-reports
+          path: reports/
+          if-no-files-found: ignore
