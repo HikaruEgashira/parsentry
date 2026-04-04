@@ -1,21 +1,22 @@
 [package]
-name = "parsentry-analyzer"
+name = "parsentry-threat-model"
 version.workspace = true
 edition.workspace = true
-description = "LLM-based security analysis for Parsentry"
+description = "Threat modeling phase for Parsentry: generates tree-sitter queries from repository-level analysis"
 
 [dependencies]
 parsentry-core = { path = "../parsentry-core" }
-parsentry-parser = { path = "../parsentry-parser" }
-parsentry-i18n = { path = "../parsentry-i18n" }
-parsentry-reports = { path = "../parsentry-reports" }
-parsentry-cache = { path = "../parsentry-cache" }
 parsentry-utils = { path = "../parsentry-utils" }
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml = "0.9"
 anyhow.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 genai = "0.4.0-alpha.15"
 log = "0.4"
-regex = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3.10"
+tokio-test = "0.4"

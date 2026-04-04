@@ -51,9 +51,6 @@ pub struct Args {
     #[arg(long)]
     pub vuln_types: Option<String>,
 
-    #[arg(long)]
-    pub generate_patterns: bool,
-
     #[arg(long, global = true)]
     pub debug: bool,
 
@@ -154,40 +151,6 @@ pub enum Commands {
         security_focus: bool,
     },
 
-    /// Generate security patterns from source code
-    Generate {
-        /// Target directory or GitHub repository (owner/repo) to analyze
-        target: String,
-
-        /// Output directory for generated patterns
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-
-        /// Run benchmark validation after generation
-        #[arg(long)]
-        benchmark: bool,
-
-        /// Path to benchmark.json for validation
-        #[arg(long)]
-        benchmark_file: Option<PathBuf>,
-
-        /// Additional GitHub repositories to analyze (owner/repo format)
-        #[arg(long = "repo", short = 'r')]
-        repos: Vec<String>,
-
-        /// GitHub search query to find repositories (e.g., "language:python flask")
-        #[arg(long)]
-        search: Option<String>,
-
-        /// Maximum number of repositories to analyze from search
-        #[arg(long, default_value = "5")]
-        max_repos: usize,
-
-        /// LLM agent for pattern generation (overrides global --agent)
-        #[arg(long, value_enum)]
-        agent: Option<Agent>,
-    },
-
     /// Manage LLM response cache
     Cache {
         #[command(subcommand)]
@@ -237,7 +200,6 @@ pub struct ScanArgs {
     pub output_dir: Option<PathBuf>,
     pub min_confidence: i32,
     pub vuln_types: Option<String>,
-    pub generate_patterns: bool,
     pub debug: bool,
     pub api_base_url: Option<String>,
     pub language: String,
@@ -269,7 +231,6 @@ impl From<&Args> for ScanArgs {
             output_dir: args.output_dir.clone(),
             min_confidence: args.min_confidence,
             vuln_types: args.vuln_types.clone(),
-            generate_patterns: args.generate_patterns,
             debug: args.debug,
             api_base_url: args.api_base_url.clone(),
             language: args.language.clone(),
@@ -338,50 +299,3 @@ pub fn validate_graph_args(args: &GraphArgs) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-pub struct GenerateArgs {
-    pub target: String,
-    pub output: Option<PathBuf>,
-    pub benchmark: bool,
-    pub benchmark_file: Option<PathBuf>,
-    pub repos: Vec<String>,
-    pub search: Option<String>,
-    pub max_repos: usize,
-    pub model: String,
-    pub verbosity: u8,
-    pub debug: bool,
-    pub api_base_url: Option<String>,
-    pub agent: Agent,
-}
-
-pub fn validate_generate_args(args: &GenerateArgs) -> Result<()> {
-    // Check if target is a GitHub repo (owner/repo format) or local path
-    let is_github_repo = args.target.contains('/') && !args.target.starts_with('/') && !args.target.starts_with('.');
-
-    if !is_github_repo {
-        let target_path = PathBuf::from(&args.target);
-        if !target_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Target directory does not exist: {}",
-                args.target
-            ));
-        }
-        if !target_path.is_dir() {
-            return Err(anyhow::anyhow!(
-                "Target must be a directory: {}",
-                args.target
-            ));
-        }
-    }
-
-    if let Some(benchmark_file) = &args.benchmark_file {
-        if !benchmark_file.exists() {
-            return Err(anyhow::anyhow!(
-                "Benchmark file does not exist: {}",
-                benchmark_file.display()
-            ));
-        }
-    }
-
-    Ok(())
-}

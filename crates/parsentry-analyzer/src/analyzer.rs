@@ -571,12 +571,26 @@ pub async fn analyze_pattern(
     output_dir: &Option<PathBuf>,
     api_base_url: Option<&str>,
     language: &Language,
+    cache: Option<&parsentry_cache::Cache>,
 ) -> Result<Option<Response>, Error> {
     info!(
         "Analyzing pattern '{}' in file {}",
         pattern_match.pattern_config.description,
         file_path.display()
     );
+
+    let pattern_type_str = format!("{:?}", pattern_match.pattern_type);
+
+    // Try pattern-based cache first
+    if let Some(cache) = cache {
+        if let Ok(Some(cached)) = cache.get_by_pattern(&pattern_type_str, &pattern_match.matched_text, model) {
+            if let Ok(mut response) = serde_json::from_str::<Response>(&cached) {
+                info!("Pattern cache hit for '{}' in {}", pattern_match.pattern_config.description, file_path.display());
+                response.file_path = Some(file_path.to_string_lossy().to_string());
+                return Ok(Some(response));
+            }
+        }
+    }
 
     let mut parser = CodeParser::new()?;
 
@@ -729,6 +743,13 @@ pub async fn analyze_pattern(
     response.pattern_description = Some(pattern_match.pattern_config.description.clone());
     response.matched_source_code = Some(pattern_match.matched_text.clone());
     response.full_source_code = Some(content);
+
+    // Store in pattern-based cache
+    if let Some(cache) = cache {
+        if let Ok(json) = serde_json::to_string(&response) {
+            let _ = cache.set_by_pattern(&pattern_type_str, &pattern_match.matched_text, model, &json);
+        }
+    }
 
     info!(
         "Pattern analysis complete for '{}' with confidence: {}",

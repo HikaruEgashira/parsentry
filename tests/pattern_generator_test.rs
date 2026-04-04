@@ -1,4 +1,3 @@
-use parsentry_analyzer::{PatternClassification, write_patterns_to_file};
 use parsentry_core::Language;
 use std::fs;
 use std::path::PathBuf;
@@ -66,73 +65,6 @@ fn sanitize_input(input: &str) -> String {
     file_path
 }
 
-// Note: LLM integration tests are commented out as they require real API keys
-// These would be integration tests that need actual LLM responses
-//
-// #[tokio::test]
-// async fn test_pattern_generation_python() {
-//     let temp_dir = TempDir::new().unwrap();
-//     create_test_python_file(&temp_dir);
-//
-//     let result = generate_custom_patterns(&temp_dir.path().to_path_buf(), "test-model").await;
-//     assert!(result.is_ok());
-//     assert!(temp_dir.path().join("vuln-patterns.yml").exists());
-// }
-//
-// #[tokio::test]
-// async fn test_pattern_generation_rust() {
-//     let temp_dir = TempDir::new().unwrap();
-//     create_test_rust_file(&temp_dir);
-//
-//     let result = generate_custom_patterns(&temp_dir.path().to_path_buf(), "test-model").await;
-//     assert!(result.is_ok());
-//     assert!(temp_dir.path().join("vuln-patterns.yml").exists());
-// }
-
-#[test]
-fn test_yaml_pattern_format() {
-    let temp_dir = TempDir::new().unwrap();
-
-    // Only resources patterns are now generated
-    let patterns = vec![
-        PatternClassification {
-            function_name: "test_resource".to_string(),
-            pattern_type: Some("resources".to_string()),
-            query_type: "reference".to_string(),
-            query: "(call_expression function: (identifier) @func (#eq? @func \"test_resource\"))".to_string(),
-            description: "Test resource function".to_string(),
-            reasoning: "Test reasoning for resource".to_string(),
-            attack_vector: vec!["T1059".to_string()],
-        },
-        PatternClassification {
-            function_name: "test_resource2".to_string(),
-            pattern_type: Some("resources".to_string()),
-            query_type: "definition".to_string(),
-            query: "(function_definition name: (identifier) @name (#eq? @name \"test_resource2\")) @function".to_string(),
-            description: "Test resource definition".to_string(),
-            reasoning: "Test reasoning for resource definition".to_string(),
-            attack_vector: vec!["T1190".to_string()],
-        },
-    ];
-
-    let result =
-        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
-    assert!(result.is_ok());
-
-    let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-    assert!(yaml_path.exists());
-
-    let content = fs::read_to_string(&yaml_path).unwrap();
-    assert!(content.contains("Python:"));
-    assert!(content.contains("resources:"));
-    assert!(content.contains("test_resource"));
-    assert!(content.contains("test_resource2"));
-    // principals and actions are no longer generated
-    assert!(!content.contains("principals:"));
-    assert!(!content.contains("actions:"));
-}
-
-// Integration test that doesn't require API calls
 #[test]
 fn test_file_discovery() {
     let temp_dir = TempDir::new().unwrap();
@@ -158,10 +90,8 @@ fn test_definition_extraction() {
 
     let context = parser.build_context_from_file(&file_path).unwrap();
 
-    // Should extract function definitions
     assert!(!context.definitions.is_empty());
 
-    // Check if expected functions are found
     let function_names: Vec<&str> = context
         .definitions
         .iter()
@@ -173,81 +103,6 @@ fn test_definition_extraction() {
     assert!(function_names.contains(&"write_to_file"));
     assert!(function_names.contains(&"validate_input"));
     assert!(function_names.contains(&"hash_password"));
-}
-
-#[test]
-fn test_yaml_append_functionality() {
-    let temp_dir = TempDir::new().unwrap();
-    let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-
-    // Write initial content
-    fs::write(&yaml_path, "Go:\n  resources:\n    - pattern: \"existing_pattern\"\n      description: \"Existing pattern\"\n").unwrap();
-
-    let patterns = vec![PatternClassification {
-        function_name: "new_function".to_string(),
-        pattern_type: Some("resources".to_string()),
-        query_type: "reference".to_string(),
-        query: "(call_expression function: (identifier) @func (#eq? @func \"new_function\"))".to_string(),
-        description: "New function pattern".to_string(),
-        reasoning: "Test reasoning".to_string(),
-        attack_vector: vec!["T1059".to_string()],
-    }];
-
-    let result =
-        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
-    assert!(result.is_ok());
-
-    let content = fs::read_to_string(&yaml_path).unwrap();
-    assert!(content.contains("Go:"));
-    assert!(content.contains("existing_pattern"));
-    assert!(content.contains("Python:"));
-    assert!(content.contains("new_function"));
-}
-
-#[test]
-fn test_empty_patterns_handling() {
-    let temp_dir = TempDir::new().unwrap();
-
-    // Pattern without "resources" type should be ignored
-    let patterns = vec![PatternClassification {
-        function_name: "non_security_function".to_string(),
-        pattern_type: None,
-        query_type: "reference".to_string(),
-        query: "".to_string(),
-        description: "".to_string(),
-        reasoning: "Not a security pattern".to_string(),
-        attack_vector: vec![],
-    }];
-
-    let result =
-        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
-    assert!(result.is_ok());
-
-    // When there are no resource patterns, no file should be created
-    let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-    assert!(!yaml_path.exists());
-}
-
-#[test]
-fn test_language_filtering() {
-    let temp_dir = TempDir::new().unwrap();
-
-    let patterns = vec![PatternClassification {
-        function_name: "test_function".to_string(),
-        pattern_type: Some("resources".to_string()),
-        query_type: "reference".to_string(),
-        query: "test_pattern".to_string(),
-        description: "Test description".to_string(),
-        reasoning: "Test reasoning".to_string(),
-        attack_vector: vec!["T1059".to_string()],
-    }];
-
-    // Test that Other language is skipped
-    let result = write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Other, &patterns);
-    assert!(result.is_ok());
-
-    let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-    assert!(!yaml_path.exists());
 }
 
 fn create_mixed_security_file(dir: &TempDir) -> PathBuf {
@@ -297,9 +152,8 @@ fn test_definition_extraction_mixed_functions() {
 
     let context = parser.build_context_from_file(&file_path).unwrap();
 
-    // Should extract all function definitions
     assert!(!context.definitions.is_empty());
-    assert!(context.definitions.len() >= 6); // At least 6 functions defined
+    assert!(context.definitions.len() >= 6);
 
     let function_names: Vec<&str> = context
         .definitions
@@ -307,159 +161,161 @@ fn test_definition_extraction_mixed_functions() {
         .map(|def| def.name.as_str())
         .collect();
 
-    // High-risk functions
     assert!(function_names.contains(&"execute_user_command"));
     assert!(function_names.contains(&"get_user_data"));
-
-    // Non-security functions
     assert!(function_names.contains(&"format_string"));
     assert!(function_names.contains(&"calculate_sum"));
     assert!(function_names.contains(&"get_current_time"));
-
-    // Medium-risk function
     assert!(function_names.contains(&"load_config"));
-
-    // Low-risk function
     assert!(function_names.contains(&"validate_email_format"));
 }
 
+// Threat model metadata collection tests
 #[test]
-fn test_pattern_classification_structure() {
-    // Test the structure of PatternClassification without LLM calls
-    let pattern = PatternClassification {
-        function_name: "test_auth".to_string(),
-        pattern_type: Some("actions".to_string()),
-        query_type: "reference".to_string(),
-        query: "(call_expression function: (identifier) @func (#eq? @func \"test_auth\"))".to_string(),
-        description: "Authentication function".to_string(),
-        reasoning: "Handles user authentication".to_string(),
-        attack_vector: vec!["T1078".to_string(), "T1110".to_string()],
-    };
-
-    assert_eq!(pattern.function_name, "test_auth");
-    assert_eq!(pattern.pattern_type, Some("actions".to_string()));
-    assert!(!pattern.attack_vector.is_empty());
-    assert!(pattern.attack_vector.contains(&"T1078".to_string()));
-    assert!(pattern.attack_vector.contains(&"T1110".to_string()));
-}
-
-#[test]
-fn test_attack_vector_formatting() {
+fn test_repo_metadata_collection() {
     let temp_dir = TempDir::new().unwrap();
+    let root = temp_dir.path();
 
-    let patterns = vec![PatternClassification {
-        function_name: "multi_attack_function".to_string(),
-        pattern_type: Some("resources".to_string()),
-        query_type: "reference".to_string(),
-        query: "(call_expression function: (identifier) @func (#eq? @func \"multi_attack_function\"))".to_string(),
-        description: "Function with multiple attack vectors".to_string(),
-        reasoning: "Can be exploited in multiple ways".to_string(),
-        attack_vector: vec![
-            "T1059".to_string(), // Command and Scripting Interpreter
-            "T1190".to_string(), // Exploit Public-Facing Application
-            "T1078".to_string(), // Valid Accounts
+    fs::create_dir_all(root.join("src")).unwrap();
+    fs::write(
+        root.join("src/app.py"),
+        "from flask import Flask\napp = Flask(__name__)",
+    )
+    .unwrap();
+    fs::write(root.join("requirements.txt"), "flask==3.0\nsqlalchemy==2.0").unwrap();
+
+    let meta = parsentry_threat_model::RepoMetadata::collect(root).unwrap();
+
+    assert_eq!(meta.total_files, 1);
+    assert!(meta.languages.contains_key(&Language::Python));
+    assert_eq!(meta.dependency_manifests.len(), 1);
+    assert!(meta.dependency_manifests[0].content.contains("flask"));
+}
+
+#[test]
+fn test_repo_metadata_prompt_context() {
+    let temp_dir = TempDir::new().unwrap();
+    let root = temp_dir.path();
+
+    fs::create_dir_all(root.join("api")).unwrap();
+    fs::write(root.join("api/app.py"), "from flask import Flask").unwrap();
+    fs::write(root.join("requirements.txt"), "flask").unwrap();
+
+    let meta = parsentry_threat_model::RepoMetadata::collect(root).unwrap();
+    let ctx = meta.to_prompt_context();
+
+    assert!(ctx.contains("Directory Structure"));
+    assert!(ctx.contains("Languages"));
+    assert!(ctx.contains("Dependencies"));
+    assert!(ctx.contains("flask"));
+}
+
+#[test]
+fn test_threat_model_report_rendering() {
+    use parsentry_threat_model::{ThreatEntry, ThreatModel, ThreatQuery, render_threat_model_md};
+
+    let model = ThreatModel {
+        repository: "test/repo".to_string(),
+        generated_at: "2025-01-01T00:00:00Z".to_string(),
+        summary: "A Flask web app with SQL injection risks.".to_string(),
+        threats: vec![ThreatEntry {
+            id: "THREAT-001".to_string(),
+            category: "SQL Injection".to_string(),
+            rationale: "Uses raw SQL queries with string formatting.".to_string(),
+            attack_vectors: vec!["T1190".to_string()],
+            attack_surface: vec!["src/db.py".to_string()],
+            language: Language::Python,
+            queries: vec![ThreatQuery {
+                par_type: "resource".to_string(),
+                query_type: "reference".to_string(),
+                query: r#"(call function: (attribute attribute: (identifier) @attr (#eq? @attr "execute"))) @call"#.to_string(),
+                description: "SQL execute calls".to_string(),
+            }],
+        }],
+    };
+
+    let md = render_threat_model_md(&model);
+
+    assert!(md.contains("# Threat Model: test/repo"));
+    assert!(md.contains("THREAT-001"));
+    assert!(md.contains("SQL Injection"));
+    assert!(md.contains("execute"));
+}
+
+#[test]
+fn test_threat_model_queries_by_language() {
+    use parsentry_threat_model::{ThreatEntry, ThreatModel, ThreatQuery};
+
+    let model = ThreatModel {
+        repository: "test".to_string(),
+        generated_at: "now".to_string(),
+        summary: "test".to_string(),
+        threats: vec![
+            ThreatEntry {
+                id: "T1".to_string(),
+                category: "SQLi".to_string(),
+                rationale: "test".to_string(),
+                attack_vectors: vec![],
+                attack_surface: vec![],
+                language: Language::Python,
+                queries: vec![
+                    ThreatQuery {
+                        par_type: "resource".to_string(),
+                        query_type: "reference".to_string(),
+                        query: "(call) @call".to_string(),
+                        description: "test".to_string(),
+                    },
+                ],
+            },
+            ThreatEntry {
+                id: "T2".to_string(),
+                category: "XSS".to_string(),
+                rationale: "test".to_string(),
+                attack_vectors: vec![],
+                attack_surface: vec![],
+                language: Language::JavaScript,
+                queries: vec![
+                    ThreatQuery {
+                        par_type: "resource".to_string(),
+                        query_type: "reference".to_string(),
+                        query: "(assignment_expression) @expr".to_string(),
+                        description: "test".to_string(),
+                    },
+                ],
+            },
         ],
-    }];
+    };
 
-    let result =
-        write_patterns_to_file(&temp_dir.path().to_path_buf(), Language::Python, &patterns);
-    assert!(result.is_ok());
-
-    let yaml_path = temp_dir.path().join("vuln-patterns.yml");
-    let content = fs::read_to_string(&yaml_path).unwrap();
-
-    // Check that all attack vectors are properly formatted
-    assert!(content.contains("attack_vector:"));
-    assert!(content.contains("\"T1059\""));
-    assert!(content.contains("\"T1190\""));
-    assert!(content.contains("\"T1078\""));
-}
-
-// Test to verify the new filtering logic would work
-// This is a unit test that doesn't require LLM calls
-#[test]
-fn test_security_risk_categories() {
-    // Define test cases that represent different security risk levels
-    let high_risk_patterns = vec![
-        "execute_user_command", // Command injection risk
-        "get_user_data",        // SQL injection risk
-        "upload_file",          // File upload risk
-        "authenticate_user",    // Authentication function
-    ];
-
-    let low_risk_patterns = vec![
-        "format_string",    // String utility
-        "calculate_sum",    // Math function
-        "get_current_time", // Time utility
-        "sort_array",       // Data structure operation
-    ];
-
-    // In a real implementation, these would be filtered by the LLM
-    // Here we just verify the pattern structure is as expected
-    for pattern_name in high_risk_patterns {
-        assert!(pattern_name.len() > 0);
-        // High-risk patterns typically involve user input, system operations, or security functions
-        assert!(
-            pattern_name.contains("user")
-                || pattern_name.contains("execute")
-                || pattern_name.contains("auth")
-                || pattern_name.contains("upload")
-                || pattern_name.contains("get") && pattern_name.contains("data")
-        );
-    }
-
-    for pattern_name in low_risk_patterns {
-        assert!(pattern_name.len() > 0);
-        // Low-risk patterns are typically utilities without external dependencies
-        assert!(
-            pattern_name.contains("format")
-                || pattern_name.contains("calculate")
-                || pattern_name.contains("time")
-                || pattern_name.contains("sort")
-        );
-    }
+    let by_lang = model.queries_by_language();
+    assert_eq!(by_lang.len(), 2);
+    assert_eq!(by_lang[&Language::Python].len(), 1);
+    assert_eq!(by_lang[&Language::JavaScript].len(), 1);
+    assert_eq!(model.total_queries(), 2);
 }
 
 #[test]
-fn test_par_pattern_types() {
-    // Test that we handle all three PAR pattern types correctly
-    let principals_example = PatternClassification {
-        function_name: "get_request_data".to_string(),
-        pattern_type: Some("principals".to_string()),
-        query_type: "reference".to_string(),
-        query: "(call_expression function: (identifier) @func (#eq? @func \"get_request_data\"))".to_string(),
-        description: "Retrieves data from HTTP request".to_string(),
-        reasoning: "Principal - source of user input".to_string(),
-        attack_vector: vec!["T1190".to_string()],
-    };
+fn test_add_dynamic_query_to_patterns() {
+    use parsentry_parser::SecurityRiskPatterns;
 
-    let actions_example = PatternClassification {
-        function_name: "validate_input".to_string(),
-        pattern_type: Some("actions".to_string()),
-        query_type: "reference".to_string(),
-        query: "(call_expression function: (identifier) @func (#eq? @func \"validate_input\"))".to_string(),
-        description: "Validates user input".to_string(),
-        reasoning: "Action - performs security validation".to_string(),
-        attack_vector: vec!["T1059".to_string()],
-    };
+    let mut patterns = SecurityRiskPatterns::new(Language::Python);
 
-    let resources_example = PatternClassification {
-        function_name: "write_file".to_string(),
-        pattern_type: Some("resources".to_string()),
-        query_type: "reference".to_string(),
-        query: "(call_expression function: (identifier) @func (#eq? @func \"write_file\"))".to_string(),
-        description: "Writes data to file".to_string(),
-        reasoning: "Resource - accesses file system".to_string(),
-        attack_vector: vec!["T1005".to_string()],
-    };
-
-    assert_eq!(
-        principals_example.pattern_type,
-        Some("principals".to_string())
+    // Valid query should succeed
+    let ok = patterns.add_query(
+        "resource",
+        "reference",
+        r#"(call function: (identifier) @func (#eq? @func "eval")) @call"#,
+        "eval() calls",
+        vec!["T1059".to_string()],
     );
-    assert_eq!(actions_example.pattern_type, Some("actions".to_string()));
-    assert_eq!(
-        resources_example.pattern_type,
-        Some("resources".to_string())
+    assert!(ok);
+
+    // Invalid query should fail gracefully
+    let bad = patterns.add_query(
+        "resource",
+        "reference",
+        "this is not a valid query !!!",
+        "bad query",
+        vec![],
     );
+    assert!(!bad);
 }

@@ -12,17 +12,16 @@ use crate::cli::streaming_ui::StreamingDisplay;
 use crate::cli::ui::{self, StatusPrinter, SummaryRow, SummaryTable};
 use crate::config::ParsentryConfig;
 use crate::mvra::{MvraRepositoryResult, MvraResults, MvraScanner};
-use crate::pattern_generator_claude_code::generate_custom_patterns_with_claude_code;
-use crate::pattern_generator_codex::generate_custom_patterns_with_codex;
 use crate::github::clone_repo;
 use crate::repo::RepoOps;
 use crate::response::{from_codex_response, Response, ResponseExt, VulnType};
 
-use parsentry_analyzer::{analyze_pattern, generate_custom_patterns};
+use parsentry_analyzer::analyze_pattern;
 use parsentry_cache::Cache;
 use parsentry_claude_code::{ClaudeCodeConfig, ClaudeCodeExecutor, StreamCallback};
 use parsentry_core::Language;
 use parsentry_prompt::PromptBuilder;
+use parsentry_threat_model::{RepoMetadata, ThreatModelGenerator, render_threat_model_md};
 #[allow(unused_imports)]
 use parsentry_codex::{CodexConfig, CodexError, CodexExecutor};
 
@@ -57,10 +56,11 @@ use parsentry_reports::{
 use parsentry_utils::FileClassifier;
 
 /// Analyze a pattern using Claude Code CLI with direct SARIF output.
-/// Claude Code will write the SARIF JSON directly to a file using the Write tool.
-/// If the SARIF file already exists (cache hit), skip the analysis.
+/// Uses pattern-based cache for cross-file/cross-repo hits.
 async fn analyze_with_claude_code<C: StreamCallback>(
     executor: &ClaudeCodeExecutor,
+    cache: Option<&Cache>,
+    cache_mode: CacheMode,
     prompt_builder: &PromptBuilder,
     file_path: &PathBuf,
     pattern_match: &PatternMatch,
@@ -73,17 +73,33 @@ async fn analyze_with_claude_code<C: StreamCallback>(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
+    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
+    let model = "claude-code";
+
+    // Try pattern-based cache first
+    if cache_mode != CacheMode::NoCache {
+        if let Some(cache) = cache {
+            if let Ok(Some(cached_sarif)) = cache.get_by_pattern(&pattern_type_str, &pattern_match.matched_text, model) {
+                if let Some(parent) = sarif_output_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                if std::fs::write(sarif_output_path, &cached_sarif).is_ok() {
+                    printer.status("Cache hit", &file_name);
+                    return Ok(true);
+                }
+            }
+        }
+    }
+
+    // Also check SARIF file existence (legacy cache)
     if sarif_output_path.exists() {
-        info!(
-            "SARIF cache hit for {}: {}",
-            file_path.display(),
-            sarif_output_path.display()
-        );
         printer.status("Cached", &file_name);
         return Ok(true);
     }
 
-    let pattern_type_str = format!("{:?}", pattern_match.pattern_config.pattern_type);
+    if cache_mode == CacheMode::CacheOnly {
+        return Ok(false);
+    }
 
     let prompt = prompt_builder.build_file_reference_prompt(
         file_path,
@@ -94,7 +110,6 @@ async fn analyze_with_claude_code<C: StreamCallback>(
 
     printer.status("Analyzing", &file_name);
 
-    // Execute with streaming file output mode
     let result = executor
         .execute_streaming_file_output(&prompt, streaming_callback)
         .await;
@@ -107,6 +122,14 @@ async fn analyze_with_claude_code<C: StreamCallback>(
                     file_path.display(),
                     output.duration_ms.unwrap_or(0)
                 );
+                // Store in pattern-based cache
+                if cache_mode != CacheMode::NoCache {
+                    if let Some(cache) = cache {
+                        if let Ok(sarif_json) = std::fs::read_to_string(sarif_output_path) {
+                            let _ = cache.set_by_pattern(&pattern_type_str, &pattern_match.matched_text, model, &sarif_json);
+                        }
+                    }
+                }
                 printer.status("Completed", &file_name);
                 Ok(true)
             } else if output.success {
@@ -165,12 +188,11 @@ async fn analyze_with_codex(
     );
 
     let model = "codex";
-    let provider = "codex";
 
     // Try cache first (unless NoCache mode)
     if cache_mode != CacheMode::NoCache {
         if let Some(cache) = cache {
-            if let Ok(Some(cached_response)) = cache.get(&prompt, model, provider) {
+            if let Ok(Some(cached_response)) = cache.get_by_pattern(&pattern_type_str, &pattern_match.matched_text, model) {
                 // Parse cached response
                 if let Ok(parsed) = serde_json::from_str::<parsentry_codex::CodexResponse>(&cached_response) {
                     printer.status("Cache hit", &file_name);
@@ -206,7 +228,7 @@ async fn analyze_with_codex(
             if cache_mode != CacheMode::NoCache {
                 if let Some(cache) = cache {
                     if let Ok(response_json) = serde_json::to_string(&output.response) {
-                        if let Err(e) = cache.set(&prompt, model, provider, &response_json) {
+                        if let Err(e) = cache.set_by_pattern(&pattern_type_str, &pattern_match.matched_text, model, &response_json) {
                             debug!("Failed to cache response: {}", e);
                         }
                     }
@@ -332,70 +354,48 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
         return Err(anyhow::anyhow!("Target must be specified, or configured in a config file"));
     };
 
-    // Handle pattern generation mode
-    if final_args.generate_patterns {
-        printer.status("Generating", "custom security patterns");
+    // Threat Model Phase: analyze repo metadata and generate targeted queries
+    printer.status("Threat Model", "collecting repository metadata");
+    let repo_metadata = RepoMetadata::collect(&root_dir)?;
 
-        if config.agent.is_claude_code() {
-            let claude_path = config.agent.path.clone()
-                .unwrap_or_else(|| PathBuf::from("claude"));
-            let log_dir = None;
-            let claude_config = parsentry_claude_code::ClaudeCodeConfig {
-                claude_path,
-                max_concurrent: config.agent.max_concurrent.min(10),
-                timeout_secs: config.agent.timeout_secs,
-                enable_poc: false,
-                working_dir: root_dir.clone(),
-                log_dir,
-                model: Some("haiku".to_string()),
-            };
-            printer.info("Mode", "Claude Code");
-            let result = generate_custom_patterns_with_claude_code(&root_dir, claude_config).await?;
+    printer.status("Discovered", &format!("{} source files across {} languages",
+        repo_metadata.total_files,
+        repo_metadata.languages.len()
+    ));
+    for (lang, count) in &repo_metadata.languages {
+        printer.bullet(&format!("{:?}: {} files", lang, count));
+    }
 
-            printer.status("Discovered", &format!("{} source files", result.total_files));
-            if result.skipped_files > 0 {
-                printer.warning("Skipped", &format!("{} files (too large)", result.skipped_files));
-            }
-            printer.status("Analyzed", &format!("{} files", result.analyzed_files));
+    printer.status("Threat Model", "generating threat model via LLM");
+    let threat_generator = ThreatModelGenerator::new(&final_args.model, api_base_url);
+    let threat_model = threat_generator.generate(&repo_metadata).await?;
 
-            if !result.languages.is_empty() {
-                for lang in &result.languages {
-                    printer.bullet(&format!("{:?}", lang));
-                }
-            }
+    printer.success("Threat Model", &format!(
+        "{} threats identified, {} detection queries generated",
+        threat_model.threats.len(),
+        threat_model.total_queries()
+    ));
 
-            printer.success("Generated", &format!("{} patterns", result.patterns_generated));
-        } else if config.agent.is_codex() {
-            let codex_path = config.agent.path.clone();
-            let log_dir = final_args.output_dir.as_ref().map(|d| d.join("codex_logs"));
-            let codex_config = CodexConfig {
-                codex_path,
-                max_concurrent: config.agent.max_concurrent.min(10),
-                timeout_secs: config.agent.timeout_secs,
-                enable_poc: false,
-                working_dir: root_dir.clone(),
-                log_dir,
-                model: final_args.model.clone(),
-            };
-            printer.info("Mode", "Codex");
-            let result = generate_custom_patterns_with_codex(&root_dir, codex_config).await?;
+    for threat in &threat_model.threats {
+        printer.bullet(&format!("{} — {} ({} queries)", threat.id, threat.category, threat.queries.len()));
+    }
 
-            printer.status("Discovered", &format!("{} source files", result.total_files));
-            if result.skipped_files > 0 {
-                printer.warning("Skipped", &format!("{} files (too large)", result.skipped_files));
-            }
-            printer.status("Analyzed", &format!("{} files", result.analyzed_files));
-
-            if !result.languages.is_empty() {
-                for lang in &result.languages {
-                    printer.bullet(&format!("{:?}", lang));
-                }
-            }
-
-            printer.success("Generated", &format!("{} patterns", result.patterns_generated));
+    // Write threat-model.md for explainability
+    if let Some(ref output_dir_path) = final_args.output_dir {
+        let tm_output_dir = if let Some(ref name) = repo_name {
+            let mut d = output_dir_path.clone();
+            d.push(name);
+            d
         } else {
-            generate_custom_patterns(&root_dir, &final_args.model, api_base_url).await?;
-            printer.success("Generated", "custom patterns");
+            output_dir_path.clone()
+        };
+        let _ = std::fs::create_dir_all(&tm_output_dir);
+        let md = render_threat_model_md(&threat_model);
+        let md_path = tm_output_dir.join("threat-model.md");
+        if let Err(e) = std::fs::write(&md_path, &md) {
+            printer.error("Error", &format!("Failed to write threat model: {}", e));
+        } else {
+            printer.success("Wrote", &format!("{}", md_path.display()));
         }
     }
 
@@ -428,12 +428,16 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
     };
     let lang_filter = Arc::new(lang_filter);
 
+    // Build threat model queries indexed by language for pattern matching
+    let threat_queries_by_lang = Arc::new(threat_model.queries_by_language());
+
     let concurrency = (num_cpus::get() * 4).max(16);
     let root_dir_arc = Arc::new(root_dir.clone());
     let file_results: Vec<_> = stream::iter(files.clone())
         .map(|file_path| {
             let root_dir = Arc::clone(&root_dir_arc);
             let lang_filter = Arc::clone(&lang_filter);
+            let threat_queries = Arc::clone(&threat_queries_by_lang);
             async move {
                 tokio::task::spawn_blocking(move || {
                     std::fs::read_to_string(&file_path)
@@ -452,7 +456,21 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                                 }
                             }
 
-                            let patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
+                            let mut patterns = SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
+
+                            // Inject threat model queries for this language
+                            if let Some(queries) = threat_queries.get(&lang) {
+                                for tq in queries {
+                                    patterns.add_query(
+                                        &tq.par_type,
+                                        &tq.query_type,
+                                        &tq.query,
+                                        &tq.description,
+                                        vec![],
+                                    );
+                                }
+                            }
+
                             let matches = patterns.get_pattern_matches(&content);
 
                             Some(
@@ -689,6 +707,8 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
 
                         match analyze_with_claude_code(
                             executor,
+                            cache.as_deref(),
+                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
@@ -815,6 +835,7 @@ pub async fn run_scan_command(mut args: ScanArgs) -> Result<()> {
                         &output_dir,
                         api_base_url,
                         &language,
+                        cache.as_deref(),
                     )
                     .await
                     {
@@ -1402,6 +1423,8 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
 
                         match analyze_with_claude_code(
                             executor,
+                            cache.as_deref(),
+                            cache_mode,
                             &prompt_builder,
                             &file_path,
                             &pattern_match,
@@ -1485,6 +1508,7 @@ async fn run_single_repo_scan(args: &ScanArgs) -> Result<AnalysisSummary> {
                         &output_dir,
                         api_base_url,
                         &language,
+                        cache.as_deref(),
                     )
                     .await
                     {
