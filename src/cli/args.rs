@@ -33,7 +33,7 @@ pub struct Args {
     #[arg(short, long)]
     pub analyze: Option<PathBuf>,
 
-    #[arg(short, long, default_value = "gpt-5.1-codex", global = true)]
+    #[arg(short, long, default_value = "gpt-5.4", global = true)]
     pub model: String,
 
     #[arg(short, long, action = clap::ArgAction::Count, global = true)]

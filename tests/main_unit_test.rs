@@ -318,8 +318,8 @@ fn test_pathbuf_from_string() {
 #[test]
 fn test_model_default_value() {
     // Test that the default model is correctly set
-    let default_model = "gpt-5.1-codex";
-    assert_eq!(default_model, "gpt-5.1-codex");
+    let default_model = "gpt-5.4";
+    assert_eq!(default_model, "gpt-5.4");
 }
 
 #[test]

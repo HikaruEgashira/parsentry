@@ -302,7 +302,7 @@ pub struct CallGraphConfigToml {
     pub security_focus: bool,
 }
 fn default_model() -> String {
-    "gpt-5.1-codex".to_string()
+    "gpt-5.4".to_string()
 }
 
 fn default_min_confidence() -> i32 {
@@ -556,7 +556,7 @@ impl ParsentryConfig {
 # For more information, see documentation
 
 [analysis]
-model = "gpt-5.1-codex"
+model = "gpt-5.4"
 min_confidence = 70
 language = "ja"
 debug = false
@@ -987,7 +987,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = ParsentryConfig::default();
-        assert_eq!(config.analysis.model, "gpt-5.1-codex");
+        assert_eq!(config.analysis.model, "gpt-5.4");
         assert_eq!(config.analysis.min_confidence, 70);
         assert_eq!(config.analysis.language, "ja");
         assert!(!config.analysis.evaluate);
@@ -1058,7 +1058,7 @@ target = "test"
     fn test_generate_default_config() {
         let config_string = ParsentryConfig::generate_default_config();
         assert!(config_string.contains("[analysis]"));
-        assert!(config_string.contains("model = \"gpt-5.1-codex\""));
+        assert!(config_string.contains("model = \"gpt-5.4\""));
         assert!(config_string.contains("min_confidence = 70"));
         assert!(config_string.contains("language = \"ja\""));
     }

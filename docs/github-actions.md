@@ -22,7 +22,7 @@ jobs:
     uses: HikaruEgashira/parsentry/.github/workflows/scan.yml@main
     # with:
     #   version: 'v0.15.0'  # default: latest
-    #   model: 'gpt-5.1-codex'  # default: gpt-5.1-codex
+    #   model: 'gpt-5.4'  # default: gpt-5.4
 ```
 
 ## 入力パラメータ
@@ -30,7 +30,7 @@ jobs:
 | パラメータ | 必須 | デフォルト | 説明 |
 |-----------|------|-----------|------|
 | `version` | No | `latest` | 使用するParsentryのバージョン (e.g., `v0.15.0`) |
-| `model` | No | `gpt-5.1-codex` | 分析に使用するモデル |
+| `model` | No | `gpt-5.4` | 分析に使用するモデル |
 
 ## 仕組み
 

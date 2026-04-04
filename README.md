@@ -59,7 +59,7 @@ Arguments:
 
 Core Options:
   -a, --analyze <ANALYZE>                Analysis target
-  -m, --model <MODEL>                    [default: gpt-5.1-codex]
+  -m, --model <MODEL>                    [default: gpt-5.4]
       --output-dir <OUTPUT_DIR>          [default: ./reports]
       --generate-patterns                Generate security patterns
       --language <LANGUAGE>              [default: ja]
