@@ -8,55 +8,32 @@ use crate::cli::args::ScanArgs;
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
     #[serde(default)]
-    pub analysis: AnalysisConfig,
-
-    #[serde(default)]
     pub paths: PathsConfig,
-
-    #[serde(default)]
-    pub filtering: FilteringConfig,
-
-    #[serde(default)]
-    pub api: ApiConfig,
-
-    #[serde(default)]
-    pub repo: RepoConfig,
-
-    #[serde(default)]
-    pub generation: GenerationConfig,
 
     #[serde(default)]
     pub agent: AgentConfig,
 
     #[serde(default)]
     pub cache: CacheConfig,
+
+    /// Verbosity level: 0=quiet, 1=normal, 2+=debug
+    #[serde(default)]
+    pub verbosity: u8,
 }
 
-/// Agent configuration for LLM analysis
+/// Agent configuration for CLI executor
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct AgentConfig {
-    /// Agent type: "genai" (default) or "claude-code"
-    #[serde(default = "default_agent_type")]
-    pub agent_type: String,
-
-    /// Path to agent binary (for claude-code)
+    /// Path to agent binary
     pub path: Option<PathBuf>,
 
     /// Maximum concurrent processes
     #[serde(default = "default_agent_max_concurrent")]
     pub max_concurrent: usize,
 
-    /// Timeout in seconds (for claude-code)
+    /// Timeout in seconds
     #[serde(default = "default_agent_timeout")]
     pub timeout_secs: u64,
-
-    /// Enable PoC execution (for claude-code)
-    #[serde(default)]
-    pub enable_poc: bool,
-}
-
-fn default_agent_type() -> String {
-    "claude-code".to_string()
 }
 
 fn default_agent_max_concurrent() -> usize {
@@ -67,15 +44,17 @@ fn default_agent_timeout() -> u64 {
     300
 }
 
-impl AgentConfig {
-    /// Check if Claude Code agent is enabled
-    pub fn is_claude_code(&self) -> bool {
-        self.agent_type == "claude-code"
+impl Default for AgentConfig {
+    fn default() -> Self {
+        Self {
+            path: None,
+            max_concurrent: default_agent_max_concurrent(),
+            timeout_secs: default_agent_timeout(),
+        }
     }
-
 }
 
-/// Cache configuration for LLM responses
+/// Cache configuration
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct CacheConfig {
     /// Enable cache
@@ -203,74 +182,9 @@ impl CacheConfig {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct AnalysisConfig {
-    #[serde(default = "default_model")]
-    pub model: String,
-    
-    #[serde(default = "default_min_confidence")]
-    pub min_confidence: i32,
-    
-    #[serde(default = "default_language")]
-    pub language: String,
-
-    #[serde(default)]
-    pub evaluate: bool,
-
-    /// Verbosity level: 0=quiet, 1=normal, 2+=debug
-    #[serde(default)]
-    pub verbosity: u8,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PathsConfig {
     pub target: Option<String>,
     pub output_dir: Option<PathBuf>,
-    pub analyze: Option<PathBuf>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct FilteringConfig {
-    pub vuln_types: Option<Vec<String>>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ApiConfig {
-    pub base_url: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct RepoConfig {
-    pub url: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct GenerationConfig {
-    #[serde(default)]
-    pub generate_patterns: bool,
-}
-
-fn default_model() -> String {
-    "gpt-5.4".to_string()
-}
-
-fn default_min_confidence() -> i32 {
-    70
-}
-
-fn default_language() -> String {
-    "ja".to_string()
-}
-
-impl Default for AnalysisConfig {
-    fn default() -> Self {
-        Self {
-            model: default_model(),
-            min_confidence: default_min_confidence(),
-            language: default_language(),
-            evaluate: false,
-            verbosity: 0,
-        }
-    }
 }
 
 impl Default for PathsConfig {
@@ -278,51 +192,6 @@ impl Default for PathsConfig {
         Self {
             target: None,
             output_dir: None,
-            analyze: None,
-        }
-    }
-}
-
-impl Default for FilteringConfig {
-    fn default() -> Self {
-        Self {
-            vuln_types: None,
-        }
-    }
-}
-
-impl Default for ApiConfig {
-    fn default() -> Self {
-        Self {
-            base_url: None,
-        }
-    }
-}
-
-impl Default for RepoConfig {
-    fn default() -> Self {
-        Self {
-            url: None,
-        }
-    }
-}
-
-impl Default for GenerationConfig {
-    fn default() -> Self {
-        Self {
-            generate_patterns: false,
-        }
-    }
-}
-
-impl Default for AgentConfig {
-    fn default() -> Self {
-        Self {
-            agent_type: default_agent_type(),
-            path: None,
-            max_concurrent: default_agent_max_concurrent(),
-            timeout_secs: default_agent_timeout(),
-            enable_poc: false,
         }
     }
 }
@@ -330,14 +199,10 @@ impl Default for AgentConfig {
 impl Default for ParsentryConfig {
     fn default() -> Self {
         Self {
-            analysis: AnalysisConfig::default(),
             paths: PathsConfig::default(),
-            filtering: FilteringConfig::default(),
-            api: ApiConfig::default(),
-            repo: RepoConfig::default(),
-            generation: GenerationConfig::default(),
             agent: AgentConfig::default(),
             cache: CacheConfig::default(),
+            verbosity: 0,
         }
     }
 }
@@ -345,53 +210,19 @@ impl Default for ParsentryConfig {
 impl ParsentryConfig {
     /// Merge another config into this one (other takes precedence for set values)
     pub fn merge(&mut self, other: &ParsentryConfig) {
-        // Analysis config - merge non-default values
-        if other.analysis.model != default_model() {
-            self.analysis.model = other.analysis.model.clone();
-        }
-        if other.analysis.min_confidence != default_min_confidence() {
-            self.analysis.min_confidence = other.analysis.min_confidence;
-        }
-        if other.analysis.language != default_language() {
-            self.analysis.language = other.analysis.language.clone();
-        }
-        if other.analysis.evaluate {
-            self.analysis.evaluate = other.analysis.evaluate;
-        }
-        if other.analysis.verbosity > 0 {
-            self.analysis.verbosity = other.analysis.verbosity;
+        if other.verbosity > 0 {
+            self.verbosity = other.verbosity;
         }
 
-        // Paths config - merge Option fields
+        // Paths config
         if other.paths.target.is_some() {
             self.paths.target = other.paths.target.clone();
         }
         if other.paths.output_dir.is_some() {
             self.paths.output_dir = other.paths.output_dir.clone();
         }
-        if other.paths.analyze.is_some() {
-            self.paths.analyze = other.paths.analyze.clone();
-        }
-
-        // Filtering config
-        if other.filtering.vuln_types.is_some() {
-            self.filtering.vuln_types = other.filtering.vuln_types.clone();
-        }
-
-        // API config
-        if other.api.base_url.is_some() {
-            self.api.base_url = other.api.base_url.clone();
-        }
-
-        // Repo config
-        if other.repo.url.is_some() {
-            self.repo.url = other.repo.url.clone();
-        }
 
         // Agent config
-        if other.agent.agent_type != default_agent_type() {
-            self.agent.agent_type = other.agent.agent_type.clone();
-        }
         if other.agent.path.is_some() {
             self.agent.path = other.agent.path.clone();
         }
@@ -401,9 +232,6 @@ impl ParsentryConfig {
         if other.agent.timeout_secs != default_agent_timeout() {
             self.agent.timeout_secs = other.agent.timeout_secs;
         }
-        if other.agent.enable_poc {
-            self.agent.enable_poc = other.agent.enable_poc;
-        }
     }
 }
 
@@ -411,16 +239,13 @@ impl ParsentryConfig {
 pub enum ConfigError {
     #[error("Invalid path in {field}: {path} does not exist")]
     InvalidPath { field: String, path: PathBuf },
-    
-    #[error("Invalid range in {field}: {value} (valid range: {valid_range})")]
-    InvalidRange { field: String, value: i32, valid_range: String },
-    
+
     #[error("TOML parsing error: {0}")]
     TomlError(#[from] toml::de::Error),
-    
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     #[error("Config file not found")]
     ConfigNotFound,
 }
@@ -430,37 +255,21 @@ impl ParsentryConfig {
         let default_config = Self::default();
         toml::to_string_pretty(&default_config).unwrap_or_else(|_| {
             r#"# Parsentry Configuration File
-# For more information, see documentation
 
-[analysis]
-model = "gpt-5.4"
-min_confidence = 70
-language = "ja"
-debug = false
-evaluate = false
 verbosity = 0
 
 [paths]
 # target = "src" or "owner/repo"
 # output_dir = "reports"
-# analyze = "specific-file.rs"
-
-[filtering]
-# vuln_types = ["SQLI", "XSS", "RCE"]
-
-[api]
-# base_url = "https://api.example.com"
-
-[generation]
-generate_patterns = false
 
 [agent]
-# Agent type: "genai" or "claude-code" (default)
-agent_type = "claude-code"
-# path = "/usr/local/bin/claude"  # Only for claude-code
+# path = "/usr/local/bin/claude"
 max_concurrent = 10
 timeout_secs = 300
-enable_poc = false
+
+[cache]
+enabled = true
+directory = ".parsentry/cache"
 "#.to_string()
         })
     }
@@ -487,18 +296,15 @@ enable_poc = false
     }
 
     /// Ensure user config file exists, creating it if necessary
-    /// Returns the path to the user config file
     pub fn ensure_user_config_exists() -> Result<PathBuf> {
         let user_config_path = Self::get_user_config_path()
             .ok_or_else(|| anyhow!("Could not determine home directory"))?;
 
         if !user_config_path.exists() {
-            // Create parent directory if it doesn't exist
             if let Some(parent) = user_config_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
 
-            // Write default config
             let default_config = Self::generate_default_config();
             std::fs::write(&user_config_path, default_config)?;
 
@@ -509,13 +315,12 @@ enable_poc = false
     }
 
     /// Load and merge configs from all sources with priority:
-    /// 1. User config (~/.config/parsentry/config.toml) - lowest priority (base)
+    /// 1. User config (~/.config/parsentry/config.toml) - lowest priority
     /// 2. Current directory (./parsentry.toml)
     /// 3. System config (/etc/parsentry/config.toml) - highest priority
     pub fn load_with_merged_configs() -> Result<Self, ConfigError> {
         let mut config = Self::default();
 
-        // 1. Load user config (lowest priority - base settings)
         if let Some(user_path) = Self::get_user_config_path() {
             if user_path.exists() {
                 if let Ok(user_config) = Self::load_from_file(&user_path) {
@@ -525,7 +330,6 @@ enable_poc = false
             }
         }
 
-        // 2. Load current directory config (medium priority)
         let current_path = Self::get_current_config_path();
         if current_path.exists() {
             if let Ok(current_config) = Self::load_from_file(&current_path) {
@@ -534,7 +338,6 @@ enable_poc = false
             }
         }
 
-        // 3. Load system config (highest priority)
         let system_path = Self::get_system_config_path();
         if system_path.exists() {
             if let Ok(system_config) = Self::load_from_file(&system_path) {
@@ -546,86 +349,29 @@ enable_poc = false
         Ok(config)
     }
 
-    #[deprecated(since = "0.12.0", note = "Use load_with_merged_configs() instead")]
-    pub fn find_default_config() -> Option<PathBuf> {
-        let search_paths = vec![
-            "./parsentry.toml",
-            "~/.config/parsentry/config.toml",
-            "/etc/parsentry/config.toml",
-        ];
-
-        for path_str in search_paths {
-            let path = if path_str.starts_with("~/") {
-                if let Some(home) = dirs::home_dir() {
-                    home.join(&path_str[2..])
-                } else {
-                    continue;
-                }
-            } else {
-                PathBuf::from(path_str)
-            };
-
-            if path.exists() {
-                return Some(path);
-            }
-        }
-        None
-    }
-
-    #[deprecated(since = "0.12.0", note = "Use load_with_merged_configs() instead")]
-    pub fn find_and_load_default() -> Result<Self, ConfigError> {
-        Self::load_with_merged_configs()
-    }
-
     pub fn apply_env_vars(&mut self, env_vars: &HashMap<String, String>) -> Result<()> {
         for (key, value) in env_vars {
             if let Some(config_key) = key.strip_prefix("PARSENTRY_") {
                 match config_key {
-                    "ANALYSIS_MODEL" => self.analysis.model = value.clone(),
-                    "ANALYSIS_MIN_CONFIDENCE" => {
-                        self.analysis.min_confidence = value.parse()
-                            .map_err(|_| anyhow!("Invalid min_confidence value: {}", value))?;
-                    }
-                    "ANALYSIS_LANGUAGE" => self.analysis.language = value.clone(),
-                    "ANALYSIS_DEBUG" => {
-                        // Legacy: ANALYSIS_DEBUG=true sets verbosity to 2
-                        let debug_enabled: bool = value.parse()
-                            .map_err(|_| anyhow!("Invalid debug value: {}", value))?;
-                        if debug_enabled && self.analysis.verbosity < 2 {
-                            self.analysis.verbosity = 2;
-                        }
-                    }
-                    "ANALYSIS_EVALUATE" => {
-                        self.analysis.evaluate = value.parse()
-                            .map_err(|_| anyhow!("Invalid evaluate value: {}", value))?;
-                    }
-                    "ANALYSIS_VERBOSITY" => {
-                        self.analysis.verbosity = value.parse()
+                    "VERBOSITY" => {
+                        self.verbosity = value.parse()
                             .map_err(|_| anyhow!("Invalid verbosity value: {}", value))?;
                     }
                     "PATHS_TARGET" => self.paths.target = Some(value.clone()),
                     "PATHS_OUTPUT_DIR" => self.paths.output_dir = Some(PathBuf::from(value)),
-                    "PATHS_ANALYZE" => self.paths.analyze = Some(PathBuf::from(value)),
-                    "FILTERING_VULN_TYPES" => {
-                        let types: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
-                        self.filtering.vuln_types = Some(types);
-                    }
-                    "API_BASE_URL" => self.api.base_url = Some(value.clone()),
-                    _ => {} // Ignore unknown environment variables
+                    _ => {}
                 }
             }
         }
         Ok(())
     }
 
-
     pub fn apply_scan_args(&mut self, args: &ScanArgs) -> Result<()> {
-        // --debug is equivalent to -vv (verbosity >= 2)
-        if args.debug && self.analysis.verbosity < 2 {
-            self.analysis.verbosity = 2;
+        if args.debug && self.verbosity < 2 {
+            self.verbosity = 2;
         }
         if args.verbosity > 0 {
-            self.analysis.verbosity = args.verbosity;
+            self.verbosity = args.verbosity;
         }
 
         if let Some(ref target) = args.target {
@@ -635,39 +381,26 @@ enable_poc = false
         Ok(())
     }
 
-    /// Load configuration with full precedence chain:
-    /// 1. Default values (lowest)
-    /// 2. User config (~/.config/parsentry/config.toml) - auto-created on first run
-    /// 3. Current directory (./parsentry.toml)
-    /// 4. System config (/etc/parsentry/config.toml) - highest file priority
-    /// 5. Environment variables (PARSENTRY_*)
-    /// 6. CLI arguments (highest)
-    ///
-    /// If config_path is explicitly provided, it's loaded and merged after step 4.
+    /// Load configuration with full precedence chain
     pub fn load_with_precedence(
         config_path: Option<PathBuf>,
         cli_args: &ScanArgs,
         env_vars: &HashMap<String, String>
     ) -> Result<Self> {
-        // Ensure user config exists (auto-create on first run)
         if let Err(e) = Self::ensure_user_config_exists() {
             tracing::debug!("Could not create user config: {}", e);
         }
 
-        // Load merged configs from all sources
         let mut config = Self::load_with_merged_configs()
             .unwrap_or_else(|_| Self::default());
 
-        // If explicit config path is provided, merge it with highest file priority
         if let Some(path) = config_path {
             let explicit_config = Self::load_from_file(&path)
                 .map_err(|e| anyhow!("Failed to load config file {}: {}", path.display(), e))?;
             config.merge(&explicit_config);
         }
 
-        // Apply environment variables
         config.apply_env_vars(env_vars)?;
-        // Apply CLI arguments (highest priority)
         config.apply_scan_args(cli_args)?;
         config.validate()?;
 
@@ -687,39 +420,21 @@ enable_poc = false
             }
         }
 
-        if let Some(ref analyze) = self.paths.analyze {
-            if !analyze.exists() {
-                return Err(ConfigError::InvalidPath {
-                    field: "paths.analyze".to_string(),
-                    path: analyze.clone(),
-                });
-            }
-        }
-        
-        if self.analysis.min_confidence < 0 || self.analysis.min_confidence > 100 {
-            return Err(ConfigError::InvalidRange {
-                field: "analysis.min_confidence".to_string(),
-                value: self.analysis.min_confidence,
-                valid_range: "0-100".to_string(),
+        if self.verbosity > 5 {
+            return Err(ConfigError::InvalidPath {
+                field: "verbosity".to_string(),
+                path: PathBuf::from(format!("{} (valid: 0-5)", self.verbosity)),
             });
         }
-        
-        if self.analysis.verbosity > 5 {
-            return Err(ConfigError::InvalidRange {
-                field: "analysis.verbosity".to_string(),
-                value: self.analysis.verbosity as i32,
-                valid_range: "0-5".to_string(),
-            });
-        }
-        
+
         Ok(())
     }
-    
+
     pub fn to_args(&self) -> ScanArgs {
         ScanArgs {
             target: self.paths.target.clone(),
-            verbosity: self.analysis.verbosity,
-            debug: self.analysis.verbosity >= 2,
+            verbosity: self.verbosity,
+            debug: self.verbosity >= 2,
             config: None,
             generate_config: false,
             filter_lang: None,
@@ -738,212 +453,144 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = ParsentryConfig::default();
-        assert_eq!(config.analysis.model, "gpt-5.4");
-        assert_eq!(config.analysis.min_confidence, 70);
-        assert_eq!(config.analysis.language, "ja");
-        assert!(!config.analysis.evaluate);
-        assert_eq!(config.analysis.verbosity, 0);
+        assert_eq!(config.verbosity, 0);
+        assert_eq!(config.agent.max_concurrent, 10);
+        assert_eq!(config.agent.timeout_secs, 300);
+        assert!(config.cache.enabled);
     }
 
     #[test]
     fn test_toml_parsing() {
         let toml_content = r#"
-[analysis]
-model = "gpt-4"
-min_confidence = 80
-language = "en"
 verbosity = 2
 
 [paths]
 target = "src"
 output_dir = "reports"
 
-[filtering]
-vuln_types = ["SQLI", "XSS"]
+[agent]
+max_concurrent = 5
+timeout_secs = 600
 "#;
 
         let config: ParsentryConfig = toml::from_str(toml_content).unwrap();
-        assert_eq!(config.analysis.model, "gpt-4");
-        assert_eq!(config.analysis.min_confidence, 80);
-        assert_eq!(config.analysis.language, "en");
-        assert_eq!(config.analysis.verbosity, 2);
+        assert_eq!(config.verbosity, 2);
         assert_eq!(config.paths.target, Some("src".to_string()));
         assert_eq!(config.paths.output_dir, Some(PathBuf::from("reports")));
-        assert_eq!(config.filtering.vuln_types, Some(vec!["SQLI".to_string(), "XSS".to_string()]));
+        assert_eq!(config.agent.max_concurrent, 5);
+        assert_eq!(config.agent.timeout_secs, 600);
     }
 
     #[test]
     fn test_env_var_application() {
         let mut config = ParsentryConfig::default();
         let mut env_vars = HashMap::new();
-        env_vars.insert("PARSENTRY_ANALYSIS_MODEL".to_string(), "gpt-4".to_string());
-        env_vars.insert("PARSENTRY_ANALYSIS_MIN_CONFIDENCE".to_string(), "90".to_string());
-        env_vars.insert("PARSENTRY_ANALYSIS_DEBUG".to_string(), "true".to_string());
+        env_vars.insert("PARSENTRY_VERBOSITY".to_string(), "2".to_string());
+        env_vars.insert("PARSENTRY_PATHS_TARGET".to_string(), "src".to_string());
 
         config.apply_env_vars(&env_vars).unwrap();
 
-        assert_eq!(config.analysis.model, "gpt-4");
-        assert_eq!(config.analysis.min_confidence, 90);
-        assert_eq!(config.analysis.verbosity, 2);  // DEBUG=true sets verbosity to 2
+        assert_eq!(config.verbosity, 2);
+        assert_eq!(config.paths.target, Some("src".to_string()));
     }
 
     #[test]
     fn test_config_file_loading() {
         let mut temp_file = NamedTempFile::new().unwrap();
         writeln!(temp_file, r#"
-[analysis]
-model = "claude-3"
-min_confidence = 85
+verbosity = 1
 
 [paths]
 target = "test"
 "#).unwrap();
 
         let config = ParsentryConfig::load_from_file(temp_file.path()).unwrap();
-        assert_eq!(config.analysis.model, "claude-3");
-        assert_eq!(config.analysis.min_confidence, 85);
+        assert_eq!(config.verbosity, 1);
         assert_eq!(config.paths.target, Some("test".to_string()));
     }
 
     #[test]
     fn test_generate_default_config() {
         let config_string = ParsentryConfig::generate_default_config();
-        assert!(config_string.contains("[analysis]"));
-        assert!(config_string.contains("model = \"gpt-5.4\""));
-        assert!(config_string.contains("min_confidence = 70"));
-        assert!(config_string.contains("language = \"ja\""));
+        assert!(config_string.contains("[cache]") || config_string.contains("cache"));
+        assert!(config_string.contains("[agent]") || config_string.contains("agent"));
     }
 
     #[test]
     fn test_validation() {
         let mut config = ParsentryConfig::default();
-
-        // Test invalid confidence range
-        config.analysis.min_confidence = 150;
-        assert!(config.validate().is_err());
-
-        // Test valid configuration
-        config.analysis.min_confidence = 70;
         assert!(config.validate().is_ok());
 
-        // Test invalid verbosity
-        config.analysis.verbosity = 10;
+        config.verbosity = 10;
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn test_agent_config_default() {
         let config = AgentConfig::default();
-        assert_eq!(config.agent_type, "claude-code");
         assert_eq!(config.path, None);
         assert_eq!(config.max_concurrent, 10);
         assert_eq!(config.timeout_secs, 300);
-        assert!(!config.enable_poc);
     }
-
-    #[test]
-    fn test_agent_config_is_claude_code() {
-        let mut config = AgentConfig::default();
-        assert!(config.is_claude_code());
-
-        config.agent_type = "genai".to_string();
-        assert!(!config.is_claude_code());
-
-        config.agent_type = "claude-code".to_string();
-        assert!(config.is_claude_code());
-    }
-
 
     #[test]
     fn test_agent_toml_parsing() {
         let toml_content = r#"
 [agent]
-agent_type = "claude-code"
 path = "/usr/local/bin/claude"
 max_concurrent = 5
 timeout_secs = 600
-enable_poc = true
 "#;
 
         let config: ParsentryConfig = toml::from_str(toml_content).unwrap();
-        assert_eq!(config.agent.agent_type, "claude-code");
         assert_eq!(config.agent.path, Some(PathBuf::from("/usr/local/bin/claude")));
         assert_eq!(config.agent.max_concurrent, 5);
         assert_eq!(config.agent.timeout_secs, 600);
-        assert!(config.agent.enable_poc);
-        assert!(config.agent.is_claude_code());
     }
-
 
     #[test]
     fn test_config_merge() {
         let mut base = ParsentryConfig::default();
 
-        // Create config with overrides
         let override_config: ParsentryConfig = toml::from_str(r#"
-[analysis]
-model = "gpt-4"
-min_confidence = 90
 verbosity = 2
 
 [paths]
 target = "custom-target"
 
 [agent]
-agent_type = "claude-code"
 max_concurrent = 5
 "#).unwrap();
 
         base.merge(&override_config);
 
-        // Verify merged values
-        assert_eq!(base.analysis.model, "gpt-4");
-        assert_eq!(base.analysis.min_confidence, 90);
-        assert_eq!(base.analysis.verbosity, 2);
+        assert_eq!(base.verbosity, 2);
         assert_eq!(base.paths.target, Some("custom-target".to_string()));
-        assert_eq!(base.agent.agent_type, "claude-code");
         assert_eq!(base.agent.max_concurrent, 5);
-
-        // Verify default values are preserved where not overridden
-        assert_eq!(base.analysis.language, "ja");
-        assert!(!base.analysis.evaluate);
     }
 
     #[test]
     fn test_config_merge_priority() {
-        // Simulate: user config -> current config -> system config
         let mut config = ParsentryConfig::default();
 
-        // User config (lowest priority)
         let user_config: ParsentryConfig = toml::from_str(r#"
-[analysis]
-model = "user-model"
-min_confidence = 60
-language = "en"
+verbosity = 1
+
+[paths]
+target = "user-target"
 "#).unwrap();
         config.merge(&user_config);
 
-        // Current directory config (medium priority)
         let current_config: ParsentryConfig = toml::from_str(r#"
-[analysis]
-model = "current-model"
-min_confidence = 75
+verbosity = 2
+
+[paths]
+target = "current-target"
 "#).unwrap();
         config.merge(&current_config);
 
-        // System config (highest priority)
-        let system_config: ParsentryConfig = toml::from_str(r#"
-[analysis]
-model = "system-model"
-"#).unwrap();
-        config.merge(&system_config);
-
-        // System config's model should win
-        assert_eq!(config.analysis.model, "system-model");
-        // Current config's min_confidence should win (system didn't override)
-        assert_eq!(config.analysis.min_confidence, 75);
-        // User config's language should be preserved (not overridden)
-        assert_eq!(config.analysis.language, "en");
+        assert_eq!(config.verbosity, 2);
+        assert_eq!(config.paths.target, Some("current-target".to_string()));
     }
 
     #[test]
@@ -970,17 +617,14 @@ model = "system-model"
     fn test_ensure_user_config_exists() {
         use tempfile::TempDir;
 
-        // Create a temporary directory to simulate home
         let temp_dir = TempDir::new().unwrap();
         let config_dir = temp_dir.path().join(".config/parsentry");
         let config_path = config_dir.join("config.toml");
 
-        // Manually test the logic (since we can't easily mock dirs::home_dir)
         std::fs::create_dir_all(&config_dir).unwrap();
         let default_config = ParsentryConfig::generate_default_config();
         std::fs::write(&config_path, &default_config).unwrap();
 
-        // Verify file was created with valid TOML
         let content = std::fs::read_to_string(&config_path).unwrap();
         let parsed: Result<ParsentryConfig, _> = toml::from_str(&content);
         assert!(parsed.is_ok());
