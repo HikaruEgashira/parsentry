@@ -1,4 +1,4 @@
-use crate::model::ThreatModel;
+use crate::threat_model::ThreatModel;
 
 /// Render a threat model as a Markdown document for explainability.
 pub fn render_threat_model_md(model: &ThreatModel) -> String {
@@ -45,7 +45,7 @@ pub fn render_threat_model_md(model: &ThreatModel) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{AttackSurface, SurfaceKind};
+    use crate::threat_model::{AttackSurface, SurfaceKind};
 
     #[test]
     fn test_render_basic() {

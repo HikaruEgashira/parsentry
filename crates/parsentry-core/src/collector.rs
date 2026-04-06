@@ -1,6 +1,7 @@
 use anyhow::Result;
-use parsentry_core::Language;
-use parsentry_utils::{FileClassifier, FileDiscovery};
+use crate::file_classifier::FileClassifier;
+use crate::file_discovery::FileDiscovery;
+use crate::language::Language;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

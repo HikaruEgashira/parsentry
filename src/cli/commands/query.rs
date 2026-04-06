@@ -15,7 +15,7 @@ use crate::repo::RepoOps;
 
 use parsentry_core::Language;
 use parsentry_parser::{PatternMatch, PatternType, SecurityRiskPatterns};
-use parsentry_threat_model::ThreatModel;
+use parsentry_core::ThreatModel;
 use parsentry_utils::FileClassifier;
 
 use super::common::locate_repository;

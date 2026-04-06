@@ -1,7 +1,0 @@
-[package]
-name = "parsentry-prompt"
-version.workspace = true
-edition.workspace = true
-description = "Minimal prompt builder: origin + scope only"
-
-[dependencies]

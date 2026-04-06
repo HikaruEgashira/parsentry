@@ -1,74 +1,9 @@
 use anyhow::Result;
-use genai::chat::{ChatMessage, ChatOptions, ChatRequest, JsonSpec};
-use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
-use genai::{Client, ClientConfig, ModelIden, ServiceTarget, adapter::AdapterKind};
-use log::{debug, info};
 use serde::Deserialize;
 
-use crate::collector::RepoMetadata;
-use crate::model::{AttackSurface, SurfaceKind, ThreatModel};
+use crate::threat_model::{AttackSurface, SurfaceKind, ThreatModel};
 
-pub struct ThreatModelGenerator {
-    model: String,
-    api_base_url: Option<String>,
-}
-
-impl ThreatModelGenerator {
-    pub fn new(model: &str, api_base_url: Option<&str>) -> Self {
-        Self {
-            model: model.to_string(),
-            api_base_url: api_base_url.map(|s| s.to_string()),
-        }
-    }
-
-    /// Generate a threat model from repository metadata. Single LLM call.
-    pub async fn generate(&self, metadata: &RepoMetadata) -> Result<ThreatModel> {
-        let repo_context = metadata.to_prompt_context();
-        let languages: Vec<String> = metadata
-            .languages
-            .keys()
-            .map(|l| format!("{:?}", l))
-            .collect();
-
-        let prompt = build_prompt(&repo_context, &languages);
-        let response = self.call_llm(&prompt).await?;
-
-        let model = parse_response(
-            &response,
-            &metadata
-                .root_dir
-                .to_string_lossy()
-                .to_string(),
-        )?;
-
-        info!(
-            "Threat model generated: {} attack surfaces",
-            model.total_surfaces()
-        );
-
-        Ok(model)
-    }
-
-    async fn call_llm(&self, prompt: &str) -> Result<String> {
-        let response_schema = threat_model_schema();
-        let client = create_client(self.api_base_url.as_deref(), response_schema);
-
-        let chat_req = ChatRequest::new(vec![
-            ChatMessage::system(SYSTEM_PROMPT),
-            ChatMessage::user(prompt),
-        ]);
-
-        let chat_res = client.exec_chat(&self.model, chat_req, None).await?;
-        let content = chat_res
-            .first_text()
-            .ok_or_else(|| anyhow::anyhow!("Empty LLM response"))?;
-
-        debug!("LLM response length: {} chars", content.len());
-        Ok(content.to_string())
-    }
-}
-
-pub const SYSTEM_PROMPT: &str = r#"You are an attack surface enumerator. Given repository metadata, identify all concrete attack surfaces and generate a tree-sitter query for each to locate them in code.
+pub const THREAT_MODEL_SYSTEM_PROMPT: &str = r#"You are an attack surface enumerator. Given repository metadata, identify all concrete attack surfaces and generate a tree-sitter query for each to locate them in code.
 
 Focus on listing:
 
@@ -95,7 +30,7 @@ Rules:
 - Use #eq? or #match? predicates to narrow matches
 - Quality over quantity — only list surfaces that warrant security review"#;
 
-pub fn build_prompt(repo_context: &str, languages: &[String]) -> String {
+pub fn build_threat_model_prompt(repo_context: &str, languages: &[String]) -> String {
     format!(
         r#"Enumerate the attack surfaces of this repository.
 
@@ -183,7 +118,7 @@ fn parse_surface_kind(s: &str) -> SurfaceKind {
     }
 }
 
-pub fn parse_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
+pub fn parse_threat_model_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
     let resp: LlmResponse = serde_json::from_str(json_str)
         .map_err(|e| anyhow::anyhow!("Failed to parse threat model response: {}. Content: {}", e, json_str))?;
 
@@ -207,34 +142,4 @@ pub fn parse_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
         summary: resp.summary,
         surfaces,
     })
-}
-
-fn create_client(api_base_url: Option<&str>, response_schema: serde_json::Value) -> Client {
-    let client_config = ClientConfig::default().with_chat_options(
-        ChatOptions::default()
-            .with_normalize_reasoning_content(true)
-            .with_response_format(JsonSpec::new("json_object", response_schema)),
-    );
-
-    let mut client_builder = Client::builder().with_config(client_config);
-
-    if let Some(base_url) = api_base_url {
-        let base_url_owned = base_url.to_string();
-        let target_resolver = ServiceTargetResolver::from_resolver_fn(
-            move |service_target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-                let ServiceTarget { model, .. } = service_target;
-                let endpoint = Endpoint::from_owned(base_url_owned.clone());
-                let model = ModelIden::new(AdapterKind::OpenAI, model.model_name);
-                let auth = AuthData::from_env("OPENAI_API_KEY");
-                Ok(ServiceTarget {
-                    endpoint,
-                    auth,
-                    model,
-                })
-            },
-        );
-        client_builder = client_builder.with_service_target_resolver(target_resolver);
-    }
-
-    client_builder.build()
 }

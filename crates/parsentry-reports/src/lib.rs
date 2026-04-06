@@ -8,7 +8,6 @@
 
 pub mod filename;
 pub mod markdown;
-pub mod prompts;
 pub mod sarif;
 pub mod summary;
 pub mod validation;

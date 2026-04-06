@@ -6,7 +6,7 @@ use crate::cli::ui::StatusPrinter;
 use crate::config::ParsentryConfig;
 
 use parsentry_parser::PatternMatch;
-use parsentry_threat_model::RepoMetadata;
+use parsentry_core::RepoMetadata;
 
 use super::common::locate_repository;
 use super::query::run_pattern_matching;

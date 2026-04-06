@@ -184,7 +184,7 @@ fn test_repo_metadata_collection() {
     .unwrap();
     fs::write(root.join("requirements.txt"), "flask==3.0\nsqlalchemy==2.0").unwrap();
 
-    let meta = parsentry_threat_model::RepoMetadata::collect(root).unwrap();
+    let meta = parsentry_core::RepoMetadata::collect(root).unwrap();
 
     assert_eq!(meta.total_files, 1);
     assert!(meta.languages.contains_key(&Language::Python));
@@ -201,7 +201,7 @@ fn test_repo_metadata_prompt_context() {
     fs::write(root.join("api/app.py"), "from flask import Flask").unwrap();
     fs::write(root.join("requirements.txt"), "flask").unwrap();
 
-    let meta = parsentry_threat_model::RepoMetadata::collect(root).unwrap();
+    let meta = parsentry_core::RepoMetadata::collect(root).unwrap();
     let ctx = meta.to_prompt_context();
 
     assert!(ctx.contains("Directory Structure"));
@@ -212,7 +212,7 @@ fn test_repo_metadata_prompt_context() {
 
 #[test]
 fn test_threat_model_report_rendering() {
-    use parsentry_threat_model::{AttackSurface, SurfaceKind, ThreatModel, render_threat_model_md};
+    use parsentry_core::{AttackSurface, SurfaceKind, ThreatModel, render_threat_model_md};
 
     let model = ThreatModel {
         repository: "test/repo".to_string(),
@@ -239,7 +239,7 @@ fn test_threat_model_report_rendering() {
 
 #[test]
 fn test_threat_model_all_locations() {
-    use parsentry_threat_model::{AttackSurface, SurfaceKind, ThreatModel};
+    use parsentry_core::{AttackSurface, SurfaceKind, ThreatModel};
 
     let model = ThreatModel {
         repository: "test".to_string(),

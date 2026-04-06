@@ -18,7 +18,6 @@ parsentry-utils = { path = "crates/parsentry-utils" }
 parsentry-reports = { path = "crates/parsentry-reports" }
 parsentry-claude-code = { path = "crates/parsentry-claude-code" }
 parsentry-cache = { path = "crates/parsentry-cache" }
-parsentry-threat-model = { path = "crates/parsentry-threat-model" }
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true
 serde_json.workspace = true

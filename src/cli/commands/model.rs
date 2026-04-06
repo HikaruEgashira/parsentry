@@ -6,7 +6,7 @@ use crate::config::ParsentryConfig;
 
 use super::common::{locate_repository, build_threat_model_cli_prompt};
 
-use parsentry_threat_model::RepoMetadata;
+use parsentry_core::RepoMetadata;
 
 pub async fn run_model_command(args: ScanArgs) -> Result<()> {
     let printer = StatusPrinter::new();

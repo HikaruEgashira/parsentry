@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::cli::ui::StatusPrinter;
 use crate::github::clone_repo;
 
-use parsentry_threat_model::{
+use parsentry_core::{
     RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT,
     build_threat_model_prompt, threat_model_schema,
 };

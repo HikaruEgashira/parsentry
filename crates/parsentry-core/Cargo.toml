@@ -2,12 +2,15 @@
 name = "parsentry-core"
 version.workspace = true
 edition.workspace = true
-description = "Core types and traits for Parsentry security scanner"
+description = "Core types and traits for Parsentry"
 license = "MIT"
 
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
+tempfile = "3.10"
