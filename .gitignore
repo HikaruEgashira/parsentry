@@ -23,3 +23,6 @@ benchmarks
 # Temporary analysis results and Claude Code logs
 analysis_result.json
 **/claude_code_logs/
+
+# Mutation testing output
+mutants.out/

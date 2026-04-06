@@ -1,0 +1,8 @@
+# cargo-mutants configuration
+# https://mutants.rs/config.html
+
+timeout_multiplier = 3.0
+minimum_test_timeout = 20
+
+# CI ではin-placeが必要（一時ディレクトリコピーで循環依存エラーが出るため）
+in_place = true
