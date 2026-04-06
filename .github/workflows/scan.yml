@@ -8,14 +8,9 @@ on:
         required: false
         type: string
         default: 'latest'
-      model:
-        description: 'Analysis model to use'
-        required: false
-        type: string
-        default: 'gpt-5.4'
     secrets:
-      PARSENTRY_API_KEY:
-        description: 'API key for the analysis model provider'
+      ANTHROPIC_API_KEY:
+        description: 'Anthropic API key for Claude analysis'
         required: false
 
 permissions:
@@ -83,10 +78,9 @@ jobs:
         run: |
           parsentry . \
             --diff-base origin/${{ github.base_ref }} \
-            --output-dir reports \
-            --cache
+            --output-dir reports
         env:
-          PARSENTRY_ANALYSIS_MODEL: ${{ inputs.model }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Upload reports
         if: steps.diff.outputs.skip != 'true'
