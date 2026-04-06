@@ -1291,10 +1291,8 @@ dependencies = [
  "octocrab",
  "parsentry-cache",
  "parsentry-core",
- "parsentry-executor",
  "parsentry-parser",
  "parsentry-reports",
- "parsentry-utils",
  "regex",
  "reqwest",
  "serde",
@@ -1339,21 +1337,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parsentry-executor"
-version = "0.17.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tokio-test",
- "tracing",
-]
-
-[[package]]
 name = "parsentry-parser"
 version = "0.17.0"
 dependencies = [
@@ -1387,15 +1370,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "parsentry-utils"
-version = "0.17.0"
-dependencies = [
- "anyhow",
- "parsentry-core",
  "tempfile",
 ]
 

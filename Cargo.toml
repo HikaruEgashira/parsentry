@@ -14,9 +14,7 @@ benchmark = []
 tokio.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
 parsentry-parser = { path = "crates/parsentry-parser" }
-parsentry-utils = { path = "crates/parsentry-utils" }
 parsentry-reports = { path = "crates/parsentry-reports" }
-parsentry-executor = { path = "crates/parsentry-executor" }
 parsentry-cache = { path = "crates/parsentry-cache" }
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true

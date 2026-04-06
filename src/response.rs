@@ -60,33 +60,6 @@ impl ResponseExt for Response {
     }
 }
 
-/// Create a Response from ClaudeCodeResponse.
-pub fn from_claude_code_response(
-    cc_response: parsentry_executor::ClaudeCodeResponse,
-    file_path: String,
-) -> Response {
-    let vulnerability_types: Vec<VulnType> = cc_response
-        .vulnerability_types
-        .iter()
-        .map(|s| s.parse().unwrap())
-        .collect();
-
-    let mut response = Response {
-        scratchpad: cc_response.scratchpad,
-        analysis: cc_response.analysis,
-        poc: cc_response.poc,
-        confidence_score: Response::normalize_confidence_score(cc_response.confidence_score),
-        vulnerability_types,
-        file_path: Some(file_path),
-        pattern_description: cc_response.pattern_description,
-        matched_source_code: cc_response.matched_source_code,
-        full_source_code: None,
-    };
-
-    response.sanitize();
-    response
-}
-
 /// Create a test response with default optional fields.
 #[cfg(test)]
 pub fn test_response(
@@ -100,9 +73,6 @@ pub fn test_response(
         poc: "Test PoC".to_string(),
         confidence_score,
         vulnerability_types,
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     }
 }

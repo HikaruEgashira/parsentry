@@ -13,10 +13,8 @@ use crate::cli::ui::StatusPrinter;
 use crate::config::ParsentryConfig;
 use crate::repo::RepoOps;
 
-use parsentry_core::Language;
+use parsentry_core::{FileClassifier, Language, ThreatModel};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
-use parsentry_core::ThreatModel;
-use parsentry_utils::FileClassifier;
 
 use super::common::locate_repository;
 

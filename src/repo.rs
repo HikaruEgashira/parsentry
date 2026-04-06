@@ -6,7 +6,7 @@ use std::{
 };
 
 use parsentry_parser::SecurityRiskPatterns;
-use parsentry_utils::{FileClassifier, FileDiscovery};
+use parsentry_core::{FileClassifier, FileDiscovery};
 
 #[derive(Default)]
 pub struct LanguageExclusions {
