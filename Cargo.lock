@@ -1290,8 +1290,8 @@ dependencies = [
  "num_cpus",
  "octocrab",
  "parsentry-cache",
- "parsentry-claude-code",
  "parsentry-core",
+ "parsentry-executor",
  "parsentry-parser",
  "parsentry-reports",
  "parsentry-utils",
@@ -1327,7 +1327,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "parsentry-claude-code"
+name = "parsentry-core"
+version = "0.17.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "parsentry-executor"
 version = "0.17.0"
 dependencies = [
  "anyhow",
@@ -1339,18 +1351,6 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
-]
-
-[[package]]
-name = "parsentry-core"
-version = "0.17.0"
-dependencies = [
- "anyhow",
- "chrono",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
 ]
 
 [[package]]

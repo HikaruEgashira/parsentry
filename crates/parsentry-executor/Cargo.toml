@@ -1,8 +1,8 @@
 [package]
-name = "parsentry-claude-code"
+name = "parsentry-executor"
 version.workspace = true
 edition.workspace = true
-description = "Claude Code CLI integration for Parsentry security scanner"
+description = "Parallel CLI agent executor for Parsentry"
 license = "MIT"
 
 [dependencies]
