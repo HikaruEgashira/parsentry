@@ -68,24 +68,37 @@ fn emit_prompt(
 
     let repo_context = metadata.to_prompt_context();
 
+    // Deduplicate: same file + same matched_text
+    let mut seen = std::collections::HashSet::new();
+    let deduped: Vec<_> = pattern_matches
+        .iter()
+        .filter(|(fp, pm)| {
+            let key = (
+                fp.strip_prefix(root_dir).unwrap_or(fp).to_string_lossy().to_string(),
+                pm.matched_text.clone(),
+            );
+            seen.insert(key)
+        })
+        .collect();
+
     let mut prompt = String::new();
     prompt.push_str("You are a security auditor. Analyze the following code patterns for vulnerabilities and output SARIF v2.1.0 results.\n\n");
     prompt.push_str("## Repository Context\n\n");
     prompt.push_str(&repo_context);
     prompt.push_str("\n\n## Detected Patterns\n\n");
 
-    for (file_path, pattern_match) in pattern_matches {
+    for (file_path, pattern_match) in &deduped {
         let rel_path = file_path
             .strip_prefix(root_dir)
             .unwrap_or(file_path)
             .display();
-        let pattern_type = format!("{:?}", pattern_match.pattern_config.pattern_type);
+        let pat_type = format!("{:?}", pattern_match.pattern_type);
 
         prompt.push_str(&format!(
-            "### {} — {}\n\n**Pattern**: {} ({})\n```\n{}\n```\n\n",
+            "### {} — {}\n\n**Type**: {} | **Pattern**: {}\n```\n{}\n```\n\n",
             rel_path,
             pattern_match.pattern_config.description,
-            pattern_type,
+            pat_type,
             pattern_match.pattern_config.description,
             pattern_match.matched_text,
         ));
@@ -101,6 +114,6 @@ fn emit_prompt(
 
     print!("{}", prompt);
 
-    printer.success("Prompt", &format!("{} patterns included", pattern_matches.len()));
+    printer.success("Prompt", &format!("{} unique patterns (from {} total)", deduped.len(), pattern_matches.len()));
     Ok(())
 }
