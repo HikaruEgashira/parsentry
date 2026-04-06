@@ -440,6 +440,7 @@ directory = ".parsentry/cache"
             filter_lang: None,
             diff_base: None,
             threat_model: None,
+            output_dir: self.paths.output_dir.clone(),
         }
     }
 }

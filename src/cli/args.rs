@@ -41,6 +41,10 @@ pub struct Args {
     /// Use "-" for stdin: `parsentry model repo | parsentry query repo`
     #[arg(long, global = true)]
     pub threat_model: Option<PathBuf>,
+
+    /// Output directory for analysis results.
+    #[arg(long, global = true)]
+    pub output_dir: Option<PathBuf>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -94,6 +98,7 @@ pub struct ScanArgs {
     pub filter_lang: Option<String>,
     pub diff_base: Option<String>,
     pub threat_model: Option<PathBuf>,
+    pub output_dir: Option<PathBuf>,
 }
 
 impl From<&Args> for ScanArgs {
@@ -107,6 +112,7 @@ impl From<&Args> for ScanArgs {
             filter_lang: args.filter_lang.clone(),
             diff_base: args.diff_base.clone(),
             threat_model: args.threat_model.clone(),
+            output_dir: args.output_dir.clone(),
         }
     }
 }
