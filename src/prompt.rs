@@ -102,6 +102,10 @@ pub fn build_surface_prompt(
         ));
     }
 
+    // Cache key is computed BEFORE output instructions so that
+    // changing --output-dir does not invalidate the cache.
+    let cache_key = hex_sha256(&prompt);
+
     prompt.push_str("## Output Instructions\n\n");
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
@@ -112,8 +116,6 @@ pub fn build_surface_prompt(
         output_path.display()
     ));
     prompt.push_str("Do NOT output the SARIF to stdout. Write it to the specified file only.\n");
-
-    let cache_key = hex_sha256(&prompt);
 
     Some(SurfacePrompt {
         surface_id: surface.id.clone(),
