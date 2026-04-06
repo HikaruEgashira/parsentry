@@ -53,57 +53,6 @@ pub fn to_markdown(response: &Response) -> String {
         md.push('\n');
     }
 
-    md.push_str("## PAR Policy Analysis\n\n");
-
-    if !response.par_analysis.principals.is_empty() {
-        md.push_str("### Principals (データ源)\n\n");
-        for principal in &response.par_analysis.principals {
-            md.push_str(&format!(
-                "- **{}** - {:?}\n",
-                principal.identifier, principal.trust_level
-            ));
-        }
-        md.push('\n');
-    }
-
-    if !response.par_analysis.actions.is_empty() {
-        md.push_str("### Actions (セキュリティ制御)\n\n");
-        for action in &response.par_analysis.actions {
-            md.push_str(&format!(
-                "- **{}** - {:?}\n",
-                action.identifier, action.implementation_quality
-            ));
-        }
-        md.push('\n');
-    }
-
-    if !response.par_analysis.resources.is_empty() {
-        md.push_str("### Resources (操作対象)\n\n");
-        for resource in &response.par_analysis.resources {
-            md.push_str(&format!(
-                "- **{}** - {:?}\n",
-                resource.identifier, resource.sensitivity_level
-            ));
-        }
-        md.push('\n');
-    }
-
-    if !response.par_analysis.policy_violations.is_empty() {
-        md.push_str("### Policy Violations\n\n");
-        for violation in &response.par_analysis.policy_violations {
-            md.push_str(&format!(
-                "- **{}**: {}\n",
-                violation.rule_id, violation.violation_path
-            ));
-            md.push_str(&format!(
-                "  - Severity: {} | Confidence: {:.0}%\n",
-                violation.severity,
-                violation.confidence * 100.0
-            ));
-        }
-        md.push('\n');
-    }
-
     // Source code sections
     if let Some(matched_code) = &response.matched_source_code {
         if !matched_code.trim().is_empty() {
@@ -146,22 +95,6 @@ pub fn to_markdown(response: &Response) -> String {
         md.push_str("\n```\n\n");
     }
 
-    if !response.remediation_guidance.policy_enforcement.is_empty() {
-        md.push_str("## 修復ガイダンス\n\n");
-        for remediation in &response.remediation_guidance.policy_enforcement {
-            md.push_str(&format!("### {}\n\n", remediation.component));
-            md.push_str(&format!(
-                "- **Required**: {}\n",
-                remediation.required_improvement
-            ));
-            md.push_str(&format!(
-                "- **Guidance**: {}\n",
-                remediation.specific_guidance
-            ));
-            md.push_str(&format!("- **Priority**: {}\n\n", remediation.priority));
-        }
-    }
-
     if !response.scratchpad.is_empty() {
         md.push_str("## 解析ノート\n\n");
         md.push_str(&response.scratchpad);
@@ -169,4 +102,471 @@ pub fn to_markdown(response: &Response) -> String {
     }
 
     md
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parsentry_core::VulnType;
+
+    fn make_empty_response() -> Response {
+        Response {
+            analysis: "test analysis".to_string(),
+            confidence_score: 50,
+            ..Default::default()
+        }
+    }
+
+    fn make_full_response() -> Response {
+        Response {
+            scratchpad: "thinking notes".to_string(),
+            analysis: "detailed analysis".to_string(),
+            poc: "curl http://evil".to_string(),
+            confidence_score: 95,
+            vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
+            file_path: Some("src/app/routes.py".to_string()),
+            pattern_description: Some("SQL query construction".to_string()),
+            matched_source_code: Some(
+                "query = f\"SELECT * FROM users WHERE id={user_id}\"".to_string(),
+            ),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_title_with_file_and_pattern() {
+        let r = make_full_response();
+        let md = to_markdown(&r);
+        assert!(
+            md.starts_with("# Security Analysis: routes.py - SQL query construction\n")
+        );
+    }
+
+    #[test]
+    fn test_title_with_file_only() {
+        let mut r = make_empty_response();
+        r.file_path = Some("src/handler.rs".to_string());
+        let md = to_markdown(&r);
+        assert!(md.starts_with("# Security Analysis: handler.rs\n"));
+    }
+
+    #[test]
+    fn test_title_no_file() {
+        let r = make_empty_response();
+        let md = to_markdown(&r);
+        assert!(md.starts_with("# Security Analysis Report\n"));
+    }
+
+    #[test]
+    fn test_confidence_badge_high() {
+        let mut r = make_empty_response();
+        r.confidence_score = 95;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-高-red"));
+    }
+
+    #[test]
+    fn test_confidence_badge_90_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 90;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-高-red"));
+    }
+
+    #[test]
+    fn test_confidence_badge_100_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 100;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-高-red"));
+    }
+
+    #[test]
+    fn test_confidence_badge_medium_high() {
+        let mut r = make_empty_response();
+        r.confidence_score = 75;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中高-orange"));
+    }
+
+    #[test]
+    fn test_confidence_badge_70_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 70;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中高-orange"));
+    }
+
+    #[test]
+    fn test_confidence_badge_89_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 89;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中高-orange"));
+    }
+
+    #[test]
+    fn test_confidence_badge_medium() {
+        let mut r = make_empty_response();
+        r.confidence_score = 55;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中-yellow"));
+    }
+
+    #[test]
+    fn test_confidence_badge_50_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 50;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中-yellow"));
+    }
+
+    #[test]
+    fn test_confidence_badge_69_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 69;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中-yellow"));
+    }
+
+    #[test]
+    fn test_confidence_badge_medium_low() {
+        let mut r = make_empty_response();
+        r.confidence_score = 40;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中低-green"));
+    }
+
+    #[test]
+    fn test_confidence_badge_30_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 30;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中低-green"));
+    }
+
+    #[test]
+    fn test_confidence_badge_49_boundary() {
+        let mut r = make_empty_response();
+        r.confidence_score = 49;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-中低-green"));
+    }
+
+    #[test]
+    fn test_confidence_badge_low() {
+        let mut r = make_empty_response();
+        r.confidence_score = 10;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-低-blue"));
+    }
+
+    #[test]
+    fn test_confidence_badge_29_is_low() {
+        let mut r = make_empty_response();
+        r.confidence_score = 29;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度-低-blue"));
+    }
+
+    #[test]
+    fn test_confidence_score_value_displayed() {
+        let mut r = make_empty_response();
+        r.confidence_score = 85;
+        let md = to_markdown(&r);
+        assert!(md.contains("信頼度スコア: 85"));
+    }
+
+    #[test]
+    fn test_file_info_section_present() {
+        let mut r = make_empty_response();
+        r.file_path = Some("src/main.py".to_string());
+        r.pattern_description = Some("dangerous pattern".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("## ファイル情報"));
+        assert!(md.contains("**ファイルパス**: `src/main.py`"));
+        assert!(md.contains("**検出パターン**: dangerous pattern"));
+    }
+
+    #[test]
+    fn test_file_info_section_absent_when_no_file() {
+        let r = make_empty_response();
+        let md = to_markdown(&r);
+        assert!(!md.contains("## ファイル情報"));
+    }
+
+    #[test]
+    fn test_vuln_types_section() {
+        let mut r = make_empty_response();
+        r.vulnerability_types = vec![VulnType::SQLI, VulnType::RCE];
+        let md = to_markdown(&r);
+        assert!(md.contains("## 脆弱性タイプ"));
+        assert!(md.contains("- `SQLI`"));
+        assert!(md.contains("- `RCE`"));
+    }
+
+    #[test]
+    fn test_vuln_types_section_absent_when_empty() {
+        let r = make_empty_response();
+        let md = to_markdown(&r);
+        assert!(!md.contains("## 脆弱性タイプ"));
+    }
+
+    #[test]
+    fn test_lang_ruby() {
+        let mut r = make_empty_response();
+        r.file_path = Some("app.rb".to_string());
+        r.matched_source_code = Some("puts 'hello'".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```ruby\n"));
+    }
+
+    #[test]
+    fn test_lang_python() {
+        let mut r = make_empty_response();
+        r.file_path = Some("app.py".to_string());
+        r.matched_source_code = Some("print('hello')".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```python\n"));
+    }
+
+    #[test]
+    fn test_lang_javascript() {
+        let mut r = make_empty_response();
+        r.file_path = Some("app.js".to_string());
+        r.matched_source_code = Some("console.log('hi')".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```javascript\n"));
+    }
+
+    #[test]
+    fn test_lang_typescript() {
+        let mut r = make_empty_response();
+        r.file_path = Some("app.ts".to_string());
+        r.matched_source_code = Some("const x: number = 1".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```typescript\n"));
+    }
+
+    #[test]
+    fn test_lang_go() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.go".to_string());
+        r.matched_source_code = Some("fmt.Println()".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```go\n"));
+    }
+
+    #[test]
+    fn test_lang_rust() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.rs".to_string());
+        r.matched_source_code = Some("fn main() {}".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```rust\n"));
+    }
+
+    #[test]
+    fn test_lang_java() {
+        let mut r = make_empty_response();
+        r.file_path = Some("App.java".to_string());
+        r.matched_source_code = Some("class App {}".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```java\n"));
+    }
+
+    #[test]
+    fn test_lang_c() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.c".to_string());
+        r.matched_source_code = Some("int main() {}".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```c\n"));
+    }
+
+    #[test]
+    fn test_lang_c_header() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.h".to_string());
+        r.matched_source_code = Some("#include <stdio.h>".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```c\n"));
+    }
+
+    #[test]
+    fn test_lang_cpp() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.cpp".to_string());
+        r.matched_source_code = Some("std::cout".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```cpp\n"));
+    }
+
+    #[test]
+    fn test_lang_cc() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.cc".to_string());
+        r.matched_source_code = Some("code".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```cpp\n"));
+    }
+
+    #[test]
+    fn test_lang_cxx() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.cxx".to_string());
+        r.matched_source_code = Some("code".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```cpp\n"));
+    }
+
+    #[test]
+    fn test_lang_hpp() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.hpp".to_string());
+        r.matched_source_code = Some("code".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```cpp\n"));
+    }
+
+    #[test]
+    fn test_lang_php() {
+        let mut r = make_empty_response();
+        r.file_path = Some("index.php".to_string());
+        r.matched_source_code = Some("<?php echo 1;".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```php\n"));
+    }
+
+    #[test]
+    fn test_lang_bash() {
+        let mut r = make_empty_response();
+        r.file_path = Some("run.sh".to_string());
+        r.matched_source_code = Some("#!/bin/bash".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```bash\n"));
+    }
+
+    #[test]
+    fn test_lang_bash_ext() {
+        let mut r = make_empty_response();
+        r.file_path = Some("run.bash".to_string());
+        r.matched_source_code = Some("echo hi".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```bash\n"));
+    }
+
+    #[test]
+    fn test_lang_hcl() {
+        let mut r = make_empty_response();
+        r.file_path = Some("main.tf".to_string());
+        r.matched_source_code = Some("resource \"aws_s3_bucket\" {}".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```hcl\n"));
+    }
+
+    #[test]
+    fn test_lang_yaml() {
+        let mut r = make_empty_response();
+        r.file_path = Some("config.yaml".to_string());
+        r.matched_source_code = Some("key: value".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```yaml\n"));
+    }
+
+    #[test]
+    fn test_lang_yml() {
+        let mut r = make_empty_response();
+        r.file_path = Some("config.yml".to_string());
+        r.matched_source_code = Some("key: value".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```yaml\n"));
+    }
+
+    #[test]
+    fn test_lang_json() {
+        let mut r = make_empty_response();
+        r.file_path = Some("data.json".to_string());
+        r.matched_source_code = Some("{}".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```json\n"));
+    }
+
+    #[test]
+    fn test_lang_unknown_uses_extension() {
+        let mut r = make_empty_response();
+        r.file_path = Some("script.lua".to_string());
+        r.matched_source_code = Some("print('hi')".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```lua\n"));
+    }
+
+    #[test]
+    fn test_lang_no_file_path_uses_text() {
+        let mut r = make_empty_response();
+        r.matched_source_code = Some("some code".to_string());
+        let md = to_markdown(&r);
+        assert!(md.contains("```text\n"));
+    }
+
+    #[test]
+    fn test_matched_source_code_section_present() {
+        let r = make_full_response();
+        let md = to_markdown(&r);
+        assert!(md.contains("## マッチしたソースコード"));
+        assert!(md.contains("SELECT * FROM users"));
+    }
+
+    #[test]
+    fn test_matched_source_code_section_absent_when_none() {
+        let r = make_empty_response();
+        let md = to_markdown(&r);
+        assert!(!md.contains("## マッチしたソースコード"));
+    }
+
+    #[test]
+    fn test_matched_source_code_section_absent_when_whitespace() {
+        let mut r = make_empty_response();
+        r.matched_source_code = Some("   \n  ".to_string());
+        let md = to_markdown(&r);
+        assert!(!md.contains("## マッチしたソースコード"));
+    }
+
+    #[test]
+    fn test_analysis_section() {
+        let r = make_full_response();
+        let md = to_markdown(&r);
+        assert!(md.contains("## 詳細解析"));
+        assert!(md.contains("detailed analysis"));
+    }
+
+    #[test]
+    fn test_poc_section_present() {
+        let r = make_full_response();
+        let md = to_markdown(&r);
+        assert!(md.contains("## PoC"));
+        assert!(md.contains("curl http://evil"));
+    }
+
+    #[test]
+    fn test_poc_section_absent_when_empty() {
+        let r = make_empty_response();
+        let md = to_markdown(&r);
+        assert!(!md.contains("## PoC"));
+    }
+
+    #[test]
+    fn test_scratchpad_section_present() {
+        let r = make_full_response();
+        let md = to_markdown(&r);
+        assert!(md.contains("## 解析ノート"));
+        assert!(md.contains("thinking notes"));
+    }
+
+    #[test]
+    fn test_scratchpad_section_absent_when_empty() {
+        let r = make_empty_response();
+        let md = to_markdown(&r);
+        assert!(!md.contains("## 解析ノート"));
+    }
 }

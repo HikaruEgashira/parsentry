@@ -171,4 +171,18 @@ mod tests {
         assert_eq!(files.len(), 1);
         assert_eq!(files[0], file_path);
     }
+
+    #[test]
+    fn test_supported_extensions_returns_actual_list() {
+        let discovery = FileDiscovery::new(PathBuf::from("/tmp"));
+        let exts = discovery.supported_extensions();
+        // Non-empty (kills → Vec::new() / vec![])
+        assert!(!exts.is_empty());
+        // Contains known extensions (kills → vec!["xyzzy"])
+        assert!(exts.contains(&"py".to_string()));
+        assert!(exts.contains(&"rs".to_string()));
+        assert!(exts.contains(&"tf".to_string()));
+        // Doesn't contain random strings
+        assert!(!exts.contains(&"xyzzy".to_string()));
+    }
 }

@@ -265,4 +265,221 @@ mod tests {
         assert!(ctx.contains("Languages"));
         assert!(ctx.contains("Dependencies"));
     }
+
+    #[test]
+    fn test_build_directory_tree_skips_hidden_and_special_dirs() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        for dir in &[".hidden_dir", "node_modules", "target", "__pycache__", "venv", "vendor", "dist", "build"] {
+            fs::create_dir_all(root.join(dir)).unwrap();
+            fs::write(root.join(format!("{}/f.txt", dir)), "x").unwrap();
+        }
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/main.rs"), "fn main(){}").unwrap();
+        let tree = build_directory_tree(root, 3).unwrap();
+        assert!(!tree.contains(".hidden_dir"));
+        assert!(!tree.contains("node_modules"));
+        assert!(!tree.contains("__pycache__"));
+        assert!(!tree.contains("venv"));
+        assert!(!tree.contains("vendor"));
+        assert!(tree.contains("src"));
+    }
+
+    #[test]
+    fn test_build_directory_tree_depth_limiting() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("a/b/c/d")).unwrap();
+        fs::write(root.join("a/b/c/d/deep.txt"), "deep").unwrap();
+        let tree = build_directory_tree(root, 2).unwrap();
+        assert!(tree.contains("a/"));
+        assert!(tree.contains("b/"));
+        assert!(tree.contains("c/"));
+        assert!(!tree.contains("d/"), "depth > max_depth should be excluded");
+    }
+
+    #[test]
+    fn test_build_directory_tree_files_only_at_top_levels() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::write(root.join("top.txt"), "top").unwrap();
+        fs::create_dir_all(root.join("sub")).unwrap();
+        fs::write(root.join("sub/level1.txt"), "l1").unwrap();
+        fs::create_dir_all(root.join("sub/deep")).unwrap();
+        fs::write(root.join("sub/deep/level2.txt"), "l2").unwrap();
+        let tree = build_directory_tree(root, 3).unwrap();
+        assert!(tree.contains("top.txt"));
+        assert!(tree.contains("level1.txt"));
+        assert!(!tree.contains("level2.txt"), "depth 2 file should be hidden");
+    }
+
+    #[test]
+    fn test_detect_entry_points_matches_and_rejects() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/main.py"), "").unwrap();
+        fs::write(root.join("src/helper.py"), "").unwrap();
+        fs::write(root.join("main.tf"), "").unwrap();
+        let files = vec![root.join("src/main.py"), root.join("src/helper.py"), root.join("main.tf")];
+        let eps = detect_entry_points(root, &files);
+        assert!(eps.iter().any(|e| e.contains("main.py")));
+        assert!(eps.iter().any(|e| e.contains("main.tf")));
+        assert!(!eps.iter().any(|e| e.contains("helper.py")));
+    }
+
+    #[test]
+    fn test_detect_entry_points_relative_paths() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/main.rs"), "").unwrap();
+        let files = vec![root.join("src/main.rs")];
+        let eps = detect_entry_points(root, &files);
+        assert_eq!(eps, vec!["src/main.rs"]);
+    }
+
+    #[test]
+    fn test_prompt_context_manifest_truncation() {
+        let long_content = "x".repeat(3000);
+        let meta = RepoMetadata {
+            root_dir: PathBuf::from("/tmp/test"),
+            directory_tree: "src/\n".to_string(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![ManifestInfo {
+                path: "package.json".to_string(),
+                content: long_content.clone(),
+            }],
+            entry_points: vec![],
+            total_files: 1,
+        };
+        let ctx = meta.to_prompt_context();
+        assert!(ctx.contains("Dependencies"));
+        assert!(!ctx.contains(&long_content));
+        assert!(ctx.contains(&"x".repeat(2000)));
+    }
+
+    #[test]
+    fn test_prompt_context_entry_points_section() {
+        let meta = RepoMetadata {
+            root_dir: PathBuf::from("/tmp/test"),
+            directory_tree: String::new(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![],
+            entry_points: vec!["src/main.py".to_string()],
+            total_files: 1,
+        };
+        let ctx = meta.to_prompt_context();
+        assert!(ctx.contains("## Entry Points"));
+        assert!(ctx.contains("- src/main.py"));
+    }
+
+    #[test]
+    fn test_prompt_context_no_entry_points_when_empty() {
+        let meta = RepoMetadata {
+            root_dir: PathBuf::from("/tmp/test"),
+            directory_tree: String::new(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![],
+            entry_points: vec![],
+            total_files: 0,
+        };
+        let ctx = meta.to_prompt_context();
+        assert!(!ctx.contains("## Entry Points"));
+    }
+
+    #[test]
+    fn test_prompt_context_no_deps_when_empty() {
+        let meta = RepoMetadata {
+            root_dir: PathBuf::from("/tmp/test"),
+            directory_tree: String::new(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![],
+            entry_points: vec![],
+            total_files: 0,
+        };
+        let ctx = meta.to_prompt_context();
+        assert!(!ctx.contains("## Dependencies"));
+    }
+
+    #[test]
+    fn test_prompt_context_total_files() {
+        let meta = RepoMetadata {
+            root_dir: PathBuf::from("/tmp/test"),
+            directory_tree: String::new(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![],
+            entry_points: vec![],
+            total_files: 42,
+        };
+        let ctx = meta.to_prompt_context();
+        assert!(ctx.contains("Total source files: 42"));
+    }
+
+    #[test]
+    fn test_language_counting_increments() {
+        // Kills += → *= mutant: multiple files of same language should add up
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/a.py"), "x = 1").unwrap();
+        fs::write(root.join("src/b.py"), "y = 2").unwrap();
+        fs::write(root.join("src/c.py"), "z = 3").unwrap();
+
+        let meta = RepoMetadata::collect(root).unwrap();
+        assert_eq!(*meta.languages.get(&Language::Python).unwrap(), 3);
+    }
+
+    #[test]
+    fn test_manifest_truncation_boundary() {
+        // Kills > → >= at 2000 char boundary
+        let manifest_2000 = "x".repeat(2000);
+        let meta = RepoMetadata {
+            root_dir: PathBuf::from("/tmp"),
+            directory_tree: String::new(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![ManifestInfo {
+                path: "req.txt".to_string(),
+                content: manifest_2000.clone(),
+            }],
+            entry_points: vec![],
+            total_files: 0,
+        };
+        let ctx = meta.to_prompt_context();
+        // Exactly 2000 should NOT be truncated
+        assert!(ctx.contains(&manifest_2000));
+
+        let manifest_2001 = "y".repeat(2001);
+        let meta2 = RepoMetadata {
+            root_dir: PathBuf::from("/tmp"),
+            directory_tree: String::new(),
+            languages: HashMap::new(),
+            dependency_manifests: vec![ManifestInfo {
+                path: "req.txt".to_string(),
+                content: manifest_2001.clone(),
+            }],
+            entry_points: vec![],
+            total_files: 0,
+        };
+        let ctx2 = meta2.to_prompt_context();
+        // 2001 should be truncated
+        assert!(!ctx2.contains(&manifest_2001));
+    }
+
+    #[test]
+    fn test_build_tree_skips_dist_and_build() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("dist")).unwrap();
+        fs::create_dir_all(root.join("build")).unwrap();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("dist/bundle.js"), "").unwrap();
+        fs::write(root.join("build/output.js"), "").unwrap();
+        fs::write(root.join("src/main.py"), "").unwrap();
+
+        let tree = build_directory_tree(root, 3).unwrap();
+        assert!(!tree.contains("dist"), "dist should be skipped");
+        assert!(!tree.contains("build"), "build should be skipped");
+        assert!(tree.contains("src"));
+    }
 }

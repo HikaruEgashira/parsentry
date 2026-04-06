@@ -1,4 +1,4 @@
-use parsentry::response::{ParAnalysis, RemediationGuidance, Response, VulnType};
+use parsentry::response::{Response, VulnType};
 use parsentry_reports::AnalysisSummary;
 use std::path::PathBuf;
 
@@ -61,19 +61,7 @@ fn test_analysis_summary_creation() {
         poc: "Test PoC 1".to_string(),
         confidence_score: 8,
         vulnerability_types: vec![VulnType::RCE],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     let response2 = Response {
@@ -82,19 +70,7 @@ fn test_analysis_summary_creation() {
         poc: "Test PoC 2".to_string(),
         confidence_score: 6,
         vulnerability_types: vec![VulnType::SQLI],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     // Add results to summary
@@ -117,19 +93,7 @@ fn test_analysis_summary_filtering_by_confidence() {
         poc: "High confidence PoC".to_string(),
         confidence_score: 9,
         vulnerability_types: vec![VulnType::RCE],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     let low_confidence = Response {
@@ -138,19 +102,7 @@ fn test_analysis_summary_filtering_by_confidence() {
         poc: "Low confidence PoC".to_string(),
         confidence_score: 3,
         vulnerability_types: vec![VulnType::XSS],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     summary.add_result(PathBuf::from("/test/high.py"), high_confidence, "high.py.md".to_string());
@@ -173,19 +125,7 @@ fn test_analysis_summary_filtering_by_vuln_types() {
         poc: "RCE PoC".to_string(),
         confidence_score: 8,
         vulnerability_types: vec![VulnType::RCE],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     let sqli_response = Response {
@@ -194,19 +134,7 @@ fn test_analysis_summary_filtering_by_vuln_types() {
         poc: "SQLI PoC".to_string(),
         confidence_score: 7,
         vulnerability_types: vec![VulnType::SQLI],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     let xss_response = Response {
@@ -215,19 +143,7 @@ fn test_analysis_summary_filtering_by_vuln_types() {
         poc: "XSS PoC".to_string(),
         confidence_score: 6,
         vulnerability_types: vec![VulnType::XSS],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     summary.add_result(PathBuf::from("/test/rce.py"), rce_response, "rce.py.md".to_string());
@@ -278,19 +194,7 @@ fn test_analysis_summary_sorting_by_confidence() {
             poc: format!("PoC {}", confidence),
             confidence_score: confidence,
             vulnerability_types: vec![VulnType::RCE],
-            par_analysis: ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
+            ..Default::default()
         };
         summary.add_result(path, response, format!("{}.md", confidence));
     }

@@ -280,7 +280,6 @@ fn test_add_dynamic_query_to_patterns() {
 
     // Valid query should succeed
     let ok = patterns.add_query(
-        "resource",
         "reference",
         r#"(call function: (identifier) @func (#eq? @func "eval")) @call"#,
         "eval() calls",
@@ -290,7 +289,6 @@ fn test_add_dynamic_query_to_patterns() {
 
     // Invalid query should fail gracefully
     let bad = patterns.add_query(
-        "resource",
         "reference",
         "this is not a valid query !!!",
         "bad query",

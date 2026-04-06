@@ -185,4 +185,103 @@ mod tests {
         assert!(err.contains("Unknown language"));
         assert!(err.contains("Supported languages"));
     }
+
+    // --- Mutant-killing: every FromStr arm ---
+
+    #[test]
+    fn test_from_str_all_arms() {
+        // Ensure every match arm is hit and returns the correct variant
+        assert_eq!(Language::from_str("java").unwrap(), Language::Java);
+        assert_eq!(Language::from_str("go").unwrap(), Language::Go);
+        assert_eq!(Language::from_str("ruby").unwrap(), Language::Ruby);
+        assert_eq!(Language::from_str("rb").unwrap(), Language::Ruby);
+        assert_eq!(Language::from_str("c").unwrap(), Language::C);
+        assert_eq!(Language::from_str("cpp").unwrap(), Language::Cpp);
+        assert_eq!(Language::from_str("cxx").unwrap(), Language::Cpp);
+        assert_eq!(Language::from_str("terraform").unwrap(), Language::Terraform);
+        assert_eq!(Language::from_str("cloudformation").unwrap(), Language::CloudFormation);
+        assert_eq!(Language::from_str("cfn").unwrap(), Language::CloudFormation);
+        assert_eq!(Language::from_str("kubernetes").unwrap(), Language::Kubernetes);
+        assert_eq!(Language::from_str("yaml").unwrap(), Language::Yaml);
+        assert_eq!(Language::from_str("yml").unwrap(), Language::Yaml);
+        assert_eq!(Language::from_str("bash").unwrap(), Language::Bash);
+        assert_eq!(Language::from_str("shell").unwrap(), Language::Shell);
+        assert_eq!(Language::from_str("sh").unwrap(), Language::Shell);
+        assert_eq!(Language::from_str("php").unwrap(), Language::Php);
+        assert_eq!(Language::from_str("other").unwrap(), Language::Other);
+        assert_eq!(Language::from_str("tsx").unwrap(), Language::TypeScript);
+        assert_eq!(Language::from_str("typescript").unwrap(), Language::TypeScript);
+    }
+
+    // --- Mutant-killing: every from_extension arm ---
+
+    #[test]
+    fn test_from_extension_all_arms() {
+        assert_eq!(Language::from_extension("rs"), Language::Rust);
+        assert_eq!(Language::from_extension("ts"), Language::TypeScript);
+        assert_eq!(Language::from_extension("tsx"), Language::TypeScript);
+        assert_eq!(Language::from_extension("java"), Language::Java);
+        assert_eq!(Language::from_extension("go"), Language::Go);
+        assert_eq!(Language::from_extension("rb"), Language::Ruby);
+        assert_eq!(Language::from_extension("c"), Language::C);
+        assert_eq!(Language::from_extension("h"), Language::C);
+        assert_eq!(Language::from_extension("cpp"), Language::Cpp);
+        assert_eq!(Language::from_extension("cxx"), Language::Cpp);
+        assert_eq!(Language::from_extension("cc"), Language::Cpp);
+        assert_eq!(Language::from_extension("hpp"), Language::Cpp);
+        assert_eq!(Language::from_extension("hxx"), Language::Cpp);
+        assert_eq!(Language::from_extension("tf"), Language::Terraform);
+        assert_eq!(Language::from_extension("hcl"), Language::Terraform);
+        assert_eq!(Language::from_extension("yml"), Language::Yaml);
+        assert_eq!(Language::from_extension("yaml"), Language::Yaml);
+        assert_eq!(Language::from_extension("sh"), Language::Bash);
+        assert_eq!(Language::from_extension("bash"), Language::Bash);
+        assert_eq!(Language::from_extension("php"), Language::Php);
+        assert_eq!(Language::from_extension("php3"), Language::Php);
+        assert_eq!(Language::from_extension("php4"), Language::Php);
+        assert_eq!(Language::from_extension("php5"), Language::Php);
+        assert_eq!(Language::from_extension("phtml"), Language::Php);
+    }
+
+    // --- Mutant-killing: is_iac all variants ---
+
+    #[test]
+    fn test_is_iac_all_true_variants() {
+        assert!(Language::Terraform.is_iac());
+        assert!(Language::CloudFormation.is_iac());
+        assert!(Language::Kubernetes.is_iac());
+        assert!(Language::Yaml.is_iac());
+    }
+
+    #[test]
+    fn test_is_iac_false_variants() {
+        assert!(!Language::Python.is_iac());
+        assert!(!Language::Rust.is_iac());
+        assert!(!Language::JavaScript.is_iac());
+        assert!(!Language::Php.is_iac());
+        assert!(!Language::Other.is_iac());
+    }
+
+    // --- Mutant-killing: display_name all variants ---
+
+    #[test]
+    fn test_display_name_all_variants() {
+        assert_eq!(Language::Python.display_name(), "Python");
+        assert_eq!(Language::JavaScript.display_name(), "JavaScript");
+        assert_eq!(Language::Rust.display_name(), "Rust");
+        assert_eq!(Language::TypeScript.display_name(), "TypeScript");
+        assert_eq!(Language::Java.display_name(), "Java");
+        assert_eq!(Language::Go.display_name(), "Go");
+        assert_eq!(Language::Ruby.display_name(), "Ruby");
+        assert_eq!(Language::C.display_name(), "C");
+        assert_eq!(Language::Cpp.display_name(), "C++");
+        assert_eq!(Language::Terraform.display_name(), "Terraform");
+        assert_eq!(Language::CloudFormation.display_name(), "CloudFormation");
+        assert_eq!(Language::Kubernetes.display_name(), "Kubernetes");
+        assert_eq!(Language::Yaml.display_name(), "YAML");
+        assert_eq!(Language::Bash.display_name(), "Bash");
+        assert_eq!(Language::Shell.display_name(), "Shell");
+        assert_eq!(Language::Php.display_name(), "PHP");
+        assert_eq!(Language::Other.display_name(), "Other");
+    }
 }

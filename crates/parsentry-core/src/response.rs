@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::par::{ParAnalysis, RemediationGuidance};
 use crate::vuln_type::VulnType;
 
 /// The main response structure for security analysis.
@@ -19,10 +18,6 @@ pub struct Response {
     pub confidence_score: i32,
     #[serde(default)]
     pub vulnerability_types: Vec<VulnType>,
-    #[serde(default)]
-    pub par_analysis: ParAnalysis,
-    #[serde(default)]
-    pub remediation_guidance: RemediationGuidance,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -52,10 +47,6 @@ impl Response {
 
         if self.vulnerability_types.is_empty() && self.confidence_score > 50 {
             self.confidence_score = 0;
-        }
-
-        if self.par_analysis.is_empty() && self.confidence_score > 30 {
-            self.confidence_score = std::cmp::min(self.confidence_score, 30);
         }
     }
 
@@ -94,88 +85,9 @@ pub fn response_json_schema() -> serde_json::Value {
                     "type": "string",
                     "enum": ["LFI", "RCE", "SSRF", "AFO", "SQLI", "XSS", "IDOR"]
                 }
-            },
-            "par_analysis": {
-                "type": "object",
-                "properties": {
-                    "principals": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "identifier": { "type": "string" },
-                                "trust_level": { "type": "string", "enum": ["trusted", "semi_trusted", "untrusted"] },
-                                "source_context": { "type": "string" },
-                                "risk_factors": { "type": "array", "items": { "type": "string" } }
-                            },
-                            "required": ["identifier", "trust_level", "source_context", "risk_factors"]
-                        }
-                    },
-                    "actions": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "identifier": { "type": "string" },
-                                "security_function": { "type": "string" },
-                                "implementation_quality": { "type": "string", "enum": ["adequate", "insufficient", "missing", "bypassed"] },
-                                "detected_weaknesses": { "type": "array", "items": { "type": "string" } },
-                                "bypass_vectors": { "type": "array", "items": { "type": "string" } }
-                            },
-                            "required": ["identifier", "security_function", "implementation_quality", "detected_weaknesses", "bypass_vectors"]
-                        }
-                    },
-                    "resources": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "identifier": { "type": "string" },
-                                "sensitivity_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
-                                "operation_type": { "type": "string" },
-                                "protection_mechanisms": { "type": "array", "items": { "type": "string" } }
-                            },
-                            "required": ["identifier", "sensitivity_level", "operation_type", "protection_mechanisms"]
-                        }
-                    },
-                    "policy_violations": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "rule_id": { "type": "string" },
-                                "rule_description": { "type": "string" },
-                                "violation_path": { "type": "string" },
-                                "severity": { "type": "string" },
-                                "confidence": { "type": "number" }
-                            },
-                            "required": ["rule_id", "rule_description", "violation_path", "severity", "confidence"]
-                        }
-                    }
-                },
-                "required": ["principals", "actions", "resources", "policy_violations"]
-            },
-            "remediation_guidance": {
-                "type": "object",
-                "properties": {
-                    "policy_enforcement": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "component": { "type": "string" },
-                                "required_improvement": { "type": "string" },
-                                "specific_guidance": { "type": "string" },
-                                "priority": { "type": "string" }
-                            },
-                            "required": ["component", "required_improvement", "specific_guidance", "priority"]
-                        }
-                    }
-                },
-                "required": ["policy_enforcement"]
             }
         },
-        "required": ["scratchpad", "analysis", "poc", "confidence_score", "vulnerability_types", "par_analysis", "remediation_guidance"]
+        "required": ["scratchpad", "analysis", "poc", "confidence_score", "vulnerability_types"]
     })
 }
 
@@ -230,5 +142,78 @@ mod tests {
         response.vulnerability_types = vec![VulnType::SQLI];
         response.confidence_score = 80;
         assert!(response.has_vulnerability());
+    }
+
+    #[test]
+    fn test_response_json_schema_returns_non_default() {
+        let schema = response_json_schema();
+        assert!(schema.is_object());
+        assert_eq!(schema["type"], "object");
+        assert!(schema["properties"].get("confidence_score").is_some());
+        assert!(schema["properties"].get("vulnerability_types").is_some());
+    }
+
+    #[test]
+    fn test_normalize_confidence_score_boundaries() {
+        assert_eq!(Response::normalize_confidence_score(1), 10);
+        assert_eq!(Response::normalize_confidence_score(11), 11);
+        assert_eq!(Response::normalize_confidence_score(-5), -5);
+    }
+
+    #[test]
+    fn test_severity_level_boundaries() {
+        let mut r = Response::default();
+        r.confidence_score = 90;
+        assert_eq!(r.severity_level(), "critical");
+        r.confidence_score = 100;
+        assert_eq!(r.severity_level(), "critical");
+        r.confidence_score = 89;
+        assert_eq!(r.severity_level(), "high");
+        r.confidence_score = 70;
+        assert_eq!(r.severity_level(), "high");
+        r.confidence_score = 69;
+        assert_eq!(r.severity_level(), "medium");
+        r.confidence_score = 50;
+        assert_eq!(r.severity_level(), "medium");
+        r.confidence_score = 49;
+        assert_eq!(r.severity_level(), "low");
+        r.confidence_score = 30;
+        assert_eq!(r.severity_level(), "low");
+        r.confidence_score = 29;
+        assert_eq!(r.severity_level(), "info");
+        r.confidence_score = 0;
+        assert_eq!(r.severity_level(), "info");
+    }
+
+    #[test]
+    fn test_normalize_confidence_score_boundary_zero() {
+        // score=0 should NOT be multiplied (kills > → >= : 0 >= 0 would be true)
+        assert_eq!(Response::normalize_confidence_score(0), 0);
+        // score=1 should be multiplied
+        assert_eq!(Response::normalize_confidence_score(1), 10);
+        // score=11 should NOT be multiplied
+        assert_eq!(Response::normalize_confidence_score(11), 11);
+    }
+
+    #[test]
+    fn test_sanitize_empty_vulns_boundary_at_50() {
+        // Kills > → >= at 50 in sanitize
+        // score=50 with empty vulns: 50 > 50 is false, so NOT reset to 0
+        let mut r = Response {
+            confidence_score: 50,
+            vulnerability_types: vec![],
+            ..Default::default()
+        };
+        r.sanitize();
+        assert_eq!(r.confidence_score, 50);
+
+        // score=51 with empty vulns: 51 > 50 is true, reset to 0
+        let mut r2 = Response {
+            confidence_score: 51,
+            vulnerability_types: vec![],
+            ..Default::default()
+        };
+        r2.sanitize();
+        assert_eq!(r2.confidence_score, 0);
     }
 }

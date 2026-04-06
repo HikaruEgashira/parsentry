@@ -14,7 +14,7 @@ use crate::config::ParsentryConfig;
 use crate::repo::RepoOps;
 
 use parsentry_core::Language;
-use parsentry_parser::{PatternMatch, PatternType, SecurityRiskPatterns};
+use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 use parsentry_core::ThreatModel;
 use parsentry_utils::FileClassifier;
 
@@ -24,7 +24,6 @@ use super::common::locate_repository;
 #[derive(Debug, Serialize)]
 pub struct MatchResult {
     pub file: String,
-    pub pattern_type: String,
     pub description: String,
     pub matched_text: String,
 }
@@ -76,10 +75,8 @@ fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBuf>> 
 
 /// Run tree-sitter pattern matching.
 ///
-/// When `threat_model` is provided, only scans files referenced by attack surfaces.
+/// When `threat_model` is provided, only scans files referenced by surfaces.
 /// When `None`, scans all relevant files in the repository.
-///
-/// Filters to keep only Resource patterns in files that also contain a Principal.
 pub async fn run_pattern_matching(
     root_dir: &Path,
     threat_model: Option<&ThreatModel>,
@@ -194,28 +191,6 @@ pub async fn run_pattern_matching(
         }
     }
 
-    // Filter: only Resource patterns in files that also have a Principal
-    let files_with_principals: HashSet<PathBuf> = all_pattern_matches
-        .iter()
-        .filter(|(_, pm)| pm.pattern_type == PatternType::Principal)
-        .map(|(path, _)| path.clone())
-        .collect();
-
-    let all_pattern_matches: Vec<(PathBuf, PatternMatch)> = if files_with_principals.is_empty() {
-        printer.warning(
-            "Skipped",
-            "No Principal (input source) detected — no attack vectors",
-        );
-        Vec::new()
-    } else {
-        all_pattern_matches
-            .into_iter()
-            .filter(|(file_path, pm)| {
-                pm.pattern_type == PatternType::Resource && files_with_principals.contains(file_path)
-            })
-            .collect()
-    };
-
     Ok(all_pattern_matches)
 }
 
@@ -236,7 +211,7 @@ pub async fn run_query_command(args: ScanArgs) -> Result<()> {
     printer.status(
         "Loaded",
         &format!(
-            "threat model with {} attack surfaces",
+            "threat model with {} surfaces",
             threat_model.total_surfaces()
         ),
     );
@@ -261,7 +236,6 @@ pub async fn run_query_command(args: ScanArgs) -> Result<()> {
                 .unwrap_or(file_path)
                 .to_string_lossy()
                 .to_string(),
-            pattern_type: format!("{:?}", pm.pattern_config.pattern_type),
             description: pm.pattern_config.description.clone(),
             matched_text: pm.matched_text.clone(),
         })

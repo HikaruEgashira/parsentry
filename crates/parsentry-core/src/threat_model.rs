@@ -62,3 +62,72 @@ impl ThreatModel {
         result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_surface(id: &str, locations: Vec<&str>) -> AttackSurface {
+        AttackSurface {
+            id: id.to_string(),
+            kind: "endpoint".to_string(),
+            identifier: format!("GET /api/{}", id),
+            locations: locations.into_iter().map(|s| s.to_string()).collect(),
+            description: "test".to_string(),
+            query: "".to_string(),
+        }
+    }
+
+    fn make_model(surfaces: Vec<AttackSurface>) -> ThreatModel {
+        ThreatModel {
+            repository: "test/repo".to_string(),
+            generated_at: "2024-01-01T00:00:00Z".to_string(),
+            app_type: "web_application".to_string(),
+            summary: "Test".to_string(),
+            surfaces,
+        }
+    }
+
+    #[test]
+    fn test_total_surfaces_empty() {
+        let model = make_model(vec![]);
+        assert_eq!(model.total_surfaces(), 0);
+    }
+
+    #[test]
+    fn test_total_surfaces_returns_correct_count() {
+        let model = make_model(vec![
+            make_surface("1", vec!["a.py"]),
+            make_surface("2", vec!["b.py"]),
+            make_surface("3", vec!["c.py"]),
+        ]);
+        assert_eq!(model.total_surfaces(), 3);
+    }
+
+    #[test]
+    fn test_all_locations_deduplicates() {
+        let model = make_model(vec![
+            make_surface("1", vec!["shared.py", "a.py"]),
+            make_surface("2", vec!["shared.py", "b.py"]),
+        ]);
+        let locs = model.all_locations();
+        assert_eq!(locs.len(), 3);
+        assert_eq!(locs, vec!["shared.py", "a.py", "b.py"]);
+    }
+
+    #[test]
+    fn test_all_locations_empty_surfaces() {
+        let model = make_model(vec![]);
+        assert!(model.all_locations().is_empty());
+    }
+
+    #[test]
+    fn test_all_locations_preserves_order() {
+        let model = make_model(vec![
+            make_surface("1", vec!["z.py", "a.py"]),
+            make_surface("2", vec!["m.py"]),
+        ]);
+        let locs = model.all_locations();
+        assert_eq!(locs, vec!["z.py", "a.py", "m.py"]);
+    }
+}

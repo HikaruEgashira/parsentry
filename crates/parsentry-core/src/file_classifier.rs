@@ -222,6 +222,22 @@ spec:
     }
 
     #[test]
+    fn test_kubernetes_requires_both_required_and_spec() {
+        // has spec patterns but missing required (no apiVersion/kind/metadata) → not k8s
+        let no_required = "spec:\n  containers:\n  - name: x\n";
+        assert!(!FileClassifier::is_kubernetes_manifest("pod.yaml", no_required));
+
+        // has required but no spec/data/stringData → not k8s
+        // Note: "metadata:" contains "data:" substring, so we test without metadata-like patterns
+        let only_kind = "apiVersion: v1\nkind: Pod\n";
+        assert!(!FileClassifier::is_kubernetes_manifest("pod.yaml", only_kind));
+
+        // Non-yaml extension → not k8s even with valid content
+        let full = "apiVersion: v1\nkind: Pod\nmetadata:\n  name: x\nspec:\n  c: d\n";
+        assert!(!FileClassifier::is_kubernetes_manifest("pod.json", full));
+    }
+
+    #[test]
     fn test_docker_compose_detection() {
         let content = r#"
 version: '3.8'
@@ -238,6 +254,16 @@ services:
         ));
 
         assert!(FileClassifier::is_docker_compose("services.yml", content));
+    }
+
+    #[test]
+    fn test_docker_compose_each_filename_branch() {
+        // Each || branch must independently trigger true (kills || → && mutants)
+        assert!(FileClassifier::is_docker_compose("docker-compose.yml", ""));
+        assert!(FileClassifier::is_docker_compose("docker-compose.yaml", ""));
+        assert!(FileClassifier::is_docker_compose("compose.override.yml", ""));
+        // Non-matching filename with non-matching content
+        assert!(!FileClassifier::is_docker_compose("other.yml", "random: stuff"));
     }
 
     #[test]
@@ -309,5 +335,42 @@ pipeline {
 
         // Should not match non-Jenkins files
         assert!(!FileClassifier::is_jenkinsfile("script.sh", content));
+    }
+
+    #[test]
+    fn test_terraform_extension_gating_and_patterns() {
+        // .tf with terraform content → true
+        assert!(FileClassifier::is_terraform("main.tf", "resource \"aws_s3\""));
+        // .hcl with terraform content → true
+        assert!(FileClassifier::is_terraform("main.hcl", "provider \"aws\""));
+        // non .tf/.hcl → false even with content (kills ! deletion)
+        assert!(!FileClassifier::is_terraform("main.py", "resource \"aws_s3\""));
+        // .tf without any terraform pattern → false (kills return false → true)
+        assert!(!FileClassifier::is_terraform("main.tf", "no terraform here"));
+        // .tf with only one pattern → true (|| means any match)
+        assert!(FileClassifier::is_terraform("main.tf", "variable \"name\""));
+        assert!(FileClassifier::is_terraform("main.tf", "module \"vpc\""));
+    }
+
+    #[test]
+    fn test_terraform_or_not_and() {
+        // Kills || → && : only ONE of .tf or .hcl should be enough
+        assert!(FileClassifier::is_terraform("x.tf", "resource \"r\""));
+        assert!(FileClassifier::is_terraform("x.hcl", "resource \"r\""));
+    }
+
+    #[test]
+    fn test_classify_terraform_and_k8s_dispatch() {
+        // Terraform dispatches correctly
+        assert_eq!(
+            FileClassifier::classify("main.tf", "resource \"aws\""),
+            Language::Terraform
+        );
+        // K8s dispatches correctly
+        let k8s = "apiVersion: v1\nkind: Pod\nmetadata:\n  name: x\nspec:\n  c: d\n";
+        assert_eq!(
+            FileClassifier::classify("deploy.yaml", k8s),
+            Language::Kubernetes
+        );
     }
 }

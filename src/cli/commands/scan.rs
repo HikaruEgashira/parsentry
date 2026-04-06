@@ -21,11 +21,9 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         &env_vars
     )?;
 
-    // Phase 0: Locate repository (default: current directory)
     let target = args.target.clone().unwrap_or_else(|| ".".to_string());
     let (root_dir, _repo_name) = locate_repository(&target, &printer)?;
 
-    // Collect repository metadata
     let repo_metadata = RepoMetadata::collect(&root_dir)?;
 
     printer.status(
@@ -37,7 +35,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         ),
     );
 
-    // Pattern matching (all files, no threat model filtering)
     printer.status("Scanning", "tree-sitter pattern matching");
 
     let all_pattern_matches = run_pattern_matching(
@@ -50,7 +47,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     printer.status("Matched", &format!("{} patterns", all_pattern_matches.len()));
 
-    // Output prompt to stdout
     emit_prompt(&repo_metadata, &all_pattern_matches, &root_dir, &printer)
 }
 
@@ -92,13 +88,10 @@ fn emit_prompt(
             .strip_prefix(root_dir)
             .unwrap_or(file_path)
             .display();
-        let pat_type = format!("{:?}", pattern_match.pattern_type);
 
         prompt.push_str(&format!(
-            "### {} — {}\n\n**Type**: {} | **Pattern**: {}\n```\n{}\n```\n\n",
+            "### {} — {}\n```\n{}\n```\n\n",
             rel_path,
-            pattern_match.pattern_config.description,
-            pat_type,
             pattern_match.pattern_config.description,
             pattern_match.matched_text,
         ));
@@ -108,8 +101,7 @@ fn emit_prompt(
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
     prompt.push_str("- level: error/warning/note\n");
-    prompt.push_str("- confidence: 0.0-1.0\n");
-    prompt.push_str("- PAR analysis: principal (input source), action (security function), resource (target)\n\n");
+    prompt.push_str("- confidence: 0.0-1.0\n\n");
     prompt.push_str("Output valid SARIF v2.1.0 JSON.\n");
 
     print!("{}", prompt);

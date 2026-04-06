@@ -160,4 +160,23 @@ mod tests {
         let key = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
         assert_eq!(key.len(), 64);
     }
+
+    #[test]
+    fn test_version_returns_cache_version() {
+        let gen = CacheKeyGenerator::new();
+        assert_eq!(gen.version(), "1.0.0");
+        assert_eq!(gen.version(), CACHE_VERSION);
+    }
+
+    #[test]
+    fn test_version_returns_custom_version() {
+        let gen = CacheKeyGenerator::with_version("2.5.0".to_string());
+        assert_eq!(gen.version(), "2.5.0");
+    }
+
+    #[test]
+    fn test_version_not_empty() {
+        let gen = CacheKeyGenerator::new();
+        assert!(!gen.version().is_empty());
+    }
 }

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::summary::AnalysisSummary;
-use parsentry_core::{ParAnalysis, Response, VulnType};
+use parsentry_core::{Response, VulnType};
 
 /// SARIF (Static Analysis Results Interchange Format) v2.1.0 implementation
 /// Spec: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
@@ -235,7 +235,7 @@ impl SarifReport {
                                 uri: file_path.to_string_lossy().to_string(),
                                 index: Some(artifact_index),
                             },
-                            region: extract_region_from_par_analysis(&response.par_analysis),
+                            region: None,
                         },
                     }],
                     fingerprints: Some(generate_fingerprints(file_path, response)),
@@ -244,15 +244,10 @@ impl SarifReport {
                         mitre_attack: Some(vuln_type.mitre_attack_ids()),
                         cwe: Some(vuln_type.cwe_ids()),
                         owasp: Some(vuln_type.owasp_categories()),
-                        // Extract PAR information from response
-                        principal: response.par_analysis.principals.first()
-                            .map(|p| p.identifier.clone()),
-                        action: response.par_analysis.actions.first()
-                            .map(|a| a.identifier.clone()),
-                        resource: response.par_analysis.resources.first()
-                            .map(|r| r.identifier.clone()),
-                        data_flow: response.par_analysis.policy_violations.first()
-                            .map(|v| v.violation_path.clone()),
+                        principal: None,
+                        action: None,
+                        resource: None,
+                        data_flow: None,
                     }),
                 });
             }
@@ -576,17 +571,7 @@ fn confidence_to_level(confidence: i32) -> String {
     }
 }
 
-fn extract_region_from_par_analysis(par_analysis: &ParAnalysis) -> Option<SarifRegion> {
-    // Try to extract location information from policy violations
-    for violation in &par_analysis.policy_violations {
-        if let Some(region) = parse_line_number_from_text(&violation.violation_path) {
-            return Some(region);
-        }
-    }
-
-    None
-}
-
+#[cfg(test)]
 fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
     // Enhanced regex patterns for line number detection
     let patterns = [
@@ -658,7 +643,7 @@ fn guess_mime_type(file_path: &Path) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use parsentry_core::{ParAnalysis, RemediationGuidance, VulnType};
+    use parsentry_core::VulnType;
     use std::path::PathBuf;
     use tempfile::tempdir;
 
@@ -672,19 +657,7 @@ mod tests {
             poc: "SELECT * FROM users".to_string(),
             confidence_score: 85,
             vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-            par_analysis: ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
+            ..Default::default()
         };
 
         summary.add_result(
@@ -769,19 +742,7 @@ mod tests {
             poc: "'; DROP TABLE users; --".to_string(),
             confidence_score: 90,
             vulnerability_types: vec![VulnType::SQLI],
-            par_analysis: ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
+            ..Default::default()
         };
         summary.add_result(PathBuf::from("vulnerable.py"), response, "vulnerable.py.md".to_string());
 
@@ -802,19 +763,7 @@ mod tests {
             poc: "<script>alert(1)</script>".to_string(),
             confidence_score: 85,
             vulnerability_types: vec![VulnType::XSS],
-            par_analysis: ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
+            ..Default::default()
         };
         summary.add_result(PathBuf::from("app.js"), response, "app.js.md".to_string());
 
@@ -825,5 +774,600 @@ mod tests {
         assert!(summary_md.contains("XSS"));
         assert!(summary_md.contains("app.js"));
         assert!(summary_md.contains("| File |"));
+    }
+
+    // --- confidence_to_level tests ---
+
+    #[test]
+    fn test_confidence_to_level_error() {
+        assert_eq!(confidence_to_level(90), "error");
+        assert_eq!(confidence_to_level(95), "error");
+        assert_eq!(confidence_to_level(100), "error");
+    }
+
+    #[test]
+    fn test_confidence_to_level_warning() {
+        assert_eq!(confidence_to_level(70), "warning");
+        assert_eq!(confidence_to_level(80), "warning");
+        assert_eq!(confidence_to_level(89), "warning");
+    }
+
+    #[test]
+    fn test_confidence_to_level_note() {
+        assert_eq!(confidence_to_level(50), "note");
+        assert_eq!(confidence_to_level(60), "note");
+        assert_eq!(confidence_to_level(69), "note");
+    }
+
+    #[test]
+    fn test_confidence_to_level_info() {
+        assert_eq!(confidence_to_level(49), "info");
+        assert_eq!(confidence_to_level(0), "info");
+        assert_eq!(confidence_to_level(10), "info");
+    }
+
+    // --- to_markdown level emoji tests ---
+
+    fn make_sarif_result(level: &str, rule_id: &str) -> SarifResult {
+        SarifResult {
+            rule_id: rule_id.to_string(),
+            rule_index: None,
+            level: level.to_string(),
+            message: SarifMessage {
+                text: "test message".to_string(),
+                markdown: Some("test markdown".to_string()),
+            },
+            locations: vec![SarifLocation {
+                physical_location: SarifPhysicalLocation {
+                    artifact_location: SarifArtifactLocation {
+                        uri: "test.py".to_string(),
+                        index: None,
+                    },
+                    region: None,
+                },
+            }],
+            fingerprints: None,
+            properties: Some(SarifResultProperties {
+                confidence: Some(0.85),
+                mitre_attack: None,
+                cwe: Some(vec!["CWE-89".to_string()]),
+                owasp: Some(vec!["A03".to_string()]),
+                principal: None,
+                action: None,
+                resource: None,
+                data_flow: None,
+            }),
+        }
+    }
+
+    #[test]
+    fn test_to_markdown_error_emoji() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("error", "SQLI")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("🔴 error"));
+        assert!(!md.contains("🟠"));
+    }
+
+    #[test]
+    fn test_to_markdown_warning_emoji() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("warning", "XSS")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("🟠 warning"));
+    }
+
+    #[test]
+    fn test_to_markdown_note_emoji() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("note", "LFI")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("🟡 note"));
+    }
+
+    #[test]
+    fn test_to_markdown_unknown_level_emoji() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("info", "OTHER")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("⚪ info"));
+    }
+
+    #[test]
+    fn test_to_markdown_no_results() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("No vulnerabilities detected."));
+    }
+
+    #[test]
+    fn test_to_markdown_confidence_display() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("error", "SQLI")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        // confidence is 0.85, so 0.85 * 100.0 = 85%
+        assert!(md.contains("**Confidence**: 85%"));
+    }
+
+    #[test]
+    fn test_to_markdown_cwe_and_owasp() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("error", "SQLI")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("**CWE**: CWE-89"));
+        assert!(md.contains("**OWASP**: A03"));
+    }
+
+    #[test]
+    fn test_to_markdown_region_and_snippet() {
+        let result = SarifResult {
+            rule_id: "SQLI".to_string(),
+            rule_index: None,
+            level: "error".to_string(),
+            message: SarifMessage {
+                text: "test".to_string(),
+                markdown: None,
+            },
+            locations: vec![SarifLocation {
+                physical_location: SarifPhysicalLocation {
+                    artifact_location: SarifArtifactLocation {
+                        uri: "test.py".to_string(),
+                        index: None,
+                    },
+                    region: Some(SarifRegion {
+                        start_line: 42,
+                        start_column: None,
+                        end_line: None,
+                        end_column: None,
+                        snippet: Some(SarifArtifactContent {
+                            text: "vulnerable_code()".to_string(),
+                        }),
+                    }),
+                },
+            }],
+            fingerprints: None,
+            properties: None,
+        };
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![result],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("**Line**: 42"));
+        assert!(md.contains("vulnerable_code()"));
+    }
+
+    // --- to_summary_markdown counting tests ---
+
+    #[test]
+    fn test_summary_markdown_counts() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![
+                    make_sarif_result("error", "SQLI"),
+                    make_sarif_result("error", "RCE"),
+                    make_sarif_result("warning", "XSS"),
+                    make_sarif_result("note", "LFI"),
+                    make_sarif_result("info", "IDOR"), // falls to note_count via _ arm
+                ],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_summary_markdown();
+        assert!(md.contains("| 🔴 Error | 2 |"));
+        assert!(md.contains("| 🟠 Warning | 1 |"));
+        assert!(md.contains("| 🟡 Note | 2 |"));
+        assert!(md.contains("| **Total** | **5** |"));
+    }
+
+    #[test]
+    fn test_summary_markdown_no_results() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_summary_markdown();
+        assert!(md.contains("No vulnerabilities detected."));
+        assert!(!md.contains("## Overview"));
+    }
+
+    #[test]
+    fn test_summary_markdown_omits_zero_counts() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("error", "SQLI")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_summary_markdown();
+        assert!(md.contains("| 🔴 Error | 1 |"));
+        assert!(!md.contains("🟠 Warning"));
+        assert!(!md.contains("🟡 Note"));
+    }
+
+    #[test]
+    fn test_summary_markdown_confidence_display() {
+        let report = SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![make_sarif_result("error", "SQLI")],
+                artifacts: None,
+                invocation: None,
+            }],
+        };
+        let md = report.to_summary_markdown();
+        // confidence 0.85 * 100.0 = 85%
+        assert!(md.contains("85%"));
+    }
+
+    // --- generate_fingerprints tests ---
+
+    #[test]
+    fn test_generate_fingerprints_non_empty() {
+        let response = Response {
+            scratchpad: "".to_string(),
+            analysis: "test".to_string(),
+            poc: "".to_string(),
+            confidence_score: 50,
+            vulnerability_types: vec![],
+            ..Default::default()
+        };
+        let fps = generate_fingerprints(Path::new("test.py"), &response);
+        assert!(!fps.is_empty());
+        assert!(fps.contains_key("parsentry/v1"));
+        assert!(!fps["parsentry/v1"].is_empty());
+    }
+
+    #[test]
+    fn test_generate_fingerprints_different_files() {
+        let response = Response {
+            scratchpad: "".to_string(),
+            analysis: "test".to_string(),
+            poc: "".to_string(),
+            confidence_score: 50,
+            vulnerability_types: vec![],
+            ..Default::default()
+        };
+        let fps1 = generate_fingerprints(Path::new("a.py"), &response);
+        let fps2 = generate_fingerprints(Path::new("b.py"), &response);
+        assert_ne!(fps1["parsentry/v1"], fps2["parsentry/v1"]);
+    }
+
+    // --- guess_mime_type tests ---
+
+    #[test]
+    fn test_guess_mime_type_js() {
+        assert_eq!(guess_mime_type(Path::new("a.js")), Some("application/javascript".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_ts() {
+        assert_eq!(guess_mime_type(Path::new("a.ts")), Some("application/typescript".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_py() {
+        assert_eq!(guess_mime_type(Path::new("a.py")), Some("text/x-python".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_go() {
+        assert_eq!(guess_mime_type(Path::new("a.go")), Some("text/x-go".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_rs() {
+        assert_eq!(guess_mime_type(Path::new("a.rs")), Some("text/x-rust".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_rb() {
+        assert_eq!(guess_mime_type(Path::new("a.rb")), Some("text/x-ruby".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_java() {
+        assert_eq!(guess_mime_type(Path::new("a.java")), Some("text/x-java".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_c() {
+        assert_eq!(guess_mime_type(Path::new("a.c")), Some("text/x-c".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_cpp() {
+        assert_eq!(guess_mime_type(Path::new("a.cpp")), Some("text/x-c++".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_cc() {
+        assert_eq!(guess_mime_type(Path::new("a.cc")), Some("text/x-c++".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_cxx() {
+        assert_eq!(guess_mime_type(Path::new("a.cxx")), Some("text/x-c++".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_tf() {
+        assert_eq!(guess_mime_type(Path::new("a.tf")), Some("text/x-terraform".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_unknown() {
+        assert_eq!(guess_mime_type(Path::new("a.xyz")), Some("text/plain".to_string()));
+    }
+
+    #[test]
+    fn test_guess_mime_type_no_extension() {
+        assert_eq!(guess_mime_type(Path::new("Makefile")), Some("text/plain".to_string()));
+    }
+
+    // --- parse_line_number_from_text tests ---
+
+    #[test]
+    fn test_parse_line_number_line_colon() {
+        let region = parse_line_number_from_text("line: 42").unwrap();
+        assert_eq!(region.start_line, 42);
+    }
+
+    #[test]
+    fn test_parse_line_number_ln_space() {
+        let region = parse_line_number_from_text("ln 10").unwrap();
+        assert_eq!(region.start_line, 10);
+    }
+
+    #[test]
+    fn test_parse_line_number_colon_format() {
+        let region = parse_line_number_from_text("file.py:42:10").unwrap();
+        assert_eq!(region.start_line, 42);
+        assert_eq!(region.start_column, Some(10));
+    }
+
+    #[test]
+    fn test_parse_line_number_at_marker() {
+        let region = parse_line_number_from_text("@99").unwrap();
+        assert_eq!(region.start_line, 99);
+    }
+
+    #[test]
+    fn test_parse_line_number_bracket() {
+        let region = parse_line_number_from_text("[55]").unwrap();
+        assert_eq!(region.start_line, 55);
+    }
+
+    #[test]
+    fn test_parse_line_number_no_match() {
+        assert!(parse_line_number_from_text("no line info here").is_none());
+    }
+
+    #[test]
+    fn test_parse_line_number_snippet_preserved() {
+        let region = parse_line_number_from_text("line: 42 some context").unwrap();
+        assert_eq!(region.snippet.as_ref().unwrap().text, "line: 42 some context");
+    }
+
+    // --- create_rule_for_vuln_type ---
+
+    #[test]
+    fn test_create_rule_sqli() {
+        let rule = create_rule_for_vuln_type(&VulnType::SQLI);
+        assert_eq!(rule.name.as_deref(), Some("SQL Injection"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "error");
+        assert_eq!(rule.properties.as_ref().unwrap().security_severity.as_deref(), Some("8.5"));
+    }
+
+    #[test]
+    fn test_create_rule_xss() {
+        let rule = create_rule_for_vuln_type(&VulnType::XSS);
+        assert_eq!(rule.name.as_deref(), Some("Cross-Site Scripting"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+    }
+
+    #[test]
+    fn test_create_rule_rce() {
+        let rule = create_rule_for_vuln_type(&VulnType::RCE);
+        assert_eq!(rule.name.as_deref(), Some("Remote Code Execution"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "error");
+    }
+
+    #[test]
+    fn test_create_rule_lfi() {
+        let rule = create_rule_for_vuln_type(&VulnType::LFI);
+        assert_eq!(rule.name.as_deref(), Some("Local File Inclusion"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+    }
+
+    #[test]
+    fn test_create_rule_ssrf() {
+        let rule = create_rule_for_vuln_type(&VulnType::SSRF);
+        assert_eq!(rule.name.as_deref(), Some("Server-Side Request Forgery"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+    }
+
+    #[test]
+    fn test_create_rule_afo() {
+        let rule = create_rule_for_vuln_type(&VulnType::AFO);
+        assert_eq!(rule.name.as_deref(), Some("Arbitrary File Operation"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+    }
+
+    #[test]
+    fn test_create_rule_idor() {
+        let rule = create_rule_for_vuln_type(&VulnType::IDOR);
+        assert_eq!(rule.name.as_deref(), Some("Insecure Direct Object Reference"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "note");
+    }
+
+    #[test]
+    fn test_create_rule_other() {
+        let rule = create_rule_for_vuln_type(&VulnType::Other("CustomVuln".to_string()));
+        assert_eq!(rule.name.as_deref(), Some("CustomVuln"));
+        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "note");
     }
 }

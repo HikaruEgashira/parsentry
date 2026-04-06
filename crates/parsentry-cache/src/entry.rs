@@ -156,4 +156,79 @@ mod tests {
         entry.record_access();
         assert_eq!(entry.metadata.access_count, 2);
     }
+
+    #[test]
+    fn test_set_cost() {
+        let mut entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "abc123".to_string(),
+            "test".to_string(),
+            10,
+        );
+
+        assert_eq!(entry.metadata.cost_usd, None);
+        entry.set_cost(0.05);
+        assert_eq!(entry.metadata.cost_usd, Some(0.05));
+
+        entry.set_cost(1.23);
+        assert_eq!(entry.metadata.cost_usd, Some(1.23));
+    }
+
+    #[test]
+    fn test_set_duration() {
+        let mut entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "abc123".to_string(),
+            "test".to_string(),
+            10,
+        );
+
+        assert_eq!(entry.metadata.duration_ms, None);
+        entry.set_duration(500);
+        assert_eq!(entry.metadata.duration_ms, Some(500));
+
+        entry.set_duration(0);
+        assert_eq!(entry.metadata.duration_ms, Some(0));
+    }
+
+    #[test]
+    fn test_idle_days_returns_actual_value() {
+        let mut entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "abc123".to_string(),
+            "test".to_string(),
+            10,
+        );
+
+        assert_eq!(entry.idle_days(), 0);
+
+        entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(5);
+        assert_eq!(entry.idle_days(), 5);
+
+        entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(100);
+        assert_eq!(entry.idle_days(), 100);
+    }
+
+    #[test]
+    fn test_age_days_returns_actual_value() {
+        let mut entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "abc123".to_string(),
+            "test".to_string(),
+            10,
+        );
+
+        assert_eq!(entry.age_days(), 0);
+
+        entry.metadata.created_at = Utc::now() - chrono::Duration::days(10);
+        assert_eq!(entry.age_days(), 10);
+    }
 }

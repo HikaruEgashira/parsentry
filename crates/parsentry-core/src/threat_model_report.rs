@@ -71,4 +71,44 @@ mod tests {
         assert!(md.contains("POST /api/users"));
         assert!(md.contains("web_application"));
     }
+
+    #[test]
+    fn test_render_locations_section() {
+        // Kills `!` deletion in `if !surface.locations.is_empty()`
+        let with_locations = ThreatModel {
+            repository: "r".to_string(),
+            generated_at: "t".to_string(),
+            app_type: "web".to_string(),
+            summary: "s".to_string(),
+            surfaces: vec![AttackSurface {
+                id: "S-1".to_string(),
+                kind: "endpoint".to_string(),
+                identifier: "GET /".to_string(),
+                locations: vec!["src/app.py".to_string()],
+                description: "d".to_string(),
+                query: "q".to_string(),
+            }],
+        };
+        let md = render_threat_model_md(&with_locations);
+        assert!(md.contains("**Locations**:"));
+        assert!(md.contains("- `src/app.py`"));
+
+        // Empty locations → no Locations section
+        let no_locations = ThreatModel {
+            repository: "r".to_string(),
+            generated_at: "t".to_string(),
+            app_type: "web".to_string(),
+            summary: "s".to_string(),
+            surfaces: vec![AttackSurface {
+                id: "S-2".to_string(),
+                kind: "endpoint".to_string(),
+                identifier: "GET /".to_string(),
+                locations: vec![],
+                description: "d".to_string(),
+                query: "q".to_string(),
+            }],
+        };
+        let md2 = render_threat_model_md(&no_locations);
+        assert!(!md2.contains("**Locations**:"));
+    }
 }

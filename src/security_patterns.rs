@@ -4,5 +4,5 @@
 
 pub use parsentry_core::Language;
 pub use parsentry_parser::{
-    LanguagePatterns, PatternConfig, PatternMatch, PatternQuery, PatternType, SecurityRiskPatterns,
+    LanguagePatterns, PatternConfig, PatternMatch, PatternQuery, SecurityRiskPatterns,
 };

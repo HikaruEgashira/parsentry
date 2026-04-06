@@ -310,4 +310,181 @@ mod tests {
         let stats = cache.stats().unwrap();
         assert_eq!(stats.total_entries, 0);
     }
+
+    #[test]
+    fn test_stats_mb_calculation() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        // Empty cache: 0 bytes = 0 MB
+        let stats = cache.stats().unwrap();
+        assert_eq!(stats.total_size_bytes, 0);
+        assert_eq!(stats.total_size_mb, 0);
+
+        // Add entries - they're small so MB should still be 0
+        cache.set("test1", "gpt-4", "genai", "response1").unwrap();
+        let stats = cache.stats().unwrap();
+        assert!(stats.total_size_bytes > 0);
+        // total_size_mb = total_size_bytes / 1_048_576 (integer division)
+        assert_eq!(stats.total_size_mb, stats.total_size_bytes / 1_048_576);
+    }
+
+    #[test]
+    fn test_should_cleanup_periodic_delegates() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        // Default Combined trigger with no prior cleanup -> should run
+        let result = cache.should_cleanup_periodic().unwrap();
+        assert!(result);
+    }
+
+    #[test]
+    fn test_should_cleanup_size_delegates() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        // Empty cache, should not be over size limit
+        let result = cache.should_cleanup_size().unwrap();
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_cleanup_stale_delegates() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        // No stale entries in empty cache
+        let stats = cache.cleanup_stale().unwrap();
+        assert_eq!(stats.removed_count, 0);
+        assert_eq!(stats.freed_bytes, 0);
+    }
+
+    #[test]
+    fn test_cleanup_by_size_delegates() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        // Nothing to clean in empty cache
+        let stats = cache.cleanup_by_size().unwrap();
+        assert_eq!(stats.removed_count, 0);
+        assert_eq!(stats.freed_bytes, 0);
+    }
+
+    #[test]
+    fn test_stats_mb_is_division_not_modulo() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache = Cache::new(temp_dir.path()).unwrap();
+
+        // Write enough data to make MB > 0 would require 1MB+,
+        // but we can verify the formula: total_size_mb = bytes / 1_048_576
+        // For small files, bytes < 1_048_576, so MB = 0 (not bytes % 1_048_576)
+        cache.set("p", "m", "a", &"x".repeat(1000)).unwrap();
+        let stats = cache.stats().unwrap();
+
+        // With ~1KB of data, bytes/1048576 = 0, but bytes%1048576 = bytes (non-zero)
+        // This kills the / -> % mutant
+        assert_eq!(stats.total_size_mb, 0);
+        assert!(stats.total_size_bytes > 0);
+
+        // Also verify bytes / 1048576 != bytes * 1048576
+        // (kills / -> * mutant since bytes * 1048576 would be huge)
+        assert!(stats.total_size_mb < stats.total_size_bytes);
+    }
+
+    #[test]
+    fn test_with_cleanup_config() {
+        let temp_dir = TempDir::new().unwrap();
+        let policy = CleanupPolicy {
+            max_cache_size_mb: 100,
+            max_age_days: 30,
+            max_idle_days: 10,
+            remove_version_mismatch: true,
+        };
+        let trigger = CleanupTrigger::Manual;
+
+        let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
+        assert!(cache.is_enabled());
+
+        // Manual trigger should never trigger periodic cleanup
+        assert!(!cache.should_cleanup_periodic().unwrap());
+    }
+
+    #[test]
+    fn test_should_cleanup_size_with_data() {
+        // Kills Ok(false) default: create data > threshold to get Ok(true)
+        let temp_dir = TempDir::new().unwrap();
+        let policy = CleanupPolicy::default();
+        let trigger = CleanupTrigger::OnSizeLimit { threshold_mb: 0 };
+
+        let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
+        cache.set("test", "model", "agent", "response").unwrap();
+
+        // Data exists, threshold is 0 → over limit
+        // Note: threshold 0 means threshold_bytes = 0, and total_size > 0
+        assert!(cache.should_cleanup_size().unwrap());
+    }
+
+    #[test]
+    fn test_cleanup_stale_with_stale_data() {
+        // Kills Ok(Default::default()) by ensuring actual removal happens
+        let temp_dir = TempDir::new().unwrap();
+        let policy = CleanupPolicy {
+            max_cache_size_mb: 500,
+            max_age_days: 90,
+            max_idle_days: 30,
+            remove_version_mismatch: true,
+        };
+        let trigger = CleanupTrigger::Manual;
+
+        let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
+
+        // Create an entry with wrong version so it gets cleaned up
+        let entry = CacheEntry::new(
+            "0.0.1".to_string(), // old version
+            "agent".to_string(),
+            "model".to_string(),
+            "stalekey".to_string(),
+            "resp".to_string(),
+            10,
+        );
+        let dir = temp_dir.path().join("agent").join("model").join("st");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("stalekey.json"), serde_json::to_string(&entry).unwrap()).unwrap();
+
+        let stats = cache.cleanup_stale().unwrap();
+        assert_eq!(stats.removed_count, 1);
+        assert!(stats.freed_bytes > 0);
+    }
+
+    #[test]
+    fn test_cleanup_by_size_with_data() {
+        // Kills Ok(Default::default()) by ensuring actual removal happens
+        let temp_dir = TempDir::new().unwrap();
+        let policy = CleanupPolicy {
+            max_cache_size_mb: 0, // 0 MB limit
+            max_age_days: 90,
+            max_idle_days: 30,
+            remove_version_mismatch: true,
+        };
+        let trigger = CleanupTrigger::Manual;
+
+        let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
+
+        let entry = CacheEntry::new(
+            CACHE_VERSION.to_string(),
+            "agent".to_string(),
+            "model".to_string(),
+            "sizekey".to_string(),
+            "resp".to_string(),
+            10,
+        );
+        let dir = temp_dir.path().join("agent").join("model").join("si");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("sizekey.json"), serde_json::to_string(&entry).unwrap()).unwrap();
+
+        let stats = cache.cleanup_by_size().unwrap();
+        assert_eq!(stats.removed_count, 1);
+        assert!(stats.freed_bytes > 0);
+    }
 }

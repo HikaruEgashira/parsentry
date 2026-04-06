@@ -328,4 +328,105 @@ mod tests {
         assert_eq!(removed, 2);
         assert_eq!(storage.entry_count().unwrap(), 0);
     }
+
+    #[test]
+    fn test_get_cache_path_short_hash() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage = CacheStorage::new(temp_dir.path()).unwrap();
+
+        let entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "a".to_string(),
+            "test".to_string(),
+            10,
+        );
+
+        storage.set(&entry).unwrap();
+        assert!(storage.exists("genai", "gpt-4", "a"));
+    }
+
+    #[test]
+    fn test_get_cache_path_exact_2_char_hash() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage = CacheStorage::new(temp_dir.path()).unwrap();
+
+        let entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "ab".to_string(),
+            "test".to_string(),
+            10,
+        );
+
+        storage.set(&entry).unwrap();
+        assert!(storage.exists("genai", "gpt-4", "ab"));
+    }
+
+    #[test]
+    fn test_entry_count_ignores_non_json_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage = CacheStorage::new(temp_dir.path()).unwrap();
+
+        fs::write(temp_dir.path().join("not_a_cache.txt"), "hello").unwrap();
+        assert_eq!(storage.entry_count().unwrap(), 0);
+
+        let entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "abc123".to_string(),
+            "test".to_string(),
+            10,
+        );
+        storage.set(&entry).unwrap();
+        assert_eq!(storage.entry_count().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_clear_all_ignores_non_json_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage = CacheStorage::new(temp_dir.path()).unwrap();
+
+        let txt_path = temp_dir.path().join("not_a_cache.txt");
+        fs::write(&txt_path, "hello").unwrap();
+
+        let entry = CacheEntry::new(
+            "1.0.0".to_string(),
+            "genai".to_string(),
+            "gpt-4".to_string(),
+            "abc123".to_string(),
+            "test".to_string(),
+            10,
+        );
+        storage.set(&entry).unwrap();
+
+        let removed = storage.clear_all().unwrap();
+        assert_eq!(removed, 1);
+        assert!(txt_path.exists());
+    }
+
+    #[test]
+    fn test_clear_all_returns_exact_count() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage = CacheStorage::new(temp_dir.path()).unwrap();
+
+        assert_eq!(storage.clear_all().unwrap(), 0);
+
+        for i in 0..3 {
+            let entry = CacheEntry::new(
+                "1.0.0".to_string(),
+                "genai".to_string(),
+                "gpt-4".to_string(),
+                format!("hash{:03}", i),
+                "test".to_string(),
+                10,
+            );
+            storage.set(&entry).unwrap();
+        }
+
+        assert_eq!(storage.clear_all().unwrap(), 3);
+    }
 }

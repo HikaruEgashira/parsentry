@@ -1,4 +1,4 @@
-use parsentry::response::{ParAnalysis, RemediationGuidance, Response, ResponseExt, VulnType};
+use parsentry::response::{Response, ResponseExt, VulnType};
 use parsentry_core::response_json_schema;
 use parsentry_reports::AnalysisSummary;
 use serde_json::json;
@@ -50,19 +50,7 @@ fn test_response_creation() {
         poc: "curl -X POST -d 'cmd=ls' /vulnerable-endpoint".to_string(),
         confidence_score: 9,
         vulnerability_types: vec![VulnType::RCE],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     assert_eq!(response.confidence_score, 9);
@@ -79,19 +67,7 @@ fn test_response_serialization() {
         poc: "Test PoC".to_string(),
         confidence_score: 7,
         vulnerability_types: vec![VulnType::SQLI, VulnType::XSS],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     let serialized = serde_json::to_string(&response).unwrap();
@@ -154,19 +130,7 @@ fn test_markdown_generation() {
         poc: "echo 'test'".to_string(),
         confidence_score: 8,
         vulnerability_types: vec![VulnType::RCE, VulnType::SQLI],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     let markdown = response.to_markdown();
@@ -191,24 +155,8 @@ fn test_confidence_score_validation() {
 
     for score in scores {
         let response = Response {
-            scratchpad: String::new(),
-            analysis: String::new(),
-            poc: String::new(),
             confidence_score: score,
-            vulnerability_types: vec![],
-            par_analysis: ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
+            ..Default::default()
         };
 
         // Confidence score should be stored as-is (validation is handled elsewhere)
@@ -224,19 +172,7 @@ fn test_empty_response() {
         poc: String::new(),
         confidence_score: 0,
         vulnerability_types: vec![],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     };
 
     assert!(response.scratchpad.is_empty());

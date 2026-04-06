@@ -1,5 +1,5 @@
 use parsentry::security_patterns::{
-    Language, LanguagePatterns, PatternConfig, PatternQuery, PatternType, SecurityRiskPatterns,
+    Language, LanguagePatterns, PatternConfig, PatternQuery, SecurityRiskPatterns,
 };
 
 #[test]
@@ -43,17 +43,6 @@ fn test_language_debug() {
     let lang = Language::Python;
     let debug_str = format!("{:?}", lang);
     assert_eq!(debug_str, "Python");
-}
-
-#[test]
-fn test_pattern_type_equality() {
-    assert_eq!(PatternType::Principal, PatternType::Principal);
-    assert_eq!(PatternType::Action, PatternType::Action);
-    assert_eq!(PatternType::Resource, PatternType::Resource);
-
-    assert_ne!(PatternType::Principal, PatternType::Action);
-    assert_ne!(PatternType::Action, PatternType::Resource);
-    assert_ne!(PatternType::Principal, PatternType::Resource);
 }
 
 #[test]
@@ -172,13 +161,6 @@ fn test_language_hash_and_equality() {
     assert!(set.contains(&Language::Python));
     assert!(set.contains(&Language::JavaScript));
     assert!(!set.contains(&Language::Rust));
-}
-
-#[test]
-fn test_pattern_type_clone() {
-    let original = PatternType::Principal;
-    let cloned = original.clone();
-    assert_eq!(original, cloned);
 }
 
 #[test]

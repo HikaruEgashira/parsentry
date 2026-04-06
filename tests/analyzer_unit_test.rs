@@ -1,5 +1,5 @@
 use parsentry::parser::{Context, Definition};
-use parsentry::response::{ParAnalysis, RemediationGuidance, Response};
+use parsentry::response::Response;
 use std::io::Write;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
@@ -111,19 +111,7 @@ async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Respons
             poc: String::new(),
             confidence_score: 0,
             vulnerability_types: vec![],
-            par_analysis: ParAnalysis {
-                principals: vec![],
-                actions: vec![],
-                resources: vec![],
-                policy_violations: vec![],
-            },
-            remediation_guidance: RemediationGuidance {
-                policy_enforcement: vec![],
-            },
-            file_path: None,
-            pattern_description: None,
-            matched_source_code: None,
-            full_source_code: None,
+            ..Default::default()
         });
     }
 
@@ -131,22 +119,8 @@ async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Respons
     Ok(Response {
         scratchpad: "File processed".to_string(),
         analysis: "Basic analysis performed".to_string(),
-        poc: "".to_string(),
         confidence_score: 5,
-        vulnerability_types: vec![],
-        par_analysis: ParAnalysis {
-            principals: vec![],
-            actions: vec![],
-            resources: vec![],
-            policy_violations: vec![],
-        },
-        remediation_guidance: RemediationGuidance {
-            policy_enforcement: vec![],
-        },
-        file_path: None,
-        pattern_description: None,
-        matched_source_code: None,
-        full_source_code: None,
+        ..Default::default()
     })
 }
 
@@ -157,16 +131,7 @@ fn test_parse_json_response_valid() {
         "analysis": "Test analysis",
         "poc": "Test PoC",
         "confidence_score": 8,
-        "vulnerability_types": [],
-        "par_analysis": {
-            "principals": [],
-            "actions": [],
-            "resources": [],
-            "policy_violations": []
-        },
-        "remediation_guidance": {
-            "policy_enforcement": []
-        }
+        "vulnerability_types": []
     }"#;
 
     let result: Result<Response, _> = serde_json::from_str(json_content);
