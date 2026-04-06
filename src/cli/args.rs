@@ -34,7 +34,7 @@ pub struct Args {
     pub filter_lang: Option<String>,
 
     /// Git ref to diff against (e.g., "origin/main"). Only scans changed files.
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub diff_base: Option<String>,
 
     /// Path to threat model JSON file (for query subcommand).

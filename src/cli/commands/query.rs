@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::HashSet;
-use std::io::Read as IoRead;
+use std::io::{IsTerminal, Read as IoRead};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use crate::repo::RepoOps;
 use parsentry_core::{FileClassifier, Language, ThreatModel};
 use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
 
-use super::common::locate_repository;
+use super::common::{get_diff_files, locate_repository};
 
 /// A serializable pattern match result for JSON output.
 #[derive(Debug, Serialize)]
@@ -29,46 +29,27 @@ pub struct MatchResult {
 /// Load threat model from file path or stdin.
 fn load_threat_model(path: Option<&Path>) -> Result<ThreatModel> {
     let json = match path {
-        Some(p) if p.to_string_lossy() != "-" => std::fs::read_to_string(p)?,
-        _ => {
+        Some(p) if p.to_string_lossy() != "-" => std::fs::read_to_string(p)
+            .with_context(|| format!("Failed to read threat model file: {}", p.display()))?,
+        Some(_) | None => {
+            if std::io::stdin().is_terminal() {
+                anyhow::bail!(
+                    "No threat model provided. Use --threat-model <file> or pipe from stdin:\n  \
+                     parsentry model <repo> | parsentry query <repo>"
+                );
+            }
             let mut buf = String::new();
             std::io::stdin().read_to_string(&mut buf)?;
+            if buf.trim().is_empty() {
+                anyhow::bail!(
+                    "Empty input on stdin. Provide a threat model JSON:\n  \
+                     parsentry model <repo> | parsentry query <repo>"
+                );
+            }
             buf
         }
     };
-    Ok(serde_json::from_str(&json)?)
-}
-
-/// Get files changed relative to a diff base ref.
-fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBuf>> {
-    let three_dot = format!("{}...HEAD", diff_base);
-    let output = std::process::Command::new("git")
-        .args(["diff", "--name-only", "--diff-filter=ACMR", &three_dot])
-        .current_dir(root_dir)
-        .output();
-
-    let output = match output {
-        Ok(o) if o.status.success() => o,
-        _ => std::process::Command::new("git")
-            .args(["diff", "--name-only", "--diff-filter=ACMR", diff_base])
-            .current_dir(root_dir)
-            .output()
-            .map_err(|e| anyhow::anyhow!("git diff failed: {}", e))?,
-    };
-
-    if !output.status.success() {
-        return Err(anyhow::anyhow!(
-            "git diff failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(stdout
-        .lines()
-        .filter(|l| !l.is_empty())
-        .map(|l| root_dir.join(l.trim()))
-        .collect())
+    serde_json::from_str(&json).context("Failed to parse threat model JSON")
 }
 
 /// Run tree-sitter pattern matching.

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use crate::cli::ui::StatusPrinter;
@@ -42,6 +43,38 @@ pub fn resolve_output_dir(base: &Option<PathBuf>, repo_name: &Option<String>) ->
             dir.clone()
         }
     })
+}
+
+/// Get files changed relative to a diff base ref.
+pub fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBuf>> {
+    let three_dot = format!("{}...HEAD", diff_base);
+    let output = std::process::Command::new("git")
+        .args(["diff", "--name-only", "--diff-filter=ACMR", &three_dot])
+        .current_dir(root_dir)
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => std::process::Command::new("git")
+            .args(["diff", "--name-only", "--diff-filter=ACMR", diff_base])
+            .current_dir(root_dir)
+            .output()
+            .map_err(|e| anyhow::anyhow!("git diff failed: {}", e))?,
+    };
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "git diff failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(|l| root_dir.join(l.trim()))
+        .collect())
 }
 
 /// Build threat model prompt for Claude Code CLI.

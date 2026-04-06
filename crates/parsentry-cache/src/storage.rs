@@ -19,6 +19,11 @@ impl CacheStorage {
     pub fn new<P: AsRef<Path>>(cache_dir: P) -> Result<Self> {
         let cache_dir = cache_dir.as_ref().to_path_buf();
 
+        // Use symlink_metadata to detect broken symlinks (exists() follows symlinks and returns false for broken ones)
+        if cache_dir.symlink_metadata().is_ok() && !cache_dir.is_dir() {
+            fs::remove_file(&cache_dir)
+                .with_context(|| format!("Failed to remove invalid cache path: {}", cache_dir.display()))?;
+        }
         if !cache_dir.exists() {
             fs::create_dir_all(&cache_dir)
                 .with_context(|| format!("Failed to create cache directory: {}", cache_dir.display()))?;

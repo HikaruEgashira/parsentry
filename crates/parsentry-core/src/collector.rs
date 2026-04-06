@@ -2,7 +2,7 @@ use anyhow::Result;
 use crate::file_classifier::FileClassifier;
 use crate::file_discovery::FileDiscovery;
 use crate::language::Language;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Metadata collected from a repository for threat modeling.
@@ -91,6 +91,22 @@ impl RepoMetadata {
             entry_points,
             total_files: files.len(),
         })
+    }
+
+    /// Filter metadata to only include the given set of files.
+    /// Recalculates language counts and total_files.
+    pub fn filter_to_files(&mut self, files: &HashSet<PathBuf>) {
+        let mut languages: HashMap<Language, usize> = HashMap::new();
+        for file_path in files {
+            let filename = file_path.to_string_lossy();
+            let content = std::fs::read_to_string(file_path).unwrap_or_default();
+            let lang = FileClassifier::classify(&filename, &content);
+            if lang != Language::Other {
+                *languages.entry(lang).or_insert(0) += 1;
+            }
+        }
+        self.languages = languages;
+        self.total_files = files.len();
     }
 
     /// Render metadata as a compact string for LLM consumption.
