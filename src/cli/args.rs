@@ -6,7 +6,7 @@ use std::path::PathBuf;
 #[command(
     author,
     version,
-    about,
+    about = "Parallel CLI agent execution platform with caching",
     long_about = None
 )]
 pub struct Args {
@@ -45,18 +45,17 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Generate threat model prompt. Outputs to stdout for `| claude`.
+    /// Generate analysis prompt from repo metadata. Outputs to stdout for piping to an agent.
     Model {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         target: Option<String>,
     },
     /// Run tree-sitter pattern matching. Outputs JSON to stdout.
-    /// Requires threat model via --threat-model or stdin.
     Query {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         target: Option<String>,
     },
-    /// Manage LLM response cache
+    /// Manage result cache
     Cache {
         #[command(subcommand)]
         action: CacheAction,

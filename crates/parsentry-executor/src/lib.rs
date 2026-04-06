@@ -1,13 +1,13 @@
-//! Claude Code CLI integration for Parsentry security scanner.
+//! Parallel CLI agent executor for Parsentry.
 //!
-//! This crate provides functionality to execute Claude Code CLI for
-//! security vulnerability analysis with parallel execution support.
+//! This crate provides semaphore-based parallel execution of CLI agents
+//! (Claude Code, etc.) with timeout control and streaming support.
 //!
 //! ## Streaming Support
 //!
-//! This crate supports real-time streaming output from Claude Code CLI
-//! using `--output-format stream-json`. Use `execute_streaming` methods
-//! with a `StreamCallback` implementation to receive events in real-time.
+//! Supports real-time streaming output via `--output-format stream-json`.
+//! Use `execute_streaming` methods with a `StreamCallback` implementation
+//! to receive events in real-time.
 
 mod executor;
 mod parser;

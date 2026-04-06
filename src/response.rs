@@ -121,7 +121,7 @@ impl ResponseExt for Response {
 
 /// Create a Response from ClaudeCodeResponse.
 pub fn from_claude_code_response(
-    cc_response: parsentry_claude_code::ClaudeCodeResponse,
+    cc_response: parsentry_executor::ClaudeCodeResponse,
     file_path: String,
 ) -> Response {
     let vulnerability_types: Vec<VulnType> = cc_response

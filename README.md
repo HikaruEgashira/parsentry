@@ -2,10 +2,10 @@
 
   <img width="250" src="./logo.png" alt="Parsentry Logo">
 
-**AI-only scanners are slow and miss vulnerabilities.**
+**Parallel CLI agent execution platform with caching.**
 
-Parsentry uses static analysis to enumerate attack surfaces, then orchestrates AI agents for deep inspection.
-Scan large repositories 10x faster (or more) while catching what others miss.
+Parsentry uses static analysis to enumerate isolated components, then dispatches them to CLI agents for parallel analysis.
+Run large-scale agent tasks faster with deduplication and result caching.
 
 </div>
 
@@ -13,10 +13,26 @@ Scan large repositories 10x faster (or more) while catching what others miss.
 
 ### How it works
 
-1. Attack Surface Enumeration — LLM analyzes repo metadata and enumerates endpoints, DB tables, public APIs
-2. Pattern Matching — Tree-sitter finds security-relevant code in attack surface locations
-3. AI Analysis — Claude Code agents analyze each pattern in parallel, outputting SARIF
-4. Universal — Support `C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform`
+1. **Component Enumeration** — Analyze repo metadata, enumerate isolated surfaces (endpoints, tables, public APIs, etc.)
+2. **Pattern Matching** — Tree-sitter finds code patterns in component locations
+3. **Prompt Generation** — Output analysis prompts to stdout, pipe to any CLI agent
+4. **Caching** — SHA2-based result cache prevents duplicate agent executions
+
+```bash
+# Scan and pipe to Claude Code
+parsentry owner/repo | claude
+
+# Generate threat model prompt
+parsentry model owner/repo | claude
+
+# Pattern match with threat model
+parsentry model repo > model.json
+parsentry query repo --threat-model model.json
+```
+
+### Supported Languages
+
+`C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform`
 
 <div align="center">
   <img src="./docs/images/run1.png" width="32%" alt="Run 1">
@@ -30,7 +46,7 @@ Scan large repositories 10x faster (or more) while catching what others miss.
 mise use -g github:HikaruEgashira/parsentry
 ```
 
-Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases):
+Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases).
 
 ### Usage
 
@@ -48,31 +64,34 @@ parsentry owner/repository --diff-base origin/main
 ### Command Line Options
 
 ```
-❯ parsentry --help
+Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
 
-Usage: parsentry [OPTIONS] [TARGET]
+Commands:
+  model  Generate analysis prompt from repo metadata
+  query  Run tree-sitter pattern matching (JSON output)
+  cache  Manage result cache
 
 Arguments:
-  [TARGET]  Target to analyze: local path or GitHub repository (owner/repo)
+  [TARGET]  Local path or GitHub repository (owner/repo)
 
-Core Options:
-  -m, --model <MODEL>                    [default: gpt-5.4]
-      --output-dir <OUTPUT_DIR>          [default: ./reports]
-      --min-confidence <MIN_CONFIDENCE>  [default: 70]
-      --diff-base <DIFF_BASE>            Git ref to diff against (e.g., "origin/main")
-      --filter-lang <FILTER_LANG>        Filter by language (comma-separated)
-
-Agent Options:
-      --agent <AGENT>                    [default: claude-code]
-                                         Possible values: genai, claude-code
-      --agent-path <AGENT_PATH>          Path to claude CLI binary
-      --agent-concurrency <N>            Max concurrent processes [default: 10]
-      --agent-poc                        Enable PoC execution
-
-Cache Options:
-      --cache                            Enable LLM response cache [default: true]
-      --cache-only                       Use cache only (fail if cache miss)
+Options:
+  --diff-base <REF>              Git ref to diff against
+  --filter-lang <LANG>           Filter by language (comma-separated)
+  --threat-model <PATH>          Path to threat model JSON
+  -v, --verbosity                Increase verbosity
+  --generate-config              Print default config
 ```
+
+### Architecture
+
+| Crate | Role |
+|-------|------|
+| `parsentry-core` | Language, RepoMetadata, ThreatModel types |
+| `parsentry-parser` | Tree-sitter pattern matching |
+| `parsentry-executor` | Parallel CLI agent execution |
+| `parsentry-cache` | Task result cache |
+| `parsentry-reports` | SARIF/Markdown reports |
+| `parsentry-utils` | File classification/discovery |
 
 ### Example Reports
 

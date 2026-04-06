@@ -45,7 +45,7 @@ pub fn render_threat_model_md(model: &ThreatModel) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::threat_model::{AttackSurface, SurfaceKind};
+    use crate::threat_model::AttackSurface;
 
     #[test]
     fn test_render_basic() {
@@ -56,7 +56,7 @@ mod tests {
             summary: "A Flask web app with user-facing endpoints.".to_string(),
             surfaces: vec![AttackSurface {
                 id: "SURFACE-001".to_string(),
-                kind: SurfaceKind::Endpoint,
+                kind: "endpoint".to_string(),
                 identifier: "POST /api/users".to_string(),
                 locations: vec!["src/routes/users.py".to_string()],
                 description: "User registration endpoint".to_string(),
