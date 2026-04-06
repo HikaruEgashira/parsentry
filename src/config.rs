@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::cli::args::{Agent, ScanArgs};
+use crate::cli::args::ScanArgs;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
@@ -73,20 +73,6 @@ impl AgentConfig {
         self.agent_type == "claude-code"
     }
 
-    /// Get the Agent enum value
-    pub fn get_agent(&self) -> Agent {
-        match self.agent_type.as_str() {
-            "claude-code" => Agent::ClaudeCode,
-            "genai" => Agent::Genai,
-            unknown => {
-                tracing::warn!(
-                    "Unknown agent type '{}' in config, defaulting to 'claude-code'. Valid values: 'genai', 'claude-code'",
-                    unknown
-                );
-                Agent::ClaudeCode
-            }
-        }
-    }
 }
 
 /// Cache configuration for LLM responses
@@ -634,14 +620,6 @@ enable_poc = false
 
 
     pub fn apply_scan_args(&mut self, args: &ScanArgs) -> Result<()> {
-        if !args.model.is_empty() && args.model != default_model() {
-            self.analysis.model = args.model.clone();
-        }
-
-        if args.min_confidence != default_min_confidence() {
-            self.analysis.min_confidence = args.min_confidence;
-        }
-
         // --debug is equivalent to -vv (verbosity >= 2)
         if args.debug && self.analysis.verbosity < 2 {
             self.analysis.verbosity = 2;
@@ -653,40 +631,6 @@ enable_poc = false
         if let Some(ref target) = args.target {
             self.paths.target = Some(target.clone());
         }
-
-        if let Some(ref output_dir) = args.output_dir {
-            self.paths.output_dir = Some(output_dir.clone());
-        }
-
-        if let Some(ref vuln_types_str) = args.vuln_types {
-            let types: Vec<String> = vuln_types_str.split(',').map(|s| s.trim().to_string()).collect();
-            self.filtering.vuln_types = Some(types);
-        }
-
-        if let Some(ref base_url) = args.api_base_url {
-            self.api.base_url = Some(base_url.clone());
-        }
-
-        match args.agent {
-            Agent::ClaudeCode => {
-                self.agent.agent_type = "claude-code".to_string();
-            }
-            Agent::Genai => {
-                self.agent.agent_type = "genai".to_string();
-            }
-        }
-        if let Some(ref path) = args.agent_path {
-            self.agent.path = Some(path.clone());
-        }
-        if args.agent_concurrency != default_agent_max_concurrent() {
-            self.agent.max_concurrent = args.agent_concurrency.min(50);
-        }
-        if args.agent_poc {
-            self.agent.enable_poc = true;
-        }
-
-        // Apply cache flag
-        self.cache.enabled = args.cache;
 
         Ok(())
     }
@@ -774,23 +718,13 @@ enable_poc = false
     pub fn to_args(&self) -> ScanArgs {
         ScanArgs {
             target: self.paths.target.clone(),
-            model: self.analysis.model.clone(),
             verbosity: self.analysis.verbosity,
-            output_dir: self.paths.output_dir.clone(),
-            min_confidence: self.analysis.min_confidence,
-            vuln_types: self.filtering.vuln_types.as_ref().map(|v| v.join(",")),
-            debug: self.analysis.verbosity >= 2,  // debug is now derived from verbosity
-            api_base_url: self.api.base_url.clone(),
+            debug: self.analysis.verbosity >= 2,
             config: None,
             generate_config: false,
-            agent: self.agent.get_agent(),
-            agent_path: self.agent.path.clone(),
-            agent_concurrency: self.agent.max_concurrent,
-            agent_poc: self.agent.enable_poc,
-            cache: self.cache.enabled,
-            cache_only: false,  // CLI flags are applied in scan command
-            filter_lang: None,  // CLI option only
-            diff_base: None,    // CLI option only
+            filter_lang: None,
+            diff_base: None,
+            threat_model: None,
         }
     }
 }
@@ -898,11 +832,6 @@ target = "test"
     }
 
     #[test]
-    fn test_agent_enum_default() {
-        assert_eq!(Agent::default(), Agent::ClaudeCode);
-    }
-
-    #[test]
     fn test_agent_config_default() {
         let config = AgentConfig::default();
         assert_eq!(config.agent_type, "claude-code");
@@ -924,21 +853,6 @@ target = "test"
         assert!(config.is_claude_code());
     }
 
-    #[test]
-    fn test_agent_config_get_agent() {
-        let mut config = AgentConfig::default();
-        assert_eq!(config.get_agent(), Agent::ClaudeCode);
-
-        config.agent_type = "genai".to_string();
-        assert_eq!(config.get_agent(), Agent::Genai);
-
-        config.agent_type = "claude-code".to_string();
-        assert_eq!(config.get_agent(), Agent::ClaudeCode);
-
-        // Unknown agent falls back to ClaudeCode (with warning logged)
-        config.agent_type = "unknown-agent".to_string();
-        assert_eq!(config.get_agent(), Agent::ClaudeCode);
-    }
 
     #[test]
     fn test_agent_toml_parsing() {
@@ -960,27 +874,6 @@ enable_poc = true
         assert!(config.agent.is_claude_code());
     }
 
-    #[test]
-    fn test_agent_to_args_conversion() {
-        let mut config = ParsentryConfig::default();
-
-        // Test genai agent
-        config.agent.agent_type = "genai".to_string();
-        let args = config.to_args();
-        assert_eq!(args.agent, Agent::Genai);
-
-        // Test claude-code agent
-        config.agent.agent_type = "claude-code".to_string();
-        config.agent.path = Some(PathBuf::from("/custom/claude"));
-        config.agent.max_concurrent = 8;
-        config.agent.enable_poc = true;
-
-        let args = config.to_args();
-        assert_eq!(args.agent, Agent::ClaudeCode);
-        assert_eq!(args.agent_path, Some(PathBuf::from("/custom/claude")));
-        assert_eq!(args.agent_concurrency, 8);
-        assert!(args.agent_poc);
-    }
 
     #[test]
     fn test_config_merge() {
