@@ -9,7 +9,7 @@ license = "MIT"
 parsentry-core = { path = "../parsentry-core" }
 
 # Tree-sitter core
-tree-sitter = "0.25.6"
+tree-sitter = "0.26.8"
 streaming-iterator = "0.1"
 
 # Tree-sitter language grammars
