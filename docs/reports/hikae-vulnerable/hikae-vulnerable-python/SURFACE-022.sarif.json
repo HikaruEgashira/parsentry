@@ -1,0 +1,192 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via string interpolation"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is interpolated directly into a SQL query string using f-string formatting, allowing an attacker to manipulate the query structure and bypass authentication or extract data."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "sql-injection", "CWE-89", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "LOG-SENSITIVE",
+              "name": "SensitiveDataLogging",
+              "shortDescription": {
+                "text": "Sensitive data written to logs"
+              },
+              "fullDescription": {
+                "text": "Credentials (username and password) are logged as part of the SQL query string via logger.debug, exposing them to anyone with log access."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-532"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "API key exposed in authentication response"
+              },
+              "fullDescription": {
+                "text": "The authenticate_user function returns the user's api_key in the result dictionary. This unnecessarily exposes a secret credential to callers, increasing the attack surface if the response is logged or leaked."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-200"]
+              }
+            },
+            {
+              "id": "ERROR-DISCLOSURE",
+              "name": "ErrorInformationDisclosure",
+              "shortDescription": {
+                "text": "Database error details logged without sanitization"
+              },
+              "fullDescription": {
+                "text": "Raw database exception messages are logged via logger.error, potentially revealing internal schema details, table names, or query structure to an attacker with log access."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-209"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "Authentication bypass via SQL injection. The query is constructed using f-string interpolation with unsanitized `username` and `password` parameters: `f\"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'\"`. An attacker can inject `' OR '1'='1` as either parameter to bypass authentication entirely, or use UNION-based injection to extract arbitrary data. Use parameterized queries (`cursor.execute(\"SELECT ... WHERE username = ? AND password = ?\", (username, password))`) instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "query = f\"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-022",
+            "impact": "Authentication bypass, unauthorized data access, potential data exfiltration"
+          }
+        },
+        {
+          "ruleId": "LOG-SENSITIVE",
+          "level": "error",
+          "message": {
+            "text": "Credentials logged in plaintext. The debug log statement `logger.debug(f\"Executing query: {query}\")` writes the full SQL query—including the raw username and password—to the application log. This exposes credentials to anyone with log access (operators, log aggregation services, SIEM). Remove credential logging or redact sensitive fields before logging."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 8,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "logger.debug(f\"Executing query: {query}\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-022",
+            "impact": "Credential exposure via log files"
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "API key unnecessarily returned in authentication response. The `api_key` field (column index 5) is included in the returned dictionary. Authentication responses should return only the minimum necessary fields (id, username, role). The API key should be retrieved separately only when explicitly needed, following the principle of least privilege."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 21,
+                  "snippet": {
+                    "text": "'api_key': result[5]"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "surface_id": "SURFACE-022",
+            "impact": "Unnecessary secret exposure in authentication flow"
+          }
+        },
+        {
+          "ruleId": "ERROR-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "Raw database exception message logged without sanitization. `logger.error(f\"Database error: {e}\")` may reveal internal database schema, table structure, or SQL syntax in logs. Use a generic error message for logging and store detailed diagnostics separately with restricted access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "logger.error(f\"Database error: {e}\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "surface_id": "SURFACE-022",
+            "impact": "Internal schema details potentially exposed via logs"
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}

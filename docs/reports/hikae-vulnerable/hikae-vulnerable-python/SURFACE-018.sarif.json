@@ -1,0 +1,381 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "XSS",
+              "name": "ReflectedCrossSiteScripting",
+              "shortDescription": {
+                "text": "Reflected XSS via render_template_string with unsanitized input"
+              },
+              "fullDescription": {
+                "text": "User-controlled input from query parameters is interpolated directly into an HTML template string using Python f-strings, then passed to Flask's render_template_string(). Because the interpolation happens before Jinja2 processes the template, Jinja2's auto-escaping is completely bypassed, allowing an attacker to inject arbitrary HTML and JavaScript."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": {
+                "tags": ["security", "CWE-79", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via string interpolation"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is interpolated directly into SQL query strings using f-string formatting, allowing an attacker to inject arbitrary SQL commands."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "CWE-89", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "CMDI",
+              "name": "CommandInjection",
+              "shortDescription": {
+                "text": "OS command injection via os.system / os.popen"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is passed to os.system() or os.popen() without sanitization, enabling arbitrary command execution on the server."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": {
+                "tags": ["security", "CWE-78", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "LocalFileInclusion",
+              "shortDescription": {
+                "text": "Arbitrary file read via unvalidated path parameter"
+              },
+              "fullDescription": {
+                "text": "A user-supplied file path is opened and read without validation or path traversal checks, allowing an attacker to read arbitrary files on the server such as /etc/passwd or application configuration files."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": {
+                "tags": ["security", "CWE-22", "OWASP-A01"]
+              }
+            },
+            {
+              "id": "WEAK-HASH",
+              "name": "WeakHashAlgorithm",
+              "shortDescription": {
+                "text": "Use of MD5 for security-sensitive hashing"
+              },
+              "fullDescription": {
+                "text": "MD5 is used for hashing in a security context (e.g., session tokens). MD5 is cryptographically broken and should not be used for security purposes. Use SHA-256 or stronger algorithms."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/328.html",
+              "properties": {
+                "tags": ["security", "CWE-328"]
+              }
+            },
+            {
+              "id": "SENSITIVE-LOG",
+              "name": "SensitiveDataLogging",
+              "shortDescription": {
+                "text": "Sensitive data written to log output"
+              },
+              "fullDescription": {
+                "text": "Passwords or other sensitive data are logged in plaintext via logger.info, exposing secrets in log files."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["security", "CWE-532"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in GET /xss: the 'name' parameter from request.args is interpolated directly into an HTML template via f-string (e.g., `f\"<h1>Hello {name}</h1>\"`) before being passed to render_template_string(). Because the user input is embedded into the template string before Jinja2 processes it, auto-escaping never applies. An attacker can inject `<script>alert(document.cookie)</script>` as the name parameter to execute arbitrary JavaScript in victims' browsers. Fix: use Jinja2 template variables (e.g., `render_template_string(\"<h1>Hello {{ name }}</h1>\", name=name)`) so auto-escaping is applied."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 286,
+                  "snippet": {
+                    "text": "render_template_string(f\"<h1>Hello {name}</h1>\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.97
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in GET /xss: the 'comment' parameter is interpolated into an HTML template via f-string in an attribute context (e.g., `f\"<div data-comment='{comment}'>\"`) and a JavaScript context (e.g., `f\"<script>var x = '{comment}';</script>\"`), bypassing Jinja2 auto-escaping. An attacker can break out of the attribute or script context to inject arbitrary JavaScript. Fix: pass user input as Jinja2 template variables and apply context-appropriate escaping (|e for HTML, |tojson for JavaScript contexts)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 289,
+                  "snippet": {
+                    "text": "render_template_string(f\"<div data-comment='{comment}'>...\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.97
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "DOM-based XSS via JavaScript context injection: user input is interpolated into a <script> block via f-string (e.g., `f\"<script>var x = '{comment}';</script>\"`). An attacker can inject `'; alert(1); '` to execute arbitrary JavaScript. JavaScript context XSS is particularly dangerous as Content-Security-Policy nonce-based protections do not help when the injection is within an already-trusted script block."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 294,
+                  "snippet": {
+                    "text": "f\"<script>var x = '{comment}';</script>\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.96
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "warning",
+          "message": {
+            "text": "CSS injection via style context: user input is interpolated into a CSS style attribute (e.g., `f\"<div style='color: {comment}'>\"`) allowing an attacker to inject CSS that exfiltrates data or defaces the page. While less severe than script injection, CSS injection can be used for data theft via CSS selectors and background-image URLs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 300,
+                  "snippet": {
+                    "text": "f\"<div style='color: {comment}'>\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in search endpoint: user-supplied 'username' parameter is interpolated into SQL queries via f-string formatting (e.g., `f\"SELECT * FROM users WHERE username LIKE '%{username}%'\"`). The cursor.execute(query).fetchall() pattern confirms the query is executed directly. An attacker can inject `' UNION SELECT * FROM users --` to exfiltrate all user data. Use parameterized queries with placeholder values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 227,
+                  "snippet": {
+                    "text": "cursor.execute(query1).fetchall()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.96
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection via ORDER BY clause: the second query uses f-string interpolation for an ORDER BY clause (e.g., `f\"SELECT * FROM users ORDER BY {sort_column}\"`). An attacker can inject arbitrary SQL after the ORDER BY. Use an allowlist of permitted column names instead of interpolating user input directly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 230,
+                  "snippet": {
+                    "text": "cursor.execute(query2).fetchall()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CMDI",
+          "level": "error",
+          "message": {
+            "text": "OS command injection via os.system(): user-supplied input is concatenated into a shell command string and passed to os.system() (line ~330). An attacker can inject shell metacharacters (e.g., `; rm -rf /`) to execute arbitrary commands. Replace os.system() with subprocess.run() using a list of arguments (shell=False) and validate/sanitize input."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 330,
+                  "snippet": {
+                    "text": "os.system(command)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "level": "error",
+          "message": {
+            "text": "Local File Inclusion via open(): a user-supplied file_path parameter is passed directly to open(file_path, 'r') without any path validation or traversal checks. An attacker can read arbitrary files (e.g., `../../etc/passwd`, application secrets) by supplying path traversal sequences. Validate the resolved path is within an allowed directory using os.path.realpath() and a prefix check."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 364,
+                  "snippet": {
+                    "text": "open(file_path, 'r')"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "WEAK-HASH",
+          "level": "warning",
+          "message": {
+            "text": "MD5 used for session token generation: hashlib.md5 is used to generate predictable session tokens. MD5 is cryptographically broken—collisions can be generated in seconds. Use secrets.token_hex() or secrets.token_urlsafe() for session tokens, which provide cryptographically strong random values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 159,
+                  "snippet": {
+                    "text": "hashlib.md5(username.encode()).hexdigest()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-LOG",
+          "level": "warning",
+          "message": {
+            "text": "Plaintext password logged: logger.info logs the user-supplied password during authentication. This exposes credentials in log files accessible to operators or attackers who gain log access. Remove password values from all log statements."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 149,
+                  "snippet": {
+                    "text": "logger.info(f\"Login attempt: {username}:{password}\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-018",
+            "surface_kind": "endpoint",
+            "surface_identifier": "GET /xss"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,259 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via string interpolation in log retrieval"
+              },
+              "fullDescription": {
+                "text": "User-controlled input (user_id) is interpolated directly into a SQL query string using f-string formatting without parameterization, allowing an attacker to inject arbitrary SQL commands such as UNION-based data extraction or boolean-blind enumeration of all audit_logs records."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "CWE-89", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Missing authorization check on audit log access"
+              },
+              "fullDescription": {
+                "text": "The /api/logs/<user_id> endpoint accepts an arbitrary user_id from the URL path and returns that user's audit logs without verifying the caller's identity or authorization. Any unauthenticated caller can enumerate and retrieve audit logs of any user, exposing sensitive actions, IP addresses, and timestamps."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "properties": {
+                "tags": ["security", "CWE-639", "OWASP-A01"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Exception details leaked to API client"
+              },
+              "fullDescription": {
+                "text": "The endpoint catches all exceptions and returns the raw exception message in the JSON error response. This can reveal internal database schema, table names, SQL syntax errors, and file paths to an attacker, aiding further exploitation of the SQL injection vulnerability."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209", "OWASP-A04"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "The user_id parameter from the URL path is interpolated directly into a SQL query via f-string (f\"SELECT * FROM audit_logs WHERE user_id = {user_id}\"). An attacker can inject SQL such as '1 UNION SELECT * FROM users--' to extract data from other tables including credentials and API keys. Use parameterized queries (cursor.execute(\"SELECT ... WHERE user_id = ?\", (user_id,))) instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 269,
+                  "startColumn": 9,
+                  "endLine": 269,
+                  "endColumn": 85
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_user_logs",
+                  "fullyQualifiedName": "models.AuditLogger.get_user_logs",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Tainted input enters here via URL path parameter user_id"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 319,
+                  "startColumn": 1,
+                  "endLine": 320,
+                  "endColumn": 31
+                }
+              }
+            },
+            {
+              "id": 2,
+              "message": {
+                "text": "Tainted user_id passed to get_user_logs without validation"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 323,
+                  "startColumn": 9,
+                  "endLine": 323,
+                  "endColumn": 52
+                }
+              }
+            },
+            {
+              "id": 3,
+              "message": {
+                "text": "Unsanitized user_id executed in SQL query"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 272,
+                  "startColumn": 13,
+                  "endLine": 272,
+                  "endColumn": 35
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.98,
+            "source": "user_id URL path parameter",
+            "sink": "cursor.execute(query)",
+            "cwe": "CWE-89"
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "The GET /api/logs/<user_id> endpoint has no authentication or authorization check. Any caller can supply an arbitrary user_id to retrieve that user's complete audit log history, which contains actions, details (including logged passwords from login events), IP addresses, and timestamps. Implement authentication middleware and verify the caller owns the requested user_id or has admin privileges."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 319,
+                  "startColumn": 1,
+                  "endLine": 326,
+                  "endColumn": 53
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_user_logs",
+                  "fullyQualifiedName": "api.get_user_logs",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Log data returned directly without ownership verification"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 324,
+                  "startColumn": 9,
+                  "endLine": 324,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.97,
+            "cwe": "CWE-639"
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Raw exception message is returned in the API response via str(e). When combined with the SQL injection vulnerability, this leaks database error details (table names, column names, SQL syntax) that help attackers craft more precise injection payloads. Return a generic error message and log the exception details server-side only."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 325,
+                  "startColumn": 9,
+                  "endLine": 326,
+                  "endColumn": 53
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_user_logs",
+                  "fullyQualifiedName": "api.get_user_logs",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.90,
+            "cwe": "CWE-209"
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-013",
+            "surface_kind": "endpoint",
+            "surface_identifier": "GET /api/logs/<user_id>"
+          }
+        }
+      ],
+      "properties": {
+        "analysisTarget": "GET /api/logs/<user_id>",
+        "severity": "critical",
+        "summary": "The log retrieval endpoint chains three vulnerabilities: (1) No authentication/authorization allows any caller to access any user's audit logs (IDOR), (2) the user_id path parameter is injected directly into a SQL query enabling full database extraction (SQLi), and (3) raw exception messages are returned to the client aiding attack refinement (Info Disclosure). The audit logs themselves may contain sensitive data such as plaintext passwords logged during login events."
+      }
+    }
+  ]
+}

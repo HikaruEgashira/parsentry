@@ -1,0 +1,146 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "Remote Code Execution via Insecure Deserialization",
+              "shortDescription": {
+                "text": "Arbitrary code execution via pickle.loads on untrusted user input"
+              }
+            },
+            {
+              "id": "SSRF",
+              "name": "Server-Side Request Forgery",
+              "shortDescription": {
+                "text": "Unvalidated URL passed to requests.get enabling server-side request forgery"
+              }
+            },
+            {
+              "id": "RCE-SUBPROCESS",
+              "name": "Remote Code Execution via subprocess",
+              "shortDescription": {
+                "text": "User-controlled input passed to subprocess.run enabling OS command injection"
+              }
+            },
+            {
+              "id": "RCE-EVAL",
+              "name": "Remote Code Execution via eval",
+              "shortDescription": {
+                "text": "User-controlled input passed to eval() enabling arbitrary code execution"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Insecure deserialization: pickle.loads called on untrusted base64-decoded user input",
+            "markdown": "### 安全でない逆シリアル化（Insecure Deserialization）\n\n**脆弱性の概要**:\n`POST /api/pickle/deserialize` エンドポイントがリクエストからbase64エンコードされたデータを受け取り、`pickle.loads()` を直接呼び出しています。Pythonの `pickle` モジュールは設計上、逆シリアル化時に任意のコード実行が可能であり、信頼できない入力に対して使用してはなりません。\n\n**攻撃シナリオ**:\n1. 攻撃者が `__reduce__` メソッドを持つ悪意あるPickleペイロードを作成\n2. ペイロードをbase64エンコードしてエンドポイントに送信\n3. `pickle.loads()` が逆シリアル化時に `__reduce__` で定義された任意のコードを実行\n4. サーバー上でリバースシェル確立、ファイル窃取、権限昇格等が可能\n\n**PAR分析**:\n- **Principal（プリンシパル）**: 外部ユーザーからのHTTP POSTリクエスト\n- **Action（アクション）**: base64デコード後、入力検証・型制限なしに `pickle.loads()` を直接呼び出し\n- **Resource（リソース）**: Pickleによる任意のPythonオブジェクト生成・コード実行\n\n**CVSS評価**: 極度に危険 (CVSS v3.1: 9.8 — AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)\n\n**修復方法**:\n1. `pickle.loads()` を信頼できない入力に対して使用しない\n2. JSON等の安全なシリアル化形式に置き換える\n3. やむを得ない場合は `RestrictedUnpickler` で許可クラスをホワイトリスト化する\n4. 入力データの署名検証（HMAC）を実装し、改竄を検知する"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "surface-id": "SURFACE-006"
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Server-Side Request Forgery: requests.get called with potentially user-controlled URL",
+            "markdown": "### サーバーサイドリクエストフォージェリ（SSRF）\n\n**脆弱性の概要**:\n`api.py` 内で `requests.get()` が使用されており、ユーザー制御可能なURLが渡される場合、内部ネットワークやクラウドメタデータサービス（169.254.169.254）へのアクセスが可能になります。\n\n**PAR分析**:\n- **Principal**: 外部ユーザーからのHTTPリクエスト\n- **Action**: URL検証なしの `requests.get()` 呼び出し\n- **Resource**: 内部ネットワーク、クラウドメタデータ、ローカルサービス\n\n**修復方法**:\n1. URLのホワイトリスト検証を実装する\n2. プライベートIPレンジ（RFC1918）、リンクローカル、ループバックアドレスをブロックする\n3. DNSリバインディング攻撃を防ぐため、解決後のIPアドレスも検証する"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "surface-id": "SURFACE-006"
+          }
+        },
+        {
+          "ruleId": "RCE-SUBPROCESS",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "OS Command Injection: subprocess.run called with potentially user-controlled input",
+            "markdown": "### OSコマンドインジェクション\n\n**脆弱性の概要**:\n`api.py` 内で `subprocess.run()` が使用されており、ユーザー入力が引数に含まれる場合、任意のOSコマンド実行が可能になります。\n\n**PAR分析**:\n- **Principal**: 外部ユーザーからのHTTPリクエスト\n- **Action**: 入力サニタイズなしの `subprocess.run()` 呼び出し\n- **Resource**: OS レベルのコマンド実行\n\n**修復方法**:\n1. `shell=True` を使用しない\n2. ユーザー入力をコマンド引数に含めない設計にする\n3. やむを得ない場合は `shlex.quote()` でエスケープし、許可コマンドをホワイトリスト化する"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "surface-id": "SURFACE-006"
+          }
+        },
+        {
+          "ruleId": "RCE-EVAL",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "Remote Code Execution: eval() called with user-controlled input",
+            "markdown": "### リモートコード実行（eval）\n\n**脆弱性の概要**:\n`api.py` 内で `eval(code)` が使用されており、ユーザー入力が直接渡される場合、任意のPythonコード実行が可能になります。\n\n**PAR分析**:\n- **Principal**: 外部ユーザーからのHTTPリクエスト\n- **Action**: 入力検証なしの `eval()` 呼び出し\n- **Resource**: 任意のPythonコード実行\n\n**修復方法**:\n1. `eval()` の使用を完全に廃止する\n2. `ast.literal_eval()` で安全なリテラル評価に置き換える\n3. ホワイトリストベースの入力検証を実装する"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 278
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "surface-id": "SURFACE-006"
+          }
+        }
+      ]
+    }
+  ]
+}

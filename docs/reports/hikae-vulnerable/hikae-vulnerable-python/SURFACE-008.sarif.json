@@ -1,0 +1,176 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "RCE-001",
+              "name": "CodeInjectionViaEval",
+              "shortDescription": {
+                "text": "Arbitrary code execution via eval() on user-supplied input"
+              },
+              "fullDescription": {
+                "text": "The endpoint POST /api/eval/python passes the attacker-controlled 'code' field from request JSON body directly to Python's eval() built-in without any input validation, sandboxing, or restricted execution environment. This allows an attacker to execute arbitrary Python code on the server, including importing os/subprocess modules, reading/writing files, executing shell commands, and pivoting to internal systems."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": {
+                "tags": ["security", "CWE-94", "OWASP-A03:2021"],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "RCE-002",
+              "name": "CommandInjectionViaSubprocess",
+              "shortDescription": {
+                "text": "OS command injection via subprocess.run with shell=True"
+              },
+              "fullDescription": {
+                "text": "The endpoint POST /api/exec/command passes attacker-controlled 'command' field directly to subprocess.run() with shell=True. This enables arbitrary OS command execution including chaining commands with &&, ||, ;, pipe operators, and command substitution via $()."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": {
+                "tags": ["security", "CWE-78", "OWASP-A03:2021"],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "SSRF-001",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "SSRF via unvalidated URL in requests.get()"
+              },
+              "fullDescription": {
+                "text": "The endpoint POST /api/ssrf/fetch passes an attacker-controlled URL directly to requests.get() without validating the scheme, host, or destination. An attacker can probe internal network services (e.g., http://169.254.169.254 for cloud metadata, http://localhost:6379 for Redis), access internal APIs, or scan ports. The response body, status code, and headers are returned to the attacker, making this a full-read SSRF."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918", "OWASP-A10:2021"],
+                "precision": "very-high"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'code' field from POST JSON body is passed directly to eval() with no sandboxing or input validation. An attacker can execute arbitrary Python code on the server (e.g., __import__('os').system('id')) gaining full remote code execution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 197,
+                  "startColumn": 18,
+                  "endLine": 197,
+                  "endColumn": 28,
+                  "snippet": {
+                    "text": "        result = eval(code)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "eval-code-injection-api-eval-python"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "source": "request.get_json().get('code')",
+            "sink": "eval(code)",
+            "impact": "An attacker can execute arbitrary Python code on the server, leading to full system compromise including data exfiltration, lateral movement, and denial of service.",
+            "remediation": "Remove the eval() endpoint entirely. If dynamic code evaluation is a business requirement, use a sandboxed execution environment (e.g., RestrictedPython, containerized execution with resource limits and network isolation, or a dedicated code execution service like AWS Lambda)."
+          }
+        },
+        {
+          "ruleId": "RCE-002",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'command' field is passed directly to subprocess.run() with shell=True, enabling arbitrary OS command execution. An attacker can chain commands (e.g., 'id; cat /etc/passwd') or exfiltrate data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 156,
+                  "startColumn": 18,
+                  "endLine": 158,
+                  "endColumn": 10,
+                  "snippet": {
+                    "text": "        result = subprocess.run(\n            command, shell=True, capture_output=True, text=True, timeout=10\n        )"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "subprocess-shell-injection-exec-command"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "source": "request.get_json().get('command')",
+            "sink": "subprocess.run(command, shell=True)",
+            "impact": "Full OS command execution enabling data theft, system compromise, and lateral movement. The timeout=10 provides minimal protection as damage can be done instantly.",
+            "remediation": "Remove this endpoint. If command execution is required, use a strict allowlist of permitted commands, pass arguments as a list (not a string) with shell=False, and run in a restricted container with minimal privileges."
+          }
+        },
+        {
+          "ruleId": "SSRF-001",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "User-supplied URL is passed directly to requests.get() without any validation of scheme, host, or IP. An attacker can access internal services, cloud metadata endpoints, and scan the internal network. Response content and headers are returned to the attacker."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 104,
+                  "startColumn": 20,
+                  "endLine": 104,
+                  "endColumn": 51,
+                  "snippet": {
+                    "text": "        response = requests.get(url, timeout=10)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "ssrf-requests-get-fetch-endpoint"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "source": "request.get_json().get('url')",
+            "sink": "requests.get(url)",
+            "impact": "Full-read SSRF. Attacker can access cloud metadata (169.254.169.254), internal APIs, databases, and other services not exposed to the internet. Response body (first 1000 chars), status code, and all headers are leaked.",
+            "remediation": "Validate URLs against an allowlist of permitted domains and schemes (https only). Block private/reserved IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 127.0.0.0/8). Use DNS resolution validation to prevent DNS rebinding attacks."
+          }
+        }
+      ],
+      "columnKind": "utf16CodeUnits"
+    }
+  ]
+}

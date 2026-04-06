@@ -1,0 +1,113 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "rules": [
+            {
+              "id": "PATH_TRAVERSAL",
+              "name": "Path Traversal",
+              "shortDescription": {
+                "text": "Unsanitized filename used in os.path.join allows writing to arbitrary paths"
+              }
+            },
+            {
+              "id": "UNRESTRICTED_UPLOAD",
+              "name": "Unrestricted File Upload",
+              "shortDescription": {
+                "text": "No MIME type or file extension validation on uploaded files"
+              }
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "Information Disclosure",
+              "shortDescription": {
+                "text": "Internal file path exposed in API response"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PATH_TRAVERSAL",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Path traversal vulnerability via unsanitized filename in file upload endpoint",
+            "markdown": "### パストラバーサル脆弱性\n\n**脆弱性の概要**:\n`POST /api/file/upload` エンドポイントで、`file.filename` をサニタイズせずに `os.path.join(upload_dir, file.filename)` に直接渡しています（218行目）。`os.path.join` は絶対パスが第2引数に渡された場合に第1引数を無視するため、攻撃者は任意のパスにファイルを書き込めます。\n\n**攻撃シナリオ**:\n1. 攻撃者がファイル名を `../../../etc/cron.d/backdoor` や `/root/.ssh/authorized_keys` に設定したHTTPリクエストを送信\n2. `os.path.join('/tmp/uploads', '/root/.ssh/authorized_keys')` は `/root/.ssh/authorized_keys` を返す\n3. サーバー上の任意のパスにファイルが書き込まれ、システム全体の侵害が可能\n\n**PAR分析**:\n- **Principal（プリンシパル）**: 外部ユーザーからのHTTPマルチパートリクエスト\n- **Action（アクション）**: ファイル名のサニタイズなし。`werkzeug.utils.secure_filename()` の使用もパス正規化も行われていない\n- **Resource（リソース）**: ファイルシステム全体への書き込みアクセス\n\n**CVSS評価**: Critical (CVSS v3.1: 9.1)\n\n**修復方法**:\n1. `werkzeug.utils.secure_filename()` でファイル名をサニタイズする\n2. 保存先パスが意図したディレクトリ内に収まることを `os.path.realpath()` で検証する\n3. UUIDベースのファイル名を生成し、元のファイル名をメタデータとして保存する"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/api.py"
+                },
+                "region": {
+                  "startLine": 218
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "UNRESTRICTED_UPLOAD",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Unrestricted file upload allows uploading of dangerous file types including executables and web shells",
+            "markdown": "### 制限なしファイルアップロード脆弱性\n\n**脆弱性の概要**:\n`POST /api/file/upload` エンドポイントで、アップロードされるファイルに対してMIMEタイプの検証もファイル拡張子のバリデーションも実施されていません（202-225行目）。空ファイル名チェック（210行目）のみで、ファイル内容や種類の検証は一切ありません。\n\n**攻撃シナリオ**:\n1. 攻撃者がWebシェル（例: `.php`, `.jsp`, `.py`）をアップロード\n2. アップロード先がWebサーバーの公開ディレクトリ内であれば、直接アクセスしてリモートコード実行が可能\n3. 実行可能バイナリ、マルウェア、`.htaccess` ファイルのアップロードによるサーバー設定の改変も可能\n4. パストラバーサル脆弱性と組み合わせることで、任意の場所にWebシェルを配置可能\n\n**PAR分析**:\n- **Principal（プリンシパル）**: 外部ユーザーからのファイルアップロードリクエスト\n- **Action（アクション）**: Content-Type検証なし、拡張子ホワイトリストなし、ファイルサイズ制限なし、マジックバイト検証なし\n- **Resource（リソース）**: サーバーのファイルシステムに任意のファイルタイプを書き込み\n\n**CVSS評価**: High (CVSS v3.1: 8.8)\n\n**修復方法**:\n1. 許可する拡張子のホワイトリストを定義する\n2. MIMEタイプとマジックバイトの両方で検証する\n3. アップロードファイルのサイズ制限を設ける\n4. アップロード先ディレクトリのスクリプト実行を無効化する\n5. ウイルススキャンの導入を検討する"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/api.py"
+                },
+                "region": {
+                  "startLine": 202,
+                  "endLine": 225
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Server file path leaked in upload response exposes internal directory structure",
+            "markdown": "### 情報漏洩脆弱性\n\n**脆弱性の概要**:\nファイルアップロード成功後のレスポンス（221-224行目）で、サーバー内部のファイルパス（`file_path`）とファイル名（`file.filename`）がそのまま返されています。これによりサーバーのディレクトリ構造が攻撃者に漏洩します。\n\n**攻撃シナリオ**:\n1. 攻撃者が通常のファイルをアップロードし、レスポンスから内部パス `/tmp/uploads/...` を確認\n2. ディレクトリ構造の情報を基に、パストラバーサル攻撃のペイロードを精密に構築\n3. OS情報やアプリケーション配置構造の推測に利用される\n\n**PAR分析**:\n- **Principal（プリンシパル）**: 外部ユーザー\n- **Action（アクション）**: JSONレスポンスに内部パスを含めて返却\n- **Resource（リソース）**: サーバーの内部ディレクトリ構造\n\n**CVSS評価**: Medium (CVSS v3.1: 5.3)\n\n**修復方法**:\n1. レスポンスにサーバー内部パスを含めない\n2. ファイルIDやトークンベースの参照を返却する\n3. ファイル名もサニタイズした値を返す"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/api.py"
+                },
+                "region": {
+                  "startLine": 221,
+                  "endLine": 225
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ]
+    }
+  ]
+}

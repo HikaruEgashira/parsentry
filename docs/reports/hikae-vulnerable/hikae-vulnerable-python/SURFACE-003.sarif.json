@@ -1,0 +1,250 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery: user-controlled URL passed to HTTP client without validation"
+              },
+              "fullDescription": {
+                "text": "The endpoint accepts an arbitrary URL from the JSON request body and passes it directly to requests.get() with no scheme allowlist (e.g., http/https only), no hostname allowlist, and no blocking of internal/private IP ranges (127.0.0.0/8, 10.0.0.0/8, 169.254.169.254, etc.). An attacker can probe internal services, access cloud metadata endpoints, or reach otherwise-firewalled resources."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918", "OWASP-A10"]
+              }
+            },
+            {
+              "id": "RCE-COMMAND-INJECTION",
+              "name": "CommandInjection",
+              "shortDescription": {
+                "text": "OS Command Injection: user-controlled input passed to subprocess.run with shell=True"
+              },
+              "fullDescription": {
+                "text": "The /api/exec/command endpoint takes a 'command' string from the JSON request body and passes it directly to subprocess.run() with shell=True. This grants full arbitrary command execution on the host operating system with the privileges of the web server process."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": {
+                "tags": ["security", "CWE-78", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "RCE-CODE-INJECTION",
+              "name": "CodeInjection",
+              "shortDescription": {
+                "text": "Code Injection: user-controlled input passed to eval()"
+              },
+              "fullDescription": {
+                "text": "The /api/eval/python endpoint takes a 'code' string from the JSON request body and passes it directly to Python's eval() built-in. This allows arbitrary Python expression evaluation, enabling full code execution including OS command execution via __import__('os').system()."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": {
+                "tags": ["security", "CWE-94", "OWASP-A03"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "User-supplied URL from request body (data.get('url')) is passed directly to requests.get() at line 121 with no validation. No scheme restriction (file://, gopher://, dict:// are all reachable), no hostname allowlist, and no private IP range blocking. An attacker can: (1) access cloud metadata at http://169.254.169.254, (2) scan internal network services, (3) read local files via file:// scheme, (4) exfiltrate data through DNS or HTTP callbacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 121,
+                  "startColumn": 20,
+                  "endLine": 121,
+                  "endColumn": 50
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ssrf_fetch",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Taint source: user-controlled URL extracted from JSON body"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 116,
+                  "startColumn": 11,
+                  "endLine": 116,
+                  "endColumn": 31
+                }
+              }
+            },
+            {
+              "id": 2,
+              "message": {
+                "text": "Response content and headers are returned to the caller, enabling data exfiltration from internal services"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 123,
+                  "startColumn": 16,
+                  "endLine": 127,
+                  "endColumn": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-003",
+            "taint_flow": "request.get_json().get('url') → requests.get(url) → jsonify(response)"
+          }
+        },
+        {
+          "ruleId": "RCE-COMMAND-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "User-supplied command string from request body is passed directly to subprocess.run() with shell=True at line 186. This is unrestricted OS command execution. No input sanitization, no command allowlist, no sandboxing. An attacker achieves full RCE with the privileges of the web server process."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 186,
+                  "startColumn": 18,
+                  "endLine": 192,
+                  "endColumn": 10
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "execute_command",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Taint source: user-controlled command extracted from JSON body"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 182,
+                  "startColumn": 15,
+                  "endLine": 182,
+                  "endColumn": 39
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-003"
+          }
+        },
+        {
+          "ruleId": "RCE-CODE-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "User-supplied code string from request body is passed directly to Python's eval() at line 278. eval() executes arbitrary Python expressions, allowing full code execution. An attacker can escalate to OS command execution via __import__('os').system() or exfiltrate data via __import__('socket')."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 278,
+                  "startColumn": 18,
+                  "endLine": 278,
+                  "endColumn": 28
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "eval_python",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Taint source: user-controlled code extracted from JSON body"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 274,
+                  "startColumn": 11,
+                  "endLine": 274,
+                  "endColumn": 33
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-003"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "length": -1,
+          "mimeType": "text/x-python"
+        }
+      ],
+      "columnKind": "utf16CodeUnits"
+    }
+  ]
+}

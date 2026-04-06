@@ -1,0 +1,309 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "IDOR: user_id parameter overrides session identity without ownership check"
+              },
+              "fullDescription": {
+                "text": "The GET /logs endpoint accepts a 'user_id' query parameter that is used directly to fetch audit logs without verifying that the authenticated user owns or is authorized to access the requested user's data. Any authenticated user can enumerate and view another user's audit logs by supplying an arbitrary user_id value."
+              },
+              "helpUri": "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/",
+              "properties": {
+                "tags": ["security", "OWASP-API1", "authorization", "BOLA"]
+              }
+            },
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via string formatting in database queries"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is interpolated directly into SQL query strings using f-strings or string formatting, allowing an attacker to inject arbitrary SQL commands. This can lead to unauthorized data access, modification, or deletion."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/SQL_Injection",
+              "properties": {
+                "tags": ["security", "OWASP-A03", "injection"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Sensitive data exposed in logs and API responses"
+              },
+              "fullDescription": {
+                "text": "Sensitive information such as SQL queries containing credentials, API keys, and detailed error messages are logged or returned in API responses, potentially exposing them to unauthorized parties."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/",
+              "properties": {
+                "tags": ["security", "OWASP-A01", "information-disclosure"]
+              }
+            },
+            {
+              "id": "WEAK-HASH",
+              "name": "WeakHashAlgorithm",
+              "shortDescription": {
+                "text": "Use of MD5 hash function which is cryptographically broken"
+              },
+              "fullDescription": {
+                "text": "MD5 is a cryptographically broken hash function. It is vulnerable to collision attacks and should not be used for security-sensitive operations such as password hashing, integrity verification, or digital signatures."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/04-Testing_for_Weak_Encryption",
+              "properties": {
+                "tags": ["security", "OWASP-A02", "cryptography"]
+              }
+            },
+            {
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": {
+                "text": "Use of os.system allows arbitrary command execution"
+              },
+              "fullDescription": {
+                "text": "The os.system function executes commands through the system shell. If user-controlled input reaches this function, an attacker can inject arbitrary OS commands, leading to full system compromise."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Command_Injection",
+              "properties": {
+                "tags": ["security", "OWASP-A03", "injection", "command-injection"]
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "LocalFileInclusion",
+              "shortDescription": {
+                "text": "File read operations with potentially user-controlled paths"
+              },
+              "fullDescription": {
+                "text": "File open operations that may accept user-controlled file paths without proper sanitization can allow attackers to read arbitrary files from the server filesystem, including sensitive configuration files and credentials."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/11.1-Testing_for_Local_File_Inclusion",
+              "properties": {
+                "tags": ["security", "OWASP-A01", "path-traversal"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "The GET /logs endpoint accepts a 'user_id' query parameter that overrides the session user's identity without any ownership or authorization check. Any authenticated user can view another user's audit logs by supplying a different user_id. The endpoint should enforce that the authenticated user can only access their own logs, or restrict access to admin roles."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL injection in authenticate_user(): user-supplied 'username' and 'password' are interpolated directly into SQL query via f-string formatting (f\"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'\"). An attacker can bypass authentication or extract arbitrary data using payloads like ' OR '1'='1' --."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "The GET /logs endpoint uses cursor.execute() with queries constructed from user input (user_id parameter). If the user_id is interpolated into the SQL query without parameterized queries, this enables SQL injection to exfiltrate or modify audit log data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Sensitive SQL query containing username and password is logged at DEBUG level via logger.debug(f\"Executing query: {query}\"). This exposes plaintext credentials in log files accessible to anyone with log access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "API key is included in the authentication response dictionary ('api_key': result[5]). Returning API keys in authentication responses increases the risk of key leakage through logs, client-side storage, or network interception."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Database exception details are logged via logger.error(f\"Database error: {e}\"), which may expose internal database schema, table names, or query structure to log consumers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "WEAK-HASH",
+          "level": "warning",
+          "message": {
+            "text": "Use of hashlib.md5 detected. MD5 is cryptographically broken and should not be used for any security-sensitive purpose. Replace with SHA-256 or bcrypt/argon2 for password hashing."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "level": "error",
+          "message": {
+            "text": "os.system() call detected in app.py. If any user-controlled input reaches this function, an attacker can inject arbitrary OS commands via shell metacharacters (e.g., '; rm -rf /'). Replace with subprocess.run() with shell=False and explicit argument lists."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "level": "warning",
+          "message": {
+            "text": "File open operations (open(temp_file, 'r') and open(file_path, 'r')) in app.py may accept user-controlled paths. Without path validation and canonicalization, an attacker could use path traversal sequences (../../etc/passwd) to read arbitrary files from the server."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%"
+          }
+        },
+        {
+          "location": {
+            "uri": "models.py",
+            "uriBaseId": "%SRCROOT%"
+          }
+        }
+      ]
+    }
+  ]
+}

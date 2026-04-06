@@ -1,0 +1,311 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via string interpolation"
+              },
+              "fullDescription": {
+                "text": "User-supplied input is concatenated directly into a SQL query string without parameterization, allowing an attacker to inject arbitrary SQL commands."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "CWE-89", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "SENSITIVE_DATA_LOG",
+              "name": "SensitiveDataInLog",
+              "shortDescription": {
+                "text": "Plaintext password written to audit log"
+              },
+              "fullDescription": {
+                "text": "User passwords are logged in plaintext via audit_logger.log_action, violating confidentiality. An attacker with log access can harvest credentials."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["security", "CWE-532", "OWASP-A09:2021"]
+              }
+            },
+            {
+              "id": "SENSITIVE_DATA_EXPOSURE",
+              "name": "SensitiveDataExposure",
+              "shortDescription": {
+                "text": "API key exposed in authentication response"
+              },
+              "fullDescription": {
+                "text": "The login response includes the user's api_key field, leaking secret material to any client that authenticates. This enables lateral movement and privilege escalation."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "CWE-200", "OWASP-A01:2021"]
+              }
+            },
+            {
+              "id": "HARDCODED_SECRET",
+              "name": "HardcodedSecret",
+              "shortDescription": {
+                "text": "Hardcoded JWT signing secret"
+              },
+              "fullDescription": {
+                "text": "The JWT signing key is a hardcoded string 'super_secret_key_123'. Any attacker who reads the source can forge arbitrary JWTs and impersonate any user."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": ["security", "CWE-798", "OWASP-A07:2021"]
+              }
+            },
+            {
+              "id": "WEAK_CRYPTO",
+              "name": "WeakJWTConfiguration",
+              "shortDescription": {
+                "text": "JWT signed with HS256 and weak secret"
+              },
+              "fullDescription": {
+                "text": "The JWT is signed using HS256 with a short, predictable secret. This is vulnerable to brute-force and offline dictionary attacks against the signing key."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/326.html",
+              "properties": {
+                "tags": ["security", "CWE-326", "OWASP-A02:2021"]
+              }
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Stack trace / exception detail leaked in error response"
+              },
+              "fullDescription": {
+                "text": "The exception message is returned verbatim in the JSON error response, potentially revealing internal paths, database schema, or library versions to an attacker."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209", "OWASP-A09:2021"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "authenticate_user() builds a SQL query via f-string interpolation: `SELECT * FROM users WHERE username = '{username}' AND password = '{password}'`. An attacker can supply a crafted username such as `' OR '1'='1' --` to bypass authentication entirely or extract arbitrary data via UNION-based injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 46,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "UserModel.authenticate_user",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Tainted input enters here via request.get_json()"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SENSITIVE_DATA_LOG",
+          "level": "error",
+          "message": {
+            "text": "The login handler passes the plaintext password into audit_logger.log_action() via an f-string: `f\"User {username} logged in with password {password}\"`. Passwords stored in logs are accessible to anyone with log/database read access, violating least-privilege and enabling credential theft."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "api_login",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SENSITIVE_DATA_EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "The login response includes `'api_key': user['api_key']`, exposing the user's secret API key to the client. Combined with the hardcoded API_KEYS dict (which maps keys to roles), this enables an attacker to escalate privileges or impersonate other users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 62,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "api_login",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED_SECRET",
+          "level": "error",
+          "message": {
+            "text": "JWT_SECRET is hardcoded as 'super_secret_key_123' at module scope. Any attacker with source access (or who brute-forces this weak key) can forge JWTs with arbitrary claims including admin role, achieving full authentication bypass."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "JWT_SECRET",
+                  "kind": "variable"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "WEAK_CRYPTO",
+          "level": "warning",
+          "message": {
+            "text": "JWT is signed with HS256 using the weak hardcoded secret 'super_secret_key_123'. HS256 with a short key is vulnerable to offline brute-force. Recommend using RS256 with a proper key pair, or at minimum a cryptographically random secret of >= 256 bits."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "api_login",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "The except block returns `f'Authentication failed: {str(e)}'` in the JSON response. Exception messages may leak internal details such as database connection strings, table names, or library stack traces, aiding attacker reconnaissance."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "api_login",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-001",
+            "surface_kind": "endpoint",
+            "surface_identifier": "POST /api/auth/login"
+          }
+        }
+      ]
+    }
+  ]
+}

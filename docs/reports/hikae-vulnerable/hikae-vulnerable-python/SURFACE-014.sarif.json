@@ -1,0 +1,151 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SQLI-001",
+              "name": "SqlInjectionLikeClause",
+              "shortDescription": {
+                "text": "SQL Injection via string interpolation in LIKE clause"
+              },
+              "fullDescription": {
+                "text": "User-supplied 'username' query parameter is interpolated directly into a SQL LIKE clause using an f-string. An attacker can escape the LIKE pattern and inject arbitrary SQL, enabling data exfiltration, authentication bypass, or destructive operations such as DROP TABLE."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "sql-injection", "cwe-89", "owasp-a03"]
+              }
+            },
+            {
+              "id": "SQLI-002",
+              "name": "SqlInjectionOrderByClause",
+              "shortDescription": {
+                "text": "SQL Injection via unsanitized ORDER BY clause"
+              },
+              "fullDescription": {
+                "text": "User-supplied 'order' query parameter is interpolated directly into a SQL ORDER BY clause using an f-string. ORDER BY injection allows boolean-based blind SQL injection to extract data one bit at a time, and in SQLite can escalate to arbitrary SQL execution via subqueries."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "sql-injection", "cwe-89", "owasp-a03"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "The 'username' query parameter is interpolated directly into a SQL LIKE clause via f-string formatting on line 227: `f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"`. No parameterized query or input sanitization is used. An attacker can close the LIKE pattern and append arbitrary SQL (e.g., `' UNION SELECT sql,2,3,4 FROM sqlite_master--`) to exfiltrate the entire database schema and contents."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 227,
+                  "startColumn": 20,
+                  "endLine": 227,
+                  "endColumn": 94
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "sql_injection",
+                  "fullyQualifiedName": "app.sql_injection",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "sqli-like-username-line227"
+          },
+          "properties": {
+            "confidence": 0.99,
+            "source": "username query parameter (line 218)",
+            "sink": "cursor.execute(query1) (line 232)",
+            "cwe": "CWE-89",
+            "impact": "An attacker can read, modify, or delete arbitrary database records. In SQLite, ATTACH DATABASE can be used to write files to disk, potentially achieving remote code execution.",
+            "remediation": "Use parameterized queries: `cursor.execute('SELECT id, username, email, role FROM users WHERE username LIKE ?', (f'%{username}%',))`"
+          }
+        },
+        {
+          "ruleId": "SQLI-002",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "The 'order' query parameter is interpolated directly into a SQL ORDER BY clause via f-string formatting on line 230: `f\"SELECT * FROM users ORDER BY {order_by}\"`. No allowlist validation or parameterization is applied. An attacker can inject arbitrary SQL via the ORDER BY position (e.g., `(CASE WHEN (SELECT substr(sql,1,1) FROM sqlite_master LIMIT 1)='C' THEN 1 ELSE 1/0 END)`) to perform blind data extraction."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 230,
+                  "startColumn": 20,
+                  "endLine": 230,
+                  "endColumn": 62
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "sql_injection",
+                  "fullyQualifiedName": "app.sql_injection",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "sqli-orderby-order-line230"
+          },
+          "properties": {
+            "confidence": 0.99,
+            "source": "order query parameter (line 219)",
+            "sink": "cursor.execute(query2) (line 233)",
+            "cwe": "CWE-89",
+            "impact": "ORDER BY injection enables blind SQL injection. In SQLite, subqueries in ORDER BY can extract arbitrary data. Combined with error-based techniques (1/0 causing division by zero), extraction is efficient.",
+            "remediation": "Validate against an allowlist of column names: `order_by = order_by if order_by in ('id', 'username', 'email') else 'id'`"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "length": -1,
+          "sourceLanguage": "python"
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-014",
+            "surface_kind": "endpoint",
+            "surface_identifier": "GET /sqli"
+          }
+        }
+      ]
+    }
+  ]
+}

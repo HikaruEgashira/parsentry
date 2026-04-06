@@ -1,0 +1,556 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via string interpolation"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is interpolated directly into SQL query strings using f-strings, enabling an attacker to manipulate query logic, extract data, or modify the database."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "sql-injection", "CWE-89"]
+              }
+            },
+            {
+              "id": "PLAINTEXT_CREDENTIALS",
+              "name": "PlaintextCredentialStorage",
+              "shortDescription": {
+                "text": "Passwords and API keys stored in plaintext"
+              },
+              "fullDescription": {
+                "text": "The users table schema stores passwords, API keys, and session tokens as plain TEXT columns without hashing or encryption. An attacker who gains read access to the database obtains all credentials directly."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/256.html",
+              "properties": {
+                "tags": ["security", "plaintext-password", "CWE-256"]
+              }
+            },
+            {
+              "id": "HARDCODED_CREDENTIALS",
+              "name": "HardcodedCredentials",
+              "shortDescription": {
+                "text": "Hardcoded credentials in source code"
+              },
+              "fullDescription": {
+                "text": "Default usernames, passwords, and API keys are embedded directly in source code. These credentials are trivially discoverable and provide immediate access to the application."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": ["security", "hardcoded-credentials", "CWE-798"]
+              }
+            },
+            {
+              "id": "SENSITIVE_DATA_LOG",
+              "name": "SensitiveDataInLogs",
+              "shortDescription": {
+                "text": "Sensitive data written to logs"
+              },
+              "fullDescription": {
+                "text": "SQL queries containing passwords or detailed error messages are written to application logs, risking credential exposure through log files, monitoring systems, or log aggregation services."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-532"]
+              }
+            },
+            {
+              "id": "INFO_EXPOSURE",
+              "name": "SensitiveDataExposure",
+              "shortDescription": {
+                "text": "API key returned in authentication response"
+              },
+              "fullDescription": {
+                "text": "The authenticate_user function returns the user's API key in its response dictionary. Any code path that serializes this response (e.g., JSON API) will leak the API key to the client."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "information-exposure", "CWE-200"]
+              }
+            },
+            {
+              "id": "DESERIALIZE",
+              "name": "UnsafeDeserialization",
+              "shortDescription": {
+                "text": "Unsafe pickle deserialization of user input"
+              },
+              "fullDescription": {
+                "text": "User-supplied preferences string is deserialized via pickle.loads(), which can execute arbitrary code. An attacker can craft a malicious pickle payload to achieve remote code execution."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "properties": {
+                "tags": ["security", "deserialization", "RCE", "CWE-502"]
+              }
+            },
+            {
+              "id": "LFI",
+              "name": "LocalFileInclusion",
+              "shortDescription": {
+                "text": "Arbitrary file read via unvalidated file path from database"
+              },
+              "fullDescription": {
+                "text": "A file path retrieved from the database (which can be controlled via SQL injection) is passed directly to open() without path traversal validation, allowing an attacker to read arbitrary files on the server."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": {
+                "tags": ["security", "path-traversal", "LFI", "CWE-22"]
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Missing authorization check on document search"
+              },
+              "fullDescription": {
+                "text": "The search_documents function accepts a user_id parameter but never uses it to filter results, allowing any authenticated user to search and access all documents regardless of ownership."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "properties": {
+                "tags": ["security", "authorization", "IDOR", "CWE-639"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in authenticate_user: username and password are interpolated directly into the query via f-string. An attacker can bypass authentication with payloads like `' OR '1'='1' --` to log in as any user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 92,
+                  "startColumn": 17,
+                  "endLine": 92,
+                  "endColumn": 95
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in get_user_by_id: user_id (typed as str) is interpolated directly into the query. An attacker can inject `1 UNION SELECT * FROM users` to exfiltrate all user records including plaintext passwords and API keys."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 119,
+                  "startColumn": 17,
+                  "endLine": 119,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in search_documents: the query parameter is interpolated into a LIKE clause without sanitization. An attacker can escape the LIKE context and inject arbitrary SQL, e.g., `%' UNION SELECT id,username,password,api_key,session_token FROM users--`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 172,
+                  "startColumn": 15,
+                  "endLine": 172,
+                  "endColumn": 66
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in get_document_content: doc_id (typed as str) is interpolated directly into the query. Combined with the subsequent unvalidated file read (LFI), this creates a chained attack where an attacker can inject a path traversal payload into the database and then read arbitrary files."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 201,
+                  "startColumn": 17,
+                  "endLine": 201,
+                  "endColumn": 66
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in log_action: all four parameters (user_id, action, details, ip_address) are interpolated into an INSERT statement via f-string. An attacker controlling any of these fields (e.g., via spoofed X-Forwarded-For header for ip_address) can inject arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 250,
+                  "startColumn": 17,
+                  "endLine": 253,
+                  "endColumn": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in get_user_logs: user_id (typed as str) is interpolated directly into the query. An attacker can inject `0 UNION SELECT 1,2,password,api_key,session_token,6 FROM users` to exfiltrate credentials from the users table."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 269,
+                  "startColumn": 17,
+                  "endLine": 269,
+                  "endColumn": 87
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "PLAINTEXT_CREDENTIALS",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "The users table stores password, api_key, and session_token as plain TEXT columns. Passwords must be hashed with a strong adaptive algorithm (bcrypt/argon2). API keys and session tokens should be encrypted at rest."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 9,
+                  "endLine": 38,
+                  "endColumn": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "HARDCODED_CREDENTIALS",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded admin credentials ('admin'/'admin123') and API key ('sk-1234567890abcdef') in source code. These are trivially discoverable via source code access and grant full administrative access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 13,
+                  "endLine": 69,
+                  "endColumn": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "HARDCODED_CREDENTIALS",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded guest credentials ('guest'/'guest') and API key ('pk-0987654321fedcba') in source code."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 71,
+                  "startColumn": 13,
+                  "endLine": 74,
+                  "endColumn": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SENSITIVE_DATA_LOG",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "The interpolated SQL query containing the plaintext username and password is written to debug logs. Log files, SIEM systems, or monitoring dashboards will contain user credentials in cleartext."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 93,
+                  "startColumn": 9,
+                  "endLine": 93,
+                  "endColumn": 54
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SENSITIVE_DATA_LOG",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "Database exception details are logged verbatim. Stack traces and error messages may reveal table structures, column names, and query syntax that assist an attacker in refining SQL injection payloads."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 108,
+                  "startColumn": 13,
+                  "endLine": 108,
+                  "endColumn": 56
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INFO_EXPOSURE",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "The authenticate_user response includes the user's api_key (result[5]). Any endpoint that returns this response to clients will leak the API key, potentially granting the attacker access to external services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 105,
+                  "startColumn": 21,
+                  "endLine": 105,
+                  "endColumn": 58
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "DESERIALIZE",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "User-supplied preferences string is deserialized via pickle.loads(). Python pickle can execute arbitrary code during deserialization, enabling remote code execution. Replace with json.loads() or a safe deserialization library."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 143,
+                  "startColumn": 21,
+                  "endLine": 143,
+                  "endColumn": 60
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "File path from database is passed directly to open() without validation. Combined with the SQL injection on line 201, an attacker can inject arbitrary file paths (e.g., '../../../../etc/passwd') and read any file accessible to the application process."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 211,
+                  "startColumn": 22,
+                  "endLine": 211,
+                  "endColumn": 44
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "search_documents accepts user_id but never filters by it. The SQL query returns all matching documents regardless of ownership, allowing any user to search and read documents belonging to other users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 172,
+                  "startColumn": 15,
+                  "endLine": 172,
+                  "endColumn": 66
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "models.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "length": -1,
+          "sourceLanguage": "python"
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-020",
+            "surface_kind": "db_table",
+            "surface_identifier": "users"
+          }
+        }
+      ]
+    }
+  ]
+}
