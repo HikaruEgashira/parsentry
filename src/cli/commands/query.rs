@@ -49,7 +49,47 @@ fn load_threat_model(path: Option<&Path>) -> Result<ThreatModel> {
             buf
         }
     };
-    serde_json::from_str(&json).context("Failed to parse threat model JSON")
+    // Try parsing as-is first, then try extracting JSON from markdown code blocks
+    let json_str = json.trim();
+    if let Ok(model) = serde_json::from_str::<ThreatModel>(json_str) {
+        return Ok(model);
+    }
+    // Extract JSON from markdown code block (```json ... ``` or ``` ... ```)
+    let extracted = extract_json_from_markdown(json_str);
+    serde_json::from_str(&extracted).context(
+        "Failed to parse threat model JSON. Ensure the input is valid JSON \
+         (markdown code blocks are automatically stripped)"
+    )
+}
+
+/// Extract JSON content from a markdown code block if present.
+fn extract_json_from_markdown(text: &str) -> String {
+    // Try ```json ... ``` first, then ``` ... ```
+    if let Some(start) = text.find("```json") {
+        let after = &text[start + 7..];
+        if let Some(end) = after.find("```") {
+            return after[..end].trim().to_string();
+        }
+    }
+    if let Some(start) = text.find("```") {
+        let after = &text[start + 3..];
+        // Skip the language identifier line
+        let after = if let Some(nl) = after.find('\n') {
+            &after[nl + 1..]
+        } else {
+            after
+        };
+        if let Some(end) = after.find("```") {
+            return after[..end].trim().to_string();
+        }
+    }
+    // Try finding the first { ... } block
+    if let Some(start) = text.find('{') {
+        if let Some(end) = text.rfind('}') {
+            return text[start..=end].to_string();
+        }
+    }
+    text.to_string()
 }
 
 /// Run tree-sitter pattern matching.

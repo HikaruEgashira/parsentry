@@ -31,8 +31,10 @@ pub struct AttackSurface {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThreatModel {
     /// Repository identifier (path or owner/repo)
+    #[serde(default)]
     pub repository: String,
     /// ISO-8601 timestamp of generation
+    #[serde(default)]
     pub generated_at: String,
     /// Application type (e.g. "web_application", "library", "cli", "infrastructure")
     pub app_type: String,
