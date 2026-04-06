@@ -1,0 +1,64 @@
+use anyhow::Result;
+use std::path::{Path, PathBuf};
+
+use crate::cli::ui::StatusPrinter;
+use crate::github::clone_repo;
+
+use parsentry_threat_model::{
+    RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT,
+    build_threat_model_prompt, threat_model_schema,
+};
+
+/// Phase 0: Locate and optionally clone the repository.
+/// Returns (root_dir, repo_name).
+pub fn locate_repository(
+    target: &str,
+    printer: &StatusPrinter,
+) -> Result<(PathBuf, Option<String>)> {
+    if target.contains('/') && !Path::new(target).exists() {
+        let dest = PathBuf::from("repo");
+        if dest.exists() {
+            std::fs::remove_dir_all(&dest)?;
+        }
+        printer.status("Cloning", &format!("{} → {}", target, dest.display()));
+        clone_repo(target, &dest)?;
+        let repo_name = target
+            .split('/')
+            .last()
+            .unwrap_or("unknown-repo")
+            .replace(".git", "");
+        Ok((dest, Some(repo_name)))
+    } else {
+        Ok((PathBuf::from(target), None))
+    }
+}
+
+/// Resolve output directory from base path and optional repo name.
+pub fn resolve_output_dir(base: &Option<PathBuf>, repo_name: &Option<String>) -> Option<PathBuf> {
+    base.as_ref().map(|dir| {
+        if let Some(name) = repo_name {
+            dir.join(name)
+        } else {
+            dir.clone()
+        }
+    })
+}
+
+/// Build threat model prompt for Claude Code CLI.
+pub fn build_threat_model_cli_prompt(metadata: &RepoMetadata) -> String {
+    let repo_context = metadata.to_prompt_context();
+    let languages: Vec<String> = metadata
+        .languages
+        .keys()
+        .map(|l| format!("{:?}", l))
+        .collect();
+    let user_prompt = build_threat_model_prompt(&repo_context, &languages);
+    let schema = serde_json::to_string_pretty(&threat_model_schema()).unwrap_or_default();
+
+    format!(
+        "{system}\n\n{user}\n\nIMPORTANT: Return ONLY valid JSON matching this schema, with no markdown wrapping or extra text:\n{schema}",
+        system = THREAT_MODEL_SYSTEM_PROMPT,
+        user = user_prompt,
+        schema = schema,
+    )
+}

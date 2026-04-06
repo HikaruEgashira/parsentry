@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
 
-use crate::cli::args::{Args, Commands, ScanArgs, validate_scan_args};
-use crate::cli::commands::{run_scan_command, handle_cache_command};
+use crate::cli::args::{Args, Commands, ScanArgs};
+use crate::cli::commands::{run_scan_command, run_model_command, run_query_command, handle_cache_command};
 use crate::config::ParsentryConfig;
 
 pub struct RootCommand;
@@ -31,6 +31,14 @@ impl RootCommand {
         let args = Args::parse();
 
         match &args.command {
+            Some(Commands::Model { target }) => {
+                let scan_args = ScanArgs::from(&args).with_target(target.clone());
+                run_model_command(scan_args).await
+            },
+            Some(Commands::Query { target }) => {
+                let scan_args = ScanArgs::from(&args).with_target(target.clone());
+                run_query_command(scan_args).await
+            },
             Some(Commands::Cache { action }) => {
                 let config = if let Some(config_path) = &args.config {
                     ParsentryConfig::load_from_file(config_path)?
@@ -47,7 +55,6 @@ impl RootCommand {
                     return Ok(());
                 }
 
-                validate_scan_args(&scan_args)?;
                 run_scan_command(scan_args).await
             }
         }
