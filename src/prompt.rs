@@ -91,6 +91,22 @@ pub fn build_surface_prompt(
     prompt.push_str(&repo_context);
     prompt.push_str("\n\n## Detected Patterns\n\n");
 
+    // Cache key: hash only the pattern matches (the actual analysis input).
+    // Surface metadata, repo context, and output path are excluded because
+    // they don't change the analysis result — only the code patterns do.
+    let mut cache_input = String::new();
+    for (file_path, pm) in &relevant {
+        let rel_path = file_path
+            .strip_prefix(root_dir)
+            .unwrap_or(file_path)
+            .to_string_lossy();
+        cache_input.push_str(&rel_path);
+        cache_input.push('\0');
+        cache_input.push_str(&pm.matched_text);
+        cache_input.push('\0');
+    }
+    let cache_key = hex_sha256(&cache_input);
+
     for (file_path, pm) in &relevant {
         let rel_path = file_path
             .strip_prefix(root_dir)
@@ -101,10 +117,6 @@ pub fn build_surface_prompt(
             rel_path, pm.pattern_config.description, pm.matched_text,
         ));
     }
-
-    // Cache key is computed BEFORE output instructions so that
-    // changing --output-dir does not invalidate the cache.
-    let cache_key = hex_sha256(&prompt);
 
     prompt.push_str("## Output Instructions\n\n");
     prompt.push_str("For each finding, provide:\n");
