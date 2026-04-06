@@ -1,7 +1,7 @@
-//! Parsentry cache system for LLM responses
+//! Content-addressable file cache with namespace isolation
 //!
-//! This crate provides caching functionality for LLM agent responses,
-//! enabling faster testing, reduced costs, and offline operation.
+//! This crate provides a generic caching layer with file-based persistence,
+//! namespace-based isolation, and configurable cleanup policies.
 
 pub mod cleanup;
 pub mod entry;
@@ -10,16 +10,15 @@ pub mod storage;
 
 pub use cleanup::{CleanupManager, CleanupPolicy, CleanupStats, CleanupTrigger};
 pub use entry::{CacheEntry, CacheMetadata};
-pub use key::{CacheKeyGenerator, CACHE_VERSION};
+pub use key::{hash_key, CACHE_VERSION};
 pub use storage::CacheStorage;
 
 use anyhow::Result;
 use std::path::Path;
 
-/// Main cache interface
+/// Content-addressable file cache with namespace isolation
 pub struct Cache {
     storage: CacheStorage,
-    key_gen: CacheKeyGenerator,
     cleanup: CleanupManager,
     enabled: bool,
 }
@@ -29,12 +28,10 @@ impl Cache {
     pub fn new<P: AsRef<Path>>(cache_dir: P) -> Result<Self> {
         let cache_dir = cache_dir.as_ref().to_path_buf();
         let storage = CacheStorage::new(&cache_dir)?;
-        let key_gen = CacheKeyGenerator::new();
         let cleanup = CleanupManager::new(&cache_dir)?;
 
         Ok(Self {
             storage,
-            key_gen,
             cleanup,
             enabled: true,
         })
@@ -48,12 +45,10 @@ impl Cache {
     ) -> Result<Self> {
         let cache_dir = cache_dir.as_ref().to_path_buf();
         let storage = CacheStorage::new(&cache_dir)?;
-        let key_gen = CacheKeyGenerator::new();
         let cleanup = CleanupManager::with_config(&cache_dir, policy, trigger)?;
 
         Ok(Self {
             storage,
-            key_gen,
             cleanup,
             enabled: true,
         })
@@ -74,89 +69,40 @@ impl Cache {
         self.enabled
     }
 
-    /// Get a cached response
-    pub fn get(&self, prompt: &str, model: &str, agent: &str) -> Result<Option<String>> {
+    /// Get a cached value by namespace and key
+    pub fn get(&self, namespace: &str, key: &str) -> Result<Option<String>> {
         if !self.enabled {
             return Ok(None);
         }
 
-        let key = self.key_gen.generate_key(prompt, model, agent);
-        log::debug!("Cache lookup: key={}, agent={}, model={}", &key[..8], agent, model);
+        log::debug!("Cache lookup: ns={}, key={}", namespace, &key[..key.len().min(8)]);
 
-        if let Some(entry) = self.storage.get(agent, model, &key)? {
-            log::info!("Cache hit: {}", &key[..8]);
-            Ok(Some(entry.response))
+        if let Some(entry) = self.storage.get(namespace, key)? {
+            log::info!("Cache hit: {}", &key[..key.len().min(8)]);
+            Ok(Some(entry.value))
         } else {
-            log::info!("Cache miss: {}", &key[..8]);
+            log::info!("Cache miss: {}", &key[..key.len().min(8)]);
             Ok(None)
         }
     }
 
-    /// Set a cached response
-    pub fn set(&self, prompt: &str, model: &str, agent: &str, response: &str) -> Result<()> {
+    /// Set a cached value under a namespace and key
+    pub fn set(&self, namespace: &str, key: &str, value: &str, input_size: usize) -> Result<()> {
         if !self.enabled {
             return Ok(());
         }
 
-        let key = self.key_gen.generate_key(prompt, model, agent);
         let entry = CacheEntry::new(
-            self.key_gen.version().to_string(),
-            agent.to_string(),
-            model.to_string(),
-            key.clone(),
-            response.to_string(),
-            prompt.len(),
+            CACHE_VERSION.to_string(),
+            namespace.to_string(),
+            key.to_string(),
+            value.to_string(),
+            input_size,
         );
 
         self.storage.set(&entry)?;
-        log::info!("Cache stored: {}", &key[..8]);
+        log::info!("Cache stored: ns={}, key={}", namespace, &key[..key.len().min(8)]);
 
-        Ok(())
-    }
-
-    /// Get a cached response by pattern key (model + pattern_type + matched_text only).
-    pub fn get_by_pattern(
-        &self,
-        pattern_type: &str,
-        matched_text: &str,
-        model: &str,
-    ) -> Result<Option<String>> {
-        if !self.enabled {
-            return Ok(None);
-        }
-        let key = CacheKeyGenerator::generate_pattern_key(pattern_type, matched_text, model);
-        log::debug!("Pattern cache lookup: key={}, model={}", &key[..8], model);
-        if let Some(entry) = self.storage.get("pattern", model, &key)? {
-            log::info!("Pattern cache hit: {}", &key[..8]);
-            Ok(Some(entry.response))
-        } else {
-            log::info!("Pattern cache miss: {}", &key[..8]);
-            Ok(None)
-        }
-    }
-
-    /// Set a cached response by pattern key (model + pattern_type + matched_text only).
-    pub fn set_by_pattern(
-        &self,
-        pattern_type: &str,
-        matched_text: &str,
-        model: &str,
-        response: &str,
-    ) -> Result<()> {
-        if !self.enabled {
-            return Ok(());
-        }
-        let key = CacheKeyGenerator::generate_pattern_key(pattern_type, matched_text, model);
-        let entry = CacheEntry::new(
-            self.key_gen.version().to_string(),
-            "pattern".to_string(),
-            model.to_string(),
-            key.clone(),
-            response.to_string(),
-            matched_text.len(),
-        );
-        self.storage.set(&entry)?;
-        log::info!("Pattern cache stored: {}", &key[..8]);
         Ok(())
     }
 
@@ -220,7 +166,6 @@ mod tests {
     fn test_cache_creation() {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
-
         assert!(cache.is_enabled());
     }
 
@@ -229,21 +174,20 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
 
-        let prompt = "test prompt";
-        let model = "gpt-4";
-        let agent = "genai";
-        let response = "test response";
+        let ns = "test-ns";
+        let key = "abc123def456";
+        let value = "test value";
 
         // Cache miss
-        let result = cache.get(prompt, model, agent).unwrap();
+        let result = cache.get(ns, key).unwrap();
         assert!(result.is_none());
 
         // Set cache
-        cache.set(prompt, model, agent, response).unwrap();
+        cache.set(ns, key, value, 42).unwrap();
 
         // Cache hit
-        let result = cache.get(prompt, model, agent).unwrap();
-        assert_eq!(result, Some(response.to_string()));
+        let result = cache.get(ns, key).unwrap();
+        assert_eq!(result, Some(value.to_string()));
     }
 
     #[test]
@@ -255,10 +199,10 @@ mod tests {
         assert!(!cache.is_enabled());
 
         // Set should be no-op
-        cache.set("test", "gpt-4", "genai", "response").unwrap();
+        cache.set("ns", "key123", "value", 5).unwrap();
 
         // Get should return None
-        let result = cache.get("test", "gpt-4", "genai").unwrap();
+        let result = cache.get("ns", "key123").unwrap();
         assert!(result.is_none());
 
         // Re-enable
@@ -271,8 +215,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
 
-        cache.set("test1", "gpt-4", "genai", "response1").unwrap();
-        cache.set("test2", "gpt-4", "genai", "response2").unwrap();
+        cache.set("ns", "key1abc", "value1", 10).unwrap();
+        cache.set("ns", "key2def", "value2", 10).unwrap();
 
         let stats = cache.stats().unwrap();
         assert_eq!(stats.total_entries, 2);
@@ -280,26 +224,12 @@ mod tests {
     }
 
     #[test]
-    fn test_cache_get_set_by_pattern() {
-        let temp_dir = TempDir::new().unwrap();
-        let cache = Cache::new(temp_dir.path()).unwrap();
-
-        let result = cache.get_by_pattern("Resource", "exec(q)", "gpt-4").unwrap();
-        assert!(result.is_none());
-
-        cache.set_by_pattern("Resource", "exec(q)", "gpt-4", "resp").unwrap();
-
-        let result = cache.get_by_pattern("Resource", "exec(q)", "gpt-4").unwrap();
-        assert_eq!(result, Some("resp".to_string()));
-    }
-
-    #[test]
     fn test_cache_clear_all() {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
 
-        cache.set("test1", "gpt-4", "genai", "response1").unwrap();
-        cache.set("test2", "gpt-4", "genai", "response2").unwrap();
+        cache.set("ns", "key1abc", "value1", 10).unwrap();
+        cache.set("ns", "key2def", "value2", 10).unwrap();
 
         let stats = cache.stats().unwrap();
         assert_eq!(stats.total_entries, 2);
@@ -316,16 +246,13 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
 
-        // Empty cache: 0 bytes = 0 MB
         let stats = cache.stats().unwrap();
         assert_eq!(stats.total_size_bytes, 0);
         assert_eq!(stats.total_size_mb, 0);
 
-        // Add entries - they're small so MB should still be 0
-        cache.set("test1", "gpt-4", "genai", "response1").unwrap();
+        cache.set("ns", "key1abc", &"x".repeat(1000), 1000).unwrap();
         let stats = cache.stats().unwrap();
         assert!(stats.total_size_bytes > 0);
-        // total_size_mb = total_size_bytes / 1_048_576 (integer division)
         assert_eq!(stats.total_size_mb, stats.total_size_bytes / 1_048_576);
     }
 
@@ -333,8 +260,6 @@ mod tests {
     fn test_should_cleanup_periodic_delegates() {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
-
-        // Default Combined trigger with no prior cleanup -> should run
         let result = cache.should_cleanup_periodic().unwrap();
         assert!(result);
     }
@@ -343,8 +268,6 @@ mod tests {
     fn test_should_cleanup_size_delegates() {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
-
-        // Empty cache, should not be over size limit
         let result = cache.should_cleanup_size().unwrap();
         assert!(!result);
     }
@@ -353,8 +276,6 @@ mod tests {
     fn test_cleanup_stale_delegates() {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
-
-        // No stale entries in empty cache
         let stats = cache.cleanup_stale().unwrap();
         assert_eq!(stats.removed_count, 0);
         assert_eq!(stats.freed_bytes, 0);
@@ -364,8 +285,6 @@ mod tests {
     fn test_cleanup_by_size_delegates() {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
-
-        // Nothing to clean in empty cache
         let stats = cache.cleanup_by_size().unwrap();
         assert_eq!(stats.removed_count, 0);
         assert_eq!(stats.freed_bytes, 0);
@@ -376,19 +295,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache = Cache::new(temp_dir.path()).unwrap();
 
-        // Write enough data to make MB > 0 would require 1MB+,
-        // but we can verify the formula: total_size_mb = bytes / 1_048_576
-        // For small files, bytes < 1_048_576, so MB = 0 (not bytes % 1_048_576)
-        cache.set("p", "m", "a", &"x".repeat(1000)).unwrap();
+        cache.set("ns", "key1abc", &"x".repeat(1000), 1000).unwrap();
         let stats = cache.stats().unwrap();
 
-        // With ~1KB of data, bytes/1048576 = 0, but bytes%1048576 = bytes (non-zero)
-        // This kills the / -> % mutant
         assert_eq!(stats.total_size_mb, 0);
         assert!(stats.total_size_bytes > 0);
-
-        // Also verify bytes / 1048576 != bytes * 1048576
-        // (kills / -> * mutant since bytes * 1048576 would be huge)
         assert!(stats.total_size_mb < stats.total_size_bytes);
     }
 
@@ -405,29 +316,23 @@ mod tests {
 
         let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
         assert!(cache.is_enabled());
-
-        // Manual trigger should never trigger periodic cleanup
         assert!(!cache.should_cleanup_periodic().unwrap());
     }
 
     #[test]
     fn test_should_cleanup_size_with_data() {
-        // Kills Ok(false) default: create data > threshold to get Ok(true)
         let temp_dir = TempDir::new().unwrap();
         let policy = CleanupPolicy::default();
         let trigger = CleanupTrigger::OnSizeLimit { threshold_mb: 0 };
 
         let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
-        cache.set("test", "model", "agent", "response").unwrap();
+        cache.set("ns", "key1abc", "value", 5).unwrap();
 
-        // Data exists, threshold is 0 → over limit
-        // Note: threshold 0 means threshold_bytes = 0, and total_size > 0
         assert!(cache.should_cleanup_size().unwrap());
     }
 
     #[test]
     fn test_cleanup_stale_with_stale_data() {
-        // Kills Ok(Default::default()) by ensuring actual removal happens
         let temp_dir = TempDir::new().unwrap();
         let policy = CleanupPolicy {
             max_cache_size_mb: 500,
@@ -439,16 +344,14 @@ mod tests {
 
         let cache = Cache::with_cleanup_config(temp_dir.path(), policy, trigger).unwrap();
 
-        // Create an entry with wrong version so it gets cleaned up
         let entry = CacheEntry::new(
-            "0.0.1".to_string(), // old version
-            "agent".to_string(),
-            "model".to_string(),
+            "0.0.1".to_string(),
+            "ns".to_string(),
             "stalekey".to_string(),
             "resp".to_string(),
             10,
         );
-        let dir = temp_dir.path().join("agent").join("model").join("st");
+        let dir = temp_dir.path().join("ns").join("st");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("stalekey.json"), serde_json::to_string(&entry).unwrap()).unwrap();
 
@@ -459,10 +362,9 @@ mod tests {
 
     #[test]
     fn test_cleanup_by_size_with_data() {
-        // Kills Ok(Default::default()) by ensuring actual removal happens
         let temp_dir = TempDir::new().unwrap();
         let policy = CleanupPolicy {
-            max_cache_size_mb: 0, // 0 MB limit
+            max_cache_size_mb: 0,
             max_age_days: 90,
             max_idle_days: 30,
             remove_version_mismatch: true,
@@ -473,13 +375,12 @@ mod tests {
 
         let entry = CacheEntry::new(
             CACHE_VERSION.to_string(),
-            "agent".to_string(),
-            "model".to_string(),
+            "ns".to_string(),
             "sizekey".to_string(),
             "resp".to_string(),
             10,
         );
-        let dir = temp_dir.path().join("agent").join("model").join("si");
+        let dir = temp_dir.path().join("ns").join("si");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("sizekey.json"), serde_json::to_string(&entry).unwrap()).unwrap();
 

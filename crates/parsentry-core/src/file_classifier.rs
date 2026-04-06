@@ -267,6 +267,16 @@ services:
     }
 
     #[test]
+    fn test_docker_compose_yaml_only_not_yml() {
+        // This filename ends with "docker-compose.yaml" but NOT "docker-compose.yml"
+        // and does NOT contain "compose." in a way that would independently match
+        // Actually "docker-compose.yaml" contains "compose." so this is inherently unkillable
+        // via the third branch. Instead, test that "docker-compose.yaml" returns true
+        // even when the first condition is false.
+        assert!(FileClassifier::is_docker_compose("path/docker-compose.yaml", ""));
+    }
+
+    #[test]
     fn test_gitlab_ci_detection() {
         let content = r#"
 image: "python:3.9"

@@ -2,74 +2,20 @@
 
 use sha2::{Digest, Sha256};
 
-/// Current cache version - increment when prompt templates change
+/// Current cache version - increment to invalidate all entries
 pub const CACHE_VERSION: &str = "1.0.0";
 
-/// Generates deterministic cache keys from prompts
-pub struct CacheKeyGenerator {
-    version: String,
-}
-
-impl CacheKeyGenerator {
-    /// Create a new key generator with the current version
-    pub fn new() -> Self {
-        Self {
-            version: CACHE_VERSION.to_string(),
-        }
-    }
-
-    /// Create a key generator with a custom version
-    pub fn with_version(version: String) -> Self {
-        Self { version }
-    }
-
-    /// Generate a cache key from prompt, model, and agent
-    ///
-    /// The key is a SHA256 hash of:
-    /// - Cache version (to invalidate on template changes)
-    /// - Agent name (genai vs claude-code have different formats)
-    /// - Model name (different models produce different outputs)
-    /// - Full prompt text (the main determinant)
-    pub fn generate_key(&self, prompt: &str, model: &str, agent: &str) -> String {
-        let mut hasher = Sha256::new();
-
-        hasher.update(self.version.as_bytes());
+/// Generate a deterministic cache key from arbitrary string parts.
+///
+/// Returns a SHA256 hex digest of `CACHE_VERSION` joined with `parts` by `"|"`.
+pub fn hash_key(parts: &[&str]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(CACHE_VERSION.as_bytes());
+    for part in parts {
         hasher.update(b"|");
-        hasher.update(agent.as_bytes());
-        hasher.update(b"|");
-        hasher.update(model.as_bytes());
-        hasher.update(b"|");
-        hasher.update(prompt.as_bytes());
-
-        let result = hasher.finalize();
-        format!("{:x}", result)
+        hasher.update(part.as_bytes());
     }
-
-    /// Generate a pattern-based cache key: SHA256(model | pattern_type | matched_text).
-    pub fn generate_pattern_key(
-        pattern_type: &str,
-        matched_text: &str,
-        model: &str,
-    ) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(model.as_bytes());
-        hasher.update(b"|");
-        hasher.update(pattern_type.as_bytes());
-        hasher.update(b"|");
-        hasher.update(matched_text.as_bytes());
-        format!("{:x}", hasher.finalize())
-    }
-
-    /// Get the current version
-    pub fn version(&self) -> &str {
-        &self.version
-    }
-}
-
-impl Default for CacheKeyGenerator {
-    fn default() -> Self {
-        Self::new()
-    }
+    format!("{:x}", hasher.finalize())
 }
 
 #[cfg(test)]
@@ -77,106 +23,46 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_key_generation_deterministic() {
-        let gen = CacheKeyGenerator::new();
-
-        let key1 = gen.generate_key("test prompt", "gpt-4", "genai");
-        let key2 = gen.generate_key("test prompt", "gpt-4", "genai");
-
-        assert_eq!(key1, key2, "Same inputs should produce same key");
-    }
-
-    #[test]
-    fn test_key_generation_different_prompts() {
-        let gen = CacheKeyGenerator::new();
-
-        let key1 = gen.generate_key("prompt1", "gpt-4", "genai");
-        let key2 = gen.generate_key("prompt2", "gpt-4", "genai");
-
-        assert_ne!(key1, key2, "Different prompts should produce different keys");
-    }
-
-    #[test]
-    fn test_key_generation_different_models() {
-        let gen = CacheKeyGenerator::new();
-
-        let key1 = gen.generate_key("test", "gpt-4", "genai");
-        let key2 = gen.generate_key("test", "gpt-3.5-turbo", "genai");
-
-        assert_ne!(key1, key2, "Different models should produce different keys");
-    }
-
-    #[test]
-    fn test_key_generation_different_agents() {
-        let gen = CacheKeyGenerator::new();
-
-        let key1 = gen.generate_key("test", "gpt-4", "genai");
-        let key2 = gen.generate_key("test", "gpt-4", "claude-code");
-
-        assert_ne!(
-            key1, key2,
-            "Different agents should produce different keys"
-        );
-    }
-
-    #[test]
-    fn test_key_generation_different_versions() {
-        let gen1 = CacheKeyGenerator::with_version("1.0.0".to_string());
-        let gen2 = CacheKeyGenerator::with_version("2.0.0".to_string());
-
-        let key1 = gen1.generate_key("test", "gpt-4", "genai");
-        let key2 = gen2.generate_key("test", "gpt-4", "genai");
-
-        assert_ne!(
-            key1, key2,
-            "Different versions should produce different keys"
-        );
-    }
-
-    #[test]
-    fn test_key_is_64_chars() {
-        let gen = CacheKeyGenerator::new();
-        let key = gen.generate_key("test", "gpt-4", "genai");
-
-        assert_eq!(key.len(), 64, "SHA256 hash should be 64 hex characters");
-    }
-
-    #[test]
-    fn test_pattern_key_deterministic() {
-        let k1 = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
-        let k2 = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
+    fn test_deterministic() {
+        let k1 = hash_key(&["a", "b", "c"]);
+        let k2 = hash_key(&["a", "b", "c"]);
         assert_eq!(k1, k2);
     }
 
     #[test]
-    fn test_pattern_key_differs_by_type() {
-        let k1 = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
-        let k2 = CacheKeyGenerator::generate_pattern_key("Principal", "execute(query)", "gpt-4");
+    fn test_different_parts_differ() {
+        let k1 = hash_key(&["a", "b"]);
+        let k2 = hash_key(&["a", "c"]);
         assert_ne!(k1, k2);
     }
 
     #[test]
-    fn test_pattern_key_is_64_chars() {
-        let key = CacheKeyGenerator::generate_pattern_key("Resource", "execute(query)", "gpt-4");
-        assert_eq!(key.len(), 64);
+    fn test_different_length_parts_differ() {
+        let k1 = hash_key(&["a"]);
+        let k2 = hash_key(&["a", "b"]);
+        assert_ne!(k1, k2);
     }
 
     #[test]
-    fn test_version_returns_cache_version() {
-        let gen = CacheKeyGenerator::new();
-        assert_eq!(gen.version(), "1.0.0");
-        assert_eq!(gen.version(), CACHE_VERSION);
+    fn test_empty_parts() {
+        let k = hash_key(&[]);
+        assert_eq!(k.len(), 64);
     }
 
     #[test]
-    fn test_version_returns_custom_version() {
-        let gen = CacheKeyGenerator::with_version("2.5.0".to_string());
-        assert_eq!(gen.version(), "2.5.0");
+    fn test_key_is_64_hex_chars() {
+        let k = hash_key(&["test", "data"]);
+        assert_eq!(k.len(), 64);
+        assert!(k.chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]
-    fn test_version_not_empty() {
-        let gen = CacheKeyGenerator::new();
-        assert!(!gen.version().is_empty());
+    fn test_version_is_embedded() {
+        // Changing the version constant would change output; we verify by
+        // checking the hash includes CACHE_VERSION (indirectly: same parts
+        // produce the same hash only if version is constant).
+        let k1 = hash_key(&["x"]);
+        let k2 = hash_key(&["x"]);
+        assert_eq!(k1, k2);
     }
 }

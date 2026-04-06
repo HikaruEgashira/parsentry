@@ -1370,4 +1370,112 @@ mod tests {
         assert_eq!(rule.name.as_deref(), Some("CustomVuln"));
         assert_eq!(rule.default_configuration.as_ref().unwrap().level, "note");
     }
+
+    #[test]
+    fn test_from_analysis_summary_confidence_division() {
+        // Kills / → % and / → * on confidence_score / 100.0
+        let mut summary = AnalysisSummary::new();
+        let response = Response {
+            analysis: "test".to_string(),
+            confidence_score: 85,
+            vulnerability_types: vec![VulnType::SQLI],
+            ..Default::default()
+        };
+        summary.add_result(PathBuf::from("t.py"), response, "t.md".to_string());
+
+        let sarif = SarifReport::from_analysis_summary(&summary, "1.0");
+        let props = sarif.runs[0].results[0].properties.as_ref().unwrap();
+        let confidence = props.confidence.unwrap();
+        // 85 / 100.0 = 0.85 (correct), 85 % 100.0 = 85.0 (wrong), 85 * 100.0 = 8500.0 (wrong)
+        assert!((confidence - 0.85).abs() < 0.001, "confidence was {}", confidence);
+    }
+
+    #[test]
+    fn test_to_markdown_shows_mitre_attack() {
+        // Kills `!` deletion in `if !mitre.is_empty()`
+        let result = SarifResult {
+            rule_id: "SQLI".to_string(),
+            rule_index: None,
+            level: "error".to_string(),
+            message: SarifMessage { text: "t".to_string(), markdown: None },
+            locations: vec![],
+            fingerprints: None,
+            properties: Some(SarifResultProperties {
+                confidence: None,
+                mitre_attack: Some(vec!["T1190".to_string()]),
+                cwe: None,
+                owasp: None,
+                principal: None, action: None, resource: None, data_flow: None,
+            }),
+        };
+        let report = SarifReport {
+            schema: "".to_string(), version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool { driver: SarifDriver {
+                    name: "P".to_string(), version: "1".to_string(),
+                    information_uri: None, rules: None,
+                }},
+                results: vec![result], artifacts: None, invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        assert!(md.contains("**MITRE ATT&CK**: T1190"));
+    }
+
+    #[test]
+    fn test_to_markdown_rule_remediation_matches_rule_id() {
+        // Kills == → != on rule matching
+        let rule1 = SarifRule {
+            id: "SQLI".to_string(),
+            name: None, short_description: None, full_description: None,
+            help: Some(SarifMessage { text: "Use parameterized queries".to_string(), markdown: None }),
+            properties: None, default_configuration: None,
+        };
+        let rule2 = SarifRule {
+            id: "XSS".to_string(),
+            name: None, short_description: None, full_description: None,
+            help: Some(SarifMessage { text: "Sanitize output".to_string(), markdown: None }),
+            properties: None, default_configuration: None,
+        };
+        let result = SarifResult {
+            rule_id: "SQLI".to_string(),
+            rule_index: None, level: "error".to_string(),
+            message: SarifMessage { text: "t".to_string(), markdown: None },
+            locations: vec![], fingerprints: None, properties: None,
+        };
+        let report = SarifReport {
+            schema: "".to_string(), version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool { driver: SarifDriver {
+                    name: "P".to_string(), version: "1".to_string(),
+                    information_uri: None, rules: Some(vec![rule1, rule2]),
+                }},
+                results: vec![result], artifacts: None, invocation: None,
+            }],
+        };
+        let md = report.to_markdown();
+        // Should show SQLI's remediation, not XSS's
+        assert!(md.contains("Use parameterized queries"));
+        assert!(!md.contains("Sanitize output"));
+    }
+
+    #[test]
+    fn test_summary_markdown_no_error_row_when_zero_errors() {
+        // Kills > → >= at error_count > 0
+        let report = SarifReport {
+            schema: "".to_string(), version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool { driver: SarifDriver {
+                    name: "P".to_string(), version: "1".to_string(),
+                    information_uri: None, rules: None,
+                }},
+                results: vec![make_sarif_result("warning", "XSS")],
+                artifacts: None, invocation: None,
+            }],
+        };
+        let md = report.to_summary_markdown();
+        // Only warning, no errors
+        assert!(!md.contains("🔴 Error"), "Should not show Error row when error_count=0");
+        assert!(md.contains("🟠 Warning"));
+    }
 }

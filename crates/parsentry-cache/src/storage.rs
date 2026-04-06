@@ -1,4 +1,4 @@
-//! Cache storage management with file-based persistence
+//! Namespace-based file storage with content-addressable paths
 
 use anyhow::{Context, Result};
 use std::fs;
@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 use crate::entry::CacheEntry;
 
 /// Cache storage manager
+///
+/// Path structure: `cache_dir/namespace/prefix/hash.json`
 pub struct CacheStorage {
     /// Root cache directory
     cache_dir: PathBuf,
@@ -25,33 +27,27 @@ impl CacheStorage {
         Ok(Self { cache_dir })
     }
 
-    /// Get the cache file path for a given hash
+    /// Get the cache file path for a given namespace and key.
     ///
-    /// Uses first 2 characters as subdirectory for distribution
-    /// Example: abc123... -> cache_dir/genai/gpt-4/ab/abc123....json
-    fn get_cache_path(&self, agent: &str, model: &str, hash: &str) -> PathBuf {
-        let prefix = if hash.len() >= 2 {
-            &hash[..2]
-        } else {
-            hash
-        };
+    /// Uses first 2 characters of key as subdirectory for distribution.
+    /// Example: key=abc123... -> cache_dir/namespace/ab/abc123....json
+    fn get_cache_path(&self, namespace: &str, key: &str) -> PathBuf {
+        let prefix = if key.len() >= 2 { &key[..2] } else { key };
 
         self.cache_dir
-            .join(agent)
-            .join(model)
+            .join(namespace)
             .join(prefix)
-            .join(format!("{}.json", hash))
+            .join(format!("{}.json", key))
     }
 
     /// Check if a cache entry exists
-    pub fn exists(&self, agent: &str, model: &str, hash: &str) -> bool {
-        let path = self.get_cache_path(agent, model, hash);
-        path.exists()
+    pub fn exists(&self, namespace: &str, key: &str) -> bool {
+        self.get_cache_path(namespace, key).exists()
     }
 
-    /// Get a cache entry by hash
-    pub fn get(&self, agent: &str, model: &str, hash: &str) -> Result<Option<CacheEntry>> {
-        let path = self.get_cache_path(agent, model, hash);
+    /// Get a cache entry by namespace and key
+    pub fn get(&self, namespace: &str, key: &str) -> Result<Option<CacheEntry>> {
+        let path = self.get_cache_path(namespace, key);
 
         if !path.exists() {
             return Ok(None);
@@ -74,7 +70,7 @@ impl CacheStorage {
 
     /// Set a cache entry
     pub fn set(&self, entry: &CacheEntry) -> Result<()> {
-        let path = self.get_cache_path(&entry.agent, &entry.model, &entry.prompt_hash);
+        let path = self.get_cache_path(&entry.namespace, &entry.key);
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
@@ -93,8 +89,8 @@ impl CacheStorage {
     }
 
     /// Delete a cache entry
-    pub fn delete(&self, agent: &str, model: &str, hash: &str) -> Result<()> {
-        let path = self.get_cache_path(agent, model, hash);
+    pub fn delete(&self, namespace: &str, key: &str) -> Result<()> {
+        let path = self.get_cache_path(namespace, key);
 
         if path.exists() {
             fs::remove_file(&path)
@@ -183,20 +179,19 @@ mod tests {
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "my-ns".to_string(),
             "abc123".to_string(),
-            "test response".to_string(),
+            "test value".to_string(),
             100,
         );
 
         storage.set(&entry).unwrap();
 
-        let retrieved = storage.get("genai", "gpt-4", "abc123").unwrap();
+        let retrieved = storage.get("my-ns", "abc123").unwrap();
         assert!(retrieved.is_some());
 
         let retrieved_entry = retrieved.unwrap();
-        assert_eq!(retrieved_entry.response, "test response");
+        assert_eq!(retrieved_entry.value, "test value");
         assert_eq!(retrieved_entry.metadata.access_count, 1);
     }
 
@@ -205,12 +200,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let storage = CacheStorage::new(temp_dir.path()).unwrap();
 
-        assert!(!storage.exists("genai", "gpt-4", "nonexistent"));
+        assert!(!storage.exists("ns", "nonexistent"));
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             10,
@@ -218,7 +212,7 @@ mod tests {
 
         storage.set(&entry).unwrap();
 
-        assert!(storage.exists("genai", "gpt-4", "abc123"));
+        assert!(storage.exists("ns", "abc123"));
     }
 
     #[test]
@@ -228,18 +222,17 @@ mod tests {
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             10,
         );
 
         storage.set(&entry).unwrap();
-        assert!(storage.exists("genai", "gpt-4", "abc123"));
+        assert!(storage.exists("ns", "abc123"));
 
-        storage.delete("genai", "gpt-4", "abc123").unwrap();
-        assert!(!storage.exists("genai", "gpt-4", "abc123"));
+        storage.delete("ns", "abc123").unwrap();
+        assert!(!storage.exists("ns", "abc123"));
     }
 
     #[test]
@@ -251,10 +244,9 @@ mod tests {
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
-            "test response".to_string(),
+            "test value".to_string(),
             100,
         );
 
@@ -273,8 +265,7 @@ mod tests {
 
         let entry1 = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test1".to_string(),
             10,
@@ -285,8 +276,7 @@ mod tests {
 
         let entry2 = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "def456".to_string(),
             "test2".to_string(),
             10,
@@ -303,8 +293,7 @@ mod tests {
 
         let entry1 = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test1".to_string(),
             10,
@@ -312,8 +301,7 @@ mod tests {
 
         let entry2 = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "def456".to_string(),
             "test2".to_string(),
             10,
@@ -330,39 +318,37 @@ mod tests {
     }
 
     #[test]
-    fn test_get_cache_path_short_hash() {
+    fn test_get_cache_path_short_key() {
         let temp_dir = TempDir::new().unwrap();
         let storage = CacheStorage::new(temp_dir.path()).unwrap();
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "a".to_string(),
             "test".to_string(),
             10,
         );
 
         storage.set(&entry).unwrap();
-        assert!(storage.exists("genai", "gpt-4", "a"));
+        assert!(storage.exists("ns", "a"));
     }
 
     #[test]
-    fn test_get_cache_path_exact_2_char_hash() {
+    fn test_get_cache_path_exact_2_char_key() {
         let temp_dir = TempDir::new().unwrap();
         let storage = CacheStorage::new(temp_dir.path()).unwrap();
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "ab".to_string(),
             "test".to_string(),
             10,
         );
 
         storage.set(&entry).unwrap();
-        assert!(storage.exists("genai", "gpt-4", "ab"));
+        assert!(storage.exists("ns", "ab"));
     }
 
     #[test]
@@ -375,8 +361,7 @@ mod tests {
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             10,
@@ -395,8 +380,7 @@ mod tests {
 
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             10,
@@ -418,8 +402,7 @@ mod tests {
         for i in 0..3 {
             let entry = CacheEntry::new(
                 "1.0.0".to_string(),
-                "genai".to_string(),
-                "gpt-4".to_string(),
+                "ns".to_string(),
                 format!("hash{:03}", i),
                 "test".to_string(),
                 10,

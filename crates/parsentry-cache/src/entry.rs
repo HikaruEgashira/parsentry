@@ -1,25 +1,22 @@
-//! Cache entry structure and metadata
+//! Generic cache entry and metadata
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// A cache entry containing LLM response and metadata
+/// A content-addressable cache entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheEntry {
     /// Cache format version
     pub version: String,
 
-    /// Agent name (genai, claude-code)
-    pub agent: String,
+    /// SHA256 key identifying this entry
+    pub key: String,
 
-    /// Model name
-    pub model: String,
+    /// User-defined grouping (replaces agent+model with a single dimension)
+    pub namespace: String,
 
-    /// SHA256 hash of the prompt
-    pub prompt_hash: String,
-
-    /// LLM response (JSON string or raw text)
-    pub response: String,
+    /// Cached value (JSON string or raw text)
+    pub value: String,
 
     /// Metadata for cache management
     pub metadata: CacheMetadata,
@@ -37,48 +34,36 @@ pub struct CacheMetadata {
     /// Number of times this entry has been accessed
     pub access_count: usize,
 
-    /// Cost in USD (if available)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost_usd: Option<f64>,
+    /// Size of the input that produced this entry, in bytes
+    pub input_size: usize,
 
-    /// Response time in milliseconds (if available)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<u64>,
-
-    /// Size of the prompt in bytes
-    pub prompt_size: usize,
-
-    /// Size of the response in bytes
-    pub response_size: usize,
+    /// Size of the cached value in bytes
+    pub value_size: usize,
 }
 
 impl CacheEntry {
     /// Create a new cache entry
     pub fn new(
         version: String,
-        agent: String,
-        model: String,
-        prompt_hash: String,
-        response: String,
-        prompt_size: usize,
+        namespace: String,
+        key: String,
+        value: String,
+        input_size: usize,
     ) -> Self {
         let now = Utc::now();
-        let response_size = response.len();
+        let value_size = value.len();
 
         Self {
             version,
-            agent,
-            model,
-            prompt_hash,
-            response,
+            key,
+            namespace,
+            value,
             metadata: CacheMetadata {
                 created_at: now,
                 last_accessed: now,
                 access_count: 0,
-                cost_usd: None,
-                duration_ms: None,
-                prompt_size,
-                response_size,
+                input_size,
+                value_size,
             },
         }
     }
@@ -87,16 +72,6 @@ impl CacheEntry {
     pub fn record_access(&mut self) {
         self.metadata.last_accessed = Utc::now();
         self.metadata.access_count += 1;
-    }
-
-    /// Set cost metadata
-    pub fn set_cost(&mut self, cost_usd: f64) {
-        self.metadata.cost_usd = Some(cost_usd);
-    }
-
-    /// Set duration metadata
-    pub fn set_duration(&mut self, duration_ms: u64) {
-        self.metadata.duration_ms = Some(duration_ms);
     }
 
     /// Get age in days since creation
@@ -120,29 +95,26 @@ mod tests {
     fn test_cache_entry_creation() {
         let entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "my-ns".to_string(),
             "abc123".to_string(),
-            "test response".to_string(),
+            "test value".to_string(),
             100,
         );
 
         assert_eq!(entry.version, "1.0.0");
-        assert_eq!(entry.agent, "genai");
-        assert_eq!(entry.model, "gpt-4");
-        assert_eq!(entry.prompt_hash, "abc123");
-        assert_eq!(entry.response, "test response");
+        assert_eq!(entry.namespace, "my-ns");
+        assert_eq!(entry.key, "abc123");
+        assert_eq!(entry.value, "test value");
         assert_eq!(entry.metadata.access_count, 0);
-        assert_eq!(entry.metadata.prompt_size, 100);
-        assert_eq!(entry.metadata.response_size, 13);
+        assert_eq!(entry.metadata.input_size, 100);
+        assert_eq!(entry.metadata.value_size, 10);
     }
 
     #[test]
     fn test_record_access() {
         let mut entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             100,
@@ -158,49 +130,10 @@ mod tests {
     }
 
     #[test]
-    fn test_set_cost() {
-        let mut entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
-
-        assert_eq!(entry.metadata.cost_usd, None);
-        entry.set_cost(0.05);
-        assert_eq!(entry.metadata.cost_usd, Some(0.05));
-
-        entry.set_cost(1.23);
-        assert_eq!(entry.metadata.cost_usd, Some(1.23));
-    }
-
-    #[test]
-    fn test_set_duration() {
-        let mut entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
-
-        assert_eq!(entry.metadata.duration_ms, None);
-        entry.set_duration(500);
-        assert_eq!(entry.metadata.duration_ms, Some(500));
-
-        entry.set_duration(0);
-        assert_eq!(entry.metadata.duration_ms, Some(0));
-    }
-
-    #[test]
     fn test_idle_days_returns_actual_value() {
         let mut entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             10,
@@ -219,8 +152,7 @@ mod tests {
     fn test_age_days_returns_actual_value() {
         let mut entry = CacheEntry::new(
             "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
+            "ns".to_string(),
             "abc123".to_string(),
             "test".to_string(),
             10,

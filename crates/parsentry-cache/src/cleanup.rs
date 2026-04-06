@@ -360,6 +360,16 @@ mod tests {
     use crate::entry::CacheEntry;
     use tempfile::TempDir;
 
+    fn make_entry(version: &str, ns: &str, key: &str, value: &str) -> CacheEntry {
+        CacheEntry::new(
+            version.to_string(),
+            ns.to_string(),
+            key.to_string(),
+            value.to_string(),
+            10,
+        )
+    }
+
     #[test]
     fn test_cleanup_policy_stale_by_age() {
         let policy = CleanupPolicy {
@@ -369,34 +379,16 @@ mod tests {
             max_cache_size_mb: 500,
         };
 
-        let mut old_entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
+        let mut entry = make_entry("1.0.0", "ns", "abc123", "test");
+        entry.metadata.created_at = Utc::now() - chrono::Duration::days(100);
 
-        // Simulate old entry
-        old_entry.metadata.created_at = Utc::now() - chrono::Duration::days(100);
-
-        assert!(policy.is_stale(&old_entry, "1.0.0"));
+        assert!(policy.is_stale(&entry, "1.0.0"));
     }
 
     #[test]
     fn test_cleanup_policy_stale_by_version() {
         let policy = CleanupPolicy::default();
-
-        let entry = CacheEntry::new(
-            "0.9.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
-
+        let entry = make_entry("0.9.0", "ns", "abc123", "test");
         assert!(policy.is_stale(&entry, "1.0.0"));
     }
 
@@ -404,8 +396,6 @@ mod tests {
     fn test_cleanup_manager_creation() {
         let temp_dir = TempDir::new().unwrap();
         let manager = CleanupManager::new(temp_dir.path()).unwrap();
-
-        // With default Combined trigger and no prior cleanup, should run
         assert!(manager.should_run_periodic_cleanup().unwrap());
     }
 
@@ -417,24 +407,14 @@ mod tests {
 
         let manager = CleanupManager::new(&cache_dir).unwrap();
 
-        // Create an old entry
-        let mut old_entry = CacheEntry::new(
-            "0.9.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
+        let mut old_entry = make_entry("0.9.0", "ns", "abc123", "test");
         old_entry.metadata.created_at = Utc::now() - chrono::Duration::days(100);
 
-        // Save it
-        let path = cache_dir.join("genai").join("gpt-4").join("ab");
+        let path = cache_dir.join("ns").join("ab");
         fs::create_dir_all(&path).unwrap();
         let file_path = path.join("abc123.json");
         fs::write(&file_path, serde_json::to_string(&old_entry).unwrap()).unwrap();
 
-        // Clean up
         let stats = manager.cleanup_stale_entries().unwrap();
 
         assert_eq!(stats.removed_count, 1);
@@ -453,16 +433,7 @@ mod tests {
             max_cache_size_mb: 500,
         };
 
-        let entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
-
-        // Fresh entry with matching version should NOT be stale
+        let entry = make_entry("1.0.0", "ns", "abc123", "test");
         assert!(!policy.is_stale(&entry, "1.0.0"));
     }
 
@@ -471,20 +442,11 @@ mod tests {
         let policy = CleanupPolicy {
             max_age_days: 90,
             max_idle_days: 30,
-            remove_version_mismatch: false, // disabled
+            remove_version_mismatch: false,
             max_cache_size_mb: 500,
         };
 
-        let entry = CacheEntry::new(
-            "0.9.0".to_string(), // different version
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
-
-        // Version mismatch check is disabled, so not stale
+        let entry = make_entry("0.9.0", "ns", "abc123", "test");
         assert!(!policy.is_stale(&entry, "1.0.0"));
     }
 
@@ -497,18 +459,10 @@ mod tests {
             max_cache_size_mb: 500,
         };
 
-        let mut entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
+        let mut entry = make_entry("1.0.0", "ns", "abc123", "test");
 
         // age_days == max_age_days (boundary: > not >=, so NOT stale)
         entry.metadata.created_at = Utc::now() - chrono::Duration::days(90);
-        // Also keep last_accessed fresh
         entry.metadata.last_accessed = Utc::now();
         assert!(!policy.is_stale(&entry, "1.0.0"));
 
@@ -526,27 +480,17 @@ mod tests {
             max_cache_size_mb: 500,
         };
 
-        let mut entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
+        let mut entry = make_entry("1.0.0", "ns", "abc123", "test");
 
-        // idle_days == max_idle_days (boundary: > not >=, so NOT stale)
         entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(30);
         assert!(!policy.is_stale(&entry, "1.0.0"));
 
-        // idle_days == max_idle_days + 1 (stale)
         entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(31);
         assert!(policy.is_stale(&entry, "1.0.0"));
     }
 
     #[test]
     fn test_is_stale_both_conditions_and() {
-        // Tests that && is not mutated to ||
         let policy = CleanupPolicy {
             max_age_days: 90,
             max_idle_days: 30,
@@ -554,16 +498,7 @@ mod tests {
             max_cache_size_mb: 500,
         };
 
-        let mut entry = CacheEntry::new(
-            "1.0.0".to_string(), // same version
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "test".to_string(),
-            10,
-        );
-
-        // Age < max, idle < max, same version -> NOT stale
+        let mut entry = make_entry("1.0.0", "ns", "abc123", "test");
         entry.metadata.created_at = Utc::now() - chrono::Duration::days(10);
         entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(5);
         assert!(!policy.is_stale(&entry, "1.0.0"));
@@ -607,7 +542,6 @@ mod tests {
         )
         .unwrap();
 
-        // No state file = default timestamp (epoch), so should run
         assert!(manager.should_run_periodic_cleanup().unwrap());
     }
 
@@ -623,7 +557,6 @@ mod tests {
         )
         .unwrap();
 
-        // Save state with last cleanup exactly 7 days ago (>= boundary)
         let state = CleanupState {
             last_cleanup_timestamp: Utc::now() - chrono::Duration::days(7),
             last_cleanup_type: "test".to_string(),
@@ -631,7 +564,6 @@ mod tests {
         manager.save_state(state).unwrap();
         assert!(manager.should_run_periodic_cleanup().unwrap());
 
-        // Save state with last cleanup 6 days ago (< 7, should not run)
         let state = CleanupState {
             last_cleanup_timestamp: Utc::now() - chrono::Duration::days(6),
             last_cleanup_type: "test".to_string(),
@@ -692,11 +624,10 @@ mod tests {
         let manager = CleanupManager::with_config(
             cache_dir,
             CleanupPolicy::default(),
-            CleanupTrigger::OnSizeLimit { threshold_mb: 1 }, // 1MB threshold
+            CleanupTrigger::OnSizeLimit { threshold_mb: 1 },
         )
         .unwrap();
 
-        // Empty cache, under limit
         assert!(!manager.is_over_size_limit().unwrap());
     }
 
@@ -705,8 +636,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        // Create a file > 1MB
-        let big_data = vec![b'x'; 1_048_577]; // just over 1MB
+        let big_data = vec![b'x'; 1_048_577];
         fs::write(cache_dir.join("bigfile.bin"), &big_data).unwrap();
 
         let manager = CleanupManager::with_config(
@@ -724,7 +654,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        // Create a file > 1MB
         let big_data = vec![b'x'; 1_100_000];
         fs::write(cache_dir.join("bigfile.bin"), &big_data).unwrap();
 
@@ -763,11 +692,7 @@ mod tests {
     fn test_calculate_total_size_empty() {
         let temp_dir = TempDir::new().unwrap();
         let manager = CleanupManager::new(temp_dir.path()).unwrap();
-
-        let size = manager.calculate_total_size().unwrap();
-        // Should be 0 or very small (just the directory itself)
-        // Actually walkdir counts files only, so empty dir = 0
-        assert_eq!(size, 0);
+        assert_eq!(manager.calculate_total_size().unwrap(), 0);
     }
 
     #[test]
@@ -789,14 +714,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        // Write known-size files
-        fs::write(cache_dir.join("file1.txt"), "hello").unwrap(); // 5 bytes
-        fs::write(cache_dir.join("file2.txt"), "world!").unwrap(); // 6 bytes
+        fs::write(cache_dir.join("file1.txt"), "hello").unwrap();
+        fs::write(cache_dir.join("file2.txt"), "world!").unwrap();
 
         let manager = CleanupManager::new(cache_dir).unwrap();
         let size = manager.calculate_total_size().unwrap();
-
-        // Should be at least 11 bytes (the two files)
         assert!(size >= 11, "Expected at least 11 bytes, got {}", size);
     }
 
@@ -808,7 +730,7 @@ mod tests {
         let cache_dir = temp_dir.path();
 
         let policy = CleanupPolicy {
-            max_cache_size_mb: 500, // 500MB, way above what we'll add
+            max_cache_size_mb: 500,
             max_age_days: 90,
             max_idle_days: 30,
             remove_version_mismatch: true,
@@ -821,16 +743,8 @@ mod tests {
         )
         .unwrap();
 
-        // Add a small entry
-        let entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "small response".to_string(),
-            10,
-        );
-        let dir = cache_dir.join("genai").join("gpt-4").join("ab");
+        let entry = make_entry("1.0.0", "ns", "abc123", "small value");
+        let dir = cache_dir.join("ns").join("ab");
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("abc123.json"), serde_json::to_string(&entry).unwrap()).unwrap();
 
@@ -845,7 +759,7 @@ mod tests {
         let cache_dir = temp_dir.path();
 
         let policy = CleanupPolicy {
-            max_cache_size_mb: 0, // 0MB limit forces removal
+            max_cache_size_mb: 0,
             max_age_days: 90,
             max_idle_days: 30,
             remove_version_mismatch: true,
@@ -858,27 +772,12 @@ mod tests {
         )
         .unwrap();
 
-        // Create two entries: one accessed long ago, one recently
-        let mut old_entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "old111".to_string(),
-            "old response".to_string(),
-            10,
-        );
+        let mut old_entry = make_entry("1.0.0", "ns", "old111", "old value");
         old_entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(10);
 
-        let new_entry = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "new222".to_string(),
-            "new response".to_string(),
-            10,
-        );
+        let new_entry = make_entry("1.0.0", "ns", "new222", "new value");
 
-        let dir_old = cache_dir.join("genai").join("gpt-4").join("ol");
+        let dir_old = cache_dir.join("ns").join("ol");
         fs::create_dir_all(&dir_old).unwrap();
         fs::write(
             dir_old.join("old111.json"),
@@ -886,7 +785,7 @@ mod tests {
         )
         .unwrap();
 
-        let dir_new = cache_dir.join("genai").join("gpt-4").join("ne");
+        let dir_new = cache_dir.join("ns").join("ne");
         fs::create_dir_all(&dir_new).unwrap();
         fs::write(
             dir_new.join("new222.json"),
@@ -895,8 +794,6 @@ mod tests {
         .unwrap();
 
         let stats = manager.cleanup_by_size().unwrap();
-
-        // Both should be removed since max_cache_size_mb is 0
         assert!(stats.removed_count >= 1);
         assert!(stats.freed_bytes > 0);
     }
@@ -906,10 +803,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        // We need a very tight size limit.
-        // Each json entry is ~300-400 bytes. We want to keep 1 but remove 1.
         let policy = CleanupPolicy {
-            max_cache_size_mb: 0, // effectively forces removal of everything
+            max_cache_size_mb: 0,
             max_age_days: 90,
             max_idle_days: 30,
             remove_version_mismatch: true,
@@ -922,18 +817,10 @@ mod tests {
         )
         .unwrap();
 
-        // oldest accessed entry
-        let mut entry_oldest = CacheEntry::new(
-            "1.0.0".to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "aaa111".to_string(),
-            "oldest".to_string(),
-            10,
-        );
+        let mut entry_oldest = make_entry("1.0.0", "ns", "aaa111", "oldest");
         entry_oldest.metadata.last_accessed = Utc::now() - chrono::Duration::days(100);
 
-        let dir = cache_dir.join("genai").join("gpt-4").join("aa");
+        let dir = cache_dir.join("ns").join("aa");
         fs::create_dir_all(&dir).unwrap();
         fs::write(
             dir.join("aaa111.json"),
@@ -979,7 +866,6 @@ mod tests {
 
         let loaded = manager.load_state().unwrap();
         assert_eq!(loaded.last_cleanup_type, "stale");
-        // Timestamps should match (serialized/deserialized)
         assert_eq!(
             loaded.last_cleanup_timestamp.timestamp(),
             now.timestamp()
@@ -1001,7 +887,6 @@ mod tests {
 
         manager.save_state(state).unwrap();
 
-        // Verify file exists and contains expected content
         let state_path = cache_dir.join("cleanup_state.json");
         assert!(state_path.exists());
 
@@ -1027,17 +912,9 @@ mod tests {
         let manager =
             CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
 
-        // Create a fresh entry (matching version, recent)
-        let entry = CacheEntry::new(
-            CACHE_VERSION.to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "fresh".to_string(),
-            10,
-        );
+        let entry = make_entry(CACHE_VERSION, "ns", "abc123", "fresh");
 
-        let dir = cache_dir.join("genai").join("gpt-4").join("ab");
+        let dir = cache_dir.join("ns").join("ab");
         fs::create_dir_all(&dir).unwrap();
         let file_path = dir.join("abc123.json");
         fs::write(&file_path, serde_json::to_string(&entry).unwrap()).unwrap();
@@ -1064,18 +941,10 @@ mod tests {
         let manager =
             CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
 
-        let mut entry = CacheEntry::new(
-            CACHE_VERSION.to_string(),
-            "genai".to_string(),
-            "gpt-4".to_string(),
-            "abc123".to_string(),
-            "idle".to_string(),
-            10,
-        );
-        // Created recently but idle for 31 days
+        let mut entry = make_entry(CACHE_VERSION, "ns", "abc123", "idle");
         entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(31);
 
-        let dir = cache_dir.join("genai").join("gpt-4").join("ab");
+        let dir = cache_dir.join("ns").join("ab");
         fs::create_dir_all(&dir).unwrap();
         let file_path = dir.join("abc123.json");
         fs::write(&file_path, serde_json::to_string(&entry).unwrap()).unwrap();
@@ -1121,13 +990,9 @@ mod tests {
 
     #[test]
     fn test_is_over_size_limit_threshold_arithmetic() {
-        // Kills * → / mutant: threshold_mb * 1_048_576
-        // With threshold_mb=1, * gives 1_048_576 bytes, / gives 0 bytes
-        // A file of 100 bytes: 100 > 0 (true with /), 100 > 1_048_576 (false with *)
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        // Write 100 bytes
         fs::write(cache_dir.join("small.bin"), &[b'x'; 100]).unwrap();
 
         let manager = CleanupManager::with_config(
@@ -1137,18 +1002,14 @@ mod tests {
         )
         .unwrap();
 
-        // 100 bytes < 1MB, so NOT over limit (with correct * arithmetic)
         assert!(!manager.is_over_size_limit().unwrap());
     }
 
     #[test]
     fn test_is_over_size_limit_exact_boundary() {
-        // Kills > → >= : total_size > threshold_bytes
-        // If total == threshold, > is false, >= would be true
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        // Write exactly 1MB = 1_048_576 bytes
         let data = vec![b'x'; 1_048_576];
         fs::write(cache_dir.join("exact.bin"), &data).unwrap();
 
@@ -1159,23 +1020,16 @@ mod tests {
         )
         .unwrap();
 
-        // total_size == threshold_bytes: > is false, >= would be true
-        // Note: there may be state files adding extra bytes, so we use a slightly larger threshold
-        // Instead: use a threshold that exactly matches. The cleanup_state.json doesn't exist yet.
-        // Total is exactly 1_048_576. threshold = 1 * 1_048_576 = 1_048_576.
-        // 1_048_576 > 1_048_576 = false (correct with >)
         assert!(!manager.is_over_size_limit().unwrap());
     }
 
     #[test]
     fn test_cleanup_by_size_target_removal_subtraction() {
-        // Kills - → + in target_removal = total_size - max_size
-        // With + it would be total_size + max_size (huge), never reaching 0
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
         let policy = CleanupPolicy {
-            max_cache_size_mb: 0, // 0 bytes limit
+            max_cache_size_mb: 0,
             max_age_days: 90,
             max_idle_days: 30,
             remove_version_mismatch: true,
@@ -1188,26 +1042,18 @@ mod tests {
         )
         .unwrap();
 
-        // Create two entries
-        let mut entry1 = CacheEntry::new(
-            "1.0.0".to_string(), "a".to_string(), "m".to_string(),
-            "hash11".to_string(), "resp1".to_string(), 5,
-        );
+        let mut entry1 = make_entry("1.0.0", "ns", "hash11", "resp1");
         entry1.metadata.last_accessed = Utc::now() - chrono::Duration::days(10);
 
-        let mut entry2 = CacheEntry::new(
-            "1.0.0".to_string(), "a".to_string(), "m".to_string(),
-            "hash22".to_string(), "resp2".to_string(), 5,
-        );
+        let mut entry2 = make_entry("1.0.0", "ns", "hash22", "resp2");
         entry2.metadata.last_accessed = Utc::now() - chrono::Duration::days(5);
 
-        let dir1 = cache_dir.join("a").join("m").join("ha");
+        let dir1 = cache_dir.join("ns").join("ha");
         fs::create_dir_all(&dir1).unwrap();
         fs::write(dir1.join("hash11.json"), serde_json::to_string(&entry1).unwrap()).unwrap();
         fs::write(dir1.join("hash22.json"), serde_json::to_string(&entry2).unwrap()).unwrap();
 
         let stats = manager.cleanup_by_size().unwrap();
-        // With correct subtraction: target_removal = total - 0 = total, removes both
         assert_eq!(stats.removed_count, 2);
         assert!(stats.freed_bytes > 0);
     }

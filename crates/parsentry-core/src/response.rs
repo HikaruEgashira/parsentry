@@ -216,4 +216,34 @@ mod tests {
         r2.sanitize();
         assert_eq!(r2.confidence_score, 0);
     }
+
+    #[test]
+    fn test_has_vulnerability_and_not_or() {
+        // Kills && → || : empty vulns with high score should be false
+        let r = Response {
+            vulnerability_types: vec![],
+            confidence_score: 80,
+            ..Default::default()
+        };
+        assert!(!r.has_vulnerability());
+    }
+
+    #[test]
+    fn test_has_vulnerability_score_zero_boundary() {
+        // Kills > → >= at 0: vulns present but score=0 should be false
+        let r = Response {
+            vulnerability_types: vec![VulnType::SQLI],
+            confidence_score: 0,
+            ..Default::default()
+        };
+        assert!(!r.has_vulnerability());
+
+        // score=1 should be true
+        let r2 = Response {
+            vulnerability_types: vec![VulnType::SQLI],
+            confidence_score: 1,
+            ..Default::default()
+        };
+        assert!(r2.has_vulnerability());
+    }
 }

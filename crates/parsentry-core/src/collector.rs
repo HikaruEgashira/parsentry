@@ -433,7 +433,9 @@ mod tests {
     #[test]
     fn test_manifest_truncation_boundary() {
         // Kills > → >= at 2000 char boundary
-        let manifest_2000 = "x".repeat(2000);
+        // Use distinct chars so we can distinguish truncated vs full
+        let mut manifest_2000 = "a".repeat(1999);
+        manifest_2000.push('Z'); // last char is Z
         let meta = RepoMetadata {
             root_dir: PathBuf::from("/tmp"),
             directory_tree: String::new(),
@@ -446,10 +448,13 @@ mod tests {
             total_files: 0,
         };
         let ctx = meta.to_prompt_context();
-        // Exactly 2000 should NOT be truncated
+        // Exactly 2000 chars: with > 2000, NOT truncated (Z is present)
+        // With >= 2000, would be truncated to [..2000] which is same, so this alone can't distinguish.
+        // Instead: test len=2001 where truncation removes the last char
         assert!(ctx.contains(&manifest_2000));
 
-        let manifest_2001 = "y".repeat(2001);
+        let mut manifest_2001 = "b".repeat(2000);
+        manifest_2001.push('Q'); // char 2001 is Q
         let meta2 = RepoMetadata {
             root_dir: PathBuf::from("/tmp"),
             directory_tree: String::new(),
@@ -462,8 +467,10 @@ mod tests {
             total_files: 0,
         };
         let ctx2 = meta2.to_prompt_context();
-        // 2001 should be truncated
-        assert!(!ctx2.contains(&manifest_2001));
+        // 2001 chars: truncated to [..2000], so Q is missing
+        assert!(!ctx2.contains("Q"));
+        // But the first 2000 chars should be present
+        assert!(ctx2.contains(&"b".repeat(2000)));
     }
 
     #[test]
