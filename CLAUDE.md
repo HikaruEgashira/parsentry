@@ -1,21 +1,31 @@
 ## Project Overview
 
-Parsentry is a PAR (Principal-Action-Resource) based security scanner that enumerates attack surfaces via LLM, then runs tree-sitter pattern matching and Claude Code analysis in parallel.
+Parsentry is a parallel CLI agent execution platform with result caching. It uses static analysis (tree-sitter) to enumerate code patterns, then dispatches them to CLI agents (Claude Code, etc.) for parallel analysis with deduplication via cache.
 
 ### Architecture
 
 ```
-Phase 1: RepoMetadata::collect() → LLM → AttackSurface列挙 (endpoint, db_table, public_api, etc.)
-Phase 2: surface.locations内のファイルのみtree-sitter pattern match → Principal/Resource filter
-Phase 3: 各matchをClaude Codeで並列分析 → SARIF
-Phase 4: SARIF + summary.md レポート出力
+Phase 1: RepoMetadata::collect() → リポジトリメタデータ収集 (languages, manifests, entry points)
+Phase 2: tree-sitter pattern match → Principal/Resource filter → セキュリティパターン検出
+Phase 3: プロンプト生成 → stdout 出力 (パイプラインで任意の agent に接続)
 ```
+
+### Crate structure
+
+| Crate | Role |
+|-------|------|
+| `parsentry-core` | Language, RepoMetadata, ThreatModel, PAR types |
+| `parsentry-parser` | tree-sitter pattern matching |
+| `parsentry-executor` | Parallel CLI agent execution (Semaphore, timeout, streaming) |
+| `parsentry-cache` | Task result cache (SHA2 hash key, file-based storage) |
+| `parsentry-reports` | SARIF/Markdown report generation |
+| `parsentry-utils` | File classification/discovery utilities |
 
 ### Key types
 
+- `RepoMetadata` — リポジトリのメタデータ (directory tree, languages, manifests, entry points)
 - `AttackSurface` — スキャン単位。kind + identifier + locations + query
-- `SurfaceKind` — Endpoint, DbTable, PublicApi, FileHandler, ExternalCall, IacResource
-- `ThreatModel` — リポジトリ全体のattack surface一覧
+- `ThreatModel` — リポジトリ全体の attack surface 一覧
 
 ## After Code Changes
 

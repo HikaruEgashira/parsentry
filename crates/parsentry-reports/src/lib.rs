@@ -1,4 +1,4 @@
-//! Report generation for Parsentry security scanner.
+//! Report generation for Parsentry.
 //!
 //! This crate provides various report formats:
 //! - Markdown reports

@@ -2,7 +2,7 @@
 name = "parsentry-reports"
 version.workspace = true
 edition.workspace = true
-description = "Report generation for Parsentry security scanner"
+description = "Report generation for Parsentry"
 
 [dependencies]
 parsentry-core = { path = "../parsentry-core" }
