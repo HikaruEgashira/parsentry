@@ -1297,6 +1297,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "terminal_size",
  "thiserror 1.0.69",
