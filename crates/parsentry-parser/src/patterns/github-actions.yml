@@ -1,4 +1,4 @@
-# GitHub Actions and YAML Security Patterns (PAR Framework)
+# GitHub Actions and YAML Security Patterns
 # Focus: CI/CD Pipeline Security, Supply Chain Attacks, Credential Exposure
 
 principals:
@@ -58,14 +58,47 @@ actions:
       - "T1552.001"  # Unsecured Credentials: Credentials In Files
       - "T1078"       # Valid Accounts
 
-  # Environment variable injection
+  # Script injection via untrusted GitHub context
   - reference: |
       (string_scalar) @event
       (#match? @event "\\$\\{\\{.*github\\.event\\.")
-    description: "Direct GitHub event data usage (injection risk)"
+    description: "Direct GitHub event data usage (script injection risk)"
     attack_vector:
       - "T1059"  # Command and Scripting Interpreter
       - "T1055"  # Process Injection
+
+  - reference: |
+      (string_scalar) @ref
+      (#match? @ref "\\$\\{\\{.*github\\.head_ref")
+    description: "Untrusted github.head_ref in expression (injection risk)"
+    attack_vector:
+      - "T1059"  # Command and Scripting Interpreter
+
+  # Unpinned actions (supply chain risk)
+  - reference: |
+      (block_mapping_pair
+        key: (flow_node (plain_scalar (string_scalar) @key (#eq? @key "uses")))
+        value: (flow_node (plain_scalar (string_scalar) @action
+          (#match? @action "@(v[0-9]|main|master|latest)"))))
+    description: "Action pinned to mutable tag instead of commit SHA (supply chain risk)"
+    attack_vector:
+      - "T1195.001"  # Supply Chain Compromise: Compromise Software Dependencies
+
+  # Overly permissive workflow permissions
+  - reference: |
+      (string_scalar) @perm
+      (#match? @perm "write-all")
+    description: "Overly permissive write-all workflow permission"
+    attack_vector:
+      - "T1548"  # Abuse Elevation Control Mechanism
+
+  - reference: |
+      (block_mapping_pair
+        key: (flow_node (plain_scalar (string_scalar) @key (#eq? @key "id-token")))
+        value: (flow_node (plain_scalar (string_scalar) @val (#eq? @val "write"))))
+    description: "OIDC id-token write permission (token theft risk)"
+    attack_vector:
+      - "T1528"  # Steal Application Access Token
 
 resources:
   # Sensitive credentials - single consolidated pattern

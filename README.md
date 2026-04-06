@@ -40,13 +40,43 @@ parsentry query repo --threat-model model.json
   <img src="./docs/images/run3.png" width="32%" alt="Run 3">
 </div>
 
+### Prerequisites
+
+Parsentry generates analysis prompts. You need a CLI agent to process them:
+
+```bash
+# Install Claude Code (recommended)
+npm install -g @anthropic-ai/claude-code
+```
+
+Any CLI that reads stdin works: `claude`, `codex`, `aider`, etc.
+
 ### Installation
 
 ```bash
+# Via mise (recommended)
 mise use -g github:HikaruEgashira/parsentry
+
+# Via cargo
+cargo install parsentry
+
+# Or download binary from GitHub Releases
 ```
 
 Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases).
+
+### Quick Start
+
+```bash
+# 1. Generate threat model and analyze with Claude
+parsentry model owner/repo | claude
+
+# 2. Or scan a local project
+parsentry model . | claude
+
+# 3. Only scan changed files (great for PR reviews)
+parsentry model . --diff-base origin/main | claude
+```
 
 ### Usage
 
