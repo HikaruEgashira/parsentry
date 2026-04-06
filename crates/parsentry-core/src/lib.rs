@@ -20,7 +20,7 @@ pub use par::{
     RemediationGuidance, ResourceInfo, SecurityFunctionQuality, SensitivityLevel, TrustLevel,
 };
 pub use response::{response_json_schema, Response};
-pub use threat_model::{AttackSurface, SurfaceKind, ThreatModel};
+pub use threat_model::{AttackSurface, ThreatModel};
 pub use threat_model_prompt::{
     build_threat_model_prompt, parse_threat_model_response, threat_model_schema,
     THREAT_MODEL_SYSTEM_PROMPT,

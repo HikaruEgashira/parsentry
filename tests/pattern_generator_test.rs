@@ -212,7 +212,7 @@ fn test_repo_metadata_prompt_context() {
 
 #[test]
 fn test_threat_model_report_rendering() {
-    use parsentry_core::{AttackSurface, SurfaceKind, ThreatModel, render_threat_model_md};
+    use parsentry_core::{AttackSurface, ThreatModel, render_threat_model_md};
 
     let model = ThreatModel {
         repository: "test/repo".to_string(),
@@ -221,7 +221,7 @@ fn test_threat_model_report_rendering() {
         summary: "A Flask web app with user-facing endpoints.".to_string(),
         surfaces: vec![AttackSurface {
             id: "SURFACE-001".to_string(),
-            kind: SurfaceKind::Endpoint,
+            kind: "endpoint".to_string(),
             identifier: "POST /api/users".to_string(),
             locations: vec!["src/routes/users.py".to_string()],
             description: "User registration endpoint accepting untrusted input".to_string(),
@@ -239,7 +239,7 @@ fn test_threat_model_report_rendering() {
 
 #[test]
 fn test_threat_model_all_locations() {
-    use parsentry_core::{AttackSurface, SurfaceKind, ThreatModel};
+    use parsentry_core::{AttackSurface, ThreatModel};
 
     let model = ThreatModel {
         repository: "test".to_string(),
@@ -249,7 +249,7 @@ fn test_threat_model_all_locations() {
         surfaces: vec![
             AttackSurface {
                 id: "S1".to_string(),
-                kind: SurfaceKind::Endpoint,
+                kind: "endpoint".to_string(),
                 identifier: "GET /api/users".to_string(),
                 locations: vec!["src/routes.py".to_string(), "src/models.py".to_string()],
                 description: "test".to_string(),
@@ -257,7 +257,7 @@ fn test_threat_model_all_locations() {
             },
             AttackSurface {
                 id: "S2".to_string(),
-                kind: SurfaceKind::DbTable,
+                kind: "db_table".to_string(),
                 identifier: "users table".to_string(),
                 locations: vec!["src/models.py".to_string(), "src/db.py".to_string()],
                 description: "test".to_string(),

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (実施中)
 
 ## Date
 
@@ -31,79 +31,58 @@ Parsentry を以下のように再定義する:
 3. **Parallel-native**: Semaphore ベースの並列実行制御をコア機能とする
 4. **Composable**: stdin/stdout パイプライン、JSON 入出力で他ツールと合成可能
 
-## Changes Required
+### ThreatModel の意味論
 
-### Phase 1: Dead code removal (不要 crate 削除)
+ThreatModel は「脅威」のモデルではなく、**影響が分離したコンポーネントの列挙とその依存関係の定義**である。
 
-| Crate | 理由 | Action |
-|-------|------|--------|
-| `parsentry-analyzer` | 内部 LLM 呼び出し (`genai` 依存)、削除済み機能の残骸 | **削除** |
-| `parsentry-codex` | OpenAI Codex 固有統合、汎用 executor に統合 | **削除** |
-| `parsentry-i18n` | LLM レスポンスの多言語化、不要に | **削除** |
-| `parsentry-prompt` | プロンプトビルダー、scan.rs の emit_prompt に統合済み | **削除** |
-| `parsentry-threat-model` | `genai` 依存、内部 LLM 呼び出し | **削除** (metadata collector のみ `parsentry-core` に移動) |
+- **AttackSurface**: 独立して分析可能なコンポーネント単位。API endpoint, DB table, public API, IaC resource など任意の粒度で定義できる。`kind` フィールドは自由な文字列であり、コード側で固定の enum を持たない
+- **ThreatModel**: リポジトリ内の AttackSurface 一覧。各 surface は影響範囲が限定されており、1つの surface の変更・脆弱性が他の surface に自動的に波及しない。これにより surface 単位で並列分析・キャッシュが可能になる
 
-### Phase 2: Core generalization (コア汎化)
+この設計により:
+- セキュリティ分析: `kind: "endpoint"`, `kind: "db_table"` 等で attack surface を列挙
+- コードレビュー: `kind: "module"`, `kind: "api_boundary"` 等で変更影響範囲を列挙
+- テスト生成: `kind: "public_function"`, `kind: "integration_point"` 等でテスト対象を列挙
 
-| Component | Current | Target |
-|-----------|---------|--------|
-| `parsentry-claude-code` | Claude Code 専用 executor | `parsentry-executor`: 任意 CLI agent 実行エンジン (Semaphore, timeout, streaming) |
-| `parsentry-cache` | "LLM response cache" | 汎用タスク結果キャッシュ (入力ハッシュ → 出力) |
-| `parsentry-core` | VulnType, PAR 分類 | Task, TaskResult, Agent 定義の汎用型 |
-| `parsentry-reports` | SARIF 専用 | 汎用レポートフォーマッタ (SARIF はプラグイン化) |
+いずれのユースケースでも同じ ThreatModel 構造を使い回せる。
 
-### Phase 3: Config & CLI cleanup
+## Changes (実施済み)
 
-| Item | Change |
-|------|--------|
-| `AgentConfig.agent_type` | "genai" / "claude-code" → 任意の CLI パス指定に |
-| `AnalysisConfig.model` | 削除 (agent 側の責務) |
-| `AnalysisConfig.min_confidence` | セキュリティプラグインに移動 |
-| `FilteringConfig.vuln_types` | セキュリティプラグインに移動 |
-| `ApiConfig`, `RepoConfig`, `GenerationConfig` | 未使用、削除 |
-| CLI `--agent`, `--agent-poc` | `--executor`, `--executor-args` に汎化 |
-| CLI default subcommand | scan → run (汎用タスク実行) |
+### Phase 1: Dead code removal ✅
 
-### Phase 4: Architecture shift
+| Crate | Action |
+|-------|--------|
+| `parsentry-analyzer` | 削除 (genai 依存) |
+| `parsentry-codex` | 削除 (OpenAI Codex 固有) |
+| `parsentry-i18n` | 削除 (LLM レスポンス多言語化) |
+| `parsentry-prompt` | 削除 (scan.rs に統合済み) |
+| `parsentry-threat-model` | 削除 (core に移動) |
 
-```
-Before:  repo → threat model → pattern match → AI analysis → SARIF
-After:   task definition → dispatch → parallel exec → cache → aggregate
-                                         ↓
-                              任意の CLI agent (claude, codex, etc.)
-```
+### Phase 2: Core generalization ✅
 
-新しいパイプライン:
-```bash
-# Security scan (ユースケース1)
-parsentry scan repo --preset security | claude --output-format sarif
+| Before | After |
+|--------|-------|
+| `parsentry-claude-code` | `parsentry-executor` (agent-agnostic) |
+| `SurfaceKind` enum (固定6種) | `kind: String` (自由定義) |
+| Config: model, min_confidence, vuln_types 等 | Config: paths, agent, cache, verbosity のみ |
 
-# 汎用タスク実行
-parsentry run --tasks tasks.json --executor "claude -p" --concurrency 20
-```
+### Phase 3: Branding ✅
 
-### Phase 5: Branding & docs
-
-| Item | Change |
-|------|--------|
-| README.md | "AI-only scanners are slow" → 並列 agent 実行基盤として書き直し |
-| ASCII logo | 維持 (ブランド資産) |
-| `scan.yml` workflow | `run.yml` に rename、汎用化 |
-| ベンチマークテスト | セキュリティ固有テストは `tests/security/` に分離 |
-| CLAUDE.md | アーキテクチャ説明を更新 |
-| docs/concepts/ | PAR framework → Task/Executor/Cache モデルに書き直し |
+- CLI about: "Parallel CLI agent execution platform with caching"
+- CLAUDE.md: アーキテクチャ説明更新
+- 全 crate description から "security scanner" 削除
 
 ## Consequences
 
 ### Positive
 - セキュリティ以外のユースケース (コードレビュー、リファクタリング、テスト生成) にも適用可能
+- `kind` が自由文字列になったことで、ユーザーが独自のコンポーネント分類を定義できる
 - キャッシュにより CI/CD での実行コスト大幅削減
 - Agent 非依存により、ベンダーロックイン回避
 
 ### Negative
-- 既存のセキュリティ特化ユーザーにとって breaking change
-- `parsentry-parser` (tree-sitter) がセキュリティ固有のまま残る → プラグイン化の追加工数
+- 既存のセキュリティ特化ユーザーにとって breaking change (SurfaceKind enum の削除)
+- `parsentry-parser` (tree-sitter) がセキュリティ固有のまま残る → 将来プラグイン化
 
 ### Risks
 - 汎化しすぎてセキュリティスキャンの品質が下がるリスク → セキュリティは first-class preset として維持
-- キャッシュ無効化ロジックの複雑さ → 入力ハッシュベースのシンプルな戦略を維持
+- kind が自由文字列になったことでバリデーションが弱くなるリスク → プロンプト側で推奨値を提示し、LLM 出力をそのまま受け入れる設計
