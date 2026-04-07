@@ -160,8 +160,7 @@ pub fn build_orchestrator_prompt(
     surface_prompts: &[SurfacePrompt],
     output_dir: &Path,
 ) -> String {
-    let abs_output_dir = std::fs::canonicalize(output_dir)
-        .unwrap_or_else(|_| output_dir.to_path_buf());
+    let rel_output_dir = output_dir;
 
     let mut prompt = String::new();
 
@@ -170,7 +169,7 @@ pub fn build_orchestrator_prompt(
          attack surfaces in parallel by dispatching subagents.\n\n",
     );
 
-    prompt.push_str("## Instructions\n\n");
+    prompt.push_str("Instructions\n\n");
     prompt.push_str(
         "1. Read each prompt file listed below using the Read tool\n\
          2. Launch ALL subagents in a SINGLE message using the Agent tool for maximum parallelism\n\
@@ -180,13 +179,13 @@ pub fn build_orchestrator_prompt(
          5. After all agents complete, provide a summary of total findings\n\n",
     );
 
-    prompt.push_str("## Surfaces to Analyze\n\n");
+    prompt.push_str("Surfaces to Analyze\n\n");
     prompt.push_str("| Surface ID | Prompt File | SARIF Output |\n");
     prompt.push_str("|------------|-------------|-------------|\n");
 
     for sp in surface_prompts {
-        let prompt_path = abs_output_dir.join(format!("{}.prompt.md", sp.surface_id));
-        let sarif_path = abs_output_dir.join(format!("{}.sarif.json", sp.surface_id));
+        let prompt_path = rel_output_dir.join(format!("{}.prompt.md", sp.surface_id));
+        let sarif_path = rel_output_dir.join(format!("{}.sarif.json", sp.surface_id));
         prompt.push_str(&format!(
             "| {} | {} | {} |\n",
             sp.surface_id,
@@ -195,7 +194,7 @@ pub fn build_orchestrator_prompt(
         ));
     }
 
-    prompt.push_str("\n## Agent Launch Template\n\n");
+    prompt.push_str("\nAgent Launch Template\n\n");
     prompt.push_str(
         "For each surface, use the Agent tool like this:\n\n\
          ```\n\
@@ -216,15 +215,15 @@ pub fn build_orchestrator_prompt(
     );
 
     // Merge step
-    let merged_sarif = abs_output_dir.join("merged.sarif.json");
-    prompt.push_str("## Post-Analysis: Merge Results\n\n");
+    let merged_sarif = rel_output_dir.join("merged.sarif.json");
+    prompt.push_str("Post-Analysis: Merge Results\n\n");
     prompt.push_str(
         "After ALL subagents have completed, run the following command to merge \
          the per-surface SARIF files into a single report:\n\n",
     );
     prompt.push_str(&format!(
         "```bash\nparsentry merge {} -o {}\n```\n\n",
-        abs_output_dir.display(),
+        rel_output_dir.display(),
         merged_sarif.display(),
     ));
     prompt.push_str(
