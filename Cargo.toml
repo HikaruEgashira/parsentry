@@ -1,8 +1,11 @@
 [package]
 name = "parsentry"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2024"
 default-run = "parsentry"
+description = "Security prompt orchestrator for CLI agents"
+license = "AGPL-3.0"
+repository = "https://github.com/HikaruEgashira/parsentry"
 
 
 [features]
@@ -12,9 +15,9 @@ benchmark = []
 
 [dependencies]
 tokio.workspace = true
-parsentry-core = { path = "crates/parsentry-core" }
-parsentry-reports = { path = "crates/parsentry-reports" }
-parsentry-claude = { path = "crates/parsentry-claude" }
+parsentry-core = { path = "crates/parsentry-core", version = "0.18.0" }
+parsentry-reports = { path = "crates/parsentry-reports", version = "0.18.0" }
+parsentry-claude = { path = "crates/parsentry-claude", version = "0.18.0" }
 notify = { version = "7", default-features = false, features = ["macos_fsevent"] }
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true
@@ -45,7 +48,7 @@ exclude = ["tree-sitter-*"]
 
 [workspace.package]
 edition = "2024"
-version = "0.17.0"
+version = "0.18.0"
 
 [workspace.dependencies]
 tokio = { version = "1.51", features = ["full", "test-util", "macros", "process"] }

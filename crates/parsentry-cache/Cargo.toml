@@ -1,7 +1,10 @@
 [package]
 name = "parsentry-cache"
-version = "0.1.0"
+version = "0.18.0"
 edition = "2021"
+description = "Content-addressable file cache for Parsentry"
+license = "AGPL-3.0"
+repository = "https://github.com/HikaruEgashira/parsentry"
 
 [dependencies]
 anyhow = "1.0"

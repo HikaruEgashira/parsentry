@@ -3,10 +3,11 @@ name = "parsentry-parser"
 version.workspace = true
 edition.workspace = true
 description = "Tree-sitter based code parser and security pattern matcher for Parsentry"
-license = "MIT"
+license = "AGPL-3.0"
+repository = "https://github.com/HikaruEgashira/parsentry"
 
 [dependencies]
-parsentry-core = { path = "../parsentry-core" }
+parsentry-core = { path = "../parsentry-core", version = "0.18.0" }
 
 # Tree-sitter core
 tree-sitter = "0.26.8"
