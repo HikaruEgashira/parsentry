@@ -107,9 +107,13 @@ Phase 3: user orchestrates →  prompt files  →  CLI agent  →  SARIF results
 
 ### Example Reports
 
-- [langgenius/dify](docs/reports/dify/) - LLM application platform (Python/TypeScript, 8531 files)
-- [assafelovic/gpt-researcher](docs/reports/gpt-researcher/) - AI research agent (Python, 298 files)
-- [HikaruEgashira/hikae-vulnerable-python](docs/reports/hikae-vulnerable/) - Vulnerable Flask app
+Each report contains a `threat-model.json` and per-surface `SURFACE-*.prompt.md` files.
+
+| Repository | Type | Files | Surfaces |
+|-----------|------|-------|----------|
+| [langgenius/dify](docs/reports/dify/dify/) | LLM application platform | 8531 | 25 |
+| [OWASP/NodeGoat](docs/reports/NodeGoat/NodeGoat/) | Vulnerable Node.js app | 76 | 21 |
+| [HikaruEgashira/hikae-vulnerable-python](docs/reports/hikae-vulnerable/hikae-vulnerable-python/) | Vulnerable Flask app | 3 | 7 |
 
 ### Security
 

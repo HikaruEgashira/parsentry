@@ -1,0 +1,75 @@
+{
+  "app_type": "web_application",
+  "summary": "Flask web application with JWT authentication, YAML parsing, external HTTP calls, and Jinja2 templating. The dependency combination presents significant attack surface: PyYAML enables deserialization attacks, PyJWT requires careful verification, requests enables SSRF, and Jinja2 enables SSTI if user input reaches templates.",
+  "surfaces": [
+    {
+      "id": "SURFACE-001",
+      "kind": "endpoint",
+      "identifier": "Flask route handlers",
+      "locations": [
+        "app.py",
+        "api.py"
+      ],
+      "description": "HTTP endpoints defined in Flask application accepting untrusted user input. app.py is the entry point; api.py likely defines API routes. All request parameters, headers, and body data are potential injection vectors."
+    },
+    {
+      "id": "SURFACE-002",
+      "kind": "public_api",
+      "identifier": "JWT token verification (PyJWT)",
+      "locations": [
+        "api.py",
+        "app.py"
+      ],
+      "description": "PyJWT 2.8.0 used for authentication. Common vulnerabilities include algorithm confusion (none algorithm), missing signature verification, weak secrets, and improper claims validation."
+    },
+    {
+      "id": "SURFACE-003",
+      "kind": "public_api",
+      "identifier": "YAML deserialization (PyYAML)",
+      "locations": [
+        "app.py",
+        "api.py"
+      ],
+      "description": "PyYAML 6.0.1 can execute arbitrary code if yaml.load() is called without Loader=SafeLoader. Any endpoint accepting YAML input is a remote code execution vector."
+    },
+    {
+      "id": "SURFACE-004",
+      "kind": "external_call",
+      "identifier": "Outbound HTTP requests (requests library)",
+      "locations": [
+        "api.py"
+      ],
+      "description": "requests 2.31.0 makes outbound HTTP calls. If URLs are constructed from user input, this enables SSRF attacks against internal services, cloud metadata endpoints, or other restricted resources."
+    },
+    {
+      "id": "SURFACE-005",
+      "kind": "public_api",
+      "identifier": "Jinja2 template rendering",
+      "locations": [
+        "app.py"
+      ],
+      "description": "Jinja2 3.1.2 templating engine. If user input is interpolated into templates via string formatting rather than template variables, Server-Side Template Injection (SSTI) enables remote code execution."
+    },
+    {
+      "id": "SURFACE-006",
+      "kind": "db_table",
+      "identifier": "Data model definitions",
+      "locations": [
+        "models.py"
+      ],
+      "description": "Data models that likely interact with a database or data store. Potential for SQL injection if raw queries are used, mass assignment if model fields are not properly guarded, or insecure direct object references."
+    },
+    {
+      "id": "SURFACE-007",
+      "kind": "public_api",
+      "identifier": "Werkzeug request parsing",
+      "locations": [
+        "app.py",
+        "api.py"
+      ],
+      "description": "Werkzeug 3.1.3 handles request parsing, file uploads, and debugging. The Werkzeug debugger, if enabled in production, exposes an interactive Python console. File upload handling may allow path traversal."
+    }
+  ],
+  "repository": "",
+  "generated_at": ""
+}

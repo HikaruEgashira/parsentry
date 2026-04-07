@@ -1,0 +1,256 @@
+{
+  "app_type": "web_application",
+  "summary": "Dify is a large-scale LLM application platform with a Python/Flask backend, Next.js frontend, and Celery workers. It exposes multiple API layers (console, service API, web, inner API, MCP, webhooks) with varying authentication requirements. Critical attack surfaces include remote code execution via sandboxed executor, file upload/download with SSRF proxy, plugin backwards invocation, webhook triggers accepting unauthenticated input, and a RAG pipeline processing untrusted documents from external sources.",
+  "surfaces": [
+    {
+      "id": "SURFACE-001",
+      "kind": "endpoint",
+      "identifier": "POST /v1/workflows/run",
+      "locations": [
+        "api/controllers/service_api/app/workflow.py",
+        "api/core/app/apps/workflow/app_generator.py"
+      ],
+      "description": "API-key authenticated workflow execution endpoint that triggers the full workflow graph engine including code execution nodes, HTTP request nodes, and tool invocations"
+    },
+    {
+      "id": "SURFACE-002",
+      "kind": "endpoint",
+      "identifier": "POST /v1/chat-messages",
+      "locations": [
+        "api/controllers/service_api/app/chat.py",
+        "api/core/app/apps/chat/app_generator.py"
+      ],
+      "description": "API-key authenticated chat endpoint accepting user messages that flow through LLM, tool invocation, and RAG retrieval pipelines"
+    },
+    {
+      "id": "SURFACE-003",
+      "kind": "endpoint",
+      "identifier": "ALL /webhook/<webhook_id>",
+      "locations": [
+        "api/controllers/trigger/webhook.py",
+        "api/core/trigger/utils/webhook.py"
+      ],
+      "description": "Unauthenticated webhook trigger endpoint accepting GET/POST/PUT/PATCH/DELETE that injects data directly into workflow execution"
+    },
+    {
+      "id": "SURFACE-004",
+      "kind": "endpoint",
+      "identifier": "POST /plugin/<endpoint_id>",
+      "locations": [
+        "api/controllers/trigger/endpoint.py",
+        "api/core/plugin/impl/endpoint.py"
+      ],
+      "description": "Plugin endpoint trigger that accepts external requests and routes them to plugin execution with credential passing"
+    },
+    {
+      "id": "SURFACE-005",
+      "kind": "endpoint",
+      "identifier": "POST /v1/files/upload",
+      "locations": [
+        "api/controllers/service_api/app/file.py",
+        "api/controllers/web/files.py",
+        "api/controllers/console/datasets/datasets.py"
+      ],
+      "description": "Multiple file upload endpoints across service API, web API, and console with varying auth requirements; files processed through type detection and stored via configurable storage backends"
+    },
+    {
+      "id": "SURFACE-006",
+      "kind": "endpoint",
+      "identifier": "GET /api/remote-files/<path:url>",
+      "locations": [
+        "api/controllers/web/files.py"
+      ],
+      "description": "Remote file proxy endpoint that fetches content from user-supplied URLs, high SSRF risk despite proxy protections"
+    },
+    {
+      "id": "SURFACE-007",
+      "kind": "endpoint",
+      "identifier": "POST /files/upload/for-plugin",
+      "locations": [
+        "api/controllers/files/"
+      ],
+      "description": "Plugin file upload endpoint with signature verification; misvalidation could allow unauthorized file uploads to plugin storage"
+    },
+    {
+      "id": "SURFACE-008",
+      "kind": "external_call",
+      "identifier": "CodeExecutor.execute_code()",
+      "locations": [
+        "api/core/helper/code_executor/code_executor.py",
+        "api/core/tools/builtin_tool/providers/code/tools/simple_code.py"
+      ],
+      "description": "Remote code execution service executing Python3/JavaScript/Jinja2 in external sandbox with network enabled by default; template injection risk via workflow variables"
+    },
+    {
+      "id": "SURFACE-009",
+      "kind": "endpoint",
+      "identifier": "POST /inner/api/invoke/tool",
+      "locations": [
+        "api/controllers/inner_api/plugin/plugin.py"
+      ],
+      "description": "Internal API for plugin-to-host tool invocation; if inner API network boundary is misconfigured, allows unauthenticated tool execution"
+    },
+    {
+      "id": "SURFACE-010",
+      "kind": "endpoint",
+      "identifier": "POST /inner/api/invoke/llm",
+      "locations": [
+        "api/controllers/inner_api/plugin/plugin.py"
+      ],
+      "description": "Internal API for plugin-to-host LLM invocation; relies on network-level isolation rather than token authentication"
+    },
+    {
+      "id": "SURFACE-011",
+      "kind": "endpoint",
+      "identifier": "POST /inner/api/invoke/encrypt",
+      "locations": [
+        "api/controllers/inner_api/plugin/plugin.py",
+        "api/core/plugin/backwards_invocation/encrypt.py"
+      ],
+      "description": "Internal encryption service for plugin credentials using AES-CBC derived from SECRET_KEY; exposure enables credential decryption"
+    },
+    {
+      "id": "SURFACE-012",
+      "kind": "endpoint",
+      "identifier": "POST /inner/api/upload/file/request",
+      "locations": [
+        "api/controllers/inner_api/plugin/plugin.py"
+      ],
+      "description": "Internal file upload request endpoint for plugins; insufficient boundary enforcement could allow unauthorized file injection"
+    },
+    {
+      "id": "SURFACE-013",
+      "kind": "endpoint",
+      "identifier": "POST /mcp/server/<server_code>/mcp",
+      "locations": [
+        "api/controllers/mcp/mcp.py",
+        "api/core/mcp/server/"
+      ],
+      "description": "MCP JSON-RPC server endpoint allowing method invocation on registered MCP servers; method dispatch could be abused for unauthorized operations"
+    },
+    {
+      "id": "SURFACE-014",
+      "kind": "external_call",
+      "identifier": "Custom API Tool HTTP Invocation",
+      "locations": [
+        "api/core/tools/custom_tool/tool.py"
+      ],
+      "description": "Executes HTTP requests to external APIs with configurable auth (API key, Bearer token); dynamic URL construction with user-controlled path/query/body parameters"
+    },
+    {
+      "id": "SURFACE-015",
+      "kind": "external_call",
+      "identifier": "Plugin Tool Remote Invocation",
+      "locations": [
+        "api/core/tools/plugin_tool/tool.py",
+        "api/core/plugin/backwards_invocation/app.py"
+      ],
+      "description": "Routes tool invocations to remote plugin daemon with credential passing; plugin isolation depends on tenant_id boundary enforcement"
+    },
+    {
+      "id": "SURFACE-016",
+      "kind": "external_call",
+      "identifier": "RAG Document Extraction from URLs",
+      "locations": [
+        "api/core/rag/extractor/extract_processor.py",
+        "api/core/rag/datasource/"
+      ],
+      "description": "Fetches and processes documents from external URLs via SSRF proxy; supports PDF, Word, Excel, HTML, XML extraction with potential for malicious document exploitation"
+    },
+    {
+      "id": "SURFACE-017",
+      "kind": "external_call",
+      "identifier": "Website Crawl Integration (Firecrawl/Jina/Watercrawl)",
+      "locations": [
+        "api/services/auth/firecrawl/",
+        "api/services/auth/jina/",
+        "api/services/auth/watercrawl/",
+        "api/core/datasource/website_crawl/"
+      ],
+      "description": "External website crawling services with stored API keys; crawled content injected into RAG pipeline without sanitization"
+    },
+    {
+      "id": "SURFACE-018",
+      "kind": "db_table",
+      "identifier": "Vector Database Multi-Backend Access",
+      "locations": [
+        "api/core/rag/datasource/vdb/tidb_vector/tidb_vector.py",
+        "api/core/rag/datasource/vdb/"
+      ],
+      "description": "30+ vector database backend implementations with dynamic query construction; TiDB backend constructs connection strings with credentials, potential SQL injection in parameterized queries"
+    },
+    {
+      "id": "SURFACE-019",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/datasets/<dataset_id>/documents",
+      "locations": [
+        "api/controllers/console/datasets/datasets.py",
+        "api/controllers/service_api/dataset/document.py"
+      ],
+      "description": "Document creation endpoints accepting file uploads and URL sources for knowledge base indexing; untrusted content flows into embedding and retrieval pipelines"
+    },
+    {
+      "id": "SURFACE-020",
+      "kind": "endpoint",
+      "identifier": "OAuth and SSO Authentication Flow",
+      "locations": [
+        "api/controllers/console/auth/",
+        "api/controllers/common/",
+        "web/app/signin/",
+        "web/app/oauth-callback/"
+      ],
+      "description": "Authentication endpoints handling OAuth callbacks, password resets, and SSO; token validation and session management are critical security boundaries"
+    },
+    {
+      "id": "SURFACE-021",
+      "kind": "file_handler",
+      "identifier": "Tool File Access with HMAC Signing",
+      "locations": [
+        "api/core/tools/tool_file_manager.py",
+        "api/controllers/files/"
+      ],
+      "description": "File access controlled by HMAC-SHA256 signatures with 30-minute timeout; signature bypass would expose all tool-generated files"
+    },
+    {
+      "id": "SURFACE-022",
+      "kind": "external_call",
+      "identifier": "MCP Client SSE/HTTP Transport",
+      "locations": [
+        "api/core/mcp/mcp_client.py",
+        "api/core/mcp/client/sse_client.py"
+      ],
+      "description": "HTTP-based MCP client connecting to external tool servers via SSE transport; URL-based routing with SSRF-protected connections"
+    },
+    {
+      "id": "SURFACE-023",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/workspaces/current/model-providers",
+      "locations": [
+        "api/controllers/console/workspace/"
+      ],
+      "description": "Model provider configuration endpoints accepting API keys and credentials for LLM providers; stored credentials encrypted with SECRET_KEY"
+    },
+    {
+      "id": "SURFACE-024",
+      "kind": "external_call",
+      "identifier": "ExternalDataFetch.fetch() ThreadPool Execution",
+      "locations": [
+        "api/core/external_data_tool/api/",
+        "api/core/external_data_tool/"
+      ],
+      "description": "Parallel external data fetching via ThreadPoolExecutor to user-configured API endpoints; SSRF and data injection risks from external responses"
+    },
+    {
+      "id": "SURFACE-025",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/apps/<app_id>/workflows/publish",
+      "locations": [
+        "api/controllers/console/app/",
+        "api/core/app/apps/workflow/"
+      ],
+      "description": "Workflow publishing endpoint that activates workflow graphs containing code execution, HTTP request, and tool invocation nodes for production use"
+    }
+  ],
+  "repository": "",
+  "generated_at": ""
+}
