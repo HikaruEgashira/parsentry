@@ -45,7 +45,13 @@ cargo test -- --nocapture
 cargo run -- model HikaruEgashira/hikae-vulnerable-python | claude -p > /tmp/model.json
 
 # Step 2: per-surface prompt生成
-cargo run -- --threat-model /tmp/model.json --output-dir docs/reports/hikae-vulnerable HikaruEgashira/hikae-vulnerable-python
+cargo run -- scan /tmp/model.json HikaruEgashira/hikae-vulnerable-python --output-dir docs/reports/hikae-vulnerable
+
+# Step 3: agent実行（ユーザーが外部で）
+ls docs/reports/hikae-vulnerable/**/*.prompt.md | parallel 'claude -p "$(cat {})"'
+
+# Step 4: 結果集約
+cargo run -- merge docs/reports/hikae-vulnerable/hikae-vulnerable-python -o merged.sarif.json
 ```
 
 ## Benchmark guide
@@ -57,7 +63,7 @@ cargo run -- --threat-model /tmp/model.json --output-dir docs/reports/hikae-vuln
 git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
 
 cargo run -- model benchmarks/XBEN-001-24 | claude -p > /tmp/model.json
-cargo run -- --threat-model /tmp/model.json --output-dir docs/benchmark/results/XBEN-001-24 benchmarks/XBEN-001-24
+cargo run -- scan /tmp/model.json benchmarks/XBEN-001-24 --output-dir docs/benchmark/results/XBEN-001-24
 ```
 
 ## Behavior guide
