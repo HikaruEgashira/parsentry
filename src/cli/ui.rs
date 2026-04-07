@@ -1,6 +1,6 @@
 //! Unified CLI UI components for consistent, polished output
 //!
-//! Inspired by: cargo, ripgrep, bat, fd
+//! Output style inspired by docker compose: `parsentry  | keyword message`
 
 use std::io::IsTerminal;
 
@@ -55,16 +55,25 @@ pub fn truncate_path(path: &str, max_len: usize) -> String {
     format!("...{}", &path[path.len() - (max_len - 3)..])
 }
 
-/// Status line printer with consistent formatting
-/// Inspired by cargo's output style: `   Compiling foo v0.1.0`
+/// Status line printer with docker compose style formatting
+/// Format: `parsentry  | keyword message`
 pub struct StatusPrinter {
     use_colors: bool,
+    service: String,
 }
 
 impl StatusPrinter {
     pub fn new() -> Self {
         Self {
             use_colors: colors_enabled(),
+            service: "parsentry".to_string(),
+        }
+    }
+
+    pub fn with_service(service: impl Into<String>) -> Self {
+        Self {
+            use_colors: colors_enabled(),
+            service: service.into(),
         }
     }
 
@@ -77,44 +86,56 @@ impl StatusPrinter {
         }
     }
 
-    /// Print a status line: `  Scanning  target/path`
+    fn prefix(&self, color: &str) -> String {
+        let svc = self.styled(color, true, &format!("{:<12}", self.service));
+        let sep = self.styled(colors::DIM, false, "|");
+        format!("{} {}", svc, sep)
+    }
+
+    /// Print a status line: `parsentry    | Scanning target/path`
     pub fn status(&self, keyword: &str, message: &str) {
-        let keyword_styled = self.styled(colors::BRIGHT_GREEN, true, &format!("{:>12}", keyword));
-        eprintln!("{} {}", keyword_styled, message);
+        let prefix = self.prefix(colors::BRIGHT_GREEN);
+        let kw = self.styled(colors::BRIGHT_GREEN, true, keyword);
+        eprintln!("{} {} {}", prefix, kw, message);
     }
 
-    /// Print an info line: `      Info  some information`
+    /// Print an info line: `parsentry    | Info some information`
     pub fn info(&self, keyword: &str, message: &str) {
-        let keyword_styled = self.styled(colors::BRIGHT_CYAN, true, &format!("{:>12}", keyword));
-        eprintln!("{} {}", keyword_styled, message);
+        let prefix = self.prefix(colors::BRIGHT_CYAN);
+        let kw = self.styled(colors::BRIGHT_CYAN, true, keyword);
+        eprintln!("{} {} {}", prefix, kw, message);
     }
 
-    /// Print a warning line
+    /// Print a warning line: `parsentry    | Warning message`
     pub fn warning(&self, keyword: &str, message: &str) {
-        let keyword_styled = self.styled(colors::BRIGHT_YELLOW, true, &format!("{:>12}", keyword));
-        eprintln!("{} {}", keyword_styled, message);
+        let prefix = self.prefix(colors::BRIGHT_YELLOW);
+        let kw = self.styled(colors::BRIGHT_YELLOW, true, keyword);
+        eprintln!("{} {} {}", prefix, kw, message);
     }
 
-    /// Print an error line
+    /// Print an error line: `parsentry    | Error message`
     pub fn error(&self, keyword: &str, message: &str) {
-        let keyword_styled = self.styled(colors::BRIGHT_RED, true, &format!("{:>12}", keyword));
-        eprintln!("{} {}", keyword_styled, message);
+        let prefix = self.prefix(colors::BRIGHT_RED);
+        let kw = self.styled(colors::BRIGHT_RED, true, keyword);
+        eprintln!("{} {} {}", prefix, kw, message);
     }
 
-    /// Print a success line
+    /// Print a success line: `parsentry    | Done message`
     pub fn success(&self, keyword: &str, message: &str) {
-        let keyword_styled = self.styled(colors::GREEN, true, &format!("{:>12}", keyword));
-        eprintln!("{} {}", keyword_styled, message);
+        let prefix = self.prefix(colors::GREEN);
+        let kw = self.styled(colors::GREEN, true, keyword);
+        eprintln!("{} {} {}", prefix, kw, message);
     }
 
     /// Print a dim/secondary info line
     pub fn dim(&self, message: &str) {
+        let prefix = self.prefix(colors::DIM);
         let msg = if self.use_colors {
             format!("{}{}{}", colors::DIM, message, colors::RESET)
         } else {
             message.to_string()
         };
-        eprintln!("             {}", msg);
+        eprintln!("{} {}", prefix, msg);
     }
 
     /// Print section header
@@ -132,8 +153,8 @@ impl StatusPrinter {
 
     /// Print a bullet point
     pub fn bullet(&self, text: &str) {
-        let bullet = self.styled(colors::DIM, false, "•");
-        eprintln!("  {} {}", bullet, text);
+        let prefix = self.prefix(colors::DIM);
+        eprintln!("{} {}", prefix, text);
     }
 
     /// Print confidence with color coding
