@@ -31,11 +31,6 @@ pub fn render_threat_model_md(model: &ThreatModel) -> String {
             md.push('\n');
         }
 
-        md.push_str(&format!(
-            "**Query**:\n```scheme\n{}\n```\n\n",
-            surface.query
-        ));
-
         md.push_str("---\n\n");
     }
 
@@ -60,7 +55,6 @@ mod tests {
                 identifier: "POST /api/users".to_string(),
                 locations: vec!["src/routes/users.py".to_string()],
                 description: "User registration endpoint".to_string(),
-                query: r#"(call function: (identifier) @func (#eq? @func "route")) @call"#.to_string(),
             }],
         };
 
@@ -86,7 +80,6 @@ mod tests {
                 identifier: "GET /".to_string(),
                 locations: vec!["src/app.py".to_string()],
                 description: "d".to_string(),
-                query: "q".to_string(),
             }],
         };
         let md = render_threat_model_md(&with_locations);
@@ -105,7 +98,6 @@ mod tests {
                 identifier: "GET /".to_string(),
                 locations: vec![],
                 description: "d".to_string(),
-                query: "q".to_string(),
             }],
         };
         let md2 = render_threat_model_md(&no_locations);

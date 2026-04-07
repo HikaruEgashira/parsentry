@@ -24,7 +24,7 @@ Phase 3: プロンプト生成 → stdout 出力 (パイプラインで任意の
 ### Key types
 
 - `RepoMetadata` — リポジトリのメタデータ (directory tree, languages, manifests, entry points)
-- `AttackSurface` — 分析単位。kind (自由文字列) + identifier + locations + query。影響が分離した独立コンポーネント
+- `AttackSurface` — 分析単位。kind (自由文字列) + identifier + locations + description。影響が分離した独立コンポーネント
 - `ThreatModel` — リポジトリ内の AttackSurface 一覧。コンポーネント間の影響分離を定義し、surface 単位で並列分析・キャッシュを可能にする
 
 ## After Code Changes

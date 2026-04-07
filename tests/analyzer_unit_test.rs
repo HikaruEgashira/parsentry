@@ -1,24 +1,13 @@
-use parsentry::parser::{Context, Definition};
 use parsentry::response::Response;
 use std::io::Write;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
-// Mock functions for testing
 #[tokio::test]
 async fn test_analyze_empty_file() -> anyhow::Result<()> {
-    // Create empty temporary file
     let temp_file = NamedTempFile::new()?;
     let file_path = temp_file.path().to_path_buf();
 
-    // Create empty context
-    let _context = Context {
-        definitions: vec![],
-        references: vec![],
-    };
-
-    // Test with mock model (this would require actual API key in real scenario)
-    // For unit test, we'll test the empty file handling specifically
     let result = analyze_empty_file_logic(&file_path).await?;
 
     assert_eq!(result.scratchpad, "");
@@ -26,32 +15,16 @@ async fn test_analyze_empty_file() -> anyhow::Result<()> {
     assert_eq!(result.poc, "");
     assert_eq!(result.confidence_score, 0);
     assert_eq!(result.vulnerability_types.len(), 0);
-    // Note: context_code field no longer exists in Response struct
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
-    // Create temporary file with basic content
     let mut temp_file = NamedTempFile::new()?;
     writeln!(temp_file, "print('Hello, World!')")?;
     let file_path = temp_file.path().to_path_buf();
 
-    // Create context with a mock definition
-    let _context = Context {
-        definitions: vec![Definition {
-            name: "test_function".to_string(),
-            source: "def test_function(): pass".to_string(),
-            start_byte: 0,
-            end_byte: 25,
-            file_path: None,
-            line_number: None,
-        }],
-        references: vec![],
-    };
-
-    // Test basic file processing logic (without actual LLM call)
     let content = std::fs::read_to_string(&file_path)?;
     assert!(!content.is_empty());
     assert!(content.contains("Hello, World!"));
@@ -59,49 +32,7 @@ async fn test_analyze_file_with_basic_content() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_context_text_generation() {
-    let context = Context {
-        definitions: vec![
-            Definition {
-                name: "vulnerable_function".to_string(),
-                source: "def vulnerable_function(user_input):\n    os.system(user_input)"
-                    .to_string(),
-                start_byte: 0,
-                end_byte: 50,
-                file_path: None,
-                line_number: None,
-            },
-            Definition {
-                name: "safe_function".to_string(),
-                source: "def safe_function(user_input):\n    return user_input.strip()".to_string(),
-                start_byte: 60,
-                end_byte: 110,
-                file_path: None,
-                line_number: None,
-            },
-        ],
-        references: vec![],
-    };
-
-    let mut context_text = String::new();
-    if !context.definitions.is_empty() {
-        context_text.push_str("\nContext Definitions:\n");
-        for def in &context.definitions {
-            context_text.push_str(&format!(
-                "\nFunction/Definition: {}\nCode:\n{}\n",
-                def.name, def.source
-            ));
-        }
-    }
-
-    assert!(context_text.contains("vulnerable_function"));
-    assert!(context_text.contains("safe_function"));
-    assert!(context_text.contains("os.system"));
-    assert!(context_text.contains("Context Definitions:"));
-}
-
-// Simulate the empty file handling logic from analyzer.rs
+// Simulate the empty file handling logic
 async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Response> {
     let content = std::fs::read_to_string(file_path)?;
     if content.is_empty() {
@@ -115,7 +46,6 @@ async fn analyze_empty_file_logic(file_path: &PathBuf) -> anyhow::Result<Respons
         });
     }
 
-    // For non-empty files, return a mock response
     Ok(Response {
         scratchpad: "File processed".to_string(),
         analysis: "Basic analysis performed".to_string(),

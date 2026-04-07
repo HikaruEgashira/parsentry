@@ -1,29 +1,31 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::collections::HashSet;
 use std::io::{IsTerminal, Read as IoRead};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::sync::Arc;
-
-use futures::stream::{self, StreamExt};
+use std::path::Path;
 
 use crate::cli::args::ScanArgs;
 use crate::cli::ui::StatusPrinter;
 use crate::config::ParsentryConfig;
-use crate::repo::RepoOps;
 
-use parsentry_core::{FileClassifier, Language, ThreatModel};
-use parsentry_parser::{PatternMatch, SecurityRiskPatterns};
+use parsentry_core::ThreatModel;
 
-use super::common::{get_diff_files, locate_repository};
+use super::common::locate_repository;
 
-/// A serializable pattern match result for JSON output.
+/// A resolved file entry for a surface location.
 #[derive(Debug, Serialize)]
-pub struct MatchResult {
-    pub file: String,
-    pub description: String,
-    pub matched_text: String,
+pub struct ResolvedFile {
+    pub path: String,
+    pub exists: bool,
+    pub size: Option<u64>,
+}
+
+/// Output entry per surface showing resolved file locations.
+#[derive(Debug, Serialize)]
+pub struct SurfaceFiles {
+    pub surface_id: String,
+    pub identifier: String,
+    pub locations: Vec<String>,
+    pub resolved_files: Vec<ResolvedFile>,
 }
 
 /// Load threat model from file path or stdin.
@@ -58,7 +60,7 @@ fn load_threat_model(path: Option<&Path>) -> Result<ThreatModel> {
     let extracted = extract_json_from_markdown(json_str);
     serde_json::from_str(&extracted).context(
         "Failed to parse threat model JSON. Ensure the input is valid JSON \
-         (markdown code blocks are automatically stripped)"
+         (markdown code blocks are automatically stripped)",
     )
 }
 
@@ -92,125 +94,20 @@ fn extract_json_from_markdown(text: &str) -> String {
     text.to_string()
 }
 
-/// Run tree-sitter pattern matching.
-///
-/// When `threat_model` is provided, only scans files referenced by surfaces.
-/// When `None`, scans all relevant files in the repository.
-pub async fn run_pattern_matching(
-    root_dir: &Path,
-    threat_model: Option<&ThreatModel>,
-    diff_base: Option<&str>,
-    filter_lang: Option<&str>,
-    printer: &StatusPrinter,
-) -> Result<Vec<(PathBuf, PatternMatch)>> {
-    let repo = RepoOps::new(root_dir.to_path_buf());
-    let files = repo.get_relevant_files();
-
-    // Filter to changed files when diff_base is specified
-    let files = if let Some(diff_base) = diff_base {
-        let changed = get_diff_files(root_dir, diff_base)?;
-        if changed.is_empty() {
-            printer.success("Finished", "no changed files found");
-            return Ok(Vec::new());
-        }
-        let filtered: Vec<_> = files.into_iter().filter(|f| changed.contains(f)).collect();
-        printer.status(
-            "Diff filtered",
-            &format!("{} changed files (base: {})", filtered.len(), diff_base),
-        );
-        filtered
+/// Resolve a location string to actual files under root_dir.
+fn resolve_location(root_dir: &Path, location: &str) -> ResolvedFile {
+    let full_path = root_dir.join(location);
+    let exists = full_path.exists();
+    let size = if exists {
+        std::fs::metadata(&full_path).ok().map(|m| m.len())
     } else {
-        files
+        None
     };
-
-    let lang_filter: Option<HashSet<Language>> = filter_lang.and_then(|filter_str| {
-        let languages: HashSet<Language> = filter_str
-            .split(',')
-            .filter_map(|s| Language::from_str(s.trim()).ok())
-            .collect();
-        if languages.is_empty() {
-            None
-        } else {
-            Some(languages)
-        }
-    });
-
-    // Surface location filter (empty = scan all files)
-    let surface_locations: Option<HashSet<String>> = threat_model
-        .map(|tm| tm.all_locations().into_iter().collect());
-
-    let root_dir_arc = Arc::new(root_dir.to_path_buf());
-    let lang_filter = Arc::new(lang_filter);
-    let surface_locations = Arc::new(surface_locations);
-    let concurrency = (num_cpus::get() * 4).max(16);
-
-    let file_results: Vec<_> = stream::iter(files.clone())
-        .map(|file_path| {
-            let root_dir = Arc::clone(&root_dir_arc);
-            let lang_filter = Arc::clone(&lang_filter);
-            let surface_locations = Arc::clone(&surface_locations);
-            async move {
-                tokio::task::spawn_blocking(move || {
-                    // Filter by surface locations if threat model is provided
-                    if let Some(ref locations) = *surface_locations {
-                        let rel_path = file_path
-                            .strip_prefix(root_dir.as_ref())
-                            .unwrap_or(&file_path)
-                            .to_string_lossy()
-                            .to_string();
-                        let is_surface_file = locations
-                            .iter()
-                            .any(|loc| rel_path.contains(loc) || loc.contains(&rel_path));
-                        if !is_surface_file {
-                            return None;
-                        }
-                    }
-
-                    std::fs::read_to_string(&file_path)
-                        .ok()
-                        .and_then(|content| {
-                            if content.len() > 50_000 {
-                                return None;
-                            }
-
-                            let filename = file_path.to_string_lossy();
-                            let lang = FileClassifier::classify(&filename, &content);
-
-                            if let Some(filter) = lang_filter.as_ref() {
-                                if !filter.contains(&lang) {
-                                    return None;
-                                }
-                            }
-
-                            let patterns =
-                                SecurityRiskPatterns::new_with_root(lang, Some(&root_dir));
-                            let matches = patterns.get_pattern_matches(&content);
-
-                            Some(
-                                matches
-                                    .into_iter()
-                                    .map(|pattern_match| (file_path.clone(), pattern_match))
-                                    .collect::<Vec<_>>(),
-                            )
-                        })
-                })
-                .await
-                .ok()
-                .flatten()
-            }
-        })
-        .buffer_unordered(concurrency)
-        .collect()
-        .await;
-
-    let mut all_pattern_matches: Vec<(PathBuf, PatternMatch)> = Vec::new();
-    for results in file_results {
-        if let Some(matches) = results {
-            all_pattern_matches.extend(matches);
-        }
+    ResolvedFile {
+        path: location.to_string(),
+        exists,
+        size,
     }
-
-    Ok(all_pattern_matches)
 }
 
 /// Entry point for the `query` subcommand.
@@ -235,31 +132,41 @@ pub async fn run_query_command(args: ScanArgs) -> Result<()> {
         ),
     );
 
-    let pattern_matches = run_pattern_matching(
-        &root_dir,
-        Some(&threat_model),
-        args.diff_base.as_deref(),
-        args.filter_lang.as_deref(),
-        &printer,
-    )
-    .await?;
-
-    printer.status("Matched", &format!("{} patterns", pattern_matches.len()));
-
-    // Output JSON to stdout
-    let results: Vec<MatchResult> = pattern_matches
+    // Resolve each surface's locations to actual files
+    let results: Vec<SurfaceFiles> = threat_model
+        .surfaces
         .iter()
-        .map(|(file_path, pm)| MatchResult {
-            file: file_path
-                .strip_prefix(&root_dir)
-                .unwrap_or(file_path)
-                .to_string_lossy()
-                .to_string(),
-            description: pm.pattern_config.description.clone(),
-            matched_text: pm.matched_text.clone(),
+        .map(|surface| {
+            let resolved_files: Vec<ResolvedFile> = surface
+                .locations
+                .iter()
+                .map(|loc| resolve_location(&root_dir, loc))
+                .collect();
+            SurfaceFiles {
+                surface_id: surface.id.clone(),
+                identifier: surface.identifier.clone(),
+                locations: surface.locations.clone(),
+                resolved_files,
+            }
         })
         .collect();
 
+    let total_resolved = results
+        .iter()
+        .flat_map(|s| &s.resolved_files)
+        .filter(|f| f.exists)
+        .count();
+
+    printer.status(
+        "Resolved",
+        &format!(
+            "{} files across {} surfaces",
+            total_resolved,
+            results.len()
+        ),
+    );
+
+    // Output JSON to stdout
     println!("{}", serde_json::to_string_pretty(&results)?);
 
     Ok(())

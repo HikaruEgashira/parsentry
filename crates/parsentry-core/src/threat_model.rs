@@ -17,8 +17,6 @@ pub struct AttackSurface {
     pub locations: Vec<String>,
     /// Brief description of why this component warrants analysis
     pub description: String,
-    /// Tree-sitter query to locate this component in code
-    pub query: String,
 }
 
 /// Threat model for a repository — defines isolated components and their relationships.
@@ -76,7 +74,6 @@ mod tests {
             identifier: format!("GET /api/{}", id),
             locations: locations.into_iter().map(|s| s.to_string()).collect(),
             description: "test".to_string(),
-            query: "".to_string(),
         }
     }
 

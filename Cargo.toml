@@ -13,7 +13,6 @@ benchmark = []
 [dependencies]
 tokio.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
-parsentry-parser = { path = "crates/parsentry-parser" }
 parsentry-reports = { path = "crates/parsentry-reports" }
 parsentry-cache = { path = "crates/parsentry-cache" }
 clap = { version = "4.5", features = ["derive"] }
@@ -38,7 +37,6 @@ tempfile = "3.10"
 octocrab = "0.41"
 reqwest = { version = "0.12", features = ["json"] }
 urlencoding = "2.1"
-num_cpus = "1.16"
 sha2 = "0.10"
 
 [dev-dependencies]
@@ -98,10 +96,6 @@ required-features = ["benchmark"]
 name = "par_classification_accuracy_test"
 path = "tests/par_classification_accuracy_test.rs"
 required-features = ["benchmark"]
-
-[[test]]
-name = "prompt_accuracy_unit_test"
-path = "tests/prompt_accuracy_unit_test.rs"
 
 [[test]]
 name = "prompt_slo_test"

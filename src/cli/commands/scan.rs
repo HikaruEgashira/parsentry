@@ -11,7 +11,6 @@ use crate::prompt::build_all_surface_prompts;
 use parsentry_core::{RepoMetadata, ThreatModel};
 
 use super::common::{build_threat_model_cli_prompt, locate_repository, resolve_output_dir};
-use super::query::run_pattern_matching;
 
 pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     let printer = StatusPrinter::new();
@@ -55,34 +54,14 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     )
     .await?;
 
-    // Phase 3: Tree-sitter pattern matching on ALL files.
-    // Surface-level filtering happens later in prompt generation, not here.
-    // This avoids dropping patterns when LLM-generated locations are imprecise.
-    printer.status("Scanning", "tree-sitter pattern matching");
-    let all_pattern_matches = run_pattern_matching(
-        &root_dir,
-        None,
-        args.diff_base.as_deref(),
-        args.filter_lang.as_deref(),
-        &printer,
-    )
-    .await?;
-    printer.status("Matched", &format!("{} patterns", all_pattern_matches.len()));
-
-    if all_pattern_matches.is_empty() {
-        printer.warning("Scan", "no patterns found — nothing to analyze");
-        return Ok(());
-    }
-
     // Resolve output directory
     let output_dir = resolve_output_dir(&args.output_dir, &repo_name)
         .unwrap_or_else(|| PathBuf::from("parsentry-output"));
     std::fs::create_dir_all(&output_dir)?;
 
-    // Phase 4: Generate per-surface prompts
+    // Phase 3: Generate per-surface prompts (directly from source)
     let surface_prompts = build_all_surface_prompts(
         &threat_model,
-        &all_pattern_matches,
         &repo_metadata,
         &root_dir,
         &output_dir,
@@ -97,11 +76,11 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     );
 
     if surface_prompts.is_empty() {
-        printer.warning("Scan", "no surfaces matched patterns — nothing to dispatch");
+        printer.warning("Scan", "no surfaces had readable source files — nothing to dispatch");
         return Ok(());
     }
 
-    // Phase 5: Cache check + parallel agent execution
+    // Phase 4: Cache check + parallel agent execution
     let mut cached_results: Vec<ExecutionResult> = Vec::new();
     let mut tasks_to_execute: Vec<(String, String, PathBuf)> = Vec::new();
 
@@ -151,7 +130,7 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     // Combine all results
     cached_results.append(&mut execution_results);
 
-    // Phase 6: Summary
+    // Phase 5: Summary
     let succeeded = cached_results.iter().filter(|r| r.success).count();
     let failed = cached_results.len() - succeeded;
 

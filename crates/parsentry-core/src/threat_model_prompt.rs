@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::threat_model::{AttackSurface, ThreatModel};
 
-pub const THREAT_MODEL_SYSTEM_PROMPT: &str = r#"You are an attack surface enumerator. Given repository metadata, identify all concrete attack surfaces and generate a tree-sitter query for each to locate them in code.
+pub const THREAT_MODEL_SYSTEM_PROMPT: &str = r#"You are an attack surface enumerator. Given repository metadata, identify all concrete attack surfaces and the file locations where they are defined.
 
 Focus on listing:
 
@@ -25,9 +25,6 @@ For Infrastructure-as-Code:
 Rules:
 - Be specific: "POST /api/users" not "user management endpoints"
 - Include file paths where each surface is defined
-- Each surface must have a valid tree-sitter S-expression query to locate it
-- Use capture names (e.g. @func, @call) in queries
-- Use #eq? or #match? predicates to narrow matches
 - Quality over quantity — only list surfaces that warrant security review"#;
 
 pub fn build_threat_model_prompt(repo_context: &str, languages: &[String]) -> String {
@@ -53,8 +50,7 @@ Return a JSON object with this structure:
       "kind": "endpoint|db_table|public_api|file_handler|external_call|iac_resource",
       "identifier": "POST /api/users",
       "locations": ["src/routes/users.py", "src/models/user.py"],
-      "description": "User registration endpoint accepting untrusted input",
-      "query": "(decorator (call function: (attribute attribute: (identifier) @method (#match? @method \"post|put|delete\")))) @route"
+      "description": "User registration endpoint accepting untrusted input"
     }}
   ]
 }}"#,
@@ -78,10 +74,9 @@ pub fn threat_model_schema() -> serde_json::Value {
                         "kind": {"type": "string"},
                         "identifier": {"type": "string"},
                         "locations": {"type": "array", "items": {"type": "string"}},
-                        "description": {"type": "string"},
-                        "query": {"type": "string"}
+                        "description": {"type": "string"}
                     },
-                    "required": ["id", "kind", "identifier", "locations", "description", "query"]
+                    "required": ["id", "kind", "identifier", "locations", "description"]
                 }
             }
         },
@@ -103,7 +98,6 @@ struct LlmSurface {
     identifier: String,
     locations: Vec<String>,
     description: String,
-    query: String,
 }
 
 pub fn parse_threat_model_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
@@ -119,7 +113,6 @@ pub fn parse_threat_model_response(json_str: &str, repository: &str) -> Result<T
             identifier: s.identifier,
             locations: s.locations,
             description: s.description,
-            query: s.query,
         })
         .collect();
 
@@ -184,48 +177,42 @@ mod tests {
                     "kind": "endpoint",
                     "identifier": "POST /api/users",
                     "locations": ["src/routes.py"],
-                    "description": "User registration",
-                    "query": "(call) @route"
+                    "description": "User registration"
                 },
                 {
                     "id": "S-002",
                     "kind": "db_table",
                     "identifier": "users table",
                     "locations": ["src/models.py"],
-                    "description": "User data storage",
-                    "query": "(assignment) @table"
+                    "description": "User data storage"
                 },
                 {
                     "id": "S-003",
                     "kind": "public_api",
                     "identifier": "pub fn parse()",
                     "locations": ["src/lib.rs"],
-                    "description": "Public parsing function",
-                    "query": "(function_item) @func"
+                    "description": "Public parsing function"
                 },
                 {
                     "id": "S-004",
                     "kind": "file_handler",
                     "identifier": "upload_file()",
                     "locations": ["src/upload.py"],
-                    "description": "File upload handler",
-                    "query": "(call) @upload"
+                    "description": "File upload handler"
                 },
                 {
                     "id": "S-005",
                     "kind": "external_call",
                     "identifier": "requests.get(url)",
                     "locations": ["src/fetch.py"],
-                    "description": "External HTTP call",
-                    "query": "(call) @http"
+                    "description": "External HTTP call"
                 },
                 {
                     "id": "S-006",
                     "kind": "iac_resource",
                     "identifier": "aws_s3_bucket.data",
                     "locations": ["infra/main.tf"],
-                    "description": "S3 bucket resource",
-                    "query": "(block) @resource"
+                    "description": "S3 bucket resource"
                 }
             ]
         }"#;

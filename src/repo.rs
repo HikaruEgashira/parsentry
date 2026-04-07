@@ -1,12 +1,10 @@
-use anyhow::Result;
 use std::{
-    fs::{File, read_to_string},
+    fs::File,
     io::{BufRead, BufReader, Result as IoResult},
     path::{Path, PathBuf},
 };
 
-use parsentry_parser::SecurityRiskPatterns;
-use parsentry_core::{FileClassifier, FileDiscovery};
+use parsentry_core::FileDiscovery;
 
 #[derive(Default)]
 pub struct LanguageExclusions {
@@ -17,8 +15,6 @@ pub struct RepoOps {
     file_discovery: FileDiscovery,
     gitignore_patterns: Vec<String>,
     language_exclusions: LanguageExclusions,
-    code_parser: crate::parser::CodeParser,
-    parser_initialized: bool,
 }
 
 impl RepoOps {
@@ -29,27 +25,17 @@ impl RepoOps {
             file_patterns: vec!["test_".to_string(), "conftest".to_string()],
         };
 
-        let code_parser = crate::parser::CodeParser::new().unwrap();
         let file_discovery = FileDiscovery::new(repo_path);
 
         Self {
             file_discovery,
             gitignore_patterns,
             language_exclusions,
-            code_parser,
-            parser_initialized: false,
         }
     }
 
     pub fn repo_path(&self) -> &Path {
         self.file_discovery.root_path()
-    }
-
-    pub fn collect_context_for_security_pattern(
-        &mut self,
-        file_path: &std::path::Path,
-    ) -> anyhow::Result<crate::parser::Context> {
-        self.code_parser.build_context_from_file(file_path)
     }
 
     fn read_gitignore(repo_path: &Path) -> IoResult<Vec<String>> {
@@ -134,64 +120,11 @@ impl RepoOps {
         }
     }
 
-    pub fn get_network_related_files(&self, files: &[PathBuf]) -> Vec<PathBuf> {
-        let mut network_files = Vec::new();
-        for file_path in files {
-            if let Ok(content) = read_to_string(file_path) {
-                // Skip files with more than 50,000 characters
-                if content.len() > 50_000 {
-                    continue;
-                }
-                
-                let filename = file_path.to_string_lossy();
-                let lang = FileClassifier::classify(&filename, &content);
-                let patterns = SecurityRiskPatterns::new_with_root(lang, Some(self.repo_path()));
-                if patterns.matches(&content) {
-                    network_files.push(file_path.clone());
-                }
-            }
-        }
-
-        network_files
-    }
-
-    pub fn get_files_to_analyze(&self, analyze_path: Option<PathBuf>) -> Result<Vec<PathBuf>> {
+    pub fn get_files_to_analyze(
+        &self,
+        analyze_path: Option<PathBuf>,
+    ) -> anyhow::Result<Vec<PathBuf>> {
         let path_to_analyze = analyze_path.unwrap_or_else(|| self.repo_path().to_path_buf());
         self.file_discovery.get_files_in_path(&path_to_analyze)
-    }
-
-    pub fn parse_repo_files(&mut self, analyze_path: Option<PathBuf>) -> Result<()> {
-        let files = self.get_files_to_analyze(analyze_path)?;
-        for file in &files {
-            self.code_parser.add_file(file)?;
-        }
-        self.parser_initialized = true;
-
-        Ok(())
-    }
-
-    pub fn find_definition_in_repo(
-        &mut self,
-        name: &str,
-        source_file: &Path,
-    ) -> anyhow::Result<Option<(PathBuf, crate::parser::Definition)>> {
-        if !self.parser_initialized {
-            self.parse_repo_files(None)?;
-        }
-
-        self.code_parser.find_definition(name, source_file)
-    }
-
-    pub fn find_references_in_repo(
-        &mut self,
-        name: &str,
-    ) -> anyhow::Result<Vec<(PathBuf, crate::parser::Definition)>> {
-        if !self.parser_initialized {
-            self.parse_repo_files(None)?;
-        }
-        Ok(self.code_parser.find_calls(name)?.into_iter().map(|(path, def, _)| (path, def)).collect())
-    }
-    pub fn add_file_to_parser(&mut self, path: &std::path::Path) -> anyhow::Result<()> {
-        self.code_parser.add_file(path)
     }
 }

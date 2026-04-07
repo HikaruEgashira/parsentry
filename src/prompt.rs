@@ -1,13 +1,16 @@
 //! Per-surface prompt generation.
 //!
-//! Generates a focused prompt for each [`AttackSurface`] so that surfaces can be
+//! Generates a focused prompt for each [`AttackSurface`] by reading actual
+//! source code from the surface's locations, so that surfaces can be
 //! independently dispatched to CLI agents and cached by content hash.
 
 use std::path::{Path, PathBuf};
 
-use parsentry_core::{AttackSurface, RepoMetadata, ThreatModel};
-use parsentry_parser::PatternMatch;
+use parsentry_core::{AttackSurface, FileDiscovery, RepoMetadata, ThreatModel};
 use sha2::{Digest, Sha256};
+
+/// Maximum file size (in bytes) to include in a prompt.
+const MAX_FILE_SIZE: u64 = 50 * 1024;
 
 /// A prompt scoped to a single attack surface, ready for agent dispatch.
 #[derive(Debug, Clone)]
@@ -16,62 +19,107 @@ pub struct SurfacePrompt {
     pub surface_id: String,
     /// The full prompt text for the agent.
     pub prompt: String,
-    /// SHA-256 hex digest of `prompt`, used as a cache key.
+    /// SHA-256 hex digest of resolved source contents, used as a cache key.
     pub cache_key: String,
     /// File path where the agent should write its output.
     pub output_path: PathBuf,
 }
 
+/// Resolved source file: relative path + contents.
+struct SourceFile {
+    rel_path: String,
+    contents: String,
+}
+
+/// Resolve all readable source files for a surface's locations.
+fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceFile> {
+    let discovery = FileDiscovery::new(root_dir.to_path_buf());
+    let mut sources: Vec<SourceFile> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    for location in &surface.locations {
+        let full_path = root_dir.join(location);
+
+        if full_path.is_file() {
+            // Single file
+            if let Ok(meta) = std::fs::metadata(&full_path) {
+                if meta.len() <= MAX_FILE_SIZE {
+                    let rel = full_path
+                        .strip_prefix(root_dir)
+                        .unwrap_or(&full_path)
+                        .to_string_lossy()
+                        .to_string();
+                    if seen.insert(rel.clone()) {
+                        if let Ok(contents) = std::fs::read_to_string(&full_path) {
+                            sources.push(SourceFile { rel_path: rel, contents });
+                        }
+                    }
+                }
+            }
+        } else if full_path.is_dir() {
+            // Directory — find all source files under it
+            if let Ok(files) = discovery.get_files_in_path(&full_path) {
+                for file_path in files {
+                    if let Ok(meta) = std::fs::metadata(&file_path) {
+                        if meta.len() > MAX_FILE_SIZE {
+                            continue;
+                        }
+                    }
+                    let rel = file_path
+                        .strip_prefix(root_dir)
+                        .unwrap_or(&file_path)
+                        .to_string_lossy()
+                        .to_string();
+                    if seen.insert(rel.clone()) {
+                        if let Ok(contents) = std::fs::read_to_string(&file_path) {
+                            sources.push(SourceFile { rel_path: rel, contents });
+                        }
+                    }
+                }
+            }
+        }
+        // If the path doesn't exist, silently skip it.
+    }
+
+    sources
+}
+
 /// Generate a prompt for a single [`AttackSurface`].
 ///
-/// Returns `None` when no `pattern_matches` overlap with the surface's
-/// `locations` (fuzzy path containment check).
+/// Returns `None` when no readable source files overlap with the surface's
+/// `locations`.
 ///
 /// `output_dir` is the directory where the agent should write its SARIF output.
 /// The output file will be named `{surface_id}.sarif.json`.
 pub fn build_surface_prompt(
     surface: &AttackSurface,
-    pattern_matches: &[(PathBuf, PatternMatch)],
     repo_metadata: &RepoMetadata,
     root_dir: &Path,
     output_dir: &Path,
 ) -> Option<SurfacePrompt> {
-    // Filter & deduplicate matches whose relative path overlaps any surface location.
-    let mut seen = std::collections::HashSet::new();
-    let relevant: Vec<_> = pattern_matches
-        .iter()
-        .filter(|(fp, _)| {
-            let rel = fp
-                .strip_prefix(root_dir)
-                .unwrap_or(fp)
-                .to_string_lossy();
-            surface.locations.iter().any(|loc: &String| {
-                rel.contains(loc.as_str()) || loc.contains(rel.as_ref())
-            })
-        })
-        .filter(|(fp, pm)| {
-            let key = (
-                fp.strip_prefix(root_dir)
-                    .unwrap_or(fp)
-                    .to_string_lossy()
-                    .to_string(),
-                pm.matched_text.clone(),
-            );
-            seen.insert(key)
-        })
-        .collect();
+    let sources = resolve_source_files(surface, root_dir);
 
-    if relevant.is_empty() {
+    if sources.is_empty() {
         return None;
     }
 
     let repo_context = repo_metadata.to_prompt_context();
     let output_path = output_dir.join(format!("{}.sarif.json", surface.id));
 
+    // Cache key: SHA-256 of concatenated (relative_path + "\0" + file_contents)
+    let mut cache_input = String::new();
+    for src in &sources {
+        cache_input.push_str(&src.rel_path);
+        cache_input.push('\0');
+        cache_input.push_str(&src.contents);
+        cache_input.push('\0');
+    }
+    let cache_key = hex_sha256(&cache_input);
+
     let mut prompt = String::new();
 
     prompt.push_str(
-        "You are a security auditor. Analyze the following code patterns \
+        "You are a security auditor. Analyze the following source code \
          for vulnerabilities.\n\n",
     );
 
@@ -89,32 +137,17 @@ pub fn build_surface_prompt(
     // Repository context
     prompt.push_str("## Repository Context\n\n");
     prompt.push_str(&repo_context);
-    prompt.push_str("\n\n## Detected Patterns\n\n");
+    prompt.push_str("\n\n## Source Code\n\n");
 
-    // Cache key: hash only the pattern matches (the actual analysis input).
-    // Surface metadata, repo context, and output path are excluded because
-    // they don't change the analysis result — only the code patterns do.
-    let mut cache_input = String::new();
-    for (file_path, pm) in &relevant {
-        let rel_path = file_path
-            .strip_prefix(root_dir)
-            .unwrap_or(file_path)
-            .to_string_lossy();
-        cache_input.push_str(&rel_path);
-        cache_input.push('\0');
-        cache_input.push_str(&pm.matched_text);
-        cache_input.push('\0');
-    }
-    let cache_key = hex_sha256(&cache_input);
-
-    for (file_path, pm) in &relevant {
-        let rel_path = file_path
-            .strip_prefix(root_dir)
-            .unwrap_or(file_path)
-            .display();
+    for src in &sources {
+        // Infer language hint from extension
+        let lang_hint = Path::new(&src.rel_path)
+            .extension()
+            .map(|e| e.to_string_lossy().to_string())
+            .unwrap_or_default();
         prompt.push_str(&format!(
-            "### {} — {}\n```\n{}\n```\n\n",
-            rel_path, pm.pattern_config.description, pm.matched_text,
+            "### {}\n```{}\n{}\n```\n\n",
+            src.rel_path, lang_hint, src.contents,
         ));
     }
 
@@ -139,10 +172,9 @@ pub fn build_surface_prompt(
 
 /// Build prompts for every surface in a [`ThreatModel`].
 ///
-/// Surfaces that have no matching patterns are silently skipped.
+/// Surfaces that have no readable source files are silently skipped.
 pub fn build_all_surface_prompts(
     threat_model: &ThreatModel,
-    pattern_matches: &[(PathBuf, PatternMatch)],
     repo_metadata: &RepoMetadata,
     root_dir: &Path,
     output_dir: &Path,
@@ -150,7 +182,7 @@ pub fn build_all_surface_prompts(
     threat_model
         .surfaces
         .iter()
-        .filter_map(|s| build_surface_prompt(s, pattern_matches, repo_metadata, root_dir, output_dir))
+        .filter_map(|s| build_surface_prompt(s, repo_metadata, root_dir, output_dir))
         .collect()
 }
 
@@ -163,8 +195,9 @@ fn hex_sha256(data: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use parsentry_parser::{PatternConfig, PatternQuery};
     use std::collections::HashMap;
+    use std::fs;
+    use tempfile::TempDir;
 
     fn make_metadata(root: &Path) -> RepoMetadata {
         RepoMetadata {
@@ -177,21 +210,6 @@ mod tests {
         }
     }
 
-    fn make_pattern(text: &str, desc: &str) -> PatternMatch {
-        PatternMatch {
-            pattern_config: PatternConfig {
-                pattern_type: PatternQuery::Reference {
-                    reference: String::new(),
-                },
-                description: desc.to_string(),
-                attack_vector: vec![],
-            },
-            start_byte: 0,
-            end_byte: text.len(),
-            matched_text: text.to_string(),
-        }
-    }
-
     fn make_surface(id: &str, locations: Vec<&str>) -> AttackSurface {
         AttackSurface {
             id: id.to_string(),
@@ -199,39 +217,41 @@ mod tests {
             identifier: format!("GET /api/{}", id),
             locations: locations.into_iter().map(String::from).collect(),
             description: "test surface".to_string(),
-            query: String::new(),
         }
     }
 
     #[test]
-    fn returns_none_when_no_matches() {
-        let root = Path::new("/repo");
-        let out = Path::new("/tmp/out");
-        let surface = make_surface("S-1", vec!["src/auth.py"]);
-        let matches = vec![(
-            PathBuf::from("/repo/src/db.py"),
-            make_pattern("SELECT *", "sql query"),
-        )];
+    fn returns_none_when_no_files_exist() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let surface = make_surface("S-1", vec!["src/nonexistent.py"]);
         let meta = make_metadata(root);
 
-        assert!(build_surface_prompt(&surface, &matches, &meta, root, out).is_none());
+        assert!(build_surface_prompt(&surface, &meta, root, &out).is_none());
     }
 
     #[test]
-    fn builds_prompt_for_matching_surface() {
-        let root = Path::new("/repo");
-        let out = Path::new("/tmp/out");
+    fn builds_prompt_with_file_contents() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("auth.py"), "password = input()\n").unwrap();
+
         let surface = make_surface("S-1", vec!["src/auth.py"]);
-        let matches = vec![(
-            PathBuf::from("/repo/src/auth.py"),
-            make_pattern("password = input()", "user input"),
-        )];
         let meta = make_metadata(root);
 
-        let sp = build_surface_prompt(&surface, &matches, &meta, root, out).unwrap();
+        let sp = build_surface_prompt(&surface, &meta, root, &out).unwrap();
         assert_eq!(sp.surface_id, "S-1");
         assert!(sp.prompt.contains("S-1"));
         assert!(sp.prompt.contains("password = input()"));
+        assert!(sp.prompt.contains("src/auth.py"));
         assert!(sp.prompt.contains("Write the complete SARIF"));
         assert!(sp.prompt.contains("S-1.sarif.json"));
         assert_eq!(sp.output_path, out.join("S-1.sarif.json"));
@@ -239,35 +259,102 @@ mod tests {
     }
 
     #[test]
-    fn deduplicates_same_file_and_text() {
-        let root = Path::new("/repo");
-        let out = Path::new("/tmp/out");
-        let surface = make_surface("S-1", vec!["src/app.py"]);
-        let pm = make_pattern("eval(x)", "eval call");
-        let matches = vec![
-            (PathBuf::from("/repo/src/app.py"), pm.clone()),
-            (PathBuf::from("/repo/src/app.py"), pm),
-        ];
+    fn resolves_directory_locations() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("app.py"), "import os\nos.system(cmd)\n").unwrap();
+        fs::write(src_dir.join("utils.py"), "def helper(): pass\n").unwrap();
+
+        let surface = make_surface("S-1", vec!["src"]);
         let meta = make_metadata(root);
 
-        let sp = build_surface_prompt(&surface, &matches, &meta, root, out).unwrap();
-        let count = sp.prompt.matches("eval(x)").count();
-        assert_eq!(count, 1);
+        let sp = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        assert!(sp.prompt.contains("os.system(cmd)"));
+        assert!(sp.prompt.contains("def helper(): pass"));
+    }
+
+    #[test]
+    fn skips_large_files() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        // Create a file > 50KB
+        let large_content = "x".repeat(60 * 1024);
+        fs::write(src_dir.join("big.py"), &large_content).unwrap();
+
+        let surface = make_surface("S-1", vec!["src/big.py"]);
+        let meta = make_metadata(root);
+
+        assert!(build_surface_prompt(&surface, &meta, root, &out).is_none());
     }
 
     #[test]
     fn cache_key_deterministic() {
-        let root = Path::new("/repo");
-        let out = Path::new("/tmp/out");
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("app.py"), "os.system(cmd)\n").unwrap();
+
         let surface = make_surface("S-1", vec!["src/app.py"]);
-        let matches = vec![(
-            PathBuf::from("/repo/src/app.py"),
-            make_pattern("os.system(cmd)", "command injection"),
-        )];
         let meta = make_metadata(root);
 
-        let sp1 = build_surface_prompt(&surface, &matches, &meta, root, out).unwrap();
-        let sp2 = build_surface_prompt(&surface, &matches, &meta, root, out).unwrap();
+        let sp1 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        let sp2 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
         assert_eq!(sp1.cache_key, sp2.cache_key);
+    }
+
+    #[test]
+    fn cache_key_changes_with_content() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("app.py"), "version_1\n").unwrap();
+
+        let surface = make_surface("S-1", vec!["src/app.py"]);
+        let meta = make_metadata(root);
+
+        let sp1 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+
+        fs::write(src_dir.join("app.py"), "version_2\n").unwrap();
+        let sp2 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+
+        assert_ne!(sp1.cache_key, sp2.cache_key);
+    }
+
+    #[test]
+    fn deduplicates_overlapping_locations() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let out = root.join("out");
+        fs::create_dir_all(&out).unwrap();
+
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("app.py"), "eval(x)\n").unwrap();
+
+        // Both locations resolve to the same file
+        let surface = make_surface("S-1", vec!["src/app.py", "src/app.py"]);
+        let meta = make_metadata(root);
+
+        let sp = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        let count = sp.prompt.matches("eval(x)").count();
+        assert_eq!(count, 1);
     }
 }

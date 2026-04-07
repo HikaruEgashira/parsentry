@@ -54,7 +54,7 @@ pub enum Commands {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         target: Option<String>,
     },
-    /// Run tree-sitter pattern matching. Outputs JSON to stdout.
+    /// Show surface locations and resolved source files. Outputs JSON to stdout.
     Query {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         target: Option<String>,
