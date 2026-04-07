@@ -2,10 +2,9 @@
 
   <img width="250" src="./logo.png" alt="Parsentry Logo">
 
-**Parallel CLI agent execution platform with caching.**
+**Security prompt orchestrator for CLI agents.**
 
-Parsentry uses static analysis to enumerate isolated components, then dispatches them to CLI agents for parallel analysis.
-Run large-scale agent tasks faster with deduplication and result caching.
+Parsentry analyzes repository structure, enumerates attack surfaces, and generates per-surface analysis prompts. Pipe them to any CLI agent for parallel security analysis.
 
 </div>
 
@@ -13,43 +12,36 @@ Run large-scale agent tasks faster with deduplication and result caching.
 
 ### How it works
 
-1. **Component Enumeration** — Analyze repo metadata, enumerate isolated surfaces (endpoints, tables, public APIs, etc.)
-2. **Pattern Matching** — Tree-sitter finds code patterns in component locations
-3. **Prompt Generation** — Output analysis prompts to stdout, pipe to any CLI agent
-4. **Caching** — SHA2-based result cache prevents duplicate agent executions
-
-```bash
-# Scan and pipe to Claude Code
-parsentry owner/repo | claude
-
-# Generate threat model prompt
-parsentry model owner/repo | claude
-
-# Pattern match with threat model
-parsentry model repo > model.json
-parsentry query repo --threat-model model.json
+```
+parsentry model <repo>    →  threat model prompt   →  pipe to agent
+parsentry <repo>          →  per-surface prompts   →  pipe to agent (parallel)
 ```
 
-### Supported Languages
+1. **Threat Model** — Collect repo metadata (structure, languages, dependencies), generate a prompt for attack surface enumeration
+2. **Source Resolution** — For each surface, resolve file locations and read actual source code
+3. **Prompt Generation** — Output focused analysis prompts (one per surface) for piping to any CLI agent
 
-`C, C++, Go, Java, JavaScript, Python, Ruby, Rust, TypeScript, Terraform`
+```bash
+# Step 1: Generate threat model
+parsentry model owner/repo | claude -p > model.json
 
-<div align="center">
-  <img src="./docs/images/run1.png" width="32%" alt="Run 1">
-  <img src="./docs/images/run2.png" width="32%" alt="Run 2">
-  <img src="./docs/images/run3.png" width="32%" alt="Run 3">
-</div>
+# Step 2: Generate per-surface prompts
+parsentry --threat-model model.json --output-dir prompts/ owner/repo
+
+# Step 3: Run in parallel with any CLI agent
+ls prompts/*.prompt.md | parallel -j10 'claude -p "$(cat {})" > {.}.sarif.json'
+```
 
 ### Prerequisites
 
-Parsentry generates analysis prompts. You need a CLI agent to process them:
+Parsentry generates prompts. You need a CLI agent to process them:
 
 ```bash
 # Install Claude Code (recommended)
 npm install -g @anthropic-ai/claude-code
 ```
 
-Any CLI that reads stdin works: `claude`, `codex`, `aider`, etc.
+Any CLI agent works: `claude`, `codex`, `aider`, etc.
 
 ### Installation
 
@@ -63,32 +55,18 @@ cargo install parsentry
 # Or download binary from GitHub Releases
 ```
 
-Download the latest release for your platform from [GitHub Releases](https://github.com/HikaruEgashira/parsentry/releases).
-
 ### Quick Start
 
 ```bash
-# 1. Generate threat model and analyze with Claude
-parsentry model owner/repo | claude
+# Scan a GitHub repo (generates threat model prompt to stdout)
+parsentry model owner/repo | claude -p > model.json
 
-# 2. Or scan a local project
-parsentry model . | claude
+# Generate per-surface analysis prompts
+parsentry --threat-model model.json --output-dir results/ owner/repo
 
-# 3. Only scan changed files (great for PR reviews)
-parsentry model . --diff-base origin/main | claude
-```
-
-### Usage
-
-```bash
-# Analyze a GitHub repository
-parsentry owner/repository
-
-# Analyze a local directory
-parsentry /path/to/code
-
-# Only scan changed files against a base branch
-parsentry owner/repository --diff-base origin/main
+# Only scan changed files (great for PR reviews)
+parsentry model . --diff-base origin/main | claude -p > model.json
+parsentry --threat-model model.json --diff-base origin/main --output-dir results/ .
 ```
 
 ### Command Line Options
@@ -97,43 +75,41 @@ parsentry owner/repository --diff-base origin/main
 Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
 
 Commands:
-  model  Generate analysis prompt from repo metadata
-  query  Run tree-sitter pattern matching (JSON output)
+  model  Generate threat model prompt from repo metadata
+  query  Show surface locations and resolved source files
   cache  Manage result cache
 
 Arguments:
   [TARGET]  Local path or GitHub repository (owner/repo)
 
 Options:
-  --diff-base <REF>              Git ref to diff against
-  --filter-lang <LANG>           Filter by language (comma-separated)
   --threat-model <PATH>          Path to threat model JSON
+  --output-dir <DIR>             Output directory for prompt files
+  --diff-base <REF>              Git ref to diff against (only changed files)
+  --filter-lang <LANG>           Filter by language (comma-separated)
   -v, --verbosity                Increase verbosity
   --generate-config              Print default config
 ```
 
 ### Architecture
 
+```
+Phase 1: parsentry model   →  repo metadata  →  threat model prompt (stdout)
+Phase 2: parsentry scan    →  threat model + source code  →  prompt files (output-dir)
+Phase 3: user orchestrates →  prompt files  →  CLI agent  →  SARIF results
+```
+
 | Crate | Role |
 |-------|------|
-| `parsentry-core` | Language, RepoMetadata, ThreatModel types |
-| `parsentry-parser` | Tree-sitter pattern matching |
-| `parsentry-executor` | Parallel CLI agent execution |
-| `parsentry-cache` | Task result cache |
-| `parsentry-reports` | SARIF/Markdown reports |
-| `parsentry-utils` | File classification/discovery |
+| `parsentry-core` | Language, RepoMetadata, ThreatModel, AttackSurface types |
+| `parsentry-cache` | Content-addressable file cache |
+| `parsentry-reports` | SARIF/Markdown report generation |
 
 ### Example Reports
 
-- [skills/secure-code-game](docs/reports/skills-secure-code-game/summary.md) - Security challenges across multiple languages
-- [harishsg993010/damn-vulnerable-MCP-server](docs/reports/harishsg993010-damn-vulnerable-MCP-server/summary.md) - MCP Server
-- [bridgecrewio/terragoat](docs/reports/terragoat/summary.md) - Terraform
-- [RhinoSecurityLabs/cloudgoat](docs/reports/cloudgoat/summary.md) - Infrastructure as Code (IaC)
-- [NeuraLegion/brokencrystals](docs/reports/NeuraLegion-brokencrystals/summary.md) - Typescript
-- [OWASP/NodeGoat](docs/reports/NodeGoat/summary.md) - Node.js
-- [OWASP/railsgoat](docs/reports/railsgoat/summary.md) - Ruby on Rails
-- [dolevf/Damn-Vulnerable-GraphQL-Application](docs/reports/Damn-Vulnerable-GraphQL-Application/summary.md) - GraphQL
-- [cider-security-research/cicd-goat](docs/reports/cicd-goat/parsentry-results.sarif) - CI/CD Pipeline
+- [langgenius/dify](docs/reports/dify/) - LLM application platform (Python/TypeScript, 8531 files)
+- [assafelovic/gpt-researcher](docs/reports/gpt-researcher/) - AI research agent (Python, 298 files)
+- [HikaruEgashira/hikae-vulnerable-python](docs/reports/hikae-vulnerable/) - Vulnerable Flask app
 
 ### Security
 
