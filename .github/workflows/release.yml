@@ -97,9 +97,40 @@ jobs:
           name: parsentry-${{ matrix.target }}
           path: parsentry-${{ matrix.target }}.${{ matrix.archive }}
 
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        timeout-minutes: 5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Install Rust
+        timeout-minutes: 5
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: stable
+
+      - name: Publish crates
+        timeout-minutes: 10
+        run: |
+          cargo publish -p parsentry-core
+          cargo publish -p parsentry-cache
+          cargo publish -p parsentry-claude
+          cargo publish -p parsentry-parser
+          cargo publish -p parsentry-reports
+          cargo publish -p parsentry
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
