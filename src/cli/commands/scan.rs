@@ -10,9 +10,8 @@ use super::common::{cache_dir_for, locate_repository, repo_name_from_target};
 
 /// Check if a surface has a cached SARIF result with a matching cache key.
 fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
-    let skill_dir = output_dir.join(&sp.skill_name);
-    let sarif_path = skill_dir.join("result.sarif.json");
-    let cache_key_path = skill_dir.join(".cache_key");
+    let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
+    let cache_key_path = output_dir.join(format!("{}.cache_key", sp.surface_id));
 
     if !sarif_path.exists() || !cache_key_path.exists() {
         return false;
@@ -26,7 +25,7 @@ fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
 
 /// Write the cache key sidecar file for a surface.
 fn write_cache_key(output_dir: &Path, sp: &SurfacePrompt) -> Result<()> {
-    let cache_key_path = output_dir.join(&sp.skill_name).join(".cache_key");
+    let cache_key_path = output_dir.join(format!("{}.cache_key", sp.surface_id));
     std::fs::write(&cache_key_path, &sp.cache_key)?;
     Ok(())
 }
@@ -108,34 +107,29 @@ pub async fn run_scan_command(
         return Ok(());
     }
 
-    // Write Agent Skills for pending (non-cached) surfaces
-    printer.section("Skills");
+    // Write prompts only for pending (non-cached) surfaces
+    printer.section("Prompts");
     for sp in &pending {
-        let skill_dir = output_dir.join(&sp.skill_name);
-        std::fs::create_dir_all(&skill_dir)?;
+        let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
+        let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
 
-        let skill_path = skill_dir.join("SKILL.md");
-        let sarif_path = skill_dir.join("result.sarif.json");
-
-        let full_skill_md = format!(
+        let full_prompt = format!(
             "{}\n\nWrite the SARIF JSON output to: {}\n\
              Write ONLY valid JSON. No markdown, no code fences, no explanation.\n",
             sp.prompt,
             sarif_path.display()
         );
 
-        std::fs::write(&skill_path, &full_skill_md)?;
+        std::fs::write(&prompt_path, &full_prompt)?;
         write_cache_key(&output_dir, sp)?;
 
-        printer.bullet(&format!("{} → {}", sp.surface_id, skill_path.display()));
+        printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
     }
 
-    // Phase 4: Generate orchestrator skill only for pending surfaces
+    // Phase 4: Generate orchestrator prompt only for pending surfaces
     let pending_owned: Vec<SurfacePrompt> = pending.iter().map(|s| (*s).clone()).collect();
     let orchestrator_content = build_orchestrator_prompt(&pending_owned, &output_dir);
-    let orchestrator_dir = output_dir.join("orchestrator");
-    std::fs::create_dir_all(&orchestrator_dir)?;
-    let orchestrator_path = orchestrator_dir.join("SKILL.md");
+    let orchestrator_path = output_dir.join("orchestrator.prompt.md");
     std::fs::write(&orchestrator_path, &orchestrator_content)?;
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
 

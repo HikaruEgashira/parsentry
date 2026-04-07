@@ -1,11 +1,8 @@
-//! Per-surface Agent Skills generation.
+//! Per-surface prompt generation.
 //!
-//! Generates a SKILL.md file for each [`AttackSurface`] by reading actual
+//! Generates a focused prompt for each [`AttackSurface`] by reading actual
 //! source code from the surface's locations, so that surfaces can be
 //! independently dispatched to CLI agents and cached by content hash.
-//!
-//! Output follows the [Agent Skills](https://agentskills.io/specification.md) format:
-//! each skill is a directory containing a `SKILL.md` with YAML frontmatter.
 
 use std::path::Path;
 
@@ -20,37 +17,10 @@ const MAX_FILE_SIZE: u64 = 50 * 1024;
 pub struct SurfacePrompt {
     /// Surface identifier (mirrors [`AttackSurface::id`]).
     pub surface_id: String,
-    /// Agent Skills-compatible directory name (lowercase, hyphens only).
-    pub skill_name: String,
-    /// SKILL.md content (YAML frontmatter + Markdown body).
+    /// The full prompt text for the agent.
     pub prompt: String,
     /// SHA-256 hex digest of resolved source contents, used as a cache key.
     pub cache_key: String,
-}
-
-/// Convert an arbitrary surface ID to a valid Agent Skills name.
-///
-/// Rules: lowercase `[a-z0-9-]`, no leading/trailing hyphens,
-/// no consecutive hyphens, max 64 chars.
-fn sanitize_skill_name(id: &str) -> String {
-    let mut name: String = id
-        .to_lowercase()
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
-        .collect();
-
-    while name.contains("--") {
-        name = name.replace("--", "-");
-    }
-
-    let name = name.trim_matches('-').to_string();
-    let name = if name.is_empty() { "surface".to_string() } else { name };
-
-    if name.len() > 64 {
-        name[..64].trim_end_matches('-').to_string()
-    } else {
-        name
-    }
 }
 
 /// Resolved source file: relative path + contents.
@@ -112,7 +82,7 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
     sources
 }
 
-/// Generate a SKILL.md for a single [`AttackSurface`].
+/// Generate a prompt for a single [`AttackSurface`].
 ///
 /// Returns `None` when no readable source files overlap with the surface's
 /// `locations`.
@@ -136,60 +106,33 @@ pub fn build_surface_prompt(
     }
     let cache_key = hex_sha256(&cache_input);
 
-    let skill_name = sanitize_skill_name(&surface.id);
+    let mut prompt = String::new();
 
-    // Build SKILL.md description (max 1024 chars per spec)
-    let raw_desc = format!(
-        "Security vulnerability analysis for {} {}. \
-         Analyze source files for OWASP vulnerabilities and output SARIF v2.1.0.",
-        surface.kind, surface.identifier
-    );
-    let description = if raw_desc.len() > 1024 {
-        format!("{}…", &raw_desc[..1023])
-    } else {
-        raw_desc
-    };
-
-    let mut skill_md = String::new();
-
-    // YAML frontmatter
-    skill_md.push_str("---\n");
-    skill_md.push_str(&format!("name: {}\n", skill_name));
-    skill_md.push_str(&format!("description: {}\n", description));
-    skill_md.push_str("compatibility: Designed for Claude Code with Read tool access\n");
-    skill_md.push_str("allowed-tools: Read\n");
-    skill_md.push_str("metadata:\n");
-    skill_md.push_str(&format!("  surface_id: \"{}\"\n", surface.id));
-    skill_md.push_str(&format!("  kind: \"{}\"\n", surface.kind));
-    skill_md.push_str("---\n\n");
-
-    // Body
-    skill_md.push_str(
+    prompt.push_str(
         "You are a security auditor. Read the source files listed in Locations \
          and analyze them for vulnerabilities.\n\n",
     );
 
-    skill_md.push_str("## Surface Under Analysis\n\n");
-    skill_md.push_str(&format!("- **ID**: {}\n", surface.id));
-    skill_md.push_str(&format!("- **Kind**: {}\n", surface.kind));
-    skill_md.push_str(&format!("- **Identifier**: {}\n", surface.identifier));
-    skill_md.push_str(&format!("- **Description**: {}\n", surface.description));
-    skill_md.push_str(&format!(
-        "- **Locations**: {}\n\n",
+    prompt.push_str("Surface Under Analysis\n\n");
+    prompt.push_str(&format!("- ID: {}\n", surface.id));
+    prompt.push_str(&format!("- Kind: {}\n", surface.kind));
+    prompt.push_str(&format!("- Identifier: {}\n", surface.identifier));
+    prompt.push_str(&format!("- Description: {}\n", surface.description));
+    prompt.push_str(&format!(
+        "- Locations: {}\n\n",
         surface.locations.join(", ")
     ));
 
-    skill_md.push_str("## Output Instructions\n\n");
-    skill_md.push_str("Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.\n");
-    skill_md.push_str("For each finding, provide:\n");
-    skill_md.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
-    skill_md.push_str("- level: error/warning/note\n");
-    skill_md.push_str("- confidence: 0.0-1.0\n");
+    prompt.push_str("Output Instructions\n\n");
+    prompt.push_str("Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.\n");
+    prompt.push_str("For each finding, provide:\n");
+    prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
+    prompt.push_str("- level: error/warning/note\n");
+    prompt.push_str("- confidence: 0.0-1.0\n");
 
     Some(SurfacePrompt {
         surface_id: surface.id.clone(),
-        skill_name,
-        prompt: skill_md,
+        prompt,
         cache_key,
     })
 }
@@ -208,45 +151,36 @@ pub fn build_all_surface_prompts(
         .collect()
 }
 
-/// Build an orchestrator SKILL.md that dispatches all surface analyses
-/// as parallel subagents within a single agent process.
+/// Build an orchestrator prompt that dispatches all surface analyses
+/// as parallel subagents within a single Claude process.
 ///
-/// Each subagent reads the surface's `SKILL.md` from its skill directory.
+/// The orchestrator does NOT read prompt files itself — it passes each
+/// prompt file path to a subagent, which reads and executes the prompt.
 pub fn build_orchestrator_prompt(
     surface_prompts: &[SurfacePrompt],
     output_dir: &Path,
 ) -> String {
-    let mut skill_md = String::new();
+    let mut prompt = String::new();
 
-    // YAML frontmatter
-    skill_md.push_str("---\n");
-    skill_md.push_str("name: security-analysis-orchestrator\n");
-    skill_md.push_str(
-        "description: Orchestrate parallel security analysis across all attack surfaces. \
-         Run all surface analyses in parallel and merge SARIF results.\n",
-    );
-    skill_md.push_str("allowed-tools: Agent Bash\n");
-    skill_md.push_str("---\n\n");
-
-    skill_md.push_str(
+    prompt.push_str(
         "Launch ALL of the following Agent tool calls in a SINGLE message for maximum parallelism. \
          Do NOT use `run_in_background: true` — the orchestrator must wait for all agents to complete \
          before running the post-analysis step. Use `mode: \"dontAsk\"`.\n\n",
     );
 
     for sp in surface_prompts {
-        let skill_path = output_dir.join(&sp.skill_name).join("SKILL.md");
-        skill_md.push_str(&format!(
+        let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
+        prompt.push_str(&format!(
             "- Agent(description: \"Analyze {id}\", prompt: \"Read {path} and execute the instructions in it.\", \
              mode: \"dontAsk\")\n",
             id = sp.surface_id,
-            path = skill_path.display(),
+            path = prompt_path.display(),
         ));
     }
 
     let merged_sarif = output_dir.join("merged.sarif.json");
     let report_md = output_dir.join("report.md");
-    skill_md.push_str(&format!(
+    prompt.push_str(&format!(
         "\nAfter ALL agents complete, run:\n\
          ```bash\n\
          parsentry merge {dir} -o {merged}\n\
@@ -260,7 +194,7 @@ pub fn build_orchestrator_prompt(
         report = report_md.display(),
     ));
 
-    skill_md
+    prompt
 }
 
 fn hex_sha256(data: &str) -> String {
@@ -304,13 +238,9 @@ mod tests {
         let surface = make_surface("S-1", vec!["src/auth.py"]);
         let sp = build_surface_prompt(&surface, root).unwrap();
         assert_eq!(sp.surface_id, "S-1");
-        assert_eq!(sp.skill_name, "s-1");
         assert!(sp.prompt.contains("src/auth.py"));
         assert!(sp.prompt.contains("SARIF"));
         assert!(!sp.prompt.contains("password = input()"));
-        // SKILL.md has YAML frontmatter
-        assert!(sp.prompt.starts_with("---\n"));
-        assert!(sp.prompt.contains("name: s-1"));
         assert_eq!(sp.cache_key.len(), 64);
     }
 
