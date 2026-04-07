@@ -154,89 +154,43 @@ pub fn build_all_surface_prompts(
 /// Build an orchestrator prompt that dispatches all surface analyses
 /// as parallel subagents within a single Claude process.
 ///
-/// The orchestrator reads individual `.prompt.md` files and launches
-/// Agent tool calls with `run_in_background: true` for each surface.
+/// The orchestrator does NOT read prompt files itself — it passes each
+/// prompt file path to a subagent, which reads and executes the prompt.
 pub fn build_orchestrator_prompt(
     surface_prompts: &[SurfacePrompt],
     output_dir: &Path,
 ) -> String {
-    let rel_output_dir = output_dir;
-
     let mut prompt = String::new();
 
     prompt.push_str(
-        "You are a security analysis orchestrator. Your task is to analyze multiple \
-         attack surfaces in parallel by dispatching subagents.\n\n",
+        "Launch ALL of the following Agent tool calls in a SINGLE message for maximum parallelism. \
+         Each agent must use `run_in_background: true` and `mode: \"bypassPermissions\"`.\n\n",
     );
-
-    prompt.push_str("Instructions\n\n");
-    prompt.push_str(
-        "1. Read each prompt file listed below using the Read tool\n\
-         2. Launch ALL subagents in a SINGLE message using the Agent tool for maximum parallelism\n\
-         3. Each agent must run with `run_in_background: true`\n\
-         4. Each agent's prompt must include the content from the prompt file AND \
-            the instruction to write SARIF output to the specified path\n\
-         5. After all agents complete, provide a summary of total findings\n\n",
-    );
-
-    prompt.push_str("Surfaces to Analyze\n\n");
-    prompt.push_str("| Surface ID | Prompt File | SARIF Output |\n");
-    prompt.push_str("|------------|-------------|-------------|\n");
 
     for sp in surface_prompts {
-        let prompt_path = rel_output_dir.join(format!("{}.prompt.md", sp.surface_id));
-        let sarif_path = rel_output_dir.join(format!("{}.sarif.json", sp.surface_id));
+        let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
         prompt.push_str(&format!(
-            "| {} | {} | {} |\n",
-            sp.surface_id,
-            prompt_path.display(),
-            sarif_path.display(),
+            "- Agent(description: \"Analyze {id}\", prompt: \"Read {path} and execute the instructions in it.\", \
+             run_in_background: true, mode: \"bypassPermissions\")\n",
+            id = sp.surface_id,
+            path = prompt_path.display(),
         ));
     }
 
-    prompt.push_str("\nAgent Launch Template\n\n");
-    prompt.push_str(
-        "For each surface, use the Agent tool like this:\n\n\
-         ```\n\
-         Agent(\n\
-           description: \"Analyze {SURFACE_ID}\",\n\
-           prompt: \"<content from prompt file>\\n\\n\
-             Write the SARIF JSON output to: {SARIF_OUTPUT_PATH}\\n\
-             Write ONLY valid JSON. No markdown, no code fences, no explanation.\",\n\
-           run_in_background: true,\n\
-           mode: \"bypassPermissions\"\n\
-         )\n\
-         ```\n\n",
-    );
-
-    prompt.push_str(
-        "IMPORTANT: Launch ALL agents in a single message. Do NOT wait for one to finish \
-         before launching the next.\n\n",
-    );
-
-    // Merge & report step
-    let merged_sarif = rel_output_dir.join("merged.sarif.json");
-    let report_md = rel_output_dir.join("report.md");
-    prompt.push_str("Post-Analysis\n\n");
-    prompt.push_str(
-        "After ALL subagents have completed:\n\n",
-    );
+    let merged_sarif = output_dir.join("merged.sarif.json");
+    let report_md = output_dir.join("report.md");
     prompt.push_str(&format!(
-        "1. Merge SARIF files:\n\
+        "\nAfter ALL agents complete, run:\n\
          ```bash\n\
-         parsentry merge {} -o {}\n\
-         ```\n\n",
-        rel_output_dir.display(),
-        merged_sarif.display(),
-    ));
-    prompt.push_str(&format!(
-        "2. Read {} and generate a security report in markdown at {}.\n\
-         The report must include:\n\
-         - Executive summary with total findings count by severity\n\
-         - Per-finding details: rule ID, severity, confidence, file location, description\n\
-         - Remediation recommendations for each finding\n\n",
-        merged_sarif.display(),
-        report_md.display(),
+         parsentry merge {dir} -o {merged}\n\
+         ```\n\
+         Then read {merged} and write a security report to {report} with:\n\
+         - Executive summary (finding counts by severity)\n\
+         - Per-finding details (rule ID, severity, confidence, location, description)\n\
+         - Remediation recommendations\n",
+        dir = output_dir.display(),
+        merged = merged_sarif.display(),
+        report = report_md.display(),
     ));
 
     prompt

@@ -123,7 +123,6 @@ pub async fn run_scan_command(
         write_cache_key(&output_dir, sp)?;
 
         printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
-        println!("{}", prompt_path.display());
     }
 
     // Phase 4: Generate orchestrator prompt only for pending surfaces
@@ -132,6 +131,7 @@ pub async fn run_scan_command(
     let orchestrator_path = output_dir.join("orchestrator.prompt.md");
     std::fs::write(&orchestrator_path, &orchestrator_content)?;
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
+    println!("{}", orchestrator_content);
 
     printer.success(
         "Complete",
