@@ -43,14 +43,6 @@ mise use -g github:HikaruEgashira/parsentry
 cargo install parsentry
 ```
 
-Parsentry generates prompts. You need a CLI agent to execute them:
-
-```bash
-npm install -g @anthropic-ai/claude-code
-```
-
-Any CLI agent works: `claude`, `codex`, `pi`, etc.
-
 ### Commands
 
 ```
