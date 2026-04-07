@@ -2,10 +2,10 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 ## Surface Under Analysis
 
-- **ID**: SURFACE-006
+- **ID**: SURFACE-024
 - **Kind**: db_table
-- **Identifier**: Data model definitions
-- **Description**: Data models that likely interact with a database or data store. Potential for SQL injection if raw queries are used, mass assignment if model fields are not properly guarded, or insecure direct object references.
+- **Identifier**: users
+- **Description**: Users table storing passwords in plaintext, API keys, and session tokens without encryption. Hardcoded default credentials (admin/admin123, guest/guest). Schema lacks any security controls.
 - **Locations**: models.py
 
 ## Repository Context
@@ -346,5 +346,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/hikae-vulnerable-python/SURFACE-006.sarif.json
+Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/SURFACE-024.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.

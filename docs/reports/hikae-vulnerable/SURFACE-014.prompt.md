@@ -2,10 +2,10 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 ## Surface Under Analysis
 
-- **ID**: SURFACE-004
-- **Kind**: external_call
-- **Identifier**: Outbound HTTP requests (requests library)
-- **Description**: requests 2.31.0 makes outbound HTTP calls. If URLs are constructed from user input, this enables SSRF attacks against internal services, cloud metadata endpoints, or other restricted resources.
+- **ID**: SURFACE-014
+- **Kind**: endpoint
+- **Identifier**: POST /api/xml/parse
+- **Description**: XML External Entity (XXE) processing via ET.XMLParser() without disabling external entity resolution. Can lead to local file disclosure, SSRF, and denial of service.
 - **Locations**: api.py
 
 ## Repository Context
@@ -382,5 +382,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/hikae-vulnerable-python/SURFACE-004.sarif.json
+Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/SURFACE-014.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.

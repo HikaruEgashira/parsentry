@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "UNRESTRICTED_UPLOAD",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": { "text": "Unrestricted File Upload" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
+            },
+            {
+              "id": "PATH_TRAVERSAL",
+              "name": "PathTraversal",
+              "shortDescription": { "text": "Path Traversal" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "UNRESTRICTED_UPLOAD",
+          "level": "error",
+          "message": { "text": "No file type validation on uploaded files. The endpoint accepts any file type including executable scripts (e.g., .py, .php, .sh, .jsp). An attacker can upload a web shell or malicious executable. Validate file extensions against an allowlist, check MIME types, and store uploads outside the web root with randomized filenames." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 249, "endLine": 272 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "PATH_TRAVERSAL",
+          "level": "error",
+          "message": { "text": "Path traversal via unsanitized filename in `file_path = os.path.join(upload_dir, file.filename)`. The user-controlled `file.filename` can contain directory traversal sequences (e.g., `../../etc/cron.d/backdoor`), allowing an attacker to write arbitrary files anywhere on the filesystem that the process has write access to. Use `werkzeug.utils.secure_filename()` to sanitize the filename before constructing the path." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 265, "endLine": 266 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": { "text": "Server-side file path disclosed in the upload response: `'path': file_path`. This reveals the internal directory structure (`/tmp/uploads/...`) to the client, aiding attackers in planning further exploitation such as path traversal or local file inclusion attacks. Return only an opaque file identifier or relative URI instead of the absolute filesystem path." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 268, "endLine": 272 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The file upload endpoint has no authentication or authorization check. Any unauthenticated user can upload arbitrary files to the server. This amplifies all other upload vulnerabilities (path traversal, unrestricted file type) by making them exploitable without credentials. Add authentication middleware and verify the user has upload permissions before processing the request." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 249, "endLine": 250 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        }
+      ]
+    }
+  ]
+}

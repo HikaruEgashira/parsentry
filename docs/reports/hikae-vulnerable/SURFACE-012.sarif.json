@@ -1,0 +1,149 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "VULN-PICKLE-DESER",
+              "name": "InsecurePickleDeserialization",
+              "shortDescription": {
+                "text": "Insecure deserialization via pickle.loads() on untrusted input"
+              },
+              "fullDescription": {
+                "text": "The endpoint deserializes user-supplied base64-encoded data using pickle.loads(). Python's pickle module can execute arbitrary code during deserialization via the __reduce__ protocol. An attacker can craft a malicious pickle payload to achieve Remote Code Execution (RCE)."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-502",
+                  "OWASP-A08:2021"
+                ],
+                "precision": "very-high",
+                "security-severity": "9.8"
+              }
+            },
+            {
+              "id": "VULN-NO-AUTH",
+              "name": "MissingAuthentication",
+              "shortDescription": {
+                "text": "Critical endpoint lacks authentication"
+              },
+              "fullDescription": {
+                "text": "The POST /api/pickle/deserialize endpoint performs a dangerous operation (deserialization) without requiring any authentication or authorization. Any unauthenticated attacker can reach the vulnerable code path."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-306",
+                  "OWASP-A07:2021"
+                ],
+                "precision": "very-high",
+                "security-severity": "9.1"
+              }
+            },
+            {
+              "id": "VULN-NO-INPUT-VALIDATION",
+              "name": "MissingInputValidation",
+              "shortDescription": {
+                "text": "No validation on user-supplied data before deserialization"
+              },
+              "fullDescription": {
+                "text": "The endpoint passes user input directly to base64.b64decode() and then pickle.loads() without any validation, sanitization, or allowlisting of expected types. This maximizes the attack surface for deserialization exploits."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-20"
+                ],
+                "precision": "high",
+                "security-severity": "7.5"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "VULN-PICKLE-DESER",
+          "level": "error",
+          "message": {
+            "text": "pickle.loads() is called on base64-decoded user input without any restrictions. An attacker can submit a crafted pickle payload using __reduce__ to execute arbitrary system commands on the server. This is a critical Remote Code Execution vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 215,
+                  "endLine": 218
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-NO-AUTH",
+          "level": "error",
+          "message": {
+            "text": "POST /api/pickle/deserialize has no authentication guard. The endpoint is publicly accessible, allowing any remote attacker to exploit the deserialization vulnerability without credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 210,
+                  "endLine": 211
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-NO-INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "User-supplied pickle_data is passed directly to base64.b64decode() and then pickle.loads() with no validation, type allowlisting, or size limits. The complete absence of input validation compounds the deserialization vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 213,
+                  "endLine": 218
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

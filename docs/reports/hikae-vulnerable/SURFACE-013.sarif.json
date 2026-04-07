@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "UNSAFE_DESERIALIZATION",
+              "name": "UnsafeDeserialization",
+              "shortDescription": { "text": "Unsafe YAML Deserialization" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "MISSING_INPUT_VALIDATION",
+              "name": "MissingInputValidation",
+              "shortDescription": { "text": "Improper Input Validation" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "UNSAFE_DESERIALIZATION",
+          "level": "error",
+          "message": { "text": "Unsafe YAML deserialization using yaml.FullLoader on untrusted user input: `yaml.load(yaml_data, Loader=yaml.FullLoader)`. FullLoader can instantiate arbitrary Python objects for any class that defines a `__init__` or `__set_state__` method, enabling remote code execution through crafted YAML payloads (e.g., using `!!python/object/apply:os.system`). While FullLoader is safer than the default Loader, it still permits dangerous tag resolution. Replace with `yaml.safe_load(yaml_data)` which restricts deserialization to basic Python types (str, int, float, list, dict, bool, None)." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 204, "endLine": 204 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The POST /api/yaml/load endpoint has no authentication or authorization checks. Any unauthenticated user can submit arbitrary YAML payloads for server-side deserialization. Combined with the unsafe FullLoader usage, this gives any remote attacker a direct path to code execution. Require authentication (e.g., JWT token validation or session check) before processing YAML input." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 197, "endLine": 208 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_INPUT_VALIDATION",
+          "level": "warning",
+          "message": { "text": "User-supplied YAML data from `request.data` is decoded and passed directly to the YAML parser without any validation of content type, size, or structure. There is no Content-Type header check, no payload size limit, and no schema validation on the parsed output. An attacker can submit arbitrarily large payloads to cause denial of service via memory exhaustion (billion laughs / YAML bomb) or submit unexpected data types. Add Content-Type verification, enforce a maximum payload size, and validate the parsed structure against an expected schema." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 200, "endLine": 206 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        }
+      ]
+    }
+  ]
+}

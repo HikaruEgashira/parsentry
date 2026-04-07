@@ -1,0 +1,154 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "IDOR-001",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "IDOR via client-controlled user_id parameter overriding session identity"
+              },
+              "fullDescription": {
+                "text": "The GET /logs endpoint accepts a user_id query parameter that overrides the authenticated session user. Any authenticated user can read audit logs of any other user by supplying an arbitrary user_id value, violating the principle of least privilege and breaking tenant isolation."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "idor",
+                  "authorization"
+                ],
+                "cwe": [
+                  "CWE-639"
+                ]
+              }
+            },
+            {
+              "id": "SQLI-001",
+              "name": "SqlInjection",
+              "shortDescription": {
+                "text": "SQL injection via string interpolation in get_user_logs()"
+              },
+              "fullDescription": {
+                "text": "The get_user_logs() function constructs a SQL query using Python f-string interpolation with an unsanitized user_id value. Because user_id originates from the request query string (an attacker-controlled source), this enables arbitrary SQL injection \u2014 including UNION-based data exfiltration, blind boolean/time-based extraction, and potential command execution depending on the database driver."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "sql-injection"
+                ],
+                "cwe": [
+                  "CWE-89"
+                ]
+              }
+            },
+            {
+              "id": "INFO-001",
+              "name": "ErrorMessageInformationDisclosure",
+              "shortDescription": {
+                "text": "Verbose error message leaks internal details to the client"
+              },
+              "fullDescription": {
+                "text": "The exception handler returns the raw exception string to the HTTP response via f\"Error loading logs: {e}\". This can expose database table names, query structure, file paths, and stack trace fragments to an attacker, aiding further exploitation."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "information-disclosure"
+                ],
+                "cwe": [
+                  "CWE-209"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR-001",
+          "level": "error",
+          "message": {
+            "text": "The user_id parameter from request.args overrides session['user']['id'], allowing any authenticated user to access another user's audit logs. Fix: always derive user_id from the server-side session and ignore client-supplied values, or enforce authorization checks comparing the requested user_id against the session identity."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 467,
+                  "endLine": 470
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "severity": "critical",
+            "source_snippet": "user_id = request.args.get('user_id', session.get('user', {}).get('id', 1))"
+          }
+        },
+        {
+          "ruleId": "SQLI-001",
+          "level": "error",
+          "message": {
+            "text": "get_user_logs() builds a SQL query via f-string interpolation with attacker-controlled user_id. This permits full SQL injection. Fix: use parameterized queries \u2014 e.g. cursor.execute(\"SELECT * FROM audit_logs WHERE user_id = %s\", (user_id,))."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 640,
+                  "endLine": 667
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "severity": "critical",
+            "source_snippet": "f\"SELECT * FROM audit_logs WHERE user_id = {user_id}\""
+          }
+        },
+        {
+          "ruleId": "INFO-001",
+          "level": "warning",
+          "message": {
+            "text": "Raw exception text is returned in the HTTP response body. When combined with the SQL injection above, this can leak database schema, query fragments, and driver internals. Fix: log the full exception server-side and return a generic error message to the client."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 498,
+                  "endLine": 501
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "severity": "medium",
+            "source_snippet": "return f\"Error loading logs: {e}\""
+          }
+        }
+      ]
+    }
+  ]
+}

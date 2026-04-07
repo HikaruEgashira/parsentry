@@ -846,3 +846,7 @@ For each finding, provide:
 - rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)
 - level: error/warning/note
 - confidence: 0.0-1.0
+
+
+Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/hikae-vulnerable-python/SURFACE-003.sarif.json
+Write ONLY valid JSON. No markdown, no code fences, no explanation.

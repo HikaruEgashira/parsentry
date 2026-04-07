@@ -2,10 +2,10 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 ## Surface Under Analysis
 
-- **ID**: SURFACE-004
-- **Kind**: external_call
-- **Identifier**: Outbound HTTP requests (requests library)
-- **Description**: requests 2.31.0 makes outbound HTTP calls. If URLs are constructed from user input, this enables SSRF attacks against internal services, cloud metadata endpoints, or other restricted resources.
+- **ID**: SURFACE-009
+- **Kind**: endpoint
+- **Identifier**: POST /api/ssrf/fetch
+- **Description**: Server-side request forgery via unvalidated URL parameter passed to requests.get(). Allows scanning internal networks, accessing cloud metadata endpoints (169.254.169.254), and exfiltrating internal service data.
 - **Locations**: api.py
 
 ## Repository Context
@@ -382,5 +382,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/hikae-vulnerable-python/SURFACE-004.sarif.json
+Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/SURFACE-009.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.

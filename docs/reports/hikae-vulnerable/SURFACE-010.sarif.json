@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": { "text": "Remote Code Execution via OS Command Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure via Command Output" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE",
+          "level": "error",
+          "message": { "text": "Critical OS command injection via subprocess.run() with shell=True. The user-supplied 'command' parameter from the POST body is passed directly to subprocess.run(command, shell=True, capture_output=True, text=True, timeout=10) with no sanitization, allowlisting, or escaping. An attacker can execute arbitrary system commands (e.g., 'rm -rf /', 'cat /etc/shadow', reverse shells) with the privileges of the web application process. This is a textbook CWE-78 vulnerability. Remediation: remove this endpoint entirely, or if command execution is a business requirement, implement strict allowlist validation of permitted commands, drop shell=True, and use subprocess.run with an argument list." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 225, "endLine": 247 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The POST /api/exec/command endpoint performs arbitrary OS command execution but requires no authentication or authorization. Any unauthenticated network client can invoke this endpoint and execute commands on the server. This converts the vulnerability from an authenticated RCE to an unauthenticated RCE, which is trivially exploitable by any attacker who can reach the service. At minimum, require authentication and restrict access to an administrative role. However, given the nature of the endpoint, the safest remediation is to remove it entirely." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 225, "endLine": 227 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "error",
+          "message": { "text": "The endpoint returns both stdout and stderr of the executed command to the HTTP client. This allows an attacker to read arbitrary files, enumerate system configuration, harvest credentials from environment variables, and map the internal network — all via command output. Even if command execution were somehow restricted, returning raw process output leaks sensitive server-side information. Never return raw subprocess output to untrusted clients." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 238, "endLine": 247 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        }
+      ]
+    }
+  ]
+}

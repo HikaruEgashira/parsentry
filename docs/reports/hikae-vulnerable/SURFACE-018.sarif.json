@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "SSTI",
+              "name": "ServerSideTemplateInjection",
+              "shortDescription": { "text": "Server-Side Template Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": { "text": "Remote Code Execution via Template Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSTI",
+          "level": "error",
+          "message": { "text": "Server-Side Template Injection in render_template(). User-supplied `template` string is passed directly to `jinja2.Template(template)` without any sandboxing or input validation. Jinja2's default environment allows access to Python internals via `__class__`, `__mro__`, `__subclasses__()`, enabling arbitrary code execution. An attacker can send `{{ ''.__class__.__mro__[1].__subclasses__() }}` to enumerate classes and invoke `os.popen()` or `subprocess.Popen` to execute system commands. Use `jinja2.SandboxedEnvironment` and restrict template input to a predefined allowlist." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 342, "endLine": 343 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "RCE",
+          "level": "error",
+          "message": { "text": "Remote Code Execution via user-controlled template context. Both the `template` string and `context` dictionary are fully user-controlled (`data.get('template')` and `data.get('context', {})`). Combined with the unsandboxed Jinja2 Template, an attacker can inject callable objects through the context or use Jinja2 introspection chains like `{{ config.__class__.__init__.__globals__['os'].popen('id').read() }}` to achieve arbitrary command execution on the server. The context parameter amplifies the attack surface by allowing the attacker to inject arbitrary Python objects as template variables." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 334, "endLine": 343 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The POST /api/template/render endpoint has no authentication or authorization check. Any unauthenticated attacker can invoke template rendering, which when combined with the SSTI vulnerability provides unauthenticated remote code execution. Critical endpoints that execute server-side logic must require authentication and enforce least-privilege authorization." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 330, "endLine": 347 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        }
+      ]
+    }
+  ]
+}

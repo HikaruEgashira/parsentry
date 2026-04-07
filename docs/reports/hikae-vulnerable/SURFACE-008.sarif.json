@@ -1,0 +1,141 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "IDOR-001",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "IDOR: No authorization check on user lookup endpoint"
+              },
+              "fullDescription": {
+                "text": "The GET /api/user/<user_id> endpoint does not verify that the authenticated user is authorized to access the requested user profile. Any authenticated (or unauthenticated) user can retrieve any other user's data by manipulating the user_id parameter."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-639",
+                  "OWASP-A01"
+                ]
+              }
+            },
+            {
+              "id": "SQLI-001",
+              "name": "SqlInjection",
+              "shortDescription": {
+                "text": "SQL injection via f-string interpolation in get_user_by_id()"
+              },
+              "fullDescription": {
+                "text": "The get_user_by_id() function constructs a SQL query using an f-string that directly interpolates the user_id parameter without sanitization or parameterized queries. An attacker can inject arbitrary SQL via the user_id path parameter."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-89",
+                  "OWASP-A03"
+                ]
+              }
+            },
+            {
+              "id": "INFO-LEAK-001",
+              "name": "ErrorInformationLeak",
+              "shortDescription": {
+                "text": "Exception details propagated to client in error response"
+              },
+              "fullDescription": {
+                "text": "When get_user_by_id() raises an exception, the raw exception message is returned to the client. This can reveal internal database schema, table names, query structure, and stack traces to an attacker."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-209",
+                  "OWASP-A04"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR-001",
+          "level": "error",
+          "message": {
+            "text": "GET /api/user/<user_id> has no authorization check. Any caller can access any user's profile by enumerating user_id values, leading to horizontal privilege escalation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 121,
+                  "endLine": 133
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SQLI-001",
+          "level": "error",
+          "message": {
+            "text": "SQL injection in get_user_by_id(): the query `f\"SELECT * FROM users WHERE id = {user_id}\"` directly interpolates unsanitized user input. An attacker can submit a crafted user_id such as `1 OR 1=1` or `1; DROP TABLE users--` to exfiltrate data or modify the database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 490,
+                  "endLine": 514
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK-001",
+          "level": "warning",
+          "message": {
+            "text": "Exception details from the database layer are returned directly in the HTTP response body. This leaks internal implementation details (table names, column names, query structure) that assist further exploitation of SQLI-001."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 121,
+                  "endLine": 133
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

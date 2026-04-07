@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.1.0",
+          "version": "1.0.0",
           "rules": [
             {
               "id": "SQLI",
@@ -45,10 +45,10 @@
               "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "DESERIAL",
-              "name": "InsecureDeserialization",
-              "shortDescription": { "text": "Insecure Deserialization" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+              "id": "HARDCODED_SECRET",
+              "name": "HardcodedSecret",
+              "shortDescription": { "text": "Hardcoded Secret / Credential" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
             },
             {
               "id": "IDOR",
@@ -57,562 +57,253 @@
               "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
             },
             {
-              "id": "HARDCODED-SECRET",
-              "name": "HardcodedSecret",
-              "shortDescription": { "text": "Hardcoded Secret / Credential" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
+              "id": "DESERIALIZATION",
+              "name": "InsecureDeserialization",
+              "shortDescription": { "text": "Insecure Deserialization" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
             },
             {
-              "id": "INFO-LEAK",
-              "name": "InformationDisclosure",
-              "shortDescription": { "text": "Information Disclosure" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
-            },
-            {
-              "id": "OPEN-REDIRECT",
-              "name": "OpenRedirect",
-              "shortDescription": { "text": "Open Redirect" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
-            },
-            {
-              "id": "FILE-UPLOAD",
+              "id": "FILE_UPLOAD",
               "name": "UnrestrictedFileUpload",
               "shortDescription": { "text": "Unrestricted File Upload" },
               "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
             },
             {
-              "id": "LDAP-INJECTION",
+              "id": "OPEN_REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": { "text": "Open Redirect" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            },
+            {
+              "id": "WEAK_SESSION",
+              "name": "WeakSessionManagement",
+              "shortDescription": { "text": "Weak Session Management" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html"
+            },
+            {
+              "id": "LDAP_INJECTION",
               "name": "LDAPInjection",
               "shortDescription": { "text": "LDAP Injection" },
               "helpUri": "https://cwe.mitre.org/data/definitions/90.html"
             },
             {
-              "id": "SESSION",
-              "name": "SessionManagement",
-              "shortDescription": { "text": "Insecure Session Management" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/384.html"
-            },
-            {
-              "id": "SENSITIVE-LOG",
-              "name": "SensitiveDataLogging",
-              "shortDescription": { "text": "Sensitive Data Written to Log" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/532.html"
+              "id": "ZIP_SLIP",
+              "name": "ZipSlip",
+              "shortDescription": { "text": "Zip Slip Path Traversal" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "HARDCODED-SECRET",
+          "ruleId": "HARDCODED_SECRET",
           "level": "error",
-          "message": {
-            "text": "Flask secret_key is hardcoded as 'vulnerable_secret_key_123'. An attacker can forge session cookies to impersonate any user. The secret must be loaded from an environment variable or secrets manager."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 27 }
-              }
-            }
-          ],
+          "message": { "text": "Hardcoded Flask secret key 'vulnerable_secret_key_123' used for session signing. An attacker can forge session cookies to impersonate any user. Use a securely generated random key loaded from environment variables." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 27 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "SESSION",
+          "ruleId": "WEAK_SESSION",
           "level": "error",
-          "message": {
-            "text": "SESSION_COOKIE_SECURE is False and SESSION_COOKIE_HTTPONLY is False. Session cookies can be transmitted over plain HTTP and accessed via JavaScript, enabling session hijacking through XSS or network sniffing."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 28, "endLine": 29 }
-              }
-            }
-          ],
+          "message": { "text": "Session cookies configured without Secure flag (SESSION_COOKIE_SECURE=False) and without HttpOnly flag (SESSION_COOKIE_HTTPONLY=False). Session cookies are exposed to interception over HTTP and theft via XSS (document.cookie)." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 28 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "SENSITIVE-LOG",
-          "level": "error",
-          "message": {
-            "text": "User password is logged in plaintext via logger.info(). Credentials in logs can be harvested by anyone with log access, violating least-privilege and data-minimization principles."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 131 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "SESSION",
+          "ruleId": "INFO_DISCLOSURE",
           "level": "warning",
-          "message": {
-            "text": "Session token is derived from MD5(username+password), which is deterministic and weak. An attacker who knows the credentials can predict the session token. Use secrets.token_hex() instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 141 }
-              }
-            }
-          ],
+          "message": { "text": "Plaintext password logged via logger.info() during login attempts. Passwords in logs can be harvested by anyone with log access, violating least-privilege and compliance requirements." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 124 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "WEAK_SESSION",
+          "level": "warning",
+          "message": { "text": "Session token derived from MD5 hash of username+password is predictable and collision-prone. An attacker who knows (or brute-forces) credentials can compute the session token offline." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 133 } } }],
           "properties": { "confidence": 0.95 }
         },
         {
-          "ruleId": "INFO-LEAK",
+          "ruleId": "INFO_DISCLOSURE",
           "level": "warning",
-          "message": {
-            "text": "Login failure message discloses whether a username exists: 'Invalid credentials for user <username>'. This enables user enumeration. Use a generic message like 'Invalid username or password'."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 153 }
-              }
-            }
-          ],
+          "message": { "text": "Login error message discloses whether a specific username exists ('Invalid credentials for user <username>'). This enables username enumeration attacks." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 145 } } }],
           "properties": { "confidence": 0.95 }
         },
         {
-          "ruleId": "SESSION",
+          "ruleId": "WEAK_SESSION",
           "level": "warning",
-          "message": {
-            "text": "Logout handler does not clear session_token and does not regenerate the session ID, enabling session fixation attacks. Call session.clear() and regenerate the session."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 160, "endLine": 165 }
-              }
-            }
-          ],
+          "message": { "text": "Logout does not regenerate the session ID (session fixation) and leaves session_token in the session, allowing session reuse after logout." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 167 } } }],
           "properties": { "confidence": 0.9 }
         },
         {
           "ruleId": "SQLI",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'username' parameter is interpolated directly into SQL query via f-string: \"SELECT ... WHERE username LIKE '%{username}%'\". An attacker can extract or modify arbitrary database contents. Use parameterized queries with cursor.execute(query, params)."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 179 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied 'username' parameter is interpolated directly into SQL query via f-string (LIKE '%{username}%'). Allows full SQL injection: UNION-based data extraction, authentication bypass, and potential database takeover." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 183 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "SQLI",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'order' parameter is interpolated into ORDER BY clause via f-string: \"SELECT * FROM users ORDER BY {order_by}\". This allows boolean-blind or error-based SQL injection. Validate against an allowlist of column names."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 182 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied 'order' parameter is interpolated directly into ORDER BY clause via f-string. Allows blind SQL injection via conditional ordering and potential data extraction." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 186 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "XSS",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'name' and 'comment' parameters are interpolated directly into the HTML template string via f-string before passing to render_template_string(). This bypasses Jinja2 auto-escaping entirely, allowing reflected XSS in HTML, attribute, JavaScript, and CSS contexts simultaneously."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 199, "endLine": 234 }
-              }
-            }
-          ],
+          "message": { "text": "User input 'name' and 'comment' are interpolated via f-string into an HTML template before passing to render_template_string, bypassing Jinja2 auto-escaping. Allows reflected XSS in HTML, attribute, JavaScript, and CSS contexts simultaneously." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 217 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "RCE",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'hostname' parameter is passed directly to os.popen() via f-string: os.popen(f\"ping -c {count} {hostname}\"). An attacker can chain arbitrary commands using shell metacharacters (;, |, $(), ``)."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 245 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied 'hostname' and 'count' parameters are passed directly to os.popen() and os.system() without sanitization. An attacker can chain arbitrary commands using shell metacharacters (;, |, &&, $(), backticks) to achieve remote code execution." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 256 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "RCE",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'hostname' parameter is passed to os.system() via f-string: os.system(f\"ping -c 1 {hostname} > {temp_file}\"). Both the command and output filename are attacker-controlled, allowing command injection and arbitrary file write."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 248, "endLine": 249 }
-              }
-            }
-          ],
+          "message": { "text": "Second command injection via os.system() with user-controlled hostname interpolated into both the command and the output file path. Enables command injection through filename manipulation." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 260 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "LFI",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'file' parameter is passed directly to open() with no path validation or sanitization. An attacker can read any file readable by the application process, including /etc/passwd, application source, and secrets."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 262, "endLine": 264 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied 'file' parameter is passed directly to open() without any path validation or restriction. Allows reading arbitrary files on the server including /etc/passwd, /etc/shadow, application source code, and environment files." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 280 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "SSTI",
           "level": "error",
-          "message": {
-            "text": "User-supplied 'template' parameter is passed directly to jinja2.Template() constructor and rendered. An attacker can execute arbitrary Python code via Jinja2 template expressions such as {{ config.__class__.__init__.__globals__['os'].popen('id').read() }}."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 280, "endLine": 282 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied 'template' parameter is passed directly to Jinja2 Template() constructor and rendered. Attackers can inject template expressions like {{config}} or {{''.__class__.__mro__[1].__subclasses__()}} to achieve RCE via template sandbox escape." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 302 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "IDOR",
-          "level": "error",
-          "message": {
-            "text": "The /logs endpoint accepts a user_id query parameter without verifying it matches the authenticated user's ID. Any logged-in user can view audit logs of any other user by changing the user_id parameter."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 293 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.95 }
-        },
-        {
-          "ruleId": "INFO-LEAK",
           "level": "warning",
-          "message": {
-            "text": "Application runs with debug=True on 0.0.0.0, exposing the Werkzeug debugger with interactive console to the network. This allows unauthenticated remote code execution via the debugger PIN or console."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 314 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "HARDCODED-SECRET",
-          "level": "error",
-          "message": {
-            "text": "JWT signing secret 'super_secret_key_123' and API keys are hardcoded. An attacker can forge arbitrary JWT tokens with any role (including admin) and use the leaked API keys for unauthorized access."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 30, "endLine": 34 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "SENSITIVE-LOG",
-          "level": "error",
-          "message": {
-            "text": "Password is logged in plaintext in audit log via audit_logger.log_action(): 'User {username} logged in with password {password}'. This persists credentials in the database audit_log table."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 61 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "INFO-LEAK",
-          "level": "error",
-          "message": {
-            "text": "The /api/auth/login response exposes user['api_key'] to the client. API keys should never be returned in authentication responses; they should be managed through a separate secure channel."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 67 }
-              }
-            }
-          ],
+          "message": { "text": "Audit log viewer accepts arbitrary user_id from query parameter without verifying that the authenticated user is authorized to view that user's logs. Any authenticated user can view any other user's audit logs." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 319 } } }],
           "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": { "text": "Flask application runs with debug=True on 0.0.0.0, exposing the Werkzeug interactive debugger to all network interfaces. The debugger allows arbitrary Python code execution and leaks stack traces with source code." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "app.py" }, "region": { "startLine": 348 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "HARDCODED_SECRET",
+          "level": "error",
+          "message": { "text": "Hardcoded JWT signing key 'super_secret_key_123' and hardcoded API keys in API_KEYS dictionary. Attackers can forge valid JWT tokens and use leaked API keys for unauthorized access." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 18 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "error",
+          "message": { "text": "Login audit log records plaintext password in the details field. The API response also exposes the user's api_key. Both leak sensitive credentials to log storage and API consumers." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 51 } } }],
+          "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "IDOR",
           "level": "error",
-          "message": {
-            "text": "The /api/user/<user_id> endpoint returns full user details for any user_id without authorization checks. Any caller can enumerate and retrieve all user records including sensitive fields."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 78, "endLine": 86 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.95 }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "The /api/documents/search endpoint passes user-supplied 'q' parameter to doc_model.search_documents() which likely constructs SQL via string interpolation (based on patterns in DatabaseManager). This enables SQL injection through the search query."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 91, "endLine": 93 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.85 }
+          "message": { "text": "GET /api/user/<user_id> returns full user information without any authorization check. Any caller can retrieve any user's data including email, role, and API key by iterating user IDs." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 68 } } }],
+          "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "SSRF",
           "level": "error",
-          "message": {
-            "text": "The /api/ssrf/fetch endpoint passes a user-supplied URL directly to requests.get() without any validation or allowlisting. An attacker can scan internal networks, access cloud metadata endpoints (169.254.169.254), and interact with internal services."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 107, "endLine": 110 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied URL is passed directly to requests.get() without validation. Attackers can probe internal services (http://localhost, http://169.254.169.254 for cloud metadata), scan internal networks, and exfiltrate data via DNS/HTTP." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 95 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "DESERIAL",
+          "ruleId": "DESERIALIZATION",
           "level": "warning",
-          "message": {
-            "text": "yaml.load() is called with yaml.FullLoader on user-supplied YAML data. While FullLoader is safer than yaml.UnsafeLoader, it still permits constructing arbitrary Python objects for some types. Use yaml.safe_load() instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 133 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.8 }
+          "message": { "text": "yaml.load() with FullLoader processes user-supplied YAML. While FullLoader blocks arbitrary Python object construction, it still allows some dangerous types and is not considered safe for untrusted input. Use yaml.safe_load() instead." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 121 } } }],
+          "properties": { "confidence": 0.7 }
         },
         {
-          "ruleId": "DESERIAL",
+          "ruleId": "DESERIALIZATION",
           "level": "error",
-          "message": {
-            "text": "User-supplied base64 data is decoded and passed directly to pickle.loads(). Pickle deserialization of untrusted data allows arbitrary code execution by crafting a malicious pickle payload with __reduce__."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 145, "endLine": 146 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied base64-encoded data is decoded and passed directly to pickle.loads(). Pickle deserialization of untrusted data allows arbitrary code execution via crafted __reduce__ methods. This is a critical RCE vulnerability." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 134 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "RCE",
           "level": "error",
-          "message": {
-            "text": "The /api/exec/command endpoint passes user-supplied 'command' string directly to subprocess.run() with shell=True. This is an unauthenticated remote code execution endpoint that allows arbitrary OS command execution."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 157, "endLine": 163 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied command string is passed directly to subprocess.run() with shell=True. This is an unrestricted command execution endpoint allowing any system command to be run on the server." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 148 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "FILE-UPLOAD",
+          "ruleId": "FILE_UPLOAD",
           "level": "error",
-          "message": {
-            "text": "The /api/file/upload endpoint saves uploaded files without validating file type, extension, or content. The filename is used directly in os.path.join() allowing path traversal (e.g., '../../../etc/cron.d/backdoor'). An attacker can upload web shells or overwrite arbitrary files."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 175, "endLine": 183 }
-              }
-            }
-          ],
+          "message": { "text": "File upload endpoint accepts any file type without validation. The original filename is used directly in os.path.join() enabling path traversal (e.g., '../../../etc/cron.d/malicious'). Uploaded files can overwrite arbitrary system files or plant webshells." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 170 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "LFI",
+          "ruleId": "ZIP_SLIP",
           "level": "error",
-          "message": {
-            "text": "The /api/file/extract endpoint extracts ZIP archives without validating member paths (Zip Slip). A crafted archive with entries like '../../../../tmp/malicious.py' can write files to arbitrary locations outside the extraction directory."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 199, "endLine": 200 }
-              }
-            }
-          ],
+          "message": { "text": "zipfile.extractall() is called without validating member paths. A crafted ZIP with entries like '../../etc/cron.d/evil' will write files outside the extraction directory (Zip Slip), enabling arbitrary file overwrite." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 193 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "OPEN-REDIRECT",
+          "ruleId": "OPEN_REDIRECT",
           "level": "warning",
-          "message": {
-            "text": "The /api/redirect endpoint passes user-supplied 'next' parameter directly to Flask's redirect() without URL validation. An attacker can craft links like /api/redirect?next=https://evil.com to phish users."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 213, "endLine": 214 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.95 }
+          "message": { "text": "User-supplied 'next' URL parameter is passed directly to redirect() without validation. Attackers can craft links like /api/redirect?next=https://evil.com to phish users via a trusted domain." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 205 } } }],
+          "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "RCE",
           "level": "error",
-          "message": {
-            "text": "The /api/eval/python endpoint passes user-supplied 'code' string directly to Python's eval(). This allows arbitrary Python code execution including os.system() calls, file operations, and data exfiltration."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 224 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied Python code is passed directly to eval(). This allows arbitrary Python code execution including os.system(), file operations, and reverse shells. eval() should never be used with untrusted input." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 216 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
           "ruleId": "SSTI",
           "level": "error",
-          "message": {
-            "text": "The /api/template/render endpoint passes user-supplied template string to jinja2.Template() without sandboxing. Combined with user-controlled context, this allows arbitrary code execution via Jinja2 template expressions."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 236, "endLine": 239 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied template string is passed to Jinja2 Template() constructor with arbitrary context variables and no sandboxing. Enables server-side template injection leading to RCE via Jinja2 sandbox escape techniques." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 228 } } }],
           "properties": { "confidence": 1.0 }
         },
         {
-          "ruleId": "LDAP-INJECTION",
+          "ruleId": "LDAP_INJECTION",
           "level": "warning",
-          "message": {
-            "text": "User-supplied 'username' is interpolated directly into LDAP filter string: (&(objectClass=user)(cn={username})). An attacker can inject LDAP filter operators (e.g., *)(|(cn=*)) to bypass authentication or enumerate directory entries."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 249 }
-              }
-            }
-          ],
+          "message": { "text": "User-supplied username is interpolated directly into LDAP filter string without escaping. Attackers can inject LDAP filter operators (*, |, &) to bypass authentication or extract directory data." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 243 } } }],
           "properties": { "confidence": 0.85 }
         },
         {
           "ruleId": "IDOR",
-          "level": "error",
-          "message": {
-            "text": "The /api/logs/<user_id> endpoint returns audit logs for any user_id without authentication or authorization checks. An attacker can enumerate all user activity and extract sensitive operational data."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 255, "endLine": 260 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.95 }
-        },
-        {
-          "ruleId": "INFO-LEAK",
           "level": "warning",
-          "message": {
-            "text": "Multiple API endpoints return raw exception messages in error responses (e.g., 'Authentication failed: {str(e)}'). Stack traces and internal error details can reveal database schema, file paths, and library versions to attackers."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 72 }
-              }
-            }
-          ],
-          "properties": { "confidence": 0.9 }
+          "message": { "text": "GET /api/logs/<user_id> exposes audit logs for any user without authentication or authorization checks. Combined with potential SQL injection in the underlying query, this can leak all audit data." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 252 } } }],
+          "properties": { "confidence": 0.95 }
         }
       ]
     }

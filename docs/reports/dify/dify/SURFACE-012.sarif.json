@@ -1,0 +1,206 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "INPUT-VALIDATION",
+              "name": "MissingInputValidation",
+              "shortDescription": {
+                "text": "Missing input validation on user-controlled parameters"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "PATH-TRAVERSAL",
+              "name": "PathTraversal",
+              "shortDescription": {
+                "text": "Insufficient filename sanitization allowing path traversal characters in metadata"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "DOS",
+              "name": "DenialOfService",
+              "shortDescription": {
+                "text": "Missing resource limits enabling denial of service"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
+            },
+            {
+              "id": "UNRESTRICTED-UPLOAD",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": {
+                "text": "No restriction on file type via mimetype whitelist"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Exception details leaked to client in error responses"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Untrusted user_id from plugin request used without ownership verification"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PATH-TRAVERSAL",
+          "level": "warning",
+          "message": {
+            "text": "The `filename` field in `RequestRequestUploadFile` is passed directly to `get_signed_file_url_for_plugin` without any sanitization for path traversal characters (`/`, `\\`, null bytes). While the downstream storage uses UUID-based keys (mitigating direct filesystem traversal), the unsanitized filename is stored in the database `name` field via `ToolFileManager.create_file_by_raw`. This contrasts with `FileService.upload_file` which explicitly rejects `/` and `\\` in filenames. A malicious plugin could inject path traversal sequences into metadata, potentially confusing downstream consumers that trust the stored filename."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 420,
+                  "endLine": 425
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "The `RequestRequestUploadFile` Pydantic model accepts arbitrary `filename` and `mimetype` strings with no length constraints, character restrictions, or format validation. An attacker with access to the inner API key can request signed upload URLs for any filename/mimetype combination. The filename has no maximum length check (unlike `FileService.upload_file` which caps at 200 characters), enabling excessively long filenames that could cause database or display issues. The mimetype is not validated against RFC 6838 format or whitelisted values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 416,
+                  "endLine": 428
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "UNRESTRICTED-UPLOAD",
+          "level": "warning",
+          "message": {
+            "text": "The plugin file upload endpoint does not enforce a mimetype whitelist. Any mimetype value provided by the plugin is accepted and passed through to `get_signed_file_url_for_plugin`, then used to determine the storage file extension via `guess_extension()`. A malicious plugin could upload executable content types (e.g., `application/x-executable`, `text/html` with embedded scripts) that may be served to users with incorrect Content-Type headers, potentially enabling stored XSS if files are served inline. The regular `FileService.upload_file` endpoint enforces extension-based validation, but this plugin path bypasses those checks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 421,
+                  "endLine": 425
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "DOS",
+          "level": "warning",
+          "message": {
+            "text": "The plugin upload flow via `ToolFileManager.create_file_by_raw` does not enforce file size limits. The entire file content is read into memory (`file.read()`) before being passed to storage, with no maximum size check. In contrast, the standard upload endpoint in `FileService.upload_file` validates file size against configured limits. A compromised or malicious plugin could exhaust server memory and disk by uploading arbitrarily large files through this unprotected path."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 406,
+                  "endLine": 428
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "Multiple endpoints in this file catch broad `Exception` and return `str(e)` directly to the client via `BaseBackwardsInvocationResponse(error=str(e))`. This leaks internal error details such as stack traces, database schema information, internal paths, or configuration details. While these are inner API endpoints behind `plugin_inner_api_only`, a compromised plugin could trigger deliberate errors to enumerate internal infrastructure. Affected endpoints include: text-embedding, rerank, speech2text, moderation, parameter-extractor, question-classifier, encrypt, and summary."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 110,
+                  "endLine": 112
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "The `get_user_tenant` decorator extracts `user_id` and `tenant_id` directly from the request JSON body. The code comments explicitly acknowledge that `user_id is not trusted, it could be maliciously set to any value`. A malicious plugin can set `user_id` to any arbitrary value, and the decorator will create an EndUser record for that ID if one doesn't exist. This means the signed upload URL is generated with an attacker-controlled user identity. While the inner API key provides a trust boundary, if a single plugin is compromised, it can impersonate any user and generate upload URLs attributed to other users, breaking audit trails and potentially accessing tenant resources under another user's identity."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 406,
+                  "endLine": 428
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        }
+      ]
+    }
+  ]
+}
+```

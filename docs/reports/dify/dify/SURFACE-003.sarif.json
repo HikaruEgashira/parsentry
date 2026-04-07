@@ -1,0 +1,237 @@
+ソースコードを分析しました。以下がSARIF形式の脆弱性レポートです。
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "AUTHN-BYPASS",
+              "name": "MissingAuthentication",
+              "shortDescription": {
+                "text": "Unauthenticated endpoint allows arbitrary workflow execution"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "properties": {
+                "cwe": "CWE-306"
+              }
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InternalErrorMessageExposure",
+              "shortDescription": {
+                "text": "Internal exception messages leaked to external callers"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "cwe": "CWE-209"
+              }
+            },
+            {
+              "id": "RESOURCE-EXHAUSTION",
+              "name": "UnratedWorkflowExecution",
+              "shortDescription": {
+                "text": "No rate limiting on unauthenticated endpoint that enqueues Celery tasks"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/770.html",
+              "properties": {
+                "cwe": "CWE-770"
+              }
+            },
+            {
+              "id": "INJECTION",
+              "name": "UntrustedDataInWorkflow",
+              "shortDescription": {
+                "text": "Raw HTTP request data injected into workflow execution without sanitization"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "cwe": "CWE-20"
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "WebhookIdEnumeration",
+              "shortDescription": {
+                "text": "Webhook ID is the sole access control; enumerable IDs allow unauthorized trigger"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html",
+              "properties": {
+                "cwe": "CWE-284"
+              }
+            },
+            {
+              "id": "INFO-LEAK-DEBUG",
+              "name": "DebugEndpointInternalURLLeakage",
+              "shortDescription": {
+                "text": "Debug endpoint leaks internal webhook execution URL in 409 response"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "cwe": "CWE-200"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTHN-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The /webhook/<webhook_id> endpoint accepts all major HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS) with zero authentication or authorization checks. Any external attacker who knows or guesses a webhook_id can trigger arbitrary workflow execution via WebhookService.trigger_workflow_execution(). The webhook_id in the URL path is the sole gate. This is a design-level vulnerability: webhook endpoints are intentionally unauthenticated, but no compensating controls (HMAC signature verification, IP allowlisting, shared secret in headers) are visible in this controller layer. The same issue applies to the /webhook-debug/<webhook_id> endpoint which dispatches debug events."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 67
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "In handle_webhook(), the catch-all exception handler at line 66 returns str(e) directly in the JSON response body: `jsonify({\"error\": \"Internal server error\", \"message\": str(e)})`. Internal exception messages may contain database table names, file paths, stack details, or configuration data that assists attackers in reconnaissance. The debug endpoint (line 119) correctly masks this with a generic message, but the production endpoint does not. Additionally, ValueError exceptions are propagated via NotFound(str(e)) at line 64, which may also expose internal details about trigger configuration or workflow state."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 66,
+                  "endLine": 67
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "RESOURCE-EXHAUSTION",
+          "level": "warning",
+          "message": {
+            "text": "The unauthenticated /webhook/<webhook_id> endpoint directly enqueues Celery tasks via WebhookService.trigger_workflow_execution() with no visible rate limiting, request throttling, or queue depth checks. An attacker can flood this endpoint with requests to exhaust Celery worker capacity, database connections, and memory. Since webhook workflows may invoke LLM APIs, external tools, or data processing pipelines, each queued task can amplify resource consumption significantly. The combination of no authentication + no rate limiting + async task enqueue creates a denial-of-service amplification vector."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 56,
+                  "endLine": 57
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "Raw HTTP request data (headers, query params, body, files) is extracted via WebhookService.extract_and_validate_webhook_data() and passed directly to WebhookService.trigger_workflow_execution() and WebhookService.build_workflow_inputs(). The _prepare_webhook_execution function at line 16 captures the full request including dict(request.headers) and dict(request.args) in the error path. If downstream workflow nodes process these inputs without sanitization (e.g., template rendering, shell execution, database queries, or code evaluation nodes), this creates injection vectors. The validation is delegated to WebhookService which is not visible here, so the extent of sanitization cannot be confirmed from this controller alone."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "Access to webhook execution is gated solely by knowledge of the webhook_id string parameter. If webhook IDs are predictable (e.g., sequential integers, short UUIDs, or derivable from other public identifiers), an attacker can enumerate valid IDs and trigger workflows belonging to other tenants/apps. The WebhookService.get_webhook_trigger_and_workflow() lookup uses only the webhook_id with no tenant-scoping or caller verification. This is an Insecure Direct Object Reference where the webhook_id serves as both identifier and implicit authorization token."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 26
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK-DEBUG",
+          "level": "note",
+          "message": {
+            "text": "The /webhook-debug/<webhook_id> endpoint returns webhook_trigger.webhook_url in the 409 response body (line 108: `\"execution_url\": webhook_trigger.webhook_url`). This leaks the production webhook execution URL to any unauthenticated caller who hits the debug endpoint when no listener is active. An attacker probing debug endpoints can harvest production webhook URLs for other tenants' workflows, enabling further unauthorized workflow triggering."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 105,
+                  "endLine": 110
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 検出サマリ
+
+| # | Rule ID | 深刻度 | 信頼度 | 概要 |
+|---|---------|--------|--------|------|
+| 1 | **AUTHN-BYPASS** | error | 0.90 | 認証なしで全HTTPメソッドからワークフロー実行が可能。HMAC署名検証やIP制限などの補完的制御が不在 |
+| 2 | **INFO-LEAK** | warning | 0.95 | 本番エンドポイントの`except`で`str(e)`をそのままレスポンスに返却。DBテーブル名やパス等が漏洩する |
+| 3 | **RESOURCE-EXHAUSTION** | warning | 0.80 | 認証なし+レート制限なしでCeleryタスクを無制限にenqueue可能。LLM API呼び出し等による増幅効果あり |
+| 4 | **INJECTION** | warning | 0.70 | HTTPリクエストの生データ（headers, query, body, files）がワークフローに直接注入される。下流ノードでの処理次第でRCE/SQLi等に発展 |
+| 5 | **IDOR** | warning | 0.75 | webhook_idのみでアクセス制御。IDが予測可能な場合、他テナントのワークフローを不正に実行可能 |
+| 6 | **INFO-LEAK-DEBUG** | note | 0.85 | デバッグエンドポイントの409応答で本番webhook URLを未認証の呼び出し元に漏洩 |

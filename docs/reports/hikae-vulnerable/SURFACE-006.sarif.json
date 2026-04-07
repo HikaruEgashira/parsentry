@@ -1,0 +1,144 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSTI-001",
+              "name": "ServerSideTemplateInjection",
+              "shortDescription": {
+                "text": "User-controlled Jinja2 template string passed to Template() constructor"
+              },
+              "fullDescription": {
+                "text": "The 'template' query parameter is passed directly to jinja2.Template(), allowing an attacker to inject arbitrary Jinja2 expressions. This enables full server-side template injection, which in Jinja2 can escalate to arbitrary code execution via __class__.__mro__ traversal (e.g., {{ ''.__class__.__mro__[1].__subclasses__() }})."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "ssti",
+                  "CWE-1336"
+                ]
+              }
+            },
+            {
+              "id": "SSTI-002",
+              "name": "UnsafeTemplateRendering",
+              "shortDescription": {
+                "text": "Result of user-controlled template rendered with |safe filter, disabling autoescaping"
+              },
+              "fullDescription": {
+                "text": "The rendered output of a user-controlled Jinja2 template is passed through the |safe filter (or Markup), which disables HTML autoescaping. Even if the SSTI itself were mitigated, rendering untrusted output as safe HTML enables cross-site scripting."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "CWE-79"
+                ]
+              }
+            },
+            {
+              "id": "SSTI-003",
+              "name": "NoSandboxOnTemplateEnvironment",
+              "shortDescription": {
+                "text": "Jinja2 Template instantiated without SandboxedEnvironment"
+              },
+              "fullDescription": {
+                "text": "jinja2.Template() is used instead of jinja2.sandbox.SandboxedEnvironment. Without sandboxing, template expressions can access arbitrary Python objects and execute system commands."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "code-injection",
+                  "CWE-94"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSTI-001",
+          "level": "error",
+          "message": {
+            "text": "User-supplied query parameter 'template' is passed directly to jinja2.Template() at line 450, enabling server-side template injection. An attacker can craft a payload such as {{ config.items() }} or {{ ''.__class__.__mro__[1].__subclasses__() }} to achieve remote code execution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 450,
+                  "startColumn": 9,
+                  "endLine": 450
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSTI-002",
+          "level": "error",
+          "message": {
+            "text": "The output of t.render(name=name), where 't' is a user-controlled Jinja2 Template, is rendered with the |safe filter in the response template. This disables autoescaping and allows any HTML/JS payload produced by the SSTI to execute in the victim's browser, compounding SSTI with reflected XSS."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 451,
+                  "startColumn": 9,
+                  "endLine": 460
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSTI-003",
+          "level": "warning",
+          "message": {
+            "text": "jinja2.Template() is instantiated without a SandboxedEnvironment. Even if input validation were added, the lack of sandboxing means any bypass would immediately grant full code execution. Defence-in-depth requires using jinja2.sandbox.SandboxedEnvironment."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 450,
+                  "startColumn": 9,
+                  "endLine": 450
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

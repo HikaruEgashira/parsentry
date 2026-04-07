@@ -1,0 +1,202 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SQLI-001",
+              "name": "SQLInjectionLikeClause",
+              "shortDescription": {
+                "text": "SQL Injection via LIKE clause with unsanitized user input"
+              },
+              "fullDescription": {
+                "text": "The username parameter from the query string is interpolated directly into a SQL LIKE clause using an f-string. An attacker can inject arbitrary SQL by supplying crafted input such as: username=%' UNION SELECT password,2,3,4 FROM users--. This allows full database extraction including credentials."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "sql-injection",
+                  "CWE-89"
+                ]
+              }
+            },
+            {
+              "id": "SQLI-002",
+              "name": "SQLInjectionOrderByClause",
+              "shortDescription": {
+                "text": "SQL Injection via ORDER BY clause with unsanitized user input"
+              },
+              "fullDescription": {
+                "text": "The order parameter from the query string is interpolated directly into a SQL ORDER BY clause using an f-string. An attacker can inject arbitrary SQL such as: order=(CASE WHEN (SELECT password FROM users WHERE username='admin') LIKE 'a%' THEN id ELSE email END) to perform blind boolean-based extraction of sensitive data. ORDER BY injection also enables UNION-based attacks when combined with error-based techniques."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "sql-injection",
+                  "CWE-89"
+                ]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE-001",
+              "name": "SQLQueryDisclosureInResponse",
+              "shortDescription": {
+                "text": "SQL query string displayed in HTTP response"
+              },
+              "fullDescription": {
+                "text": "The raw SQL query strings (query1 and query2) are passed to the template and rendered in <pre> tags in the HTTP response. This reveals the database schema (table names, column names) and query structure to attackers, significantly lowering the barrier for SQL injection exploitation."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "information-disclosure",
+                  "CWE-200"
+                ]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE-002",
+              "name": "SQLErrorMessageDisclosure",
+              "shortDescription": {
+                "text": "Database error messages exposed to users"
+              },
+              "fullDescription": {
+                "text": "When a SQL query fails, the exception message (which may contain database engine details, table structure, or query fragments) is captured and rendered directly in the HTTP response via the except block. This aids attackers in refining injection payloads through error-based SQL injection techniques."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "information-disclosure",
+                  "CWE-209"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI-001",
+          "level": "error",
+          "message": {
+            "text": "SQL injection in LIKE clause: user-controlled 'username' parameter is interpolated directly into SQL query via f-string without parameterization or sanitization. Payload example: %' UNION SELECT password,2,3,4 FROM users--"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 274,
+                  "startColumn": 9,
+                  "endLine": 274
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "source": "request.args.get(\"username\", \"\")",
+            "sink": "cursor.execute(query1)",
+            "cwe": [
+              "CWE-89"
+            ]
+          }
+        },
+        {
+          "ruleId": "SQLI-002",
+          "level": "error",
+          "message": {
+            "text": "SQL injection in ORDER BY clause: user-controlled 'order' parameter is interpolated directly into SQL query via f-string without parameterization or allowlist validation. Unlike the LIKE injection, ORDER BY injection does not require escaping quote characters, making exploitation trivial. Payload example: (SELECT password FROM users LIMIT 1)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 277,
+                  "startColumn": 9,
+                  "endLine": 277
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "source": "request.args.get(\"order\", \"id\")",
+            "sink": "cursor.execute(query2)",
+            "cwe": [
+              "CWE-89"
+            ]
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE-001",
+          "level": "warning",
+          "message": {
+            "text": "Raw SQL query strings are rendered in the HTTP response template via <pre>{{ query1 }}</pre> and <pre>{{ query2 }}</pre>. This exposes table names (users), column names (id, username, email, role), and query structure to any client, enabling more targeted injection attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 317,
+                  "startColumn": 5,
+                  "endLine": 318
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": [
+              "CWE-200"
+            ]
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE-002",
+          "level": "warning",
+          "message": {
+            "text": "Database exception messages are captured and rendered directly in the HTTP response. Error-based SQL injection techniques can leverage these messages to extract data one character at a time from the database without requiring UNION or blind timing attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 283,
+                  "startColumn": 9,
+                  "endLine": 284
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "cwe": [
+              "CWE-209"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

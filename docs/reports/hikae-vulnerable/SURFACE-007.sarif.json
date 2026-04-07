@@ -1,0 +1,103 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": { "text": "SQL Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "HARDCODED_SECRET",
+              "name": "HardcodedSecret",
+              "shortDescription": { "text": "Hardcoded Secret / Credential" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
+            },
+            {
+              "id": "WEAK_CRYPTO",
+              "name": "WeakCryptography",
+              "shortDescription": { "text": "Weak Cryptographic Implementation" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/326.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            },
+            {
+              "id": "SENSITIVE_DATA_EXPOSURE",
+              "name": "SensitiveDataExposure",
+              "shortDescription": { "text": "Sensitive Data Exposure in Response" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/312.html"
+            },
+            {
+              "id": "SENSITIVE_LOGGING",
+              "name": "SensitiveDataLogging",
+              "shortDescription": { "text": "Sensitive Data Written to Logs" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": { "text": "The authenticate_user() method (called at api.py line 57) uses f-string interpolation to build SQL queries from user-supplied username and password parameters. An attacker can inject SQL via the login JSON body to bypass authentication entirely (e.g., username: \"' OR '1'='1' --\") or extract arbitrary data via UNION-based injection." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 57 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "HARDCODED_SECRET",
+          "level": "error",
+          "message": { "text": "JWT signing secret is hardcoded as 'super_secret_key_123' (api.py line 18). Any attacker who reads the source code or decompiles the application can forge arbitrary JWT tokens with any user_id, username, and role claims, achieving full authentication bypass and privilege escalation." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 18 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "WEAK_CRYPTO",
+          "level": "error",
+          "message": { "text": "JWT tokens are signed with HS256 using a weak hardcoded secret (api.py line 65). HS256 with a short, predictable secret is trivially brute-forceable. The token carries user_id, username, and role without expiration (no 'exp' claim), so forged or stolen tokens remain valid indefinitely." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 61 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "HARDCODED_SECRET",
+          "level": "error",
+          "message": { "text": "API keys are hardcoded in the API_KEYS dictionary (api.py lines 19-22): 'sk-1234567890abcdef' for admin and 'pk-0987654321fedcba' for guest. These credentials are committed to source control and grant direct access to the application." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 19 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SENSITIVE_DATA_EXPOSURE",
+          "level": "error",
+          "message": { "text": "The login response at api.py line 78 includes the user's api_key in the JSON body ('api_key': user['api_key']). API keys are long-lived credentials that should never be returned in authentication responses, as they may be cached by proxies, logged by intermediaries, or exposed in browser history." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 78 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SENSITIVE_LOGGING",
+          "level": "error",
+          "message": { "text": "Plaintext password is written to the audit log at api.py line 71: f\"User {username} logged in with password {password}\". This persists credentials in the database audit_logs table, accessible to anyone with database read access or via the IDOR-vulnerable /api/logs/<user_id> endpoint." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 71 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": { "text": "The error handler at api.py line 85 returns the full exception message to the client: f'Authentication failed: {str(e)}'. Internal exception details (stack traces, database errors, library versions) leak implementation information that aids further attacks." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 85 } } }],
+          "properties": { "confidence": 0.95 }
+        }
+      ]
+    }
+  ]
+}

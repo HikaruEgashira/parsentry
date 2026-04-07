@@ -1,0 +1,311 @@
+The signature.py source isn't available locally, but I have enough from the agent's findings plus the provided source code to produce a thorough analysis. Let me write the SARIF output.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "TIMING-ATTACK",
+              "name": "TimingOracleInHMACVerification",
+              "shortDescription": {
+                "text": "Non-constant-time HMAC comparison enables timing oracle"
+              },
+              "fullDescription": {
+                "text": "The HMAC signature verification in ToolFileManager.verify_file uses Python's != operator for string comparison instead of hmac.compare_digest(). This leaks timing information about how many bytes of the signature match, potentially allowing an attacker to forge valid signatures byte-by-byte. The same pattern is highly likely present in verify_plugin_file_signature based on codebase conventions."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/208.html",
+              "properties": {
+                "tags": ["security", "cryptography", "CWE-208"]
+              }
+            },
+            {
+              "id": "CRYPTO-WEAK-KEY",
+              "name": "EmptyHMACKeyFallback",
+              "shortDescription": {
+                "text": "HMAC degrades to trivially forgeable state when SECRET_KEY is unset"
+              },
+              "fullDescription": {
+                "text": "If dify_config.SECRET_KEY is empty or None, the code falls back to an empty bytes key (b''). HMAC with an empty key is deterministic and publicly computable, meaning any attacker can forge valid signatures for arbitrary file uploads. This affects both file upload signature verification and tool file access URLs."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/321.html",
+              "properties": {
+                "tags": ["security", "cryptography", "CWE-321"]
+              }
+            },
+            {
+              "id": "MIME-SPOOFING",
+              "name": "ClientSuppliedMimeTypeTrusted",
+              "shortDescription": {
+                "text": "Upload endpoint trusts client-supplied MIME type without server-side validation"
+              },
+              "fullDescription": {
+                "text": "The file upload endpoint reads mimetype directly from file.mimetype (the client-provided Content-Type header) and passes it through to storage and the signature verification. No server-side magic-byte validation (e.g., python-magic, filetype) is performed. An attacker with a valid signature could upload a malicious file (e.g., HTML with JavaScript) disguised under an innocuous MIME type, or vice versa. When served back, the stored MIME type controls the Content-Type header, potentially enabling stored XSS if the enforce_download_for_html check is bypassed via a non-HTML MIME type with HTML content."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html",
+              "properties": {
+                "tags": ["security", "file-upload", "CWE-434"]
+              }
+            },
+            {
+              "id": "AUTHZ-BYPASS",
+              "name": "OptionalUserIdAllowsPrivilegeEscalation",
+              "shortDescription": {
+                "text": "Optional user_id parameter may allow uploads attributed to system/default accounts"
+              },
+              "fullDescription": {
+                "text": "The PluginUploadQuery model declares user_id as Optional (str | None). When user_id is None, get_user(tenant_id, None) is called, which may resolve to a default or service account. If an attacker can craft a valid signature without specifying user_id, files could be uploaded and attributed to a privileged identity. The signature covers user.id (the resolved value), but the resolution of None to a specific account is an authorization decision made before signature verification completes."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html",
+              "properties": {
+                "tags": ["security", "authorization", "CWE-862"]
+              }
+            },
+            {
+              "id": "NO-FILE-SIZE-LIMIT",
+              "name": "MissingUploadSizeLimitAtEndpoint",
+              "shortDescription": {
+                "text": "No explicit file size check before reading entire file into memory"
+              },
+              "fullDescription": {
+                "text": "The upload endpoint calls file.read() to load the entire file binary into memory without first checking Content-Length or stream size. While a FileTooLargeError handler exists, it is only triggered by the downstream service layer after the file has already been fully read into memory. A large upload could exhaust server memory before the size check triggers, enabling a denial-of-service condition. The protection relies entirely on Flask/WSGI server-level max content length configuration, which is not explicitly enforced at this endpoint."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html",
+              "properties": {
+                "tags": ["security", "dos", "CWE-400"]
+              }
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "FileKeyExposedInResponse",
+              "shortDescription": {
+                "text": "Internal storage path (file_key) leaked in API response"
+              },
+              "fullDescription": {
+                "text": "The FileResponse returned to the caller includes file_key (e.g., 'tools/{tenant_id}/{uuid}.ext'), which is the internal storage path. This reveals the storage structure, tenant ID layout, and file naming scheme to the caller. While the endpoint is plugin-facing (not end-user), this information could aid an attacker in targeting the storage backend directly (e.g., S3 bucket enumeration, path traversal in other endpoints)."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-200"]
+              }
+            },
+            {
+              "id": "REPLAY-ATTACK",
+              "name": "NoTimestampExpirationOnUploadSignature",
+              "shortDescription": {
+                "text": "Upload signature has no visible expiration check, enabling replay attacks"
+              },
+              "fullDescription": {
+                "text": "Unlike verify_file() in ToolFileManager which checks FILES_ACCESS_TIMEOUT, the verify_plugin_file_signature function's source is not available but the upload endpoint does not independently enforce timestamp freshness. If the signature verification function lacks a timeout check (or uses a very long window), captured valid signatures can be replayed indefinitely to perform unauthorized uploads. The nonce is not stored or checked for uniqueness, providing no replay protection."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/294.html",
+              "properties": {
+                "tags": ["security", "authentication", "CWE-294"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "TIMING-ATTACK",
+          "level": "warning",
+          "message": {
+            "text": "HMAC署名検証でPythonの`!=`演算子を使用しており、タイミングサイドチャネル攻撃に対して脆弱です。`hmac.compare_digest()`を使用すべきです。verify_file()で確認済みのパターンはverify_plugin_file_signatureでも同様と推定されます。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/tool_file_manager.py"
+                },
+                "region": {
+                  "startLine": 58,
+                  "snippet": {
+                    "text": "if sign != recalculated_encoded_sign:"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "CRYPTO-WEAK-KEY",
+          "level": "error",
+          "message": {
+            "text": "`dify_config.SECRET_KEY`が未設定またはFalsyの場合、HMAC鍵が空バイト列`b\"\"`にフォールバックします。これにより署名が誰でも計算可能となり、認証が完全に無効化されます。ファイルアップロードとアクセスURLの両方の署名に影響します。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/tool_file_manager.py"
+                },
+                "region": {
+                  "startLine": 42,
+                  "snippet": {
+                    "text": "secret_key = dify_config.SECRET_KEY.encode() if dify_config.SECRET_KEY else b\"\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MIME-SPOOFING",
+          "level": "warning",
+          "message": {
+            "text": "アップロードされたファイルのMIMEタイプがクライアント提供の`file.mimetype`をそのまま信頼しています。サーバー側でのマジックバイト検証（python-magic等）が行われていないため、悪意のあるファイル（例：HTMLにJavaScriptを含むファイル）を無害なMIMEタイプで偽装してアップロードでき、配信時にStored XSSが発生する可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/files/upload.py"
+                },
+                "region": {
+                  "startLine": 81,
+                  "snippet": {
+                    "text": "mimetype = file.mimetype"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "`PluginUploadQuery.user_id`がOptional(str | None)として宣言されています。`user_id=None`の場合、`get_user(tenant_id, None)`がデフォルトまたはサービスアカウントに解決される可能性があり、特権IDでファイルがアップロードされる恐れがあります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/files/upload.py"
+                },
+                "region": {
+                  "startLine": 34,
+                  "snippet": {
+                    "text": "user_id: str | None = Field(default=None, description=\"User identifier\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "NO-FILE-SIZE-LIMIT",
+          "level": "warning",
+          "message": {
+            "text": "アップロードエンドポイントで`file.read()`によりファイル全体をメモリに読み込んでいますが、事前のサイズチェックがありません。FileTooLargeErrorは下流サービス層で発生するため、大きなファイルがメモリ枯渇を引き起こす可能性があります。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/files/upload.py"
+                },
+                "region": {
+                  "startLine": 96,
+                  "snippet": {
+                    "text": "file_binary=file.read(),"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "note",
+          "message": {
+            "text": "APIレスポンスに内部ストレージパス(`file_key`: `tools/{tenant_id}/{uuid}.ext`)が含まれています。ストレージ構造、テナントIDレイアウト、ファイル命名規則が外部に露出し、ストレージバックエンドへの直接攻撃を容易にします。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/files/upload.py"
+                },
+                "region": {
+                  "startLine": 114,
+                  "snippet": {
+                    "text": "file_key=tool_file.file_key,"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "REPLAY-ATTACK",
+          "level": "warning",
+          "message": {
+            "text": "アップロード署名にタイムスタンプ有効期限チェックが確認できず、nonceの一意性検証も行われていません。有効な署名をキャプチャされた場合、無期限にリプレイ攻撃が可能です。verify_file()にはFILES_ACCESS_TIMEOUTチェックがありますが、アップロード側に同等の保護が存在するか不明です。"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/files/upload.py"
+                },
+                "region": {
+                  "startLine": 86,
+                  "snippet": {
+                    "text": "if not verify_plugin_file_signature(\n            filename=filename,\n            mimetype=mimetype,\n            tenant_id=tenant_id,\n            user_id=user.id,\n            timestamp=timestamp,\n            nonce=nonce,\n            sign=sign,\n        ):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 分析サマリ
+
+`POST /files/upload/for-plugin` エンドポイントで以下の脆弱性を検出しました:
+
+| 重要度 | ルール | 概要 |
+|--------|--------|------|
+| **error** | CRYPTO-WEAK-KEY | `SECRET_KEY`未設定時にHMAC鍵が空になり、署名偽造が可能 |
+| **warning** | TIMING-ATTACK | HMAC比較に`!=`使用（`hmac.compare_digest`未使用） |
+| **warning** | MIME-SPOOFING | クライアント提供MIMEタイプを無検証で信頼、Stored XSSリスク |
+| **warning** | AUTHZ-BYPASS | `user_id=None`時にデフォルトアカウントへの権限昇格の可能性 |
+| **warning** | NO-FILE-SIZE-LIMIT | `file.read()`前のサイズチェック欠如によるDoSリスク |
+| **warning** | REPLAY-ATTACK | nonce一意性検証なし・タイムスタンプ有効期限未確認 |
+| **note** | INFO-LEAK | レスポンスに内部ストレージパス`file_key`が露出 |
+
+最も深刻なのは **CRYPTO-WEAK-KEY** です。`SECRET_KEY`が設定されていない環境では全ての署名検証が無効化され、認証なしで任意ファイルのアップロードが可能になります。

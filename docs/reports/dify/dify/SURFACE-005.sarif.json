@@ -1,0 +1,274 @@
+分析結果をSARIF形式で出力します。
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "UNRESTRICTED-UPLOAD",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": {
+                "text": "Unrestricted file type upload without content-based validation"
+              },
+              "helpUri": "https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload"
+            },
+            {
+              "id": "PATH-TRAVERSAL",
+              "name": "PathTraversal",
+              "shortDescription": {
+                "text": "Unsanitized filename passed to storage backend"
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Path_Traversal"
+            },
+            {
+              "id": "MIME-SPOOFING",
+              "name": "MimeSpoofing",
+              "shortDescription": {
+                "text": "Client-supplied MIME type trusted without content-based verification"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/646.html"
+            },
+            {
+              "id": "MISSING-VALIDATION",
+              "name": "MissingInputValidation",
+              "shortDescription": {
+                "text": "Missing MIME type validation on upload endpoint"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Internal error details exposed to API consumers"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "MISSING-RATE-LIMIT",
+              "name": "MissingRateLimit",
+              "shortDescription": {
+                "text": "File upload endpoint lacks per-user rate limiting"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/770.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PATH-TRAVERSAL",
+          "level": "error",
+          "message": {
+            "text": "User-supplied filename from request.files['file'].filename is passed directly to FileService.upload_file() without sanitization (e.g., os.path.basename() or werkzeug.utils.secure_filename()). A malicious filename such as '../../etc/cron.d/backdoor' could cause the file to be written outside the intended storage directory, depending on the storage backend implementation. This affects all three upload endpoints: service_api, web, and console."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file.py"
+                },
+                "region": {
+                  "startLine": 56,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/files.py"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "MIME-SPOOFING",
+          "level": "error",
+          "message": {
+            "text": "The MIME type used for file type decisions comes entirely from the client-supplied Content-Type header (file.mimetype). No magic-byte / file-signature verification is performed on the actual file content. An attacker can upload an executable or HTML file with a spoofed image/png MIME type. If the storage backend serves files with the original MIME type or the file is later rendered in a browser context, this enables stored XSS or malware distribution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file.py"
+                },
+                "region": {
+                  "startLine": 50,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/files.py"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "UNRESTRICTED-UPLOAD",
+          "level": "error",
+          "message": {
+            "text": "No allowlist of permitted file extensions or MIME types is enforced at the controller layer. While UnsupportedFileTypeError and BlockedFileExtensionError classes exist, the controller code only checks for the presence of a mimetype (service_api) or performs no mimetype check at all (web). Without an explicit allowlist, attackers can upload dangerous file types (.html, .svg, .exe, .php, .jsp) which may lead to stored XSS, phishing, or remote code execution depending on how the storage backend serves these files."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file.py"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/files.py"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "MISSING-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "The web files endpoint (controllers/web/files.py) does not validate that file.mimetype is present before passing it to FileService.upload_file(), unlike the service_api endpoint which explicitly checks 'if not file.mimetype'. A None mimetype may bypass file type restrictions in the service layer, depending on how FileService handles null values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/files.py"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "FileTooLargeError is raised with file_too_large_error.description, which may contain internal details about file size limits or storage configuration. In the console datasets endpoint (DatasetIndexingEstimateApi.post), broad exception handlers catch Exception and re-raise as IndexingEstimateError(str(e)), potentially leaking stack trace information, file paths, or database schema details to API consumers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file.py"
+                },
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/datasets/datasets.py"
+                },
+                "region": {
+                  "startLine": 399,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "MISSING-RATE-LIMIT",
+          "level": "warning",
+          "message": {
+            "text": "The service_api and web file upload endpoints lack per-user or per-tenant rate limiting. While the console dataset endpoints use @cloud_edition_billing_rate_limit_check, the file upload endpoints have no equivalent protection. An attacker with a valid API token could exhaust storage quota or cause denial of service by uploading files at high rates. The single-file-per-request check (TooManyFilesError) does not prevent rapid sequential uploads."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file.py"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/files.py"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 検出結果サマリ
+
+| # | Rule | Severity | Confidence | Location | 概要 |
+|---|------|----------|------------|----------|------|
+| 1 | PATH-TRAVERSAL | error | 0.75 | service_api/file.py, web/files.py | `file.filename`が未サニタイズのままストレージに渡される。`secure_filename()`等の処理なし |
+| 2 | MIME-SPOOFING | error | 0.85 | service_api/file.py, web/files.py | クライアント提供のMIMEタイプを信頼し、magic byte検証なし。SVG/HTMLアップロードによるStored XSSの可能性 |
+| 3 | UNRESTRICTED-UPLOAD | error | 0.70 | service_api/file.py, web/files.py | 許可ファイルタイプのホワイトリストなし。危険な拡張子(.html, .svg, .exe等)がアップロード可能 |
+| 4 | MISSING-VALIDATION | warning | 0.90 | web/files.py | Web APIエンドポイントで`file.mimetype`のnullチェックが欠落（service_apiにはある） |
+| 5 | INFO-DISCLOSURE | warning | 0.70 | service_api/file.py, datasets.py | エラーメッセージに内部詳細が漏洩。`IndexingEstimateError(str(e))`で例外情報が外部に露出 |
+| 6 | MISSING-RATE-LIMIT | warning | 0.80 | service_api/file.py, web/files.py | ファイルアップロードにレートリミットなし。ストレージ枯渇によるDoSリスク |

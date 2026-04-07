@@ -1,0 +1,321 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "AUTHZ-MISSING",
+              "name": "MissingAuthorizationCheck",
+              "shortDescription": {
+                "text": "Missing role-based authorization check on sensitive endpoint"
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+            },
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via user-controlled URL"
+              },
+              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery/"
+            },
+            {
+              "id": "CREDENTIAL-EXPOSURE",
+              "name": "CredentialExposureInResponse",
+              "shortDescription": {
+                "text": "Credentials potentially returned in API response without masking"
+              },
+              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference allowing cross-tenant access"
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+            },
+            {
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": {
+                "text": "Open redirect via configurable URL used in redirect response"
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
+            },
+            {
+              "id": "INPUT-VALIDATION",
+              "name": "InsufficientInputValidation",
+              "shortDescription": {
+                "text": "Insufficient validation of user-supplied credentials dict"
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTHZ-MISSING",
+          "level": "error",
+          "message": {
+            "text": "ToolBuiltinProviderAddApi.post() lacks @is_admin_or_owner_required decorator, allowing any authenticated workspace member (including 'normal' role) to add tool provider credentials. Contrast with ToolBuiltinProviderDeleteApi and ToolBuiltinProviderUpdateApi which correctly require admin/owner. A low-privilege user can configure arbitrary tool providers with attacker-controlled credentials, potentially intercepting tool invocations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 222,
+                  "endLine": 245
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "AUTHZ-MISSING",
+          "level": "error",
+          "message": {
+            "text": "ToolProviderMCPApi.post() (MCP provider creation), put() (update), and delete() all lack @is_admin_or_owner_required decorator. Any authenticated member can create/modify/delete MCP tool providers including setting arbitrary server_url and headers. This allows a low-privilege user to point MCP connections to attacker-controlled servers to exfiltrate data or perform SSRF."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 496,
+                  "endLine": 600
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.93
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "MCPProviderCreatePayload.server_url is a plain string with no URL validation or allowlist enforcement. The server creates an outbound connection via MCPToolManageService.reconnect_with_url() to this user-supplied URL. An attacker can supply internal network addresses (e.g., http://169.254.169.254/latest/meta-data/, http://localhost:6379/) to probe internal services or cloud metadata endpoints. The is_valid_url() helper is defined but never called for MCP payloads."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 510,
+                  "endLine": 545
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.88
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "ToolApiProviderGetRemoteSchemaApi.get() fetches an OpenAPI schema from a user-supplied URL (validated as HttpUrl by Pydantic but with no internal-network blocklist). The server makes an outbound HTTP request to the URL to retrieve the schema. Without SSRF proxy or IP-based filtering, this can be exploited to scan internal services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 272,
+                  "endLine": 287
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "ModelProviderCredentialApi.get() returns provider credentials to any authenticated user (no admin check). If the service layer does not mask sensitive values, API keys and secrets for LLM providers could be exposed to non-privileged workspace members. The response structure {'credentials': credentials} suggests raw credential values may be returned."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/model_providers.py"
+                },
+                "region": {
+                  "startLine": 78,
+                  "endLine": 95
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "ToolBuiltinProviderGetCredentialsApi.get() returns tool provider credentials to any authenticated member without @is_admin_or_owner_required. If credentials are not masked at the service layer, any workspace member can read API keys configured for builtin tools."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 248,
+                  "endLine": 262
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "ModelProviderIconApi.get() accepts tenant_id as a path parameter without authentication (no @login_required or @account_initialization_required decorators). Any unauthenticated user can enumerate tenant IDs and retrieve provider icons, leaking information about which model providers are configured per tenant."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/model_providers.py"
+                },
+                "region": {
+                  "startLine": 186,
+                  "endLine": 199
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "note",
+          "message": {
+            "text": "ToolMCPCallbackApi.get() and ToolOAuthCallback.get() redirect to dify_config.CONSOLE_WEB_URL without validating its value at runtime. If CONSOLE_WEB_URL is misconfigured or controllable through environment injection, the OAuth callback will redirect users to an attacker-controlled domain, enabling token/credential theft."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 699,
+                  "endLine": 715
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "Multiple endpoints accept credentials as dict[str, Any] without any schema validation or size constraints (e.g., ParserCredentialCreate, BuiltinToolAddPayload, ApiToolTestPayload). An attacker could submit extremely large credential dictionaries to cause memory exhaustion, or inject unexpected keys that may be passed through to downstream systems without sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/model_providers.py"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 34
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "AUTHZ-MISSING",
+          "level": "warning",
+          "message": {
+            "text": "ToolMCPAuthApi.post() lacks @is_admin_or_owner_required. Any authenticated member can initiate MCP OAuth authentication flows and update provider credentials, potentially hijacking an MCP provider's authentication state or replacing valid credentials with attacker-controlled ones."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 604,
+                  "endLine": 667
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "AUTHZ-MISSING",
+          "level": "warning",
+          "message": {
+            "text": "WorkspaceInfoApi.post() allows any authenticated member to change the workspace name without requiring admin/owner role. Missing @is_admin_or_owner_required decorator means a 'normal' or 'editor' role user can rename the workspace, which could be used for social engineering or phishing."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/workspace.py"
+                },
+                "region": {
+                  "startLine": 236,
+                  "endLine": 250
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.82
+          }
+        }
+      ]
+    }
+  ]
+}
+```

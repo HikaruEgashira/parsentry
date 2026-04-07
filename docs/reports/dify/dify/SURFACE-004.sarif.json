@@ -1,0 +1,188 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "User-controlled tenant_id interpolated into internal daemon URL without validation"
+              },
+              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Endpoint operations accept endpoint_id without ownership verification in the client layer"
+              },
+              "helpUri": "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/"
+            },
+            {
+              "id": "CREDENTIAL-EXPOSURE",
+              "name": "CredentialExposureInTransit",
+              "shortDescription": {
+                "text": "Plugin settings (credentials) passed as plaintext dict to daemon without field-level encryption"
+              },
+              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+            },
+            {
+              "id": "MISSING-AUTHZ",
+              "name": "MissingAuthorizationCheck",
+              "shortDescription": {
+                "text": "Client methods accept user_id as parameter but perform no authorization check before forwarding to daemon"
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakageViaErrorMessage",
+              "shortDescription": {
+                "text": "Exception description string exposed and matched against for control flow, may leak internal state"
+              },
+              "helpUri": "https://owasp.org/www-community/Improper_Error_Handling"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "tenant_id is directly interpolated into the daemon request URL (e.g. f\"plugin/{tenant_id}/endpoint/setup\") across all methods. If tenant_id originates from user input without strict UUID validation, an attacker could manipulate the URL path (e.g. using '../' or other path segments) to reach unintended daemon endpoints. The BasePluginClient._request_with_plugin_daemon_response method constructs a URL to an internal plugin daemon — path traversal in tenant_id could target other daemon routes."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/impl/endpoint.py"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 13,
+                  "endLine": 18
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5,
+            "impact": "medium",
+            "explanation": "All methods (create_endpoint, list_endpoints, update_endpoint, delete_endpoint, enable_endpoint, disable_endpoint) interpolate tenant_id into the URL path. If the caller does not validate tenant_id as a strict UUID before passing it, path traversal is possible. Severity reduced because the daemon is typically an internal service and tenant_id usually comes from authenticated session context."
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "Methods like update_endpoint, delete_endpoint, enable_endpoint, and disable_endpoint accept endpoint_id as a parameter and forward it directly to the plugin daemon without verifying that the endpoint belongs to the requesting user or tenant. Authorization is entirely delegated to the daemon. If the daemon does not enforce tenant-scoped ownership checks, any authenticated user could manipulate endpoints belonging to other tenants by supplying a guessed or enumerated endpoint_id."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/impl/endpoint.py"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 9,
+                  "endLine": 80
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55,
+            "impact": "high",
+            "explanation": "The delete_endpoint method (and update/enable/disable) passes endpoint_id directly without checking ownership. The tenant_id is in the URL path but endpoint_id is in the request body — if the daemon matches only on endpoint_id and ignores tenant_id scope, cross-tenant manipulation is possible. This is an architectural trust boundary issue."
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "create_endpoint and update_endpoint pass a 'settings' dict (which contains plugin credentials/secrets) as plaintext JSON in the HTTP request body to the plugin daemon. If the daemon communication channel is not encrypted (e.g., HTTP instead of HTTPS on localhost or across a network), credentials are exposed in transit. Additionally, settings are passed as an untyped dict with no field-level encryption, meaning all credential values are visible in logs, network captures, and daemon memory."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/impl/endpoint.py"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 13,
+                  "endLine": 27
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.45,
+            "impact": "medium",
+            "explanation": "The settings dict likely contains API keys, tokens, or other secrets for the plugin. These are sent as plaintext JSON to the daemon. The risk depends on whether the daemon connection uses TLS and whether request logging is enabled. In containerized deployments with inter-service HTTP, this could expose credentials."
+          }
+        },
+        {
+          "ruleId": "MISSING-AUTHZ",
+          "level": "note",
+          "message": {
+            "text": "The PluginEndpointClient methods accept user_id as a parameter but do not perform any authorization logic. Authorization is implicitly delegated to the upstream controller (which should set user_id from the authenticated session) and downstream daemon (which should enforce tenant-scoped access). However, the client layer itself provides no defense-in-depth. If a controller mistakenly passes a user-supplied user_id, the daemon may execute actions on behalf of another user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/impl/endpoint.py"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 5,
+                  "endLine": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.4,
+            "impact": "medium",
+            "explanation": "This is a defense-in-depth concern. The controller file (api/controllers/trigger/endpoint.py) was not provided for analysis, so we cannot verify whether user_id is correctly sourced from the authenticated session. The client blindly trusts whatever user_id is passed to it."
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "note",
+          "message": {
+            "text": "In delete_endpoint, the exception handler inspects e.description via string matching ('record not found') to implement idempotent delete. This pattern (1) relies on unstable error message strings that could change, breaking the logic, and (2) converts internal daemon error details into a boolean success, potentially masking other errors that happen to contain 'record not found' in their description. The str(e.description) call could also inadvertently expose internal state if the exception is logged or propagated."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/impl/endpoint.py"
+                },
+                "region": {
+                  "startLine": 82,
+                  "startColumn": 9,
+                  "endLine": 85
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6,
+            "impact": "low",
+            "explanation": "String-based error matching is fragile and could mask genuine errors. If the daemon error message changes, the idempotent behavior silently breaks. Additionally, broad string matching on 'record not found' could match unrelated errors that coincidentally contain this substring."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "OPEN_REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": { "text": "Open Redirect" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "OPEN_REDIRECT",
+          "level": "warning",
+          "message": { "text": "User-supplied 'next' query parameter is passed directly to Flask's redirect() without any URL validation or domain allowlisting. An attacker can craft a link such as /api/redirect?next=https://evil.com to redirect users to a malicious site via a trusted domain, enabling credential phishing and OAuth token theft." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 309, "endLine": 315 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "OPEN_REDIRECT",
+          "level": "warning",
+          "message": { "text": "No validation is performed to ensure the redirect target is a relative path or belongs to a trusted domain allowlist. The endpoint accepts arbitrary schemes (javascript:, data:, https://) enabling both phishing redirects and potential XSS via javascript: URIs in older browsers." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 311 } } }],
+          "properties": { "confidence": 0.9 }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": { "text": "Insecure Direct Object Reference" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": { "text": "SQL Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "GET /api/logs/<user_id> has no authentication check. Any unauthenticated caller can retrieve audit logs for any user by supplying an arbitrary user_id in the URL path. This endpoint must require a valid session or token and verify that the authenticated user is authorized to access the requested logs. Add @login_required or equivalent middleware and enforce that the caller's identity matches the requested user_id (or has admin privileges)." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 366, "endLine": 373 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": { "text": "Insecure Direct Object Reference in audit log retrieval. The endpoint GET /api/logs/<user_id> accepts an arbitrary user_id from the URL and returns that user's audit logs without verifying the caller's identity or authorization. An attacker can enumerate user IDs to exfiltrate the complete audit trail of every user in the system, including login timestamps, IP addresses, and performed actions. Enforce authorization by comparing the authenticated caller's identity against the requested user_id." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 366, "endLine": 373 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": { "text": "SQL injection in audit log query. The user_id path parameter is interpolated directly into the SQL query via f-string: `f\"SELECT * FROM audit_logs WHERE user_id = {user_id} ORDER BY timestamp DESC\"`. An attacker can inject arbitrary SQL through the URL path (e.g., `/api/logs/1 OR 1=1--`) to dump the entire audit_logs table, access other tables via UNION-based injection, or perform data modification. Use parameterized queries: `cursor.execute(\"SELECT * FROM audit_logs WHERE user_id = ? ORDER BY timestamp DESC\", (user_id,))`." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "models.py" },
+                "region": { "startLine": 640, "endLine": 667 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": { "text": "Audit log response exposes sensitive metadata including client IP addresses, user-agent strings, and detailed action descriptions. Combined with the missing authentication and IDOR vulnerabilities, this allows any unauthenticated attacker to harvest IP addresses and behavioral patterns of all users. Restrict the response fields to only what the authenticated user needs, and redact or omit IP addresses and user-agent data from non-admin responses." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 366, "endLine": 373 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": { "text": "SQL Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": { "text": "Insecure Direct Object Reference" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": { "text": "SQL injection in document search endpoint. The query parameter 'q' is interpolated directly into a SQL LIKE clause via f-string: `f\"SELECT * FROM documents WHERE title LIKE '%{query}%'\"`. An attacker can break out of the LIKE pattern to execute arbitrary SQL — e.g., `%' UNION SELECT username, password, '', '' FROM users --` to exfiltrate credentials, or `%'; DROP TABLE documents; --` for destructive attacks. Use parameterized queries: `cursor.execute(\"SELECT * FROM documents WHERE title LIKE ?\", (f'%{query}%',))`." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 135, "endLine": 144 }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "models.py" },
+                "region": { "startLine": 542, "endLine": 570 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": { "text": "Insecure Direct Object Reference in document search. The user_id parameter is taken directly from the client-supplied query string with no authorization check to verify the requesting user matches the target user_id. An attacker can enumerate or supply arbitrary user_id values to access other users' documents. The server must derive user_id from the authenticated session rather than accepting it as client input." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 135, "endLine": 144 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The GET /api/documents/search endpoint requires no authentication. Any unauthenticated user can search documents belonging to any user by supplying an arbitrary user_id. This compounds the IDOR vulnerability — without authentication there is no identity to authorize against. Add authentication middleware (e.g., session validation or token verification) and derive the user_id from the authenticated principal." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 135, "endLine": 144 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        }
+      ]
+    }
+  ]
+}

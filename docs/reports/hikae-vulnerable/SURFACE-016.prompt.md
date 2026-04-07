@@ -2,10 +2,10 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 ## Surface Under Analysis
 
-- **ID**: SURFACE-004
-- **Kind**: external_call
-- **Identifier**: Outbound HTTP requests (requests library)
-- **Description**: requests 2.31.0 makes outbound HTTP calls. If URLs are constructed from user input, this enables SSRF attacks against internal services, cloud metadata endpoints, or other restricted resources.
+- **ID**: SURFACE-016
+- **Kind**: endpoint
+- **Identifier**: POST /api/file/extract
+- **Description**: Zip slip vulnerability — archive extraction via zipfile.extractall() without validating entry paths. Malicious zip entries with ../ paths can overwrite arbitrary files on the filesystem.
 - **Locations**: api.py
 
 ## Repository Context
@@ -382,5 +382,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/hikae-vulnerable-python/SURFACE-004.sarif.json
+Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/SURFACE-016.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.

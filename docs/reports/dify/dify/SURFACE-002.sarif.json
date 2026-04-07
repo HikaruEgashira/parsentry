@@ -1,0 +1,198 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "PROMPT-INJECTION",
+              "name": "PromptInjection",
+              "shortDescription": {
+                "text": "User-controlled input flows into LLM prompt without sanitization"
+              },
+              "helpUri": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakageViaErrorMessages",
+              "shortDescription": {
+                "text": "Internal exception details exposed to external callers via queue"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "INPUT-VALIDATION",
+              "name": "InsufficientInputValidation",
+              "shortDescription": {
+                "text": "User-supplied inputs dict lacks schema validation before downstream use"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Conversation ID from user input used without ownership verification at generator level"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "RESOURCE-EXHAUSTION",
+              "name": "UnboundedResourceConsumption",
+              "shortDescription": {
+                "text": "Unbounded thread creation per request without rate limiting"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'query' field undergoes only null-byte removal (replace('\\x00', '')) before being passed into ChatAppGenerateEntity and ultimately into the LLM prompt chain. No escaping, length limit, or content filtering is applied at this layer. An attacker with a valid API key can craft query payloads that manipulate LLM behavior, exfiltrate system prompt content, or abuse tool-calling capabilities (e.g., 'Ignore previous instructions and ...'). This is the primary prompt injection vector for the chat endpoint."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/chat/app_generator.py"
+                },
+                "region": {
+                  "startLine": 82,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "query = query.replace(\"\\x00\", \"\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "severity": "critical",
+            "cwe": "CWE-77"
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "error",
+          "message": {
+            "text": "The 'inputs' dict from args is passed directly to _prepare_user_inputs() without schema validation of keys or value types at the generator level. These inputs flow into Jinja2 template rendering in prompt construction, and potentially into code execution nodes and HTTP request nodes in workflow pipelines. An attacker can inject template directives (e.g., '{{ config }}') or craft values that exploit downstream template engines (SSTI). The 'files' array is similarly extracted from args with only config-based type filtering, potentially allowing malicious file metadata to propagate."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/chat/app_generator.py"
+                },
+                "region": {
+                  "startLine": 83,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "inputs = args[\"inputs\"]"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "severity": "high",
+            "cwe": "CWE-20"
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "In _generate_worker(), all caught exceptions—including ValidationError, ValueError, and the broad 'except Exception'—are published to the queue via queue_manager.publish_error(e, ...) and ultimately returned to the API caller. This can leak internal file paths, database schema details, stack traces, model configuration, and prompt content to external API consumers. The ValueError handler conditionally logs based on DEBUG mode but unconditionally publishes the error. Exception messages from ORM operations may contain SQL fragments or table names."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/chat/app_generator.py"
+                },
+                "region": {
+                  "startLine": 170,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "queue_manager.publish_error(e, PublishFrom.APPLICATION_MANAGER)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "severity": "medium",
+            "cwe": "CWE-209"
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "The conversation_id from user-supplied args is passed to ConversationService.get_conversation() with the app_model and user parameters. While ownership checks may exist in that service, the generator itself performs no authorization verification. If the service method only checks app_model membership without strict user-level ownership, an attacker sharing the same app API key could enumerate and access other end-users' conversation histories by guessing or brute-forcing UUID conversation IDs. This is especially concerning for multi-tenant SaaS deployments where multiple end-users share the same app."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/chat/app_generator.py"
+                },
+                "region": {
+                  "startLine": 89,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "conversation = ConversationService.get_conversation(\n                app_model=app_model, conversation_id=conversation_id, user=user\n            )"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6,
+            "severity": "medium",
+            "cwe": "CWE-639"
+          }
+        },
+        {
+          "ruleId": "RESOURCE-EXHAUSTION",
+          "level": "note",
+          "message": {
+            "text": "Each chat request spawns an unbounded worker thread (threading.Thread) for LLM generation without any thread pool limit, semaphore, or per-tenant rate limiting at this layer. An attacker with a valid API key can issue many concurrent requests to exhaust server thread resources, memory, and downstream LLM API quotas. Combined with streaming mode, connections remain open for extended periods, amplifying the denial-of-service impact. No backpressure mechanism is visible in the generator code."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/chat/app_generator.py"
+                },
+                "region": {
+                  "startLine": 143,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "worker_thread = threading.Thread(target=worker_with_context)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75,
+            "severity": "medium",
+            "cwe": "CWE-400"
+          }
+        }
+      ]
+    }
+  ]
+}

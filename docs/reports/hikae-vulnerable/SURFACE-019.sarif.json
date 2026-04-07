@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "LDAP_INJECTION",
+              "name": "LDAPInjection",
+              "shortDescription": { "text": "LDAP Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/90.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure via Error Response" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "LDAP_INJECTION",
+          "level": "error",
+          "message": { "text": "LDAP injection in POST /api/ldap/search endpoint. User-supplied `username` parameter is interpolated directly into an LDAP filter string via f-string: `f\"(&(objectClass=user)(cn={username}))\"`. An attacker can inject LDAP filter metacharacters (e.g., `*)(uid=*))(|(uid=*` ) to bypass intended query logic, enumerate all directory entries, or extract sensitive attributes. Sanitize input by escaping LDAP special characters (RFC 4515 Section 3) or use a parameterized LDAP query builder." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 349, "endLine": 358 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The POST /api/ldap/search endpoint has no authentication or authorization check. Any unauthenticated client can query the LDAP directory, which combined with the LDAP injection flaw allows unrestricted enumeration of directory objects (users, groups, organizational units). Require authentication (e.g., session token or API key validation) and enforce least-privilege authorization before processing LDAP search requests." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 349, "endLine": 364 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": { "text": "The LDAP query result is returned directly in the HTTP response body. When combined with the LDAP injection vulnerability, this creates a data exfiltration channel: an attacker can craft injected filters to enumerate arbitrary directory attributes (e.g., userPassword, mail, memberOf) and receive the full results. Restrict returned attributes to an explicit allow-list and never echo the raw LDAP query or its full result set to the client." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 359, "endLine": 364 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        }
+      ]
+    }
+  ]
+}

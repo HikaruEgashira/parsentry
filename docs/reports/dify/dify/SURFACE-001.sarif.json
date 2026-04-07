@@ -1,0 +1,263 @@
+ソースコードが手元にないため、提供されたコードから直接分析します。
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "IDOR",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference"
+              },
+              "helpUri": "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/"
+            },
+            {
+              "id": "AUTHZ-BYPASS",
+              "shortDescription": {
+                "text": "Authorization Bypass"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "INPUT-VALIDATION",
+              "shortDescription": {
+                "text": "Insufficient Input Validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "INFO-LEAK",
+              "shortDescription": {
+                "text": "Information Disclosure via Error Messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "RATE-LIMIT",
+              "shortDescription": {
+                "text": "Missing Rate Limiting"
+              },
+              "helpUri": "https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "WorkflowTaskStopApi uses `AppQueueManager.set_stop_flag_no_user_check(task_id)` which explicitly bypasses user ownership verification. Any authenticated API token holder can stop ANY running workflow task across the entire application by enumerating or guessing task_id values. The method name itself documents the missing check. An attacker with a valid API key for one app could disrupt workflow executions belonging to other apps or tenants if task_id is globally scoped. The GraphEngineManager.send_stop_command also lacks user-scoped authorization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 221,
+                  "startColumn": 9,
+                  "endLine": 225
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "In WorkflowRunByIdApi.post, the `workflow_id` from the URL path is injected directly into the args dict (`args['workflow_id'] = workflow_id`) and passed to `AppGenerateService.generate`. If downstream code resolves this workflow_id without verifying it belongs to the same tenant and app as the authenticated token, an attacker could execute arbitrary workflows from other tenants/apps by supplying a different workflow_id. The controller performs no ownership validation of workflow_id before delegation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 172,
+                  "startColumn": 9,
+                  "endLine": 172
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "WorkflowRunPayload.inputs is typed as `dict[str, Any]` with no schema validation on keys or values. These inputs flow directly into the workflow graph engine which may include code execution nodes (Python/JavaScript sandboxes), HTTP request nodes, and template rendering nodes. If downstream nodes interpolate these values without sanitization (e.g., into Jinja2 templates, shell commands, or SQL), this becomes a Server-Side Template Injection (SSTI), command injection, or SQL injection vector. The `files` field similarly accepts `list[dict[str, Any]]` with arbitrary structure. While `_prepare_user_inputs` exists in the generator, its validation is conditional (`_should_prepare_user_inputs`) and can be skipped via the `_skip_prepare_user_inputs` key in args."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 50,
+                  "startColumn": 5,
+                  "endLine": 52
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/workflow/app_generator.py"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 5,
+                  "endLine": 64
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "The `_should_prepare_user_inputs` method checks for `SKIP_PREPARE_USER_INPUTS_KEY` ('_skip_prepare_user_inputs') in the args dict. While the WorkflowRunPayload Pydantic model does not include this field (so it would be stripped by model_validate), the `args` dict passed to `generate()` is constructed via `payload.model_dump(exclude_none=True)` and then mutated (e.g., `args['workflow_id'] = workflow_id`, `args['external_trace_id'] = ...`). If any code path allows injecting `_skip_prepare_user_inputs` into args before it reaches the generator, input validation would be completely bypassed. This is a defense-in-depth concern."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/workflow/app_generator.py"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 5,
+                  "endLine": 64
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.4
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "note",
+          "message": {
+            "text": "In both WorkflowRunApi.post and WorkflowRunByIdApi.post, `except ValueError as e: raise e` re-raises ValueError exceptions directly to the client. ValueError messages from deep within the workflow engine, graph engine, or model runtime may contain internal implementation details such as file paths, configuration values, database schema information, or stack-derived context that aids an attacker in reconnaissance. Other exception types (InvokeError, QuotaExceededError) are properly wrapped in API-specific error classes, but ValueError is passed through raw."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 147,
+                  "startColumn": 9,
+                  "endLine": 148
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 199,
+                  "startColumn": 9,
+                  "endLine": 200
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "RATE-LIMIT",
+          "level": "note",
+          "message": {
+            "text": "The POST /v1/workflows/run endpoint triggers full workflow graph execution including LLM invocations, code execution nodes, and HTTP request nodes, but shows no rate limiting at the controller level. While `validate_app_token` authenticates the request, resource-intensive workflow execution without per-token or per-user rate limiting enables a single API key holder to exhaust compute resources (LLM tokens, code execution sandboxes, outbound HTTP connections) or cause denial-of-service by flooding concurrent workflow runs. The `InvokeRateLimitError` only catches downstream LLM provider rate limits, not application-level request throttling."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 119,
+                  "startColumn": 5,
+                  "endLine": 150
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "note",
+          "message": {
+            "text": "In `_generate_worker`, exceptions are published to the queue via `queue_manager.publish_error(e, ...)` for ValidationError, ValueError, and generic Exception types. These error objects may contain internal stack traces, model configuration details, or sensitive runtime state that gets serialized and returned to the API caller through the streaming/blocking response pipeline. The broad `except Exception as e` catch-all forwards arbitrary internal exceptions to the client."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/apps/workflow/app_generator.py"
+                },
+                "region": {
+                  "startLine": 338,
+                  "startColumn": 13,
+                  "endLine": 349
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 検出結果サマリ
+
+| # | Rule | Severity | Confidence | 概要 |
+|---|------|----------|------------|------|
+| 1 | **AUTHZ-BYPASS** | error | 0.9 | `WorkflowTaskStopApi`が`set_stop_flag_no_user_check`を使用し、任意のtask_idのワークフローを認可なく停止可能 |
+| 2 | **IDOR** | warning | 0.6 | `WorkflowRunByIdApi`で`workflow_id`がテナント/アプリ所有権検証なしにargsへ注入される |
+| 3 | **INPUT-VALIDATION** | warning | 0.65 | `inputs: dict[str, Any]`がスキーマ検証なしでグラフエンジン（コード実行ノード、HTTPノード等）に渡される |
+| 4 | **INPUT-VALIDATION** | warning | 0.4 | `SKIP_PREPARE_USER_INPUTS_KEY`により入力バリデーションがバイパスされる可能性 |
+| 5 | **INFO-LEAK** | note | 0.75 | `ValueError`がラップされずにクライアントへ再送出され、内部情報が漏洩する |
+| 6 | **RATE-LIMIT** | note | 0.6 | リソース集約的なワークフロー実行にアプリケーションレベルのレート制限が欠如 |
+| 7 | **INFO-LEAK** | note | 0.55 | `_generate_worker`の`publish_error`が内部例外をクライアントに転送する |
+
+最も深刻なのは **#1 AUTHZ-BYPASS**: `set_stop_flag_no_user_check`は関数名自体がユーザーチェック省略を明示しており、認証済みAPIキー保持者が他テナントのタスクを停止できるDoSベクターです。

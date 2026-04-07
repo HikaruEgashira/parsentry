@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "CODE_INJECTION",
+              "name": "CodeInjection",
+              "shortDescription": { "text": "Code Injection via eval()" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html"
+            },
+            {
+              "id": "MISSING_AUTHN",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "MISSING_AUTHZ",
+              "name": "MissingAuthorization",
+              "shortDescription": { "text": "Missing Authorization" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "MISSING_INPUT_VALIDATION",
+              "name": "MissingInputValidation",
+              "shortDescription": { "text": "Improper Input Validation" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CODE_INJECTION",
+          "level": "error",
+          "message": { "text": "Remote Code Execution via eval() on user-supplied input. The endpoint POST /api/eval/python passes the user-provided 'code' field from JSON request body directly to Python's eval() built-in: `result = eval(code)`. This grants any unauthenticated remote attacker full Python runtime access, enabling arbitrary command execution (e.g., `__import__('os').system('rm -rf /')`), file system access, environment variable exfiltration, and reverse shell establishment. eval() must never be used on untrusted input. Remove this endpoint entirely or replace with a sandboxed execution environment (e.g., RestrictedPython, subprocess with seccomp, or a container-isolated runner)." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 317, "endLine": 328 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHN",
+          "level": "error",
+          "message": { "text": "The POST /api/eval/python endpoint executes arbitrary Python code but requires no authentication. Any network-reachable client can invoke code execution on the server. This is a critical access control failure (CWE-306). All code execution endpoints must require strong authentication (e.g., API key, OAuth token, or session-based auth) and should be restricted to explicitly authorized users or roles." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 317, "endLine": 318 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_AUTHZ",
+          "level": "error",
+          "message": { "text": "No authorization checks on the code execution endpoint. Even if authentication were added, there is no role-based or permission-based gate to restrict who can execute arbitrary Python code. A code execution capability should be limited to administrator or operator roles at minimum, with audit logging of every invocation." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 317, "endLine": 328 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "MISSING_INPUT_VALIDATION",
+          "level": "error",
+          "message": { "text": "No input validation, sanitization, or length restriction on the 'code' parameter before it is passed to eval(). There is no allowlist of permitted operations, no AST-level inspection, and no timeout or resource limit. Even in a legitimate code-evaluation use case, the absence of any input constraints allows denial-of-service via infinite loops (`while True: pass`), memory exhaustion, or CPU-intensive computations." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 319, "endLine": 325 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        }
+      ]
+    }
+  ]
+}

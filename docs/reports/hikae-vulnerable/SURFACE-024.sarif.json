@@ -1,0 +1,336 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "VULN-024-001",
+              "name": "PlaintextPasswordStorage",
+              "shortDescription": {
+                "text": "Passwords stored in plaintext without hashing"
+              },
+              "fullDescription": {
+                "text": "The users table schema defines password as TEXT NOT NULL with no hashing or key derivation applied before storage. The authenticate_user method compares passwords directly as plaintext strings. Any database compromise exposes all user credentials immediately."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "properties": {
+                "security-severity": "9.8"
+              }
+            },
+            {
+              "id": "VULN-024-002",
+              "name": "HardcodedCredentials",
+              "shortDescription": {
+                "text": "Hardcoded default credentials seeded into database"
+              },
+              "fullDescription": {
+                "text": "The init_database method inserts hardcoded admin/admin123 and guest/guest credentials with known API keys. These credentials are trivially guessable and ship with the application, granting immediate admin access to any attacker."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "VULN-024-003",
+              "name": "HardcodedAPIKey",
+              "shortDescription": {
+                "text": "API keys hardcoded in source code and stored in plaintext"
+              },
+              "fullDescription": {
+                "text": "API keys sk-1234567890abcdef and pk-0987654321fedcba are hardcoded in source and stored as plaintext in the database. The authenticate_user method also returns the api_key field to the caller, exposing it on every successful login."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "security-severity": "9.0"
+              }
+            },
+            {
+              "id": "VULN-024-004",
+              "name": "UnsafePickleDeserialization",
+              "shortDescription": {
+                "text": "Arbitrary code execution via pickle.loads on user-controlled input"
+              },
+              "fullDescription": {
+                "text": "update_user_preferences calls pickle.loads on the preferences string parameter. Pickle deserialization of untrusted data allows arbitrary code execution by crafting a malicious pickle payload containing __reduce__ instructions."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "properties": {
+                "security-severity": "10.0"
+              }
+            },
+            {
+              "id": "VULN-024-005",
+              "name": "NoEncryptionSensitiveFields",
+              "shortDescription": {
+                "text": "Sensitive fields (session_token, api_key, email) stored without encryption"
+              },
+              "fullDescription": {
+                "text": "The users table stores api_key, session_token, and email as plain TEXT columns with no application-level encryption. A database compromise or SQL injection gives direct access to all secrets."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/312.html",
+              "properties": {
+                "security-severity": "8.5"
+              }
+            },
+            {
+              "id": "VULN-024-006",
+              "name": "SQLInjectionAuthentication",
+              "shortDescription": {
+                "text": "SQL injection in authentication query via f-string interpolation"
+              },
+              "fullDescription": {
+                "text": "authenticate_user constructs the SQL query using f-string formatting with unsanitized username and password inputs, enabling authentication bypass and data extraction via SQL injection."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "security-severity": "9.8"
+              }
+            },
+            {
+              "id": "VULN-024-007",
+              "name": "SensitiveDataLogging",
+              "shortDescription": {
+                "text": "SQL queries containing credentials logged at DEBUG level"
+              },
+              "fullDescription": {
+                "text": "The authenticate_user method logs the full SQL query including plaintext username and password at DEBUG level. This exposes credentials in log files, stdout, and any log aggregation systems."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "security-severity": "7.5"
+              }
+            },
+            {
+              "id": "VULN-024-008",
+              "name": "APIKeyExposureInAuthResponse",
+              "shortDescription": {
+                "text": "API key returned in authentication response dictionary"
+              },
+              "fullDescription": {
+                "text": "The authenticate_user method includes the user's api_key in the returned dictionary on successful login. This unnecessarily exposes the API key to any code path that handles the auth result, increasing the attack surface for key leakage."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "security-severity": "7.0"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "VULN-024-001",
+          "level": "error",
+          "message": {
+            "text": "The users table stores passwords as plaintext TEXT. No hashing (bcrypt, argon2, scrypt) is applied before INSERT or compared during authentication. A single SQL injection or DB file access exposes every password."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-002",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded credentials admin/admin123 (role=admin) and guest/guest (role=user) are inserted on every database initialization. These are well-known defaults that grant immediate privileged access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 66,
+                  "endLine": 69
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 71,
+                  "endLine": 74
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-003",
+          "level": "error",
+          "message": {
+            "text": "API keys sk-1234567890abcdef and pk-0987654321fedcba are hardcoded in source code and stored as plaintext in the api_key column. Keys are recoverable from source control history even if later removed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 69,
+                  "endLine": 69
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 74,
+                  "endLine": 74
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-004",
+          "level": "error",
+          "message": {
+            "text": "pickle.loads() is called on user-supplied preferences string at line 143. An attacker can craft a pickle payload that executes arbitrary system commands via __reduce__, achieving full remote code execution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 143,
+                  "endLine": 143
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-005",
+          "level": "warning",
+          "message": {
+            "text": "Sensitive columns api_key, session_token, and email are stored as plain TEXT with no application-level encryption (AES-GCM, etc.). Combined with SQL injection vulnerabilities in this file, all secrets are directly extractable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-006",
+          "level": "error",
+          "message": {
+            "text": "authenticate_user at line 92 builds a SQL query via f-string with raw username and password. Input like username=' OR 1=1-- bypasses authentication entirely. Parameterized queries must be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 92,
+                  "endLine": 92
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-007",
+          "level": "warning",
+          "message": {
+            "text": "Line 93 logs the full SQL query at DEBUG level, which contains the plaintext username and password. Credentials will appear in any log sink (files, stdout, centralized logging)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 93,
+                  "endLine": 93
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-024-008",
+          "level": "warning",
+          "message": {
+            "text": "authenticate_user returns the api_key field in its result dictionary at line 105. This leaks the key to all downstream consumers of the auth response, violating least-privilege for secret access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 105,
+                  "endLine": 105
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

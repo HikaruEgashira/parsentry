@@ -1,0 +1,243 @@
+Let me analyze the source code carefully for security vulnerabilities.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakageViaErrorMessage",
+              "shortDescription": {
+                "text": "Internal error details leaked to client via exception messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "AUTH-BYPASS",
+              "name": "MissingAuthenticationOnMCPEndpoint",
+              "shortDescription": {
+                "text": "MCP endpoint lacks authentication; any caller with a server_code can invoke app methods"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "AUTHZ-MISSING",
+              "name": "MissingAuthorizationOnToolCall",
+              "shortDescription": {
+                "text": "CallTool dispatches app invocation without verifying caller identity or permissions beyond end_user existence"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "ENUM",
+              "name": "ServerCodeEnumeration",
+              "shortDescription": {
+                "text": "Distinct error messages allow enumeration of valid server_codes and app states"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/204.html"
+            },
+            {
+              "id": "RACE",
+              "name": "TOCTOURaceConditionOnEndUserCreation",
+              "shortDescription": {
+                "text": "End user retrieval and creation happen in separate transactions, enabling race conditions and duplicate records"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/367.html"
+            },
+            {
+              "id": "INPUT-VAL",
+              "name": "UnboundedInputPassthrough",
+              "shortDescription": {
+                "text": "Tool call arguments are passed directly to AppGenerateService without size or content validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The POST /mcp/server/<server_code>/mcp endpoint has no authentication middleware. The server_code in the URL path acts as the sole credential — anyone who knows or guesses a valid server_code can invoke the associated Dify app (including CallTool). There is no API key, token, or session validation. This is functionally equivalent to a bearer token embedded in the URL, which is logged in access logs, proxies, and referer headers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 39,
+                  "endLine": 39
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "AUTHZ-MISSING",
+          "level": "error",
+          "message": {
+            "text": "handle_call_tool() invokes AppGenerateService.generate() with InvokeFrom.SERVICE_API privilege level, but the only authorization check is that an EndUser record exists. Once the initial InitializeRequest creates an EndUser, any subsequent CallTool request reuses that record without verifying that the caller is the same client. An attacker who knows the server_code can piggyback on a legitimate client's EndUser session to execute arbitrary app invocations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/server/streamable_http.py"
+                },
+                "region": {
+                  "startLine": 130,
+                  "endLine": 150
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.88
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "The top-level exception handler in handle_mcp_request() catches all exceptions and returns the string representation in the JSON-RPC error response: 'Internal server error: ' + str(e). This can leak stack traces, database schema details, file paths, or other internal implementation details to unauthenticated callers. Similarly, _parse_mcp_request leaks Pydantic ValidationError details including field names and types."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/server/streamable_http.py"
+                },
+                "region": {
+                  "startLine": 87,
+                  "endLine": 89
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 152,
+                  "endLine": 156
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "ENUM",
+          "level": "warning",
+          "message": {
+            "text": "Distinct error messages ('Server Not Found', 'App Not Found', 'Server is not active') in _get_mcp_server_and_app and _validate_server_status allow an attacker to enumerate valid server_codes and determine their state. An attacker can brute-force server_code values and distinguish between non-existent servers, servers with deleted apps, and inactive servers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 79,
+                  "endLine": 92
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "RACE",
+          "level": "warning",
+          "message": {
+            "text": "_handle_mcp_request() calls _retrieve_end_user() in one session, then conditionally calls _create_end_user() in a separate session. Two concurrent InitializeRequest calls for the same server_code can both see no existing EndUser and both create one, resulting in duplicate records. This TOCTOU gap could also be exploited to manipulate user identity: an attacker's Initialize could race with a legitimate client's Initialize, and subsequent requests may pick up the wrong EndUser."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 173,
+                  "endLine": 186
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "INPUT-VAL",
+          "level": "warning",
+          "message": {
+            "text": "In handle_call_tool(), request_obj.params.arguments are passed through prepare_tool_arguments() directly to AppGenerateService.generate() with no size limits, content filtering, or type validation beyond what the downstream service may do. For workflow/completion modes, arbitrary key-value pairs from the 'arguments' dict are forwarded as 'inputs'. A malicious caller can send extremely large payloads, deeply nested objects, or inject unexpected keys to abuse app resources or trigger unexpected behavior in downstream processing."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/server/streamable_http.py"
+                },
+                "region": {
+                  "startLine": 136,
+                  "endLine": 141
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/server/streamable_http.py"
+                },
+                "region": {
+                  "startLine": 161,
+                  "endLine": 172
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.78
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**分析サマリー:**
+
+| 重大度 | 件数 | 主な発見 |
+|--------|------|----------|
+| error | 2 | 認証欠如 (AUTH-BYPASS), 認可不足 (AUTHZ-MISSING) |
+| warning | 4 | 情報漏洩, サーバーコード列挙, TOCTOU競合, 入力検証不足 |
+
+**最も深刻な問題:**
+
+1. **AUTH-BYPASS (error)**: `server_code`がURL内の唯一の認証要素で、APIキーもトークン検証もない。`server_code`を知っている/推測できる攻撃者は誰でもアプリを呼び出せる。
+2. **AUTHZ-MISSING (error)**: `CallTool`が`InvokeFrom.SERVICE_API`権限で`AppGenerateService.generate()`を実行するが、EndUserレコードの存在確認のみで、呼び出し元の同一性検証がない。正規クライアントのセッションに便乗可能。
+3. **RACE (warning)**: `_retrieve_end_user`と`_create_end_user`が別トランザクションで実行されるTOCTOU。並行InitializeRequestで重複EndUser作成やセッションハイジャックの可能性。

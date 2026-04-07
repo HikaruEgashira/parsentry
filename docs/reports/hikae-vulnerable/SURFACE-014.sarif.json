@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "XXE",
+              "name": "XMLExternalEntity",
+              "shortDescription": { "text": "XML External Entity (XXE) Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/611.html"
+            },
+            {
+              "id": "MISSING_AUTH",
+              "name": "MissingAuthentication",
+              "shortDescription": { "text": "Missing Authentication for Critical Function" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": { "text": "Information Disclosure via Error Message" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XXE",
+          "level": "error",
+          "message": { "text": "XML External Entity (XXE) injection in parse_xml(). User-supplied XML is parsed via `ET.XMLParser()` and `ET.fromstring(xml_data, parser)` without disabling external entity resolution. Although Python's xml.etree.ElementTree does not expand external entities by default, the lack of explicit restrictions means (1) on alternative Python XML backends or future library changes the behavior may differ, (2) entity expansion attacks (billion laughs / XML bomb) for denial of service remain possible since no `forbid_dtd` or entity limits are configured, and (3) if the code is ever ported to use lxml.etree (a common refactor), external entities would be resolved. Use `defusedxml.ElementTree` or explicitly set `parser.entity = {}` and disable DTD processing to eliminate the attack surface." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 185, "endLine": 186 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.85 }
+        },
+        {
+          "ruleId": "MISSING_AUTH",
+          "level": "error",
+          "message": { "text": "The POST /api/xml/parse endpoint has no authentication or authorization checks. Any unauthenticated client can submit arbitrary XML payloads for parsing. Combined with the XXE/XML bomb vector, this allows anonymous attackers to attempt file disclosure, SSRF, or denial of service without any access control barrier. Add authentication middleware (e.g., JWT token verification or API key validation) before processing XML input." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 178, "endLine": 195 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO_DISCLOSURE",
+          "level": "warning",
+          "message": { "text": "XML parsing errors are returned directly to the client via `str(e)` in the except handler. This can disclose internal file paths, library versions, and parser state to an attacker probing with malformed XML payloads. Return a generic error message and log the detailed exception server-side only." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 194, "endLine": 195 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        }
+      ]
+    }
+  ]
+}

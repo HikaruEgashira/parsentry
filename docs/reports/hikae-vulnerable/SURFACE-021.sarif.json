@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": { "text": "SQL Injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "LFI",
+              "name": "LocalFileInclusion",
+              "shortDescription": { "text": "Local File Inclusion / Path Traversal" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": { "text": "User-supplied doc_id is interpolated directly into SQL query via f-string (f\"SELECT file_path FROM documents WHERE id = {doc_id}\"). No parameterized query or input validation is used. An attacker can inject arbitrary SQL to extract file_path values pointing to sensitive files, manipulate query logic via UNION-based injection, or exfiltrate database contents. This SQLi is the first stage of a chained attack that feeds attacker-controlled file paths into the subsequent open() call." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 146, "endLine": 150 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "LFI",
+          "level": "error",
+          "message": { "text": "The file_path value retrieved from the SQL query is passed directly to open(file_path, 'r') without any path validation, canonicalization, or allowlist check. When chained with the preceding SQL injection, an attacker can inject a UNION SELECT to return an arbitrary file path (e.g., '/etc/shadow', '/proc/self/environ', application source code), which is then read and returned in the HTTP response. Even without SQLi, if file_path values in the database are attacker-influenced, this constitutes a local file inclusion vulnerability." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 152, "endLine": 157 } } }],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": { "text": "The database model method that retrieves document metadata constructs SQL queries using string interpolation with the doc_id parameter rather than parameterized queries. This is the underlying data access layer vulnerability that enables the SQL injection at the endpoint level." },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "models.py" }, "region": { "startLine": 572, "endLine": 593 } } }],
+          "properties": { "confidence": 1.0 }
+        }
+      ]
+    }
+  ]
+}

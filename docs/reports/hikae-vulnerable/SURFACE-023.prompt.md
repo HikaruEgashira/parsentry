@@ -2,11 +2,11 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 ## Surface Under Analysis
 
-- **ID**: SURFACE-001
+- **ID**: SURFACE-023
 - **Kind**: endpoint
-- **Identifier**: Flask route handlers
-- **Description**: HTTP endpoints defined in Flask application accepting untrusted user input. app.py is the entry point; api.py likely defines API routes. All request parameters, headers, and body data are potential injection vectors.
-- **Locations**: app.py, api.py
+- **Identifier**: GET /logs?user_id=
+- **Description**: IDOR in web audit log viewer — user_id parameter overrides session user, allowing authenticated users to view any user's audit logs. SQL injection in underlying get_user_logs() query.
+- **Locations**: app.py, models.py
 
 ## Repository Context
 
@@ -509,334 +509,298 @@ if __name__ == "__main__":
 
 ```
 
-### api.py
+### models.py
 ```py
 """
-API endpoints with various vulnerability patterns
-Demonstrates complex attack vectors and multi-layered vulnerabilities
+Database models for the vulnerable application
+Contains various vulnerable database interaction patterns
 """
-from flask import Blueprint, request, jsonify, session, redirect, send_file
-import requests
-import subprocess
-import os
-import xml.etree.ElementTree as ET
-import yaml
-import pickle
-import base64
+import sqlite3
 import hashlib
-import jwt
-from urllib.parse import urlparse, urljoin
-import tempfile
-import zipfile
-from models import DatabaseManager, UserModel, DocumentModel, AuditLogger
+import pickle
+import json
+from typing import Optional, List, Dict
+import logging
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+# Vulnerable: Using root logger without configuration
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-# Initialize models
-db_manager = DatabaseManager()
-user_model = UserModel(db_manager)
-doc_model = DocumentModel(db_manager)
-audit_logger = AuditLogger(db_manager)
-
-# Vulnerable: Hardcoded secrets
-JWT_SECRET = "super_secret_key_123"
-API_KEYS = {
-    "sk-1234567890abcdef": "admin",
-    "pk-0987654321fedcba": "guest"
-}
-
-@api_bp.route('/auth/login', methods=['POST'])
-def api_login():
-    """Vulnerable authentication endpoint"""
-    try:
-        data = request.get_json()
-        username = data.get('username', '')
-        password = data.get('password', '')
+class DatabaseManager:
+    def __init__(self, db_path: str = "users.db"):
+        self.db_path = db_path
+        self.init_database()
+    
+    def init_database(self):
+        """Initialize database with vulnerable schema"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
         
-        # Vulnerable: Authentication bypass
-        user = user_model.authenticate_user(username, password)
-        
-        if user:
-            # Vulnerable: Weak JWT implementation
-            token = jwt.encode({
-                'user_id': user['id'],
-                'username': user['username'],
-                'role': user['role']
-            }, JWT_SECRET, algorithm='HS256')
-            
-            # Vulnerable: Logging sensitive information
-            audit_logger.log_action(
-                user['id'], 
-                'LOGIN', 
-                f"User {username} logged in with password {password}",  # Vulnerable!
-                request.remote_addr
+        # Vulnerable: Storing sensitive data in plain text
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                email TEXT,
+                role TEXT DEFAULT 'user',
+                api_key TEXT,
+                session_token TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        """)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS documents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT,
+                owner_id INTEGER,
+                file_path TEXT,
+                metadata TEXT,
+                FOREIGN KEY (owner_id) REFERENCES users (id)
+            )
+        """)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                action TEXT,
+                details TEXT,
+                ip_address TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Insert default vulnerable data
+        try:
+            # Vulnerable: Hardcoded credentials
+            cursor.execute("""
+                INSERT OR IGNORE INTO users (username, password, email, role, api_key) 
+                VALUES (?, ?, ?, ?, ?)
+            """, ('admin', 'admin123', 'admin@example.com', 'admin', 'sk-1234567890abcdef'))
             
-            return jsonify({
-                'token': token,
-                'user': user,
-                'api_key': user['api_key']  # Vulnerable: Exposing API key
-            })
-        else:
-            return jsonify({'error': 'Invalid credentials'}), 401
+            cursor.execute("""
+                INSERT OR IGNORE INTO users (username, password, email, role, api_key) 
+                VALUES (?, ?, ?, ?, ?)
+            """, ('guest', 'guest', 'guest@example.com', 'user', 'pk-0987654321fedcba'))
             
-    except Exception as e:
-        # Vulnerable: Information disclosure in error messages
-        return jsonify({'error': f'Authentication failed: {str(e)}'}), 500
+        except Exception as e:
+            logger.error(f"Error inserting default data: {e}")
+        
+        conn.commit()
+        conn.close()
 
-@api_bp.route('/user/<user_id>', methods=['GET'])
-def get_user(user_id):
-    """Vulnerable user information endpoint (IDOR)"""
-    try:
+class UserModel:
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+    
+    def authenticate_user(self, username: str, password: str) -> Optional[Dict]:
+        """Vulnerable authentication with SQL injection"""
+        conn = sqlite3.connect(self.db.db_path)
+        cursor = conn.cursor()
+        
+        # Vulnerable: SQL Injection via string formatting
+        query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+        logger.debug(f"Executing query: {query}")  # Vulnerable: Logging sensitive data
+        
+        try:
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return {
+                    'id': result[0],
+                    'username': result[1],
+                    'email': result[3],
+                    'role': result[4],
+                    'api_key': result[5]  # Vulnerable: Exposing API key
+                }
+        except Exception as e:
+            logger.error(f"Database error: {e}")  # Vulnerable: Information disclosure
+            conn.close()
+        
+        return None
+    
+    def get_user_by_id(self, user_id: str) -> Optional[Dict]:
+        """Vulnerable user lookup with potential injection"""
+        conn = sqlite3.connect(self.db.db_path)
+        cursor = conn.cursor()
+        
+        # Vulnerable: No input validation/sanitization
+        query = f"SELECT * FROM users WHERE id = {user_id}"
+        
+        try:
+            cursor.execute(query)
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return {
+                    'id': result[0],
+                    'username': result[1],
+                    'email': result[3],
+                    'role': result[4]
+                }
+        except Exception as e:
+            conn.close()
+            raise e
+        
+        return None
+    
+    def update_user_preferences(self, user_id: int, preferences: str):
+        """Vulnerable deserialization"""
+        try:
+            # Vulnerable: Unsafe deserialization
+            prefs = pickle.loads(preferences.encode('latin1'))
+            
+            conn = sqlite3.connect(self.db.db_path)
+            cursor = conn.cursor()
+            
+            # Store serialized preferences (vulnerable pattern)
+            cursor.execute(
+                "UPDATE users SET metadata = ? WHERE id = ?", 
+                (preferences, user_id)
+            )
+            conn.commit()
+            conn.close()
+            
+            return prefs
+        except Exception as e:
+            logger.error(f"Preference update failed: {e}")
+            return None
+
+class DocumentModel:
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+    
+    def search_documents(self, query: str, user_id: int) -> List[Dict]:
+        """Vulnerable document search with IDOR"""
+        conn = sqlite3.connect(self.db.db_path)
+        cursor = conn.cursor()
+        
         # Vulnerable: No authorization check (IDOR)
-        user = user_model.get_user_by_id(user_id)
+        # Vulnerable: SQL Injection in LIKE clause
+        sql = f"SELECT * FROM documents WHERE title LIKE '%{query}%'"
         
-        if user:
-            return jsonify(user)
-        else:
-            return jsonify({'error': 'User not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/documents/search', methods=['GET'])
-def search_documents():
-    """Vulnerable document search (SQL Injection + IDOR)"""
-    query = request.args.get('q', '')
-    user_id = request.args.get('user_id', 1)
+        try:
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            conn.close()
+            
+            documents = []
+            for row in results:
+                documents.append({
+                    'id': row[0],
+                    'title': row[1],
+                    'content': row[2],
+                    'owner_id': row[3],
+                    'file_path': row[4]
+                })
+            
+            return documents
+        except Exception as e:
+            conn.close()
+            logger.error(f"Search failed: {e}")
+            return []
     
-    # Vulnerable: No input validation
-    documents = doc_model.search_documents(query, int(user_id))
-    
-    return jsonify({'documents': documents})
-
-@api_bp.route('/documents/<doc_id>/content', methods=['GET'])
-def get_document_content(doc_id):
-    """Vulnerable file inclusion endpoint (LFI)"""
-    try:
-        content = doc_model.get_document_content(doc_id)
+    def get_document_content(self, doc_id: str) -> Optional[str]:
+        """Vulnerable file inclusion"""
+        conn = sqlite3.connect(self.db.db_path)
+        cursor = conn.cursor()
         
-        if content:
-            return jsonify({'content': content})
-        else:
-            return jsonify({'error': 'Document not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/ssrf/fetch', methods=['POST'])
-def ssrf_fetch():
-    """Server-Side Request Forgery vulnerability"""
-    data = request.get_json()
-    url = data.get('url', '')
-    
-    # Vulnerable: No URL validation (SSRF)
-    try:
-        # Vulnerable: Making requests to arbitrary URLs
-        response = requests.get(url, timeout=10)
+        # Vulnerable: SQL injection + Path traversal
+        query = f"SELECT file_path FROM documents WHERE id = {doc_id}"
         
-        return jsonify({
-            'status_code': response.status_code,
-            'content': response.text[:1000],  # Limit response size
-            'headers': dict(response.headers)
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/xml/parse', methods=['POST'])
-def parse_xml():
-    """XML External Entity (XXE) vulnerability"""
-    xml_data = request.data.decode('utf-8')
-    
-    try:
-        # Vulnerable: XXE attack vector
-        parser = ET.XMLParser()
-        root = ET.fromstring(xml_data, parser)
+        try:
+            cursor.execute(query)
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result and result[0]:
+                file_path = result[0]
+                # Vulnerable: No path validation (LFI)
+                with open(file_path, 'r') as f:
+                    return f.read()
+        except Exception as e:
+            logger.error(f"File read error: {e}")
         
-        # Process XML and return parsed content
-        result = {}
-        for child in root:
-            result[child.tag] = child.text
+        return None
+    
+    def save_document_metadata(self, doc_id: int, metadata: str):
+        """Vulnerable JSON parsing"""
+        try:
+            # Vulnerable: No input validation on JSON
+            parsed_metadata = json.loads(metadata)
+            
+            # Vulnerable: Potential for JSON injection
+            conn = sqlite3.connect(self.db.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                "UPDATE documents SET metadata = ? WHERE id = ?",
+                (metadata, doc_id)
+            )
+            conn.commit()
+            conn.close()
+            
+            return parsed_metadata
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing error: {e}")
+            return None
+
+class AuditLogger:
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+    
+    def log_action(self, user_id: int, action: str, details: str, ip_address: str):
+        """Vulnerable audit logging with injection"""
+        conn = sqlite3.connect(self.db.db_path)
+        cursor = conn.cursor()
         
-        return jsonify({'parsed_xml': result})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/yaml/load', methods=['POST'])
-def load_yaml():
-    """YAML deserialization vulnerability"""
-    yaml_data = request.data.decode('utf-8')
-    
-    try:
-        # Vulnerable: Unsafe YAML loading
-        parsed_data = yaml.load(yaml_data, Loader=yaml.FullLoader)
+        # Vulnerable: SQL Injection in logging
+        query = f"""
+            INSERT INTO audit_logs (user_id, action, details, ip_address) 
+            VALUES ({user_id}, '{action}', '{details}', '{ip_address}')
+        """
         
-        return jsonify({'parsed_yaml': parsed_data})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/pickle/deserialize', methods=['POST'])
-def deserialize_pickle():
-    """Pickle deserialization vulnerability"""
-    data = request.get_json()
-    pickle_data = data.get('data', '')
+        try:
+            cursor.execute(query)
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.error(f"Audit logging failed: {e}")
+            conn.close()
     
-    try:
-        # Vulnerable: Unsafe pickle deserialization
-        decoded = base64.b64decode(pickle_data)
-        obj = pickle.loads(decoded)
+    def get_user_logs(self, user_id: str) -> List[Dict]:
+        """Vulnerable log retrieval"""
+        conn = sqlite3.connect(self.db.db_path)
+        cursor = conn.cursor()
         
-        return jsonify({'deserialized': str(obj)})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/exec/command', methods=['POST'])
-def execute_command():
-    """Command injection vulnerability"""
-    data = request.get_json()
-    command = data.get('command', '')
-    
-    # Vulnerable: Direct command execution
-    try:
-        result = subprocess.run(
-            command, 
-            shell=True, 
-            capture_output=True, 
-            text=True,
-            timeout=10
-        )
+        # Vulnerable: No input validation + potential injection
+        query = f"SELECT * FROM audit_logs WHERE user_id = {user_id} ORDER BY timestamp DESC"
         
-        return jsonify({
-            'stdout': result.stdout,
-            'stderr': result.stderr,
-            'return_code': result.returncode
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/file/upload', methods=['POST'])
-def upload_file():
-    """Vulnerable file upload"""
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-    
-    # Vulnerable: No file type validation
-    upload_dir = '/tmp/uploads'
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    # Vulnerable: Path traversal via filename
-    file_path = os.path.join(upload_dir, file.filename)
-    file.save(file_path)
-    
-    return jsonify({
-        'message': 'File uploaded successfully',
-        'path': file_path,
-        'filename': file.filename
-    })
-
-@api_bp.route('/file/extract', methods=['POST'])
-def extract_archive():
-    """Zip slip vulnerability"""
-    if 'archive' not in request.files:
-        return jsonify({'error': 'No archive uploaded'}), 400
-    
-    archive = request.files['archive']
-    
-    # Create temporary directory
-    extract_dir = tempfile.mkdtemp()
-    
-    try:
-        # Save uploaded archive
-        archive_path = os.path.join(extract_dir, 'archive.zip')
-        archive.save(archive_path)
-        
-        # Vulnerable: Zip slip attack - no path validation
-        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
-        
-        # List extracted files
-        extracted_files = []
-        for root, dirs, files in os.walk(extract_dir):
-            for file in files:
-                if file != 'archive.zip':
-                    extracted_files.append(os.path.join(root, file))
-        
-        return jsonify({
-            'message': 'Archive extracted successfully',
-            'extracted_files': extracted_files,
-            'extract_dir': extract_dir
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/redirect', methods=['GET'])
-def open_redirect():
-    """Open redirect vulnerability"""
-    next_url = request.args.get('next', '/')
-    
-    # Vulnerable: No URL validation (Open Redirect)
-    return redirect(next_url)
-
-@api_bp.route('/eval/python', methods=['POST'])
-def eval_python():
-    """Code injection vulnerability"""
-    data = request.get_json()
-    code = data.get('code', '')
-    
-    try:
-        # Vulnerable: Direct code evaluation
-        result = eval(code)
-        return jsonify({'result': str(result)})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/template/render', methods=['POST'])
-def render_template():
-    """Server-Side Template Injection (SSTI)"""
-    data = request.get_json()
-    template = data.get('template', '')
-    context = data.get('context', {})
-    
-    try:
-        # Vulnerable: Template injection via string formatting
-        from jinja2 import Template
-        
-        # Vulnerable: No sandboxing
-        t = Template(template)
-        rendered = t.render(**context)
-        
-        return jsonify({'rendered': rendered})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/ldap/search', methods=['POST'])
-def ldap_search():
-    """LDAP Injection vulnerability"""
-    data = request.get_json()
-    username = data.get('username', '')
-    
-    # Simulate LDAP query construction
-    # Vulnerable: LDAP injection
-    ldap_query = f"(&(objectClass=user)(cn={username}))"
-    
-    # Simulate LDAP search (would normally connect to LDAP server)
-    return jsonify({
-        'ldap_query': ldap_query,
-        'message': 'LDAP search simulated (vulnerable to injection)',
-        'username': username
-    })
-
-@api_bp.route('/logs/<user_id>', methods=['GET'])
-def get_user_logs(user_id):
-    """Vulnerable log access (IDOR + Injection)"""
-    try:
-        logs = audit_logger.get_user_logs(user_id)
-        return jsonify({'logs': logs})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        try:
+            cursor.execute(query)
+            results = cursor.fetchall()
+            conn.close()
+            
+            logs = []
+            for row in results:
+                logs.append({
+                    'id': row[0],
+                    'action': row[2],
+                    'details': row[3],
+                    'ip_address': row[4],
+                    'timestamp': row[5]
+                })
+            
+            return logs
+        except Exception as e:
+            conn.close()
+            logger.error(f"Log retrieval failed: {e}")
+            return []
 ```
 
 ## Output Instructions
@@ -848,5 +812,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/hikae-vulnerable-python/SURFACE-001.sarif.json
+Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/hikae-vulnerable/SURFACE-023.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.

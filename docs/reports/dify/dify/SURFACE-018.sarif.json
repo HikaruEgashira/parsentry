@@ -1,0 +1,504 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "SQLI-001",
+              "name": "SQLInjectionViaStringInterpolation",
+              "shortDescription": { "text": "SQL injection via f-string interpolation of collection name or user-controlled values" },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "SQLI-002",
+              "name": "SQLInjectionViaMetadataKey",
+              "shortDescription": { "text": "SQL injection via unsanitized metadata key interpolated into SQL query" },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "SQLI-003",
+              "name": "SQLInjectionViaDocumentIds",
+              "shortDescription": { "text": "SQL injection via unsanitized document IDs interpolated into SQL WHERE clause" },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "SQLI-004",
+              "name": "SQLInjectionViaTableName",
+              "shortDescription": { "text": "SQL injection via unsanitized table/collection name in DDL or DML statements" },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "CREDENTIAL-001",
+              "name": "CredentialInConnectionString",
+              "shortDescription": { "text": "Database credentials embedded in connection string URL may leak via logs or error messages" },
+              "helpUri": "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+            },
+            {
+              "id": "SQLI-005",
+              "name": "SQLInjectionViaValueInterpolation",
+              "shortDescription": { "text": "SQL injection via direct string interpolation of user-supplied values into SQL" },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI-001",
+          "level": "error",
+          "message": {
+            "text": "TiDB: collection_name is interpolated directly into SQL CREATE TABLE, SELECT, DELETE, and DROP statements via f-strings without parameterization or identifier quoting. If collection_name derives from user-controlled dataset names, an attacker could inject arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/tidb_vector/tidb_vector.py" },
+                "region": { "startLine": 98, "endLine": 113 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        },
+        {
+          "ruleId": "SQLI-005",
+          "level": "error",
+          "message": {
+            "text": "TiDB delete_by_ids: doc_id values are interpolated into SQL via f-string with only single-quote wrapping (`','.join(f\"'{doc_id}'\" for doc_id in ids)`). A doc_id containing a single quote enables SQL injection: `'; DROP TABLE x; --`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/tidb_vector/tidb_vector.py" },
+                "region": { "startLine": 124, "endLine": 130 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "SQLI-002",
+          "level": "error",
+          "message": {
+            "text": "TiDB get_ids_by_metadata_field: both `key` and `value` parameters are interpolated directly into SQL via f-string (`meta->>'$.{key}' = '{value}'`). An attacker controlling key or value can inject arbitrary SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/tidb_vector/tidb_vector.py" },
+                "region": { "startLine": 142, "endLine": 148 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "error",
+          "message": {
+            "text": "TiDB search_by_vector: document_ids_filter values are interpolated directly into SQL WHERE clause via f-string without parameterization (`\"', '\".join(f\"'{id}'\" ...)`). Malicious document_id values can break out of quotes and inject SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/tidb_vector/tidb_vector.py" },
+                "region": { "startLine": 163, "endLine": 168 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        },
+        {
+          "ruleId": "CREDENTIAL-001",
+          "level": "warning",
+          "message": {
+            "text": "TiDB: Database password is embedded directly in the connection URL string (`mysql+pymysql://{user}:{password}@{host}:{port}/{database}`). This URL may appear in SQLAlchemy logs, stack traces, or error messages, leaking credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/tidb_vector/tidb_vector.py" },
+                "region": { "startLine": 80, "endLine": 83 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.85 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "error",
+          "message": {
+            "text": "PGVector: table_name derived from collection_name is interpolated directly into SQL statements (CREATE TABLE, INSERT, SELECT, DELETE, DROP) via f-strings without identifier quoting. Collection names originate from dataset IDs but are not validated as safe SQL identifiers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py" },
+                "region": { "startLine": 89, "endLine": 92 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "error",
+          "message": {
+            "text": "PGVector search_by_vector: document_ids_filter values are interpolated directly into SQL WHERE clause via f-string (`\"', '\".join(f\"'{id}'\" for id in document_ids_filter)`). No parameterized query is used, enabling SQL injection through crafted document IDs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py" },
+                "region": { "startLine": 137, "endLine": 141 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "error",
+          "message": {
+            "text": "PGVector search_by_full_text: document_ids_filter values are interpolated directly into SQL WHERE clause via f-string without parameterization, enabling SQL injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py" },
+                "region": { "startLine": 158, "endLine": 162 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "error",
+          "message": {
+            "text": "OpenGauss: table_name is interpolated into SQL via f-strings (CREATE TABLE, INSERT, SELECT, DELETE, DROP) without identifier escaping. Same pattern as PGVector."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/opengauss/opengauss.py" },
+                "region": { "startLine": 65, "endLine": 73 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "error",
+          "message": {
+            "text": "Oracle: table_name is interpolated into SQL via f-strings throughout (CREATE TABLE, INSERT, SELECT, DELETE, DROP). No identifier escaping or validation is applied."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/oracle/oraclevector.py" },
+                "region": { "startLine": 109, "endLine": 112 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "SQLI-002",
+          "level": "warning",
+          "message": {
+            "text": "MyScale delete_by_metadata_field: metadata key is interpolated directly into SQL without escaping (`metadata.{key}='{value}'`). If key is attacker-controlled, SQL injection is possible."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/myscale/myscale_vector.py" },
+                "region": { "startLine": 87, "endLine": 89 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.8 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "error",
+          "message": {
+            "text": "MyScale _search: document_ids_filter values are interpolated directly into SQL WHERE clause (`metadata['document_id'] in ({document_ids})`). No parameterization or escaping."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/myscale/myscale_vector.py" },
+                "region": { "startLine": 99, "endLine": 102 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.85 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "error",
+          "message": {
+            "text": "Relyt: collection_name is interpolated directly into SQL DDL/DML statements via f-strings and sql_text(). DROP TABLE, CREATE TABLE, SELECT, DELETE all use unquoted collection_name."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/relyt/relyt_vector.py" },
+                "region": { "startLine": 82, "endLine": 84 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "CREDENTIAL-001",
+          "level": "warning",
+          "message": {
+            "text": "Relyt: Database password embedded in connection URL string (`postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}`). May leak via logs or error messages."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/relyt/relyt_vector.py" },
+                "region": { "startLine": 72, "endLine": 74 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.85 }
+        },
+        {
+          "ruleId": "SQLI-005",
+          "level": "warning",
+          "message": {
+            "text": "Relyt similarity_search_with_score_by_vector: filter conditions are built by interpolating metadata dict keys and values directly into SQL using repr(), which is not a safe SQL escaping mechanism. Crafted metadata filter values could inject SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/relyt/relyt_vector.py" },
+                "region": { "startLine": 184, "endLine": 194 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.8 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "error",
+          "message": {
+            "text": "PGVectoRS: collection_name is interpolated directly into SQL DDL and DML statements (CREATE TABLE, CREATE INDEX, INSERT, SELECT, DELETE, DROP) via f-strings without identifier quoting."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/pgvecto_rs/pgvecto_rs.py" },
+                "region": { "startLine": 88, "endLine": 107 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "CREDENTIAL-001",
+          "level": "warning",
+          "message": {
+            "text": "PGVectoRS: Database password embedded in connection URL string. May leak via logs or error messages."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/pgvecto_rs/pgvecto_rs.py" },
+                "region": { "startLine": 48, "endLine": 50 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.85 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "error",
+          "message": {
+            "text": "Vastbase: table_name is interpolated into SQL via f-strings (CREATE TABLE, INSERT, SELECT, DELETE, DROP) without identifier escaping. Identical pattern to PGVector."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/pyvastbase/vastbase_vector.py" },
+                "region": { "startLine": 63, "endLine": 70 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "warning",
+          "message": {
+            "text": "IRIS: schema and table_name are interpolated into SQL statements via f-strings without identifier quoting throughout IrisVector (CREATE TABLE, CREATE INDEX, INSERT, SELECT, DELETE, DROP)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/iris/iris_vector.py" },
+                "region": { "startLine": 185, "endLine": 188 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.7 }
+        },
+        {
+          "ruleId": "SQLI-002",
+          "level": "warning",
+          "message": {
+            "text": "ClickZetta delete_by_metadata_field: metadata key is interpolated directly into JSON path expression in SQL (`json_extract_string({Field.METADATA_KEY}, '$.{key}') = ?`). If key contains special characters like `')`, it could break out of the JSON path and inject SQL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py" },
+                "region": { "startLine": 411, "endLine": 416 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.7 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "warning",
+          "message": {
+            "text": "ClickZetta search_by_vector: document_ids_filter values are escaped with simple quote doubling (`replace(\"'\", \"''\")`), then interpolated into SQL. While quote-doubling helps, it is not as robust as parameterized queries and may be bypassed with certain character encodings."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py" },
+                "region": { "startLine": 438, "endLine": 442 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.6 }
+        },
+        {
+          "ruleId": "SQLI-005",
+          "level": "warning",
+          "message": {
+            "text": "ClickZetta search_by_full_text: query string is escaped with simple quote doubling then interpolated into MATCH_ALL function call in SQL WHERE clause. Not using parameterized queries."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py" },
+                "region": { "startLine": 490, "endLine": 494 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.65 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "warning",
+          "message": {
+            "text": "AnalyticDB (OpenAPI) search_by_vector/search_by_full_text: document_ids_filter values are interpolated into filter string without parameterization (`metadata_->>'document_id' IN ({document_ids})`), enabling injection into the filter expression."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/analyticdb/analyticdb_vector_openapi.py" },
+                "region": { "startLine": 149, "endLine": 153 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.75 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "warning",
+          "message": {
+            "text": "AnalyticDB (SQL) search_by_vector: document_ids_filter values are interpolated directly into SQL WHERE clause via f-string without parameterization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/analyticdb/analyticdb_vector_sql.py" },
+                "region": { "startLine": 121, "endLine": 125 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.8 }
+        },
+        {
+          "ruleId": "SQLI-005",
+          "level": "warning",
+          "message": {
+            "text": "AnalyticDB (OpenAPI) delete_by_metadata_field: key and value are interpolated directly into the filter string (`metadata_ ->> '{key}' = '{value}'`). A value containing a single quote can inject into the filter expression."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/analyticdb/analyticdb_vector_openapi.py" },
+                "region": { "startLine": 117, "endLine": 128 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.8 }
+        },
+        {
+          "ruleId": "SQLI-005",
+          "level": "warning",
+          "message": {
+            "text": "AnalyticDB (OpenAPI) delete_by_ids: IDs are interpolated directly into the filter string (`ref_doc_id IN {ids_str}`) without parameterization, enabling injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/analyticdb/analyticdb_vector_openapi.py" },
+                "region": { "startLine": 104, "endLine": 116 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.8 }
+        },
+        {
+          "ruleId": "SQLI-004",
+          "level": "note",
+          "message": {
+            "text": "Systemic pattern: At least 12 vector database backends (TiDB, PGVector, PGVectoRS, Relyt, OpenGauss, Vastbase, Oracle, MyScale, IRIS, ClickZetta, AnalyticDB-SQL, Matrixone) interpolate table/collection names directly into SQL strings via f-strings without any identifier quoting (e.g., psycopg2.sql.Identifier, backtick-quoting). While collection names are typically derived from dataset UUIDs (limiting practical exploitability), this is a defense-in-depth failure. Any future code path that allows user influence over collection naming would immediately become exploitable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/vector_factory.py" },
+                "region": { "startLine": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.7 }
+        },
+        {
+          "ruleId": "SQLI-003",
+          "level": "note",
+          "message": {
+            "text": "Systemic pattern: At least 8 backends (TiDB, PGVector, PGVector-fulltext, MyScale, AnalyticDB-OpenAPI, AnalyticDB-SQL, ClickZetta, Oracle) interpolate document_ids_filter values directly into SQL WHERE clauses without parameterization. The Hologres backend correctly uses psycopg2.sql.Literal for parameterization — this pattern should be adopted across all backends."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api/core/rag/datasource/vdb/vector_factory.py" },
+                "region": { "startLine": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.85 }
+        }
+      ]
+    }
+  ]
+}
+```

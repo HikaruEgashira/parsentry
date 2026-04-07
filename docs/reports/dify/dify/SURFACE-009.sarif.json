@@ -1,0 +1,303 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "AUTH-BYPASS",
+              "name": "AuthenticationBypass",
+              "shortDescription": {
+                "text": "Hardcoded default API key allows unauthenticated access to inner API"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
+            },
+            {
+              "id": "BROKEN-AUTH-ORDER",
+              "name": "BrokenAuthenticationOrder",
+              "shortDescription": {
+                "text": "Decorator ordering allows unauthenticated database queries before auth check"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/287.html"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Caller-controlled tenant_id/user_id enables cross-tenant access"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "IDOR-CROSS-TENANT-USER",
+              "name": "CrossTenantUserResolution",
+              "shortDescription": {
+                "text": "EndUser lookup by primary key without tenant_id filter allows cross-tenant user resolution"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "MISSING-AUTHZ",
+              "name": "MissingAuthorization",
+              "shortDescription": {
+                "text": "No plugin-level authorization: any tool/provider/app can be invoked without scope checks"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "TIMING-ORACLE",
+              "name": "TimingSideChannel",
+              "shortDescription": {
+                "text": "Non-constant-time string comparison for API key enables timing-based key extraction"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/208.html"
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Unhandled exceptions leak internal identifiers to callers"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "GHOST-USER-CREATION",
+              "name": "ImplicitUserCreation",
+              "shortDescription": {
+                "text": "Arbitrary user_id values silently create ghost EndUser records in the database"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/285.html"
+            },
+            {
+              "id": "SECRET-DELETION",
+              "name": "UnauthorizedSecretDeletion",
+              "shortDescription": {
+                "text": "RequestInvokeEncrypt opt=clear allows deletion of any endpoint's secrets via caller-controlled identity"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The inner API key INNER_API_KEY_FOR_PLUGIN has a hardcoded default value of 'inner-api-key' (configs/feature/__init__.py). Any deployment that does not override this value is immediately accessible to attackers who guess or know the default. Combined with the fact that network-level isolation is not enforced in code, this represents a critical authentication bypass. The PLUGIN_DAEMON_KEY similarly defaults to 'plugin-api-key'. No startup validation warns when defaults are in use."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/wraps.py"
+                },
+                "region": {
+                  "startLine": 90
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH-ORDER",
+          "level": "error",
+          "message": {
+            "text": "In all routes in plugin.py, the decorator order is @get_user_tenant -> @setup_required -> @plugin_inner_api_only -> @plugin_data. Because Python decorators execute outermost-first, get_user_tenant runs BEFORE plugin_inner_api_only. This means the database is queried for tenant_id and user_id existence before the API key is validated. An unauthenticated caller can probe whether specific tenant_ids exist by observing differing error responses (tenant not found vs. unauthorized), creating an information disclosure oracle."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 199,
+                  "endLine": 204
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "The get_user_tenant decorator extracts tenant_id and user_id directly from the JSON request body (TenantUserPayload) without any independent verification that the calling plugin is authorized for that tenant. A compromised or malicious plugin (or any attacker with the shared API key) can supply any tenant_id to operate on arbitrary tenants' data — invoking their tools, LLMs, apps, and accessing their encryption secrets. This is a horizontal privilege escalation via Insecure Direct Object Reference."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "IDOR-CROSS-TENANT-USER",
+          "level": "error",
+          "message": {
+            "text": "In the get_user helper function, when user_id is not anonymous, the lookup is `session.get(EndUser, user_id)` — a bare primary key lookup with no tenant_id filter. A caller can supply a user_id belonging to a different tenant and successfully resolve it. The returned EndUser's tenant_id may differ from the request's tenant_id, but this mismatch is never validated. The user is then injected into the Flask-Login session via login_manager._update_request_context_with_user(), allowing impersonation of users across tenant boundaries."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                },
+                "region": {
+                  "startLine": 45
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "MISSING-AUTHZ",
+          "level": "error",
+          "message": {
+            "text": "The PluginToolBackwardsInvocation.invoke_tool method accepts tool_type, provider, and tool_name without any authorization check. It does not verify that the calling plugin is permitted to invoke the specified tool type (builtin, workflow, api, mcp), that the provider is registered to the calling plugin, or that the plugin's granted permissions include the requested operation. Combined with the caller-controlled tenant_id, a plugin can invoke any tool on any tenant. The same pattern applies to invoke_app (no app-to-tenant ownership validation) and invoke_encrypt (arbitrary identity targeting)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 199,
+                  "endLine": 230
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/backwards_invocation/tool.py"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "TIMING-ORACLE",
+          "level": "warning",
+          "message": {
+            "text": "The plugin_inner_api_only decorator compares the API key using Python's != operator (inner_api_key != dify_config.INNER_API_KEY_FOR_PLUGIN), which is not constant-time. On a low-latency internal network, an attacker could use timing differences to extract the key byte-by-byte. Should use hmac.compare_digest() for secure comparison."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/wraps.py"
+                },
+                "region": {
+                  "startLine": 90
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "Multiple endpoints catch broad exceptions and return str(e) in the response body via BaseBackwardsInvocationResponse(error=str(e)). Exception messages from ToolManager and other internal components may leak credential IDs, provider names, internal file paths, and database details. The text-embedding, rerank, speech2text, moderation, parameter-extractor, question-classifier, encrypt, and summary endpoints all follow this pattern."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 107,
+                  "endLine": 108
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "GHOST-USER-CREATION",
+          "level": "warning",
+          "message": {
+            "text": "When get_user receives a non-anonymous user_id that does not exist in the database, it silently creates a new EndUser record with the attacker-supplied user_id as the session_id. This allows an attacker to pollute the database with arbitrary ghost user records, potentially exhausting storage or creating confusion in audit logs. No rate limiting or validation prevents mass creation of spurious users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                },
+                "region": {
+                  "startLine": 47,
+                  "endLine": 55
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.88
+          }
+        },
+        {
+          "ruleId": "SECRET-DELETION",
+          "level": "error",
+          "message": {
+            "text": "The /invoke/encrypt endpoint accepts a RequestInvokeEncrypt payload with opt='clear', which deletes encrypted secrets for the specified identity. The identity field is caller-controlled and not validated against the requesting plugin's own endpoints or the tenant's owned resources. A malicious plugin can delete secrets belonging to any endpoint in the system by supplying its identity string, causing denial-of-service for other plugins' encrypted configurations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 295,
+                  "endLine": 320
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ]
+    }
+  ]
+}

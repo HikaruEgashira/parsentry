@@ -1,0 +1,234 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via user-controlled base_url"
+              },
+              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/"
+            },
+            {
+              "id": "INJECT-RAG",
+              "name": "RAGContentInjection",
+              "shortDescription": {
+                "text": "Unsanitized external content injected into RAG pipeline"
+              },
+              "helpUri": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakageViaErrorMessages",
+              "shortDescription": {
+                "text": "Sensitive information disclosed through error messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "CREDENTIAL-PASS",
+              "name": "CredentialPassthrough",
+              "shortDescription": {
+                "text": "API credentials passed without scope restriction to plugin"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/522.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "FirecrawlAuth accepts a user-controlled `base_url` from credentials config and uses it directly in HTTP POST requests via `_build_url()`. No validation is performed on the URL scheme (file://, gopher://, etc.) or host (127.0.0.1, metadata endpoints like 169.254.169.254). An attacker who can set the `base_url` credential field can force the server to issue requests to arbitrary internal services, cloud metadata APIs, or other internal infrastructure. The `_build_url` method only strips/adds slashes but performs no security checks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/firecrawl/firecrawl.py"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 14
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/firecrawl/firecrawl.py"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 35
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "WatercrawlAuth accepts a user-controlled `base_url` from credentials config and uses it with `urljoin()` to construct the request URL for credential validation. No allowlist or scheme validation is applied. An attacker who controls the credential configuration can set `base_url` to an internal IP address (e.g., http://169.254.169.254/latest/meta-data/ for AWS metadata) or internal service endpoint, enabling SSRF attacks. The `urljoin` function will faithfully combine any base URL with the path, preserving malicious hosts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 15
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 23
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "INJECT-RAG",
+          "level": "error",
+          "message": {
+            "text": "WebsiteCrawlDatasourcePlugin.get_website_crawl() passes externally crawled website content directly through the plugin manager into the RAG pipeline without any content sanitization, validation, or filtering. Crawled web pages can contain adversarial prompt injection payloads, malicious markdown/HTML, or carefully crafted text designed to manipulate LLM behavior when the content is later retrieved and fed into prompts. The `datasource_parameters` and returned `WebsiteCrawlMessage` objects flow into document indexing and retrieval with no intermediate sanitization layer. This enables indirect prompt injection attacks where a malicious website embeds instructions that get executed when users query the knowledge base."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/website_crawl/website_crawl_plugin.py"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 52
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "JinaAuth._handle_error() and the other auth handlers include raw error responses from external services in exception messages that may propagate to end users. When the external service returns unexpected content (e.g., HTML error pages or debug info), `response.text` is parsed and included directly in the exception. Additionally, `json.loads(response.text)` in JinaAuth can raise an unhandled JSONDecodeError (unlike FirecrawlAuth which wraps it in try/except), potentially exposing raw response bodies in stack traces. This can leak internal infrastructure details, API endpoint paths, or service configuration."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/jina/jina.py"
+                },
+                "region": {
+                  "startLine": 41,
+                  "endLine": 49
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 41
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-PASS",
+          "level": "warning",
+          "message": {
+            "text": "WebsiteCrawlDatasourcePlugin passes `self.runtime.credentials` directly to the PluginDatasourceManager without restricting the scope of credentials exposed. The full credentials dict (which may contain API keys and other sensitive configuration) is forwarded to the plugin layer. If a malicious or compromised plugin is installed, it gains access to the complete credential set rather than only the minimum required fields. There is no credential scoping, field filtering, or least-privilege enforcement at this boundary."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/website_crawl/website_crawl_plugin.py"
+                },
+                "region": {
+                  "startLine": 43,
+                  "endLine": 44
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "FirecrawlAuth.validate_credentials() sends an HTTP POST to the user-controlled base_url with a hardcoded payload containing 'url: https://example.com'. While this specific call is limited to validation, the same `_build_url` and `_post_request` pattern establishes infrastructure for making arbitrary outbound requests. The httpx client used by FirecrawlAuth does not configure any timeout, allowing an attacker to point `base_url` at a slow-responding endpoint to cause resource exhaustion (connection pool starvation). JinaAuth mitigates this slightly by using a pooled client with connection limits, but FirecrawlAuth and WatercrawlAuth create per-request clients with no limits."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/firecrawl/firecrawl.py"
+                },
+                "region": {
+                  "startLine": 37,
+                  "endLine": 38
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 28
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        }
+      ]
+    }
+  ]
+}
+```
