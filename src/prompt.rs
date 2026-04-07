@@ -214,22 +214,30 @@ pub fn build_orchestrator_prompt(
          before launching the next.\n\n",
     );
 
-    // Merge step
+    // Merge & report step
     let merged_sarif = rel_output_dir.join("merged.sarif.json");
-    prompt.push_str("Post-Analysis: Merge Results\n\n");
+    let report_md = rel_output_dir.join("report.md");
+    prompt.push_str("Post-Analysis\n\n");
     prompt.push_str(
-        "After ALL subagents have completed, run the following command to merge \
-         the per-surface SARIF files into a single report:\n\n",
+        "After ALL subagents have completed:\n\n",
     );
     prompt.push_str(&format!(
-        "```bash\nparsentry merge {} -o {}\n```\n\n",
+        "1. Merge SARIF files:\n\
+         ```bash\n\
+         parsentry merge {} -o {}\n\
+         ```\n\n",
         rel_output_dir.display(),
         merged_sarif.display(),
     ));
-    prompt.push_str(
-        "Then report the total number of findings by severity (error/warning/note) \
-         from the merged SARIF output.\n",
-    );
+    prompt.push_str(&format!(
+        "2. Read {} and generate a security report in markdown at {}.\n\
+         The report must include:\n\
+         - Executive summary with total findings count by severity\n\
+         - Per-finding details: rule ID, severity, confidence, file location, description\n\
+         - Remediation recommendations for each finding\n\n",
+        merged_sarif.display(),
+        report_md.display(),
+    ));
 
     prompt
 }
