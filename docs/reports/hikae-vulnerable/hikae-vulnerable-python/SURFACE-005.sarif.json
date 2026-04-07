@@ -1,0 +1,175 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SSTI",
+              "name": "ServerSideTemplateInjection",
+              "shortDescription": {
+                "text": "Server-Side Template Injection via user-controlled Jinja2 template"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html",
+              "properties": {
+                "tags": ["security", "CWE-1336", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "XSS",
+              "name": "CrossSiteScripting",
+              "shortDescription": {
+                "text": "Cross-Site Scripting via unsafe string interpolation into Jinja2 templates"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": {
+                "tags": ["security", "CWE-79", "OWASP-A03"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSTI",
+          "level": "error",
+          "message": {
+            "text": "User-controlled input is passed directly as a Jinja2 template string via `Template(template_input)`. The `template` query parameter is received from the user and compiled as a Jinja2 template without any sandboxing or restriction. An attacker can inject expressions like `{{ config.__class__.__init__.__globals__['os'].popen('id').read() }}` to achieve Remote Code Execution. Jinja2's default `Environment` does not enable sandboxing; use `jinja2.sandbox.SandboxedEnvironment` or, better, never allow user input to define template structure — only template variables."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 252,
+                  "startColumn": 9,
+                  "endLine": 253,
+                  "snippet": {
+                    "text": "        t = Template(template_input)\n        result = t.render(name=name)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99,
+            "source": "request.args.get(\"template\")",
+            "sink": "jinja2.Template(template_input)",
+            "cwe": "CWE-1336",
+            "impact": "Remote Code Execution — full server compromise. Jinja2 templates can access Python's object hierarchy to import modules and execute arbitrary commands.",
+            "remediation": "Never compile user-supplied strings as Jinja2 templates. If dynamic templates are required, use `jinja2.sandbox.SandboxedEnvironment` and restrict available globals/filters. Preferably, treat user input only as template *data* (variables), not template *structure*."
+          }
+        },
+        {
+          "ruleId": "SSTI",
+          "level": "error",
+          "message": {
+            "text": "User input (`name`, `comment`) is interpolated into a template string via Python f-string *before* it is passed to `render_template_string()`. Because the interpolation occurs prior to Jinja2 compilation, any Jinja2 syntax in the user input (e.g. `{{ config }}` or `{{ ''.__class__.__mro__[1].__subclasses__() }}`) is compiled and executed by the template engine. This is a compound SSTI: the f-string bypasses Jinja2's autoescaping entirely, and the resulting string is then processed as a live template. The attack surface spans HTML, JavaScript, CSS, and attribute contexts within the template."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 196,
+                  "startColumn": 5,
+                  "endLine": 230,
+                  "snippet": {
+                    "text": "    template = f\"\"\"\n    <h2>XSS Playground</h2>\n    ...\n    <div>Hello, {name}!</div>\n    ...\n    \"\"\"\n    return render_template_string(template)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.98,
+            "source": "request.args.get(\"name\") and request.args.get(\"comment\")",
+            "sink": "render_template_string(template) where template is built via f-string with user input",
+            "cwe": "CWE-1336",
+            "impact": "Remote Code Execution via SSTI, plus Cross-Site Scripting. The f-string interpolation injects raw user content into the template source before Jinja2 processes it, enabling both RCE (via Jinja2 expressions) and XSS (via HTML/JS injection).",
+            "remediation": "Never use f-strings or str.format() to interpolate user data into template strings. Pass user data exclusively as template context variables: `render_template_string(template, name=name, comment=comment)` with `{{ name }}` and `{{ comment }}` placeholders in the template."
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "The `/xss` endpoint constructs an HTML template using Python f-string interpolation with user-supplied `name` and `comment` values. Because the values are embedded *before* Jinja2 rendering, Jinja2's autoescaping never sees them as variables and therefore cannot escape them. User input is injected into four distinct contexts — HTML body (`<div>Hello, {name}!</div>`), HTML attribute (`value=\"{name}\"`), JavaScript string literal (`var userName = '{name}'`), and CSS property (`color: {comment}`). Each context provides a distinct XSS vector."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 200,
+                  "startColumn": 5,
+                  "endLine": 210,
+                  "snippet": {
+                    "text": "    <div>Hello, {name}!</div>\n    <input type=\"text\" value=\"{name}\" ...>\n    <script>\n        var userName = '{name}';\n        var userComment = '{comment}';\n    </script>\n    <style>\n        .user-style {{ color: {comment}; }}\n    </style>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99,
+            "source": "request.args.get(\"name\") and request.args.get(\"comment\")",
+            "sink": "f-string interpolation into HTML/JS/CSS template before render_template_string()",
+            "cwe": "CWE-79",
+            "impact": "Reflected Cross-Site Scripting in multiple contexts (HTML, attribute, JavaScript, CSS). Attackers can steal session cookies, redirect users, or execute arbitrary JavaScript in victim browsers.",
+            "remediation": "Replace f-string interpolation with Jinja2 template variables. Use `{{ name }}` and `{{ comment }}` in the template and pass them as keyword arguments to `render_template_string()`. Jinja2 will auto-escape them for HTML context. For JavaScript context, use `{{ name|tojson }}` to safely embed values."
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "warning",
+          "message": {
+            "text": "The `/ssti` endpoint renders the SSTI result with the `|safe` filter (`{{ result|safe }}`), which disables Jinja2's autoescaping. If the user-controlled template produces HTML or JavaScript output, it will be rendered unescaped in the response. While this is secondary to the SSTI vulnerability itself, it amplifies the impact by ensuring any HTML/JS produced by the injected template reaches the browser without sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 267,
+                  "startColumn": 39,
+                  "endLine": 267,
+                  "snippet": {
+                    "text": "    <div style=\"border: 1px solid #ddd; padding: 10px;\">{{ result|safe }}</div>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "source": "result variable derived from user-controlled template rendering",
+            "sink": "{{ result|safe }} in render_template_string()",
+            "cwe": "CWE-79",
+            "impact": "The `|safe` filter ensures any HTML/JavaScript generated by the SSTI payload is rendered without escaping, enabling reflected XSS even if the SSTI is partially mitigated.",
+            "remediation": "Remove the `|safe` filter. If HTML output from templates is intentional, sanitize the output using a library like `bleach` before rendering."
+          }
+        }
+      ]
+    }
+  ]
+}
+```

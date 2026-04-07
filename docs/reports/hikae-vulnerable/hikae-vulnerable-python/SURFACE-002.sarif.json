@@ -1,0 +1,359 @@
+分析対象のJWT認証関連の脆弱性を特定しました。SARIF形式で出力します。
+
+```json
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "HARDCODED-SECRET",
+              "name": "HardcodedCryptographicSecret",
+              "shortDescription": {
+                "text": "Hardcoded JWT signing secret enables token forgery"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": ["CWE-798", "OWASP-A07:2021"]
+              }
+            },
+            {
+              "id": "JWT-NO-EXPIRATION",
+              "name": "JWTMissingExpirationClaim",
+              "shortDescription": {
+                "text": "JWT issued without expiration claim allows indefinite token reuse"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/613.html",
+              "properties": {
+                "tags": ["CWE-613", "OWASP-A07:2021"]
+              }
+            },
+            {
+              "id": "JWT-MISSING-CLAIMS-VALIDATION",
+              "name": "JWTMissingClaimsValidation",
+              "shortDescription": {
+                "text": "JWT lacks issuer and audience claims, enabling cross-service token abuse"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/345.html",
+              "properties": {
+                "tags": ["CWE-345", "OWASP-A07:2021"]
+              }
+            },
+            {
+              "id": "SENSITIVE-DATA-IN-TOKEN",
+              "name": "SensitiveDataInJWTPayload",
+              "shortDescription": {
+                "text": "Role embedded in JWT payload is client-modifiable without server-side re-validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html",
+              "properties": {
+                "tags": ["CWE-284", "OWASP-A01:2021"]
+              }
+            },
+            {
+              "id": "CREDENTIAL-LOGGING",
+              "name": "CredentialLogging",
+              "shortDescription": {
+                "text": "Plaintext password written to audit log"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["CWE-532", "OWASP-A09:2021"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "SensitiveDataExposureInResponse",
+              "shortDescription": {
+                "text": "API key and full user object leaked in authentication response"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["CWE-200", "OWASP-A01:2021"]
+              }
+            },
+            {
+              "id": "WEAK-SESSION-TOKEN",
+              "name": "WeakSessionTokenGeneration",
+              "shortDescription": {
+                "text": "Session token derived from MD5(username+password) is predictable and collision-prone"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/328.html",
+              "properties": {
+                "tags": ["CWE-328", "OWASP-A02:2021"]
+              }
+            },
+            {
+              "id": "INSECURE-SESSION-CONFIG",
+              "name": "InsecureSessionCookieConfiguration",
+              "shortDescription": {
+                "text": "Session cookies lack Secure and HttpOnly flags, enabling theft via XSS or network sniffing"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "properties": {
+                "tags": ["CWE-614", "CWE-1004", "OWASP-A05:2021"]
+              }
+            },
+            {
+              "id": "SESSION-FIXATION",
+              "name": "SessionFixation",
+              "shortDescription": {
+                "text": "Logout does not regenerate session ID nor clear all session data"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html",
+              "properties": {
+                "tags": ["CWE-384", "OWASP-A07:2021"]
+              }
+            },
+            {
+              "id": "HARDCODED-API-KEYS",
+              "name": "HardcodedAPIKeys",
+              "shortDescription": {
+                "text": "Static API keys embedded in source code with role mappings"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": ["CWE-798", "OWASP-A07:2021"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "error",
+          "message": {
+            "text": "JWT signing secret is hardcoded as `\"super_secret_key_123\"`. Any attacker who reads the source code (or binary) can forge arbitrary JWT tokens with any user_id and role, achieving full authentication bypass. Use a cryptographically random secret loaded from environment variables or a secrets manager, and rotate periodically."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 30, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "error",
+          "message": {
+            "text": "Flask session signing secret is hardcoded as `\"vulnerable_secret_key_123\"`. An attacker can forge Flask session cookies to impersonate any user, bypass login, and escalate privileges. The session secret must be a cryptographically random value loaded from a secure external source."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 25, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "JWT-NO-EXPIRATION",
+          "level": "error",
+          "message": {
+            "text": "JWT tokens are issued without an `exp` (expiration) claim. Once a token is stolen or leaked, it remains valid indefinitely — there is no mechanism to revoke or expire it. Add `'exp': datetime.utcnow() + timedelta(minutes=15)` to the payload and enforce verification with `options={'require': ['exp']}`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 48, "endLine": 52 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "JWT-MISSING-CLAIMS-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "JWT tokens are issued without `iss` (issuer), `aud` (audience), or `iat` (issued-at) claims, and no verification of these claims is enforced on decode. This allows tokens issued by other services sharing the same secret to be accepted, enabling cross-service token confusion attacks. Include and validate `iss` and `aud` claims in both encode and decode."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 48, "endLine": 53 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA-IN-TOKEN",
+          "level": "warning",
+          "message": {
+            "text": "The `role` field is embedded directly in the JWT payload. If the server trusts this claim without re-checking against the database, an attacker who can forge tokens (trivial given the hardcoded secret) can escalate from guest to admin. Authorization decisions must be derived from a server-side session or database lookup, not from the token payload alone."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 51, "startColumn": 17 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-LOGGING",
+          "level": "error",
+          "message": {
+            "text": "Plaintext password is interpolated into the audit log message: `f\"User {username} logged in with password {password}\"`. This persists credentials in the database where they can be read by anyone with log access (including via the IDOR at `/api/logs/<user_id>`). Never log authentication credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 57, "startColumn": 17 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-LOGGING",
+          "level": "error",
+          "message": {
+            "text": "Login handler logs `{username}:{password}` via `logger.info()`. Credentials are written to application logs in cleartext, violating data minimization principles and creating a credential harvesting vector if logs are compromised."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 131, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "error",
+          "message": {
+            "text": "The login response returns the full `user` object (which may contain password hashes) and the user's `api_key`. This unnecessarily exposes sensitive authentication material to the client. Return only the JWT token and non-sensitive user metadata."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 60, "endLine": 64 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "WEAK-SESSION-TOKEN",
+          "level": "error",
+          "message": {
+            "text": "Session token is computed as `md5(username + password)`. MD5 is cryptographically broken, the input is deterministic (same credentials always produce the same token), and the token is derived from the password itself. An attacker who observes one session token can brute-force the password offline. Use `secrets.token_urlsafe()` for session tokens."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 143, "startColumn": 13 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "INSECURE-SESSION-CONFIG",
+          "level": "error",
+          "message": {
+            "text": "Session cookies are configured with `SESSION_COOKIE_SECURE = False` and `SESSION_COOKIE_HTTPONLY = False`. Without the Secure flag, cookies transmit over plain HTTP (susceptible to network sniffing). Without HttpOnly, JavaScript (and any XSS payload) can read the session cookie. Both flags must be set to True in production."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 26, "endLine": 28 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SESSION-FIXATION",
+          "level": "warning",
+          "message": {
+            "text": "The `/logout` route removes `user` and `logged_in` from the session but does not clear `session_token` and does not regenerate the session ID. An attacker who captured the session ID before logout can reuse it. Call `session.clear()` and regenerate the session identifier on logout."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 165, "endLine": 172 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "HARDCODED-API-KEYS",
+          "level": "error",
+          "message": {
+            "text": "Static API keys with role mappings are hardcoded in source: `sk-1234567890abcdef` (admin) and `pk-0987654321fedcba` (guest). These keys are committed to version control and grant admin access. API keys must be stored in a secrets manager and should be unique per user, not shared static values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 31, "endLine": 34 }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 分析サマリ
+
+SURFACE-002（JWT認証）に対して **12件の脆弱性** を検出しました。
+
+| 重要度 | 件数 | 主な内容 |
+|--------|------|----------|
+| error | 9 | ハードコードされたシークレット/APIキー、JWT無期限トークン、認証情報のログ出力、セッション設定不備 |
+| warning | 3 | JWT claims未検証、ロール情報のトークン埋め込み、セッション固定 |
+
+**最も深刻な攻撃チェーン**: ハードコードされたJWTシークレット(`api.py:30`)により、攻撃者はソースコードを読むだけで任意のユーザー・任意のロールのJWTを偽造でき、`exp`クレームもないため永続的に有効です。さらにログに平文パスワードが記録され(`api.py:57`)、それがIDOR経由(`/api/logs/<user_id>`)で読み取り可能なため、認証情報の完全な窃取が可能です。

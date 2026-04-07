@@ -1,0 +1,231 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via unvalidated URL in outbound HTTP request"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is passed directly to requests.get() without URL validation, scheme restriction, or internal network filtering. An attacker can force the server to make requests to internal services (e.g., 169.254.169.254 cloud metadata, localhost admin panels, internal APIs) to exfiltrate sensitive data or pivot within the network."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918", "OWASP-A10"]
+              }
+            },
+            {
+              "id": "SSRF-RESPONSE-LEAK",
+              "name": "SSRFResponseDataExposure",
+              "shortDescription": {
+                "text": "Full HTTP response body and headers returned to the attacker"
+              },
+              "fullDescription": {
+                "text": "The response body (up to 1000 chars) and all response headers from the SSRF request are returned to the caller, making this a full-read SSRF rather than blind SSRF. This dramatically increases impact as attackers can directly read internal service responses, cloud metadata tokens, and internal API data."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "CWE-200"]
+              }
+            },
+            {
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": {
+                "text": "Unvalidated redirect target enables phishing and OAuth token theft"
+              },
+              "fullDescription": {
+                "text": "The /redirect endpoint passes user-supplied 'next' parameter directly to flask.redirect() without validating the destination. While not an outbound HTTP request per se, it abuses URL handling to redirect users to attacker-controlled domains, enabling credential phishing and OAuth authorization code interception."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "properties": {
+                "tags": ["security", "CWE-601", "OWASP-A10"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "User-supplied URL from POST JSON body ('url' field) is passed directly to requests.get() with no validation. No scheme allowlist (allowing file://, gopher://, dict://), no host blocklist (allowing 127.0.0.1, 169.254.169.254, internal RFC-1918 ranges), and no DNS rebinding protection. An attacker can reach cloud metadata endpoints (e.g., http://169.254.169.254/latest/meta-data/iam/security-credentials/) to steal IAM credentials, probe internal services, or read local files via file:// scheme."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 114,
+                  "startColumn": 20,
+                  "endLine": 114,
+                  "snippet": {
+                    "text": "        response = requests.get(url, timeout=10)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "ssrf_fetch_requests_get"
+          },
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": { "uri": "api.py" },
+                          "region": { "startLine": 109, "snippet": { "text": "    data = request.get_json()" } }
+                        },
+                        "message": { "text": "Source: attacker-controlled JSON body parsed" }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": { "uri": "api.py" },
+                          "region": { "startLine": 110, "snippet": { "text": "    url = data.get('url', '')" } }
+                        },
+                        "message": { "text": "Taint: URL extracted from user input without validation" }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": { "uri": "api.py" },
+                          "region": { "startLine": 114, "snippet": { "text": "        response = requests.get(url, timeout=10)" } }
+                        },
+                        "message": { "text": "Sink: tainted URL passed to requests.get(), server makes outbound HTTP request to attacker-chosen destination" }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "impact": "critical",
+            "exploitability": "trivial",
+            "attack_scenario": "POST /api/ssrf/fetch with body {\"url\": \"http://169.254.169.254/latest/meta-data/iam/security-credentials/\"} to steal cloud IAM credentials. Or {\"url\": \"http://127.0.0.1:6379/INFO\"} to probe internal Redis. Or {\"url\": \"file:///etc/passwd\"} to read local files depending on requests library behavior.",
+            "remediation": "Implement URL validation: (1) parse URL and enforce scheme allowlist (http/https only), (2) resolve hostname and block RFC-1918/loopback/link-local addresses, (3) block cloud metadata IPs (169.254.169.254), (4) use DNS pinning to prevent TOCTOU/rebinding attacks, (5) consider using an HTTP proxy for egress filtering."
+          }
+        },
+        {
+          "ruleId": "SSRF-RESPONSE-LEAK",
+          "level": "error",
+          "message": {
+            "text": "The SSRF endpoint returns response status code, first 1000 characters of body, and all response headers back to the caller. This converts a potential blind SSRF into a full-read SSRF, allowing attackers to directly exfiltrate data from internal services. The 1000-char limit is trivially bypassed by making multiple requests to paginated or offset-based internal APIs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 116,
+                  "endLine": 120,
+                  "snippet": {
+                    "text": "        return jsonify({\n            'status_code': response.status_code,\n            'content': response.text[:1000],\n            'headers': dict(response.headers)\n        })"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "ssrf_response_data_leak"
+          },
+          "properties": {
+            "confidence": 1.0,
+            "impact": "high",
+            "exploitability": "trivial",
+            "attack_scenario": "After exploiting the SSRF, the attacker reads the full response including headers (which may contain auth tokens, session cookies) and body content from internal services. Response headers from cloud metadata or internal APIs often contain security-sensitive information.",
+            "remediation": "Even after fixing the SSRF itself, ensure no endpoint returns raw upstream response data. If proxying is a legitimate feature, implement strict response filtering and never expose raw headers."
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "warning",
+          "message": {
+            "text": "The 'next' query parameter is passed directly to flask.redirect() without validating that the target URL is on the same origin. An attacker can craft a link like /api/redirect?next=https://evil.com/phish to redirect users to a malicious site. This is commonly chained with OAuth flows to steal authorization codes."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 229,
+                  "snippet": {
+                    "text": "    return redirect(next_url)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "open_redirect_next_url"
+          },
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": { "uri": "api.py" },
+                          "region": { "startLine": 226, "snippet": { "text": "    next_url = request.args.get('next', '/')" } }
+                        },
+                        "message": { "text": "Source: 'next' query parameter from user request" }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": { "uri": "api.py" },
+                          "region": { "startLine": 229, "snippet": { "text": "    return redirect(next_url)" } }
+                        },
+                        "message": { "text": "Sink: unvalidated URL passed to redirect()" }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "impact": "medium",
+            "exploitability": "trivial",
+            "attack_scenario": "Attacker sends victim a link: https://trusted-app.com/api/redirect?next=https://evil.com/login. Victim sees trusted domain, clicks, gets redirected to phishing page that mimics the real login. Also exploitable with protocol-relative URLs (//evil.com) or JavaScript URIs.",
+            "remediation": "Validate that the redirect target is a relative path or belongs to an allowlist of trusted domains. Use url_has_allowed_host_and_scheme() (Django) pattern or manually check parsed URL host against allowed origins."
+          }
+        }
+      ],
+      "columnKind": "utf16CodeUnits"
+    }
+  ]
+}
+```

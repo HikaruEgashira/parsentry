@@ -1,0 +1,601 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "RCE-001",
+              "name": "WerkzeugDebuggerEnabled",
+              "shortDescription": { "text": "Werkzeug debugger enabled in production exposes interactive Python console" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": { "tags": ["CWE-94", "werkzeug", "debugger"] }
+            },
+            {
+              "id": "PATH-TRAVERSAL-001",
+              "name": "FileUploadPathTraversal",
+              "shortDescription": { "text": "Werkzeug file upload filename used without sanitization allows path traversal" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": { "tags": ["CWE-22", "werkzeug", "file-upload"] }
+            },
+            {
+              "id": "PATH-TRAVERSAL-002",
+              "name": "ZipSlipVulnerability",
+              "shortDescription": { "text": "Archive extraction without member path validation allows zip slip attack" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": { "tags": ["CWE-22", "zip-slip"] }
+            },
+            {
+              "id": "UNRESTRICTED-UPLOAD-001",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": { "text": "No file type or size validation on uploaded files" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html",
+              "properties": { "tags": ["CWE-434", "werkzeug", "file-upload"] }
+            },
+            {
+              "id": "HARDCODED-SECRET-001",
+              "name": "HardcodedFlaskSecretKey",
+              "shortDescription": { "text": "Hardcoded Flask secret key enables session forgery" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": { "tags": ["CWE-798", "session"] }
+            },
+            {
+              "id": "HARDCODED-SECRET-002",
+              "name": "HardcodedJWTSecret",
+              "shortDescription": { "text": "Hardcoded JWT signing key enables token forgery" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": { "tags": ["CWE-798", "jwt"] }
+            },
+            {
+              "id": "SESSION-MISCONFIG-001",
+              "name": "InsecureSessionConfiguration",
+              "shortDescription": { "text": "Session cookies lack Secure and HttpOnly flags" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "properties": { "tags": ["CWE-614", "CWE-1004", "session"] }
+            },
+            {
+              "id": "SQLI-001",
+              "name": "SQLInjectionLike",
+              "shortDescription": { "text": "SQL injection via string interpolation in LIKE clause" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": { "tags": ["CWE-89"] }
+            },
+            {
+              "id": "SQLI-002",
+              "name": "SQLInjectionOrderBy",
+              "shortDescription": { "text": "SQL injection via ORDER BY clause" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": { "tags": ["CWE-89"] }
+            },
+            {
+              "id": "XSS-001",
+              "name": "ReflectedXSSMultiContext",
+              "shortDescription": { "text": "Reflected XSS via unescaped f-string in HTML, attribute, JS, and CSS contexts" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": { "tags": ["CWE-79"] }
+            },
+            {
+              "id": "RCE-002",
+              "name": "CommandInjectionOsPopen",
+              "shortDescription": { "text": "OS command injection via os.popen with unsanitized input" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": { "tags": ["CWE-78"] }
+            },
+            {
+              "id": "RCE-003",
+              "name": "CommandInjectionOsSystem",
+              "shortDescription": { "text": "OS command injection via os.system with unsanitized input" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": { "tags": ["CWE-78"] }
+            },
+            {
+              "id": "LFI-001",
+              "name": "LocalFileInclusion",
+              "shortDescription": { "text": "Arbitrary file read via user-controlled file path" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": { "tags": ["CWE-22", "CWE-98"] }
+            },
+            {
+              "id": "SSTI-001",
+              "name": "ServerSideTemplateInjection",
+              "shortDescription": { "text": "User-controlled Jinja2 template string enables server-side template injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": { "tags": ["CWE-94", "jinja2"] }
+            },
+            {
+              "id": "SSRF-001",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": { "text": "Unvalidated URL in server-side HTTP request enables SSRF" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": { "tags": ["CWE-918"] }
+            },
+            {
+              "id": "RCE-004",
+              "name": "PickleDeserialization",
+              "shortDescription": { "text": "Deserialization of untrusted pickle data enables arbitrary code execution" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "properties": { "tags": ["CWE-502"] }
+            },
+            {
+              "id": "RCE-005",
+              "name": "PythonEvalInjection",
+              "shortDescription": { "text": "eval() on user-controlled input enables arbitrary code execution" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": { "tags": ["CWE-94"] }
+            },
+            {
+              "id": "RCE-006",
+              "name": "SubprocessShellInjection",
+              "shortDescription": { "text": "subprocess.run with shell=True on user input enables command injection" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "properties": { "tags": ["CWE-78"] }
+            },
+            {
+              "id": "SSTI-002",
+              "name": "APITemplateInjection",
+              "shortDescription": { "text": "API endpoint renders user-supplied Jinja2 template without sandboxing" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": { "tags": ["CWE-94", "jinja2"] }
+            },
+            {
+              "id": "IDOR-001",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": { "text": "User data accessible by ID without authorization check" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "properties": { "tags": ["CWE-639"] }
+            },
+            {
+              "id": "OPEN-REDIRECT-001",
+              "name": "OpenRedirect",
+              "shortDescription": { "text": "Redirect to unvalidated user-supplied URL" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "properties": { "tags": ["CWE-601"] }
+            },
+            {
+              "id": "INFO-DISCLOSURE-001",
+              "name": "SensitiveDataInLogs",
+              "shortDescription": { "text": "Passwords logged in plaintext in login audit trail" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": { "tags": ["CWE-532"] }
+            },
+            {
+              "id": "LDAP-INJECTION-001",
+              "name": "LDAPFilterInjection",
+              "shortDescription": { "text": "User input interpolated directly into LDAP filter string" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/90.html",
+              "properties": { "tags": ["CWE-90"] }
+            },
+            {
+              "id": "SESSION-FIXATION-001",
+              "name": "SessionFixation",
+              "shortDescription": { "text": "Logout does not regenerate session ID or fully clear session data" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html",
+              "properties": { "tags": ["CWE-384"] }
+            },
+            {
+              "id": "WEAK-CRYPTO-001",
+              "name": "MD5SessionToken",
+              "shortDescription": { "text": "Session token generated with MD5 hash of credentials is predictable" },
+              "helpUri": "https://cwe.mitre.org/data/definitions/328.html",
+              "properties": { "tags": ["CWE-328", "CWE-330"] }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "RCE-001",
+          "level": "error",
+          "message": {
+            "text": "Flask application runs with debug=True, enabling the Werkzeug interactive debugger. In production this exposes a Python REPL to any client that can trigger an exception, allowing full remote code execution. The debugger PIN is often brute-forceable or derivable from /proc information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 307, "startColumn": 5 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL-001",
+          "level": "error",
+          "message": {
+            "text": "Werkzeug's request.files['file'].filename is used directly in os.path.join without calling werkzeug.utils.secure_filename(). A crafted filename like '../../../etc/cron.d/backdoor' escapes the upload directory and writes to arbitrary paths on the filesystem."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 193, "startColumn": 5 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL-002",
+          "level": "error",
+          "message": {
+            "text": "zipfile.ZipFile.extractall() is called without validating that member paths do not contain '..' components. A malicious archive with entries like '../../../../etc/cron.d/shell' will write files outside the extraction directory (zip slip)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 215, "startColumn": 13 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "UNRESTRICTED-UPLOAD-001",
+          "level": "warning",
+          "message": {
+            "text": "File upload endpoint performs no validation of file extension, MIME type, or content. Attackers can upload executable files (e.g. .py, .sh, .php) or overwrite application files."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 175, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET-001",
+          "level": "error",
+          "message": {
+            "text": "Flask secret_key is hardcoded as 'vulnerable_secret_key_123'. Any attacker who reads the source can forge arbitrary session cookies, impersonate users, and bypass authentication."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 26, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET-002",
+          "level": "error",
+          "message": {
+            "text": "JWT signing secret is hardcoded as 'super_secret_key_123'. Attackers can forge valid JWT tokens with arbitrary claims including admin role escalation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 31, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SESSION-MISCONFIG-001",
+          "level": "warning",
+          "message": {
+            "text": "SESSION_COOKIE_SECURE=False allows session cookies over plaintext HTTP (susceptible to interception). SESSION_COOKIE_HTTPONLY=False allows JavaScript access to session cookies (enables session theft via XSS)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 27, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SQLI-001",
+          "level": "error",
+          "message": {
+            "text": "User input 'username' is interpolated directly into SQL LIKE clause via f-string. An attacker can inject arbitrary SQL, e.g. username=' OR 1=1 -- to dump all users or extract data via UNION-based injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 185, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SQLI-002",
+          "level": "error",
+          "message": {
+            "text": "User-controlled 'order' parameter is interpolated into ORDER BY clause without validation, enabling boolean-based blind SQL injection or error-based data extraction."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 188, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "XSS-001",
+          "level": "error",
+          "message": {
+            "text": "User input is embedded via f-string into the template before passing to render_template_string, bypassing Jinja2 auto-escaping. Injection is possible in HTML body, attribute, JavaScript variable, and CSS property contexts — each requiring different payloads but all exploitable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 222, "startColumn": 5 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "RCE-002",
+          "level": "error",
+          "message": {
+            "text": "User-controlled 'hostname' and 'count' parameters are passed unsanitized to os.popen(). An attacker can chain commands using shell metacharacters (;, |, $(), ``) to execute arbitrary OS commands."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 260, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "RCE-003",
+          "level": "error",
+          "message": {
+            "text": "User-controlled 'hostname' is passed to os.system() which invokes a shell. Combined with the file path injection via temp_file variable, this creates two independent command injection vectors."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 264, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "LFI-001",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'file' parameter is passed directly to open() with no path validation or chroot. Attacker can read any file the process has access to, including /etc/passwd, /etc/shadow, application secrets, and source code."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 280, "startColumn": 13 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SSTI-001",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'template' parameter is passed directly to Jinja2 Template() constructor. Attacker can execute arbitrary Python code via template expressions like {{config.__class__.__init__.__globals__['os'].popen('id').read()}}."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 298, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SSRF-001",
+          "level": "error",
+          "message": {
+            "text": "User-supplied URL is passed directly to requests.get() with no scheme, host, or IP validation. Attacker can probe internal services (http://169.254.169.254 for cloud metadata, http://localhost:6379 for Redis, etc.) and exfiltrate data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 119, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "RCE-004",
+          "level": "error",
+          "message": {
+            "text": "Base64-decoded user input is deserialized with pickle.loads(). Pickle deserialization executes arbitrary Python code via __reduce__. This is a trivially exploitable RCE with no mitigation possible short of removing pickle entirely."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 153, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "RCE-005",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'code' string is passed directly to Python eval(). This allows execution of arbitrary Python expressions including __import__('os').system('rm -rf /')."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 243, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "RCE-006",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'command' string is executed via subprocess.run with shell=True. This is a direct, unrestricted command execution endpoint with no authentication required."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 163, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "SSTI-002",
+          "level": "error",
+          "message": {
+            "text": "API template render endpoint passes user-supplied template string to Jinja2 Template() with no sandboxing. Combined with user-controlled context dict, this enables full RCE via Jinja2 template expressions."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 256, "startColumn": 9 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "IDOR-001",
+          "level": "error",
+          "message": {
+            "text": "User profile endpoint returns full user data including sensitive fields based solely on the URL path user_id parameter. No session/token validation is performed, allowing enumeration and data theft of all user accounts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 82, "startColumn": 1 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT-001",
+          "level": "warning",
+          "message": {
+            "text": "The 'next' query parameter is passed directly to Flask redirect() with no URL validation. Attacker can craft phishing links like /api/redirect?next=https://evil.com that appear to originate from the trusted domain."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 233, "startColumn": 5 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE-001",
+          "level": "error",
+          "message": {
+            "text": "User passwords are logged in plaintext in two locations: logger.info() in app.py login handler and audit_logger in api.py login endpoint. This violates CWE-532 and exposes credentials to anyone with log access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 130, "startColumn": 9 }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 62, "startColumn": 13 }
+              }
+            }
+          ],
+          "properties": { "confidence": 1.0 }
+        },
+        {
+          "ruleId": "LDAP-INJECTION-001",
+          "level": "warning",
+          "message": {
+            "text": "User-supplied 'username' is interpolated directly into LDAP filter string via f-string. Attacker can inject LDAP metacharacters (*, ), |) to modify query logic, e.g. username=*)(objectClass=* to bypass filters."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "api.py" },
+                "region": { "startLine": 272, "startColumn": 5 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.8 }
+        },
+        {
+          "ruleId": "SESSION-FIXATION-001",
+          "level": "warning",
+          "message": {
+            "text": "Logout handler removes user data from session but does not call session.clear() or regenerate the session ID. The session_token value is also left intact. This enables session fixation and session reuse attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 166, "startColumn": 5 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.9 }
+        },
+        {
+          "ruleId": "WEAK-CRYPTO-001",
+          "level": "warning",
+          "message": {
+            "text": "Session token is generated as MD5(username+password). MD5 is cryptographically broken, and using credentials as input makes the token deterministic and predictable — an attacker who knows a user's credentials can compute their session token offline."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app.py" },
+                "region": { "startLine": 141, "startColumn": 13 }
+              }
+            }
+          ],
+          "properties": { "confidence": 0.95 }
+        }
+      ]
+    }
+  ]
+}
+```
