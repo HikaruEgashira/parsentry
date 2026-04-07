@@ -18,7 +18,7 @@ pub fn locate_repository(
 ) -> Result<(PathBuf, Option<String>)> {
     if target.contains('/') && !Path::new(target).exists() {
         let cache_base = dirs::cache_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
+            .expect("failed to resolve XDG cache directory")
             .join("parsentry")
             .join("repos");
         let dest = cache_base.join(target.replace('/', "__"));
@@ -89,7 +89,7 @@ pub fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBu
 }
 
 /// Build threat model prompt for Claude Code CLI.
-pub fn build_threat_model_cli_prompt(metadata: &RepoMetadata) -> String {
+pub fn build_threat_model_cli_prompt(metadata: &RepoMetadata, output: &Path) -> String {
     let repo_context = metadata.to_prompt_context();
     let languages: Vec<String> = metadata
         .languages
@@ -100,9 +100,10 @@ pub fn build_threat_model_cli_prompt(metadata: &RepoMetadata) -> String {
     let schema = serde_json::to_string_pretty(&threat_model_schema()).unwrap_or_default();
 
     format!(
-        "{system}\n\n{user}\n\nIMPORTANT: Return ONLY valid JSON matching this schema, with no markdown wrapping or extra text:\n{schema}",
+        "{system}\n\n{user}\n\nWrite the JSON output to: {output}\nWrite ONLY valid JSON matching this schema. No markdown, no code fences, no explanation.\n{schema}",
         system = THREAT_MODEL_SYSTEM_PROMPT,
         user = user_prompt,
+        output = output.display(),
         schema = schema,
     )
 }

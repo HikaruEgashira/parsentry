@@ -11,11 +11,11 @@ impl RootCommand {
         let args = Args::parse();
 
         match args.command {
-            Commands::Model { target } => {
-                run_model_command(&target).await
+            Commands::Model { target, output } => {
+                run_model_command(&target, output.as_deref()).await
             },
-            Commands::Scan { threat_model, target, output_dir, diff_base, filter_lang } => {
-                run_scan_command(&threat_model, &target, output_dir.as_deref(), diff_base.as_deref(), filter_lang.as_deref()).await
+            Commands::Scan { target, threat_model, output_dir, diff_base, filter_lang } => {
+                run_scan_command(threat_model.as_deref(), &target, output_dir.as_deref(), diff_base.as_deref(), filter_lang.as_deref()).await
             },
             Commands::Merge { dir, output, baseline } => {
                 use parsentry_reports::merge_sarif_dir;

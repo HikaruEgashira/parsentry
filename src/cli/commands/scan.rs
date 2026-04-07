@@ -31,7 +31,7 @@ fn write_cache_key(output_dir: &Path, sp: &SurfacePrompt) -> Result<()> {
 }
 
 pub async fn run_scan_command(
-    threat_model_source: &str,
+    threat_model_path: Option<&Path>,
     target: &str,
     output_dir: Option<&Path>,
     _diff_base: Option<&str>,
@@ -52,20 +52,16 @@ pub async fn run_scan_command(
         ),
     );
 
-    // Phase 2: Load threat model (from stdin or file)
-    let json = if threat_model_source == "-" {
-        use std::io::Read;
-        let mut buf = String::new();
-        std::io::stdin().read_to_string(&mut buf)?;
-        buf
-    } else {
-        std::fs::read_to_string(threat_model_source)?
-    };
-    // Strip markdown code fences that LLMs often wrap around JSON
-    let json = json.trim();
-    let json = json.strip_prefix("```json").or_else(|| json.strip_prefix("```")).unwrap_or(json);
-    let json = json.strip_suffix("```").unwrap_or(json);
-    let threat_model: ThreatModel = serde_json::from_str(json.trim())?;
+    // Phase 2: Load threat model from file (default: XDG cache)
+    let default_path = dirs::cache_dir()
+        .expect("failed to resolve XDG cache directory")
+        .join("parsentry")
+        .join("model.json");
+    let threat_model_path = threat_model_path.unwrap_or(&default_path);
+    let json = std::fs::read_to_string(threat_model_path)
+        .map_err(|e| anyhow::anyhow!("Failed to read threat model {}: {}", threat_model_path.display(), e))?;
+    let threat_model: ThreatModel = serde_json::from_str(&json)
+        .map_err(|e| anyhow::anyhow!("Invalid threat model JSON in {}: {}", threat_model_path.display(), e))?;
     printer.status(
         "Loaded",
         &format!("threat model with {} surfaces", threat_model.total_surfaces()),

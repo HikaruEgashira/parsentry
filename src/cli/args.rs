@@ -34,15 +34,20 @@ pub enum Commands {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         #[arg(default_value = ".")]
         target: String,
+
+        /// Output path for threat model JSON (embedded in prompt)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
     },
     /// Generate per-surface analysis prompts from a threat model
     Scan {
-        /// Path to threat model JSON file, or "-" for stdin
-        threat_model: String,
-
         /// Target to analyze: local path or GitHub repository (owner/repo)
         #[arg(default_value = ".")]
         target: String,
+
+        /// Path to threat model JSON file (default: XDG cache)
+        #[arg(short, long)]
+        threat_model: Option<PathBuf>,
 
         /// Output directory for prompt files
         #[arg(long)]
