@@ -1,36 +1,174 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
             {
-              "id": "OPEN_REDIRECT",
-              "name": "OpenRedirect",
-              "shortDescription": { "text": "Open Redirect" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
+              "id": "SSTI",
+              "name": "ServerSideTemplateInjection",
+              "shortDescription": {
+                "text": "Server-Side Template Injection via unsandboxed Jinja2 Template()"
+              },
+              "fullDescription": {
+                "text": "User-controlled template strings passed directly to jinja2.Template() without sandboxing allow arbitrary code execution. Attackers can use Jinja2 template syntax to access Python internals, traverse the MRO chain, and invoke os.system() or similar."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/18-Testing_for_Server-side_Template_Injection"
+            },
+            {
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": {
+                "text": "Remote Code Execution through template sandbox escape"
+              },
+              "fullDescription": {
+                "text": "Unsandboxed Jinja2 Template rendering with attacker-supplied template and context enables full remote code execution via MRO traversal (e.g., {{''.__class__.__mro__[1].__subclasses__()}})."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html"
+            },
+            {
+              "id": "INJECTION",
+              "name": "UnsafeContextInjection",
+              "shortDescription": {
+                "text": "Attacker-controlled context dictionary passed to template render"
+              },
+              "fullDescription": {
+                "text": "The context object is taken directly from user JSON input and unpacked into the template render call with **context, allowing the attacker to shadow built-ins and inject arbitrary objects into the template namespace."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/915.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "OPEN_REDIRECT",
-          "level": "warning",
-          "message": { "text": "User-supplied 'next' query parameter is passed directly to Flask's redirect() without any URL validation or domain allowlisting. An attacker can craft a link such as /api/redirect?next=https://evil.com to redirect users to a malicious site via a trusted domain, enabling credential phishing and OAuth token theft." },
-          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 309, "endLine": 315 } } }],
-          "properties": { "confidence": 1.0 }
+          "ruleId": "SSTI",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'template' field is passed directly to jinja2.Template() without sandboxing. An attacker can inject Jinja2 expressions such as {{config.__class__.__init__.__globals__['os'].popen('id').read()}} to achieve arbitrary command execution on the server."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 295,
+                  "endLine": 296,
+                  "snippet": {
+                    "text": "        t = Template(template)\n        rendered = t.render(**context)"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "render_template",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "attack_vector": "network",
+            "exploit_example": "POST /api/template/render {\"template\": \"{{''.__class__.__mro__[1].__subclasses__()[396]('id',shell=True,stdout=-1).communicate()[0].decode()}}\", \"context\": {}}"
+          }
         },
         {
-          "ruleId": "OPEN_REDIRECT",
+          "ruleId": "RCE",
+          "level": "error",
+          "message": {
+            "text": "Jinja2 Template() without SandboxedEnvironment permits MRO traversal and subclass enumeration. The default Jinja2 environment does not restrict access to Python internals, enabling full OS command execution from within the template."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 292,
+                  "endLine": 296,
+                  "snippet": {
+                    "text": "        from jinja2 import Template\n        \n        # Vulnerable: No sandboxing\n        t = Template(template)\n        rendered = t.render(**context)"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "render_template",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "attack_vector": "network",
+            "remediation": "Replace jinja2.Template with jinja2.sandbox.SandboxedEnvironment().from_string(template) and apply strict input validation on both template and context."
+          }
+        },
+        {
+          "ruleId": "INJECTION",
           "level": "warning",
-          "message": { "text": "No validation is performed to ensure the redirect target is a relative path or belongs to a trusted domain allowlist. The endpoint accepts arbitrary schemes (javascript:, data:, https://) enabling both phishing redirects and potential XSS via javascript: URIs in older browsers." },
-          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 311 } } }],
-          "properties": { "confidence": 0.9 }
+          "message": {
+            "text": "The 'context' value from user JSON is unpacked with **context into template.render(). This allows an attacker to overwrite template built-ins or inject callable objects into the template namespace, compounding the SSTI risk."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 288,
+                  "endLine": 296,
+                  "snippet": {
+                    "text": "    template = data.get('template', '')\n    context = data.get('context', {})\n    \n    try:\n        # Vulnerable: Template injection via string formatting\n        from jinja2 import Template\n        \n        # Vulnerable: No sandboxing\n        t = Template(template)\n        rendered = t.render(**context)"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "render_template",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "attack_vector": "network",
+            "remediation": "Whitelist allowed context keys and values; never accept arbitrary dicts from untrusted input as template context."
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask API blueprint containing POST /api/template/render endpoint"
+          }
         }
       ]
     }

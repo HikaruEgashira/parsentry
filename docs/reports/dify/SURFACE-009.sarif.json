@@ -9,110 +9,85 @@
           "version": "0.1.0",
           "rules": [
             {
+              "id": "AUTH-BYPASS",
+              "name": "MissingAuthentication",
+              "shortDescription": {
+                "text": "MCP endpoint lacks authentication, allowing unauthenticated tool invocation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
               "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
               "shortDescription": {
                 "text": "Internal error details leaked in JSON-RPC error responses"
               },
-              "fullDescription": {
-                "text": "Exception messages are included verbatim in JSON-RPC error responses via 'Internal server error: ' + str(e). This leaks internal implementation details such as stack traces, database errors, and file paths to unauthenticated callers."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
             },
             {
-              "id": "AUTH-BYPASS",
+              "id": "RCE",
+              "name": "UnrestrictedToolExecution",
               "shortDescription": {
-                "text": "MCP endpoint lacks authentication - server_code is sole access control"
+                "text": "Arbitrary tool invocation via unauthenticated MCP CallToolRequest"
               },
-              "fullDescription": {
-                "text": "The /mcp/server/<server_code>/mcp endpoint requires only a server_code path parameter for access. There is no authentication header, API key, or session token validation. If server_code values are predictable or leaked, any unauthenticated attacker can invoke MCP tools and trigger app generation."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
-              "id": "INJECTION",
-              "shortDescription": {
-                "text": "Unvalidated tool arguments passed directly to app generation service"
-              },
-              "fullDescription": {
-                "text": "In handle_call_tool(), user-supplied arguments from the MCP CallToolRequest are passed directly to AppGenerateService.generate() via prepare_tool_arguments() without sanitization or validation against the declared schema. An attacker can inject arbitrary key-value pairs into the inputs dict, potentially manipulating app behavior or triggering unexpected code paths."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
-              "id": "SESSION-HIJACK",
-              "shortDescription": {
-                "text": "End user identity tied to server ID without client authentication"
-              },
-              "fullDescription": {
-                "text": "EndUser lookup uses only tenant_id, mcp_server_id, and type='mcp'. On InitializeRequest, a new EndUser is created with client-supplied clientInfo.name without verifying the caller's identity. Subsequent requests reuse this EndUser for all callers sharing the same server_code, enabling session hijacking where one client's conversation context is accessible to another."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html"
             },
             {
               "id": "SSRF",
+              "name": "ServerSideRequestForgery",
               "shortDescription": {
-                "text": "OAuth metadata discovery URLs constructed from attacker-influenced input"
+                "text": "OAuth discovery URLs derived from user-controlled server URL enabling SSRF"
               },
-              "fullDescription": {
-                "text": "In build_protected_resource_metadata_discovery_urls(), the www_auth_resource_metadata_url parameter (originating from a WWW-Authenticate header returned by an external MCP server) is used to construct discovery URLs. While ssrf_proxy is used for the HTTP requests, the URL normalization logic allows path-based URLs to be joined with the base URL, potentially enabling SSRF to internal services if the MCP server URL or WWW-Authenticate header is attacker-controlled."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "OPEN-REDIRECT",
+              "id": "ENUM",
+              "name": "ResourceEnumeration",
               "shortDescription": {
-                "text": "OAuth redirect_url used without validation in authorization flow"
+                "text": "Differential error responses enable server code enumeration"
               },
-              "fullDescription": {
-                "text": "In start_authorization(), the redirect_url parameter is included in the OAuth authorization request without validating it against a whitelist. If an attacker can influence the redirect_url (e.g., via provider configuration manipulation), they can redirect the OAuth callback to a malicious domain, capturing authorization codes."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/204.html"
             },
             {
-              "id": "SENSITIVE-DATA-EXPOSURE",
+              "id": "AUTH-BYPASS-USER-CREATION",
+              "name": "UnauthenticatedUserCreation",
               "shortDescription": {
-                "text": "OAuth secrets stored in Redis without encryption"
+                "text": "EndUser records created from unauthenticated InitializeRequest without verification"
               },
-              "fullDescription": {
-                "text": "The _create_secure_redis_state function stores sensitive OAuth state data including code_verifier, client_information (with client_secret), and full OAuth metadata in Redis as plaintext JSON. If Redis is compromised or misconfigured (e.g., no auth, exposed to network), an attacker can extract these secrets and complete the OAuth flow to obtain access tokens."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
-            },
-            {
-              "id": "VALIDATION-BYPASS",
-              "shortDescription": {
-                "text": "Variable type extraction uses first dict key as fallback"
-              },
-              "fullDescription": {
-                "text": "In _create_variable_entity(), the variable type is determined by 'item.get(\"type\", \"\") or list(item.keys())[0]'. If the 'type' field is empty or missing, the first key of the dict is used as the type. An attacker who can influence the user input form structure could inject an unexpected type, bypassing type-based validation in convert_input_form_to_parameters."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/287.html"
             }
           ]
         }
       },
       "results": [
         {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The MCP endpoint POST /mcp/server/<server_code>/mcp has no authentication decorator or middleware. The only access control is knowledge of the server_code string. Any party that discovers or brute-forces a valid server_code can invoke all MCP methods including tool execution. This violates CWE-306 (Missing Authentication for Critical Function)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
           "ruleId": "INFO-DISCLOSURE",
           "level": "warning",
           "message": {
-            "text": "Exception message is leaked to the client in the JSON-RPC error response. The pattern 'Internal server error: ' + str(e) exposes internal details that could aid an attacker in crafting further attacks."
+            "text": "In handle_mcp_request(), the generic Exception handler returns 'Internal server error: ' + str(e) in the JSON-RPC error response. This leaks internal exception details (stack traces, file paths, SQL errors) to unauthenticated callers. The ValueError handler similarly exposes str(e). CWE-209 (Generation of Error Message Containing Sensitive Information)."
           },
           "locations": [
             {
@@ -121,8 +96,8 @@
                   "uri": "api/core/mcp/server/streamable_http.py"
                 },
                 "region": {
-                  "startLine": 819,
-                  "startColumn": 9
+                  "startLine": 72,
+                  "startColumn": 5
                 }
               }
             }
@@ -132,33 +107,10 @@
           }
         },
         {
-          "ruleId": "AUTH-BYPASS",
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "The MCP endpoint at /mcp/server/<server_code>/mcp has no authentication mechanism. Access is controlled solely by knowledge of the server_code. The endpoint directly processes tool invocations (including CallToolRequest) which trigger app generation, making this a high-impact unauthenticated endpoint."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/mcp/mcp.py"
-                },
-                "region": {
-                  "startLine": 561,
-                  "startColumn": 5
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "INJECTION",
-          "level": "error",
-          "message": {
-            "text": "User-supplied arguments from CallToolRequest.params.arguments are passed through prepare_tool_arguments() to AppGenerateService.generate() without validation against the declared parameter schema. The arguments dict is used directly as 'inputs', allowing injection of arbitrary parameters that the app may process unsafely."
+            "text": "handle_call_tool() passes user-supplied arguments from the unauthenticated MCP CallToolRequest directly to AppGenerateService.generate() with InvokeFrom.SERVICE_API privileges. Since the MCP endpoint lacks authentication, an attacker can trigger arbitrary app execution including workflow runs, LLM invocations, and tool calls. The arguments dict is only minimally validated (mode-based key extraction) with no sanitization. Combined with AUTH-BYPASS, this enables remote code execution through tool invocation."
           },
           "locations": [
             {
@@ -167,31 +119,8 @@
                   "uri": "api/core/mcp/server/streamable_http.py"
                 },
                 "region": {
-                  "startLine": 870,
-                  "startColumn": 9
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "SESSION-HIJACK",
-          "level": "error",
-          "message": {
-            "text": "All MCP clients connecting to the same server_code share a single EndUser identity (looked up by tenant_id + mcp_server_id + type='mcp'). There is no per-client session isolation. A second client connecting to the same MCP server inherits the conversation context of the first client, enabling cross-client data leakage."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/mcp/mcp.py"
-                },
-                "region": {
-                  "startLine": 737,
-                  "startColumn": 9
+                  "startLine": 109,
+                  "startColumn": 1
                 }
               }
             }
@@ -204,7 +133,7 @@
           "ruleId": "SSRF",
           "level": "warning",
           "message": {
-            "text": "The www_auth_resource_metadata_url parameter from an external WWW-Authenticate header is used to construct discovery URLs in build_protected_resource_metadata_discovery_urls(). A malicious MCP server could return a crafted WWW-Authenticate header pointing to internal services. Although ssrf_proxy provides some protection, the URL normalization logic may allow bypass via path-based URLs."
+            "text": "In auth_flow.py, discover_protected_resource_metadata() and discover_oauth_authorization_server_metadata() construct discovery URLs from server_url which may be partially user-controlled (via MCP provider configuration). The functions build multiple fallback URLs including well-known paths and make HTTP GET requests via ssrf_proxy. While ssrf_proxy provides some SSRF protection, the URL construction logic in build_protected_resource_metadata_discovery_urls() accepts a www_auth_resource_metadata_url parameter that undergoes normalization but could still be manipulated to target internal services if the URL validation is bypassed."
           },
           "locations": [
             {
@@ -213,8 +142,8 @@
                   "uri": "api/core/mcp/auth/auth_flow.py"
                 },
                 "region": {
-                  "startLine": 2012,
-                  "startColumn": 9
+                  "startLine": 38,
+                  "startColumn": 1
                 }
               }
             }
@@ -224,56 +153,10 @@
           }
         },
         {
-          "ruleId": "OPEN-REDIRECT",
-          "level": "warning",
-          "message": {
-            "text": "The redirect_url parameter in start_authorization() is passed directly into the OAuth authorization URL without validation against an allowed-list of redirect URIs. If an attacker can manipulate the provider's redirect_url configuration, they can redirect OAuth callbacks to a malicious domain and capture authorization codes."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/mcp/auth/auth_flow.py"
-                },
-                "region": {
-                  "startLine": 2313,
-                  "startColumn": 5
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.6
-          }
-        },
-        {
-          "ruleId": "SENSITIVE-DATA-EXPOSURE",
-          "level": "warning",
-          "message": {
-            "text": "OAuth state data containing code_verifier, client_information (potentially including client_secret), redirect_uri, and full OAuth metadata is stored in Redis as plaintext JSON via model_dump_json(). If Redis access is compromised, an attacker can extract these secrets to complete OAuth flows and obtain access tokens for MCP servers."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/mcp/auth/auth_flow.py"
-                },
-                "region": {
-                  "startLine": 2157,
-                  "startColumn": 5
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "VALIDATION-BYPASS",
+          "ruleId": "ENUM",
           "level": "note",
           "message": {
-            "text": "In _create_variable_entity(), when item.get('type') is falsy, list(item.keys())[0] is used as the variable type. This fallback logic relies on dict key ordering and could produce unexpected types if the input form structure is manipulated, potentially bypassing type-based filtering in convert_input_form_to_parameters (e.g., skipping FILE/FILE_LIST type exclusion)."
+            "text": "The _get_mcp_server_and_app() and _validate_server_status() methods return distinct error messages: 'Server Not Found', 'App Not Found', and 'Server is not active'. These differential responses allow an unauthenticated attacker to enumerate valid server_code values and determine whether associated apps exist. CWE-204 (Observable Response Discrepancy)."
           },
           "locations": [
             {
@@ -282,14 +165,37 @@
                   "uri": "api/controllers/mcp/mcp.py"
                 },
                 "region": {
-                  "startLine": 676,
+                  "startLine": 76,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS-USER-CREATION",
+          "level": "error",
+          "message": {
+            "text": "In _handle_mcp_request(), when an InitializeRequest is received and no end_user exists, a new EndUser record is created using client-supplied clientInfo.name and clientInfo.version with no authentication. An attacker can create arbitrary EndUser records by sending InitializeRequest messages with crafted client names to any active MCP server. The client_name is formatted as '{name}@{version}' and stored directly without sanitization, enabling potential injection of misleading user identities."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 164,
                   "startColumn": 9
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.5
+            "confidence": 0.9
           }
         }
       ]

@@ -10,123 +10,87 @@
           "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "PLAINTEXT-PASSWORD",
+              "id": "BROKEN-AUTH",
               "name": "PlaintextPasswordStorage",
               "shortDescription": {
                 "text": "Password stored in plaintext without hashing"
               },
               "fullDescription": {
-                "text": "The addUser function stores user passwords in plaintext. The bcrypt.hashSync call is commented out, meaning passwords are inserted directly into MongoDB without any cryptographic hashing. An attacker who gains read access to the database obtains all user credentials immediately."
+                "text": "The addUser function stores the user-supplied password directly in the database document without applying any hashing algorithm. The bcrypt hashing code is commented out. An attacker who gains read access to the database obtains all user passwords in cleartext."
               },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/",
               "properties": {
-                "tags": ["security", "CWE-256", "CWE-522", "A02:2021"],
-                "precision": "very-high"
+                "tags": ["security", "CWE-256", "OWASP-A02"]
               }
             },
             {
-              "id": "WEAK-PASSWORD-POLICY",
-              "name": "WeakPasswordPolicy",
+              "id": "BROKEN-AUTH-COMPARE",
+              "name": "PlaintextPasswordComparison",
               "shortDescription": {
-                "text": "Password validation accepts any 1-20 character string"
+                "text": "Password validated via direct string comparison instead of bcrypt"
               },
               "fullDescription": {
-                "text": "The password regex /^.{1,20}$/ accepts any string of 1-20 characters with no complexity requirements. Single-character passwords, all-numeric passwords, and common dictionary words all pass validation. The commented-out fix shows the intended policy requiring uppercase, lowercase, and digits with minimum 8 characters."
+                "text": "The validateLogin function compares passwords using strict equality (===) rather than bcrypt.compareSync. This confirms passwords are stored and compared in plaintext, making credential theft trivial upon database compromise."
               },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#password-complexity",
+              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/",
               "properties": {
-                "tags": ["security", "CWE-521", "A07:2021"],
-                "precision": "very-high"
+                "tags": ["security", "CWE-916", "OWASP-A02"]
               }
             },
             {
-              "id": "NOSQL-INJECTION",
-              "name": "NoSQLInjection",
-              "shortDescription": {
-                "text": "Unsanitized user input passed to MongoDB findOne query"
-              },
-              "fullDescription": {
-                "text": "The userName parameter from req.body is passed directly to MongoDB findOne without type checking or sanitization. An attacker can submit {\"userName\": {\"$gt\": \"\"}} as the userName field to bypass authentication or enumerate users. Express body-parser with JSON content-type will parse nested objects from request body."
-              },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
-              "properties": {
-                "tags": ["security", "CWE-943", "A03:2021"],
-                "precision": "high"
-              }
-            },
-            {
-              "id": "NO-RATE-LIMIT",
-              "name": "MissingRateLimiting",
-              "shortDescription": {
-                "text": "No rate limiting on signup endpoint"
-              },
-              "fullDescription": {
-                "text": "The POST /signup endpoint has no rate limiting middleware. An attacker can automate mass account creation or use rapid requests to enumerate existing usernames via the 'User name already in use' error message. This enables both denial-of-service through database pollution and user enumeration."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "CWE-770", "CWE-307", "A04:2021"],
-                "precision": "high"
-              }
-            },
-            {
-              "id": "USER-ENUMERATION",
-              "name": "UserEnumeration",
-              "shortDescription": {
-                "text": "Signup reveals whether a username already exists"
-              },
-              "fullDescription": {
-                "text": "When a duplicate username is submitted, the signup handler returns a distinct error message 'User name already in use. Please choose another'. Combined with the lack of rate limiting and CAPTCHA, this allows automated enumeration of valid usernames in the system."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#authentication-responses",
-              "properties": {
-                "tags": ["security", "CWE-204", "A01:2021"],
-                "precision": "high"
-              }
-            },
-            {
-              "id": "DEPRECATED-CRYPTO-LIB",
+              "id": "DEPRECATED-CRYPTO",
               "name": "DeprecatedCryptographyLibrary",
               "shortDescription": {
-                "text": "Dependency on deprecated bcrypt-nodejs 0.0.3"
+                "text": "Use of deprecated and unmaintained bcrypt-nodejs library"
               },
               "fullDescription": {
-                "text": "The project depends on bcrypt-nodejs version 0.0.3, which is deprecated and unmaintained. Even if the bcrypt hashing code were uncommented, this library has known issues and should be replaced with 'bcrypt' or 'bcryptjs'. Using deprecated cryptographic libraries increases risk of unpatched vulnerabilities."
+                "text": "The module imports bcrypt-nodejs which has been deprecated since 2017 and contains known vulnerabilities. Even if the commented-out hashing code were re-enabled, it would use an insecure library. The project should migrate to 'bcrypt' or 'bcryptjs'."
               },
               "helpUri": "https://www.npmjs.com/package/bcrypt-nodejs",
               "properties": {
-                "tags": ["security", "CWE-327", "A06:2021"],
-                "precision": "very-high"
+                "tags": ["security", "CWE-327", "supply-chain"]
               }
             },
             {
-              "id": "PLAINTEXT-PASSWORD-COMPARISON",
-              "name": "PlaintextPasswordComparison",
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
               "shortDescription": {
-                "text": "Login validates passwords via plaintext string comparison"
+                "text": "MongoDB query built from unsanitized user input enables NoSQL injection"
               },
               "fullDescription": {
-                "text": "The validateLogin function compares passwords using direct string equality (fromDB === fromUser) instead of bcrypt.compareSync. This confirms passwords are stored and compared in plaintext, and the comparison is also vulnerable to timing attacks since string equality short-circuits on first differing character."
+                "text": "The userName parameter received from the HTTP request is passed directly into a MongoDB findOne query without validation or sanitization. An attacker can submit a JSON object (e.g., {\"$gt\": \"\"}) as the userName field to bypass authentication or enumerate users."
               },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
               "properties": {
-                "tags": ["security", "CWE-256", "CWE-208", "A02:2021"],
-                "precision": "very-high"
+                "tags": ["security", "CWE-943", "OWASP-A03"]
               }
             },
             {
-              "id": "SESSION-FIXATION",
-              "name": "SessionFixationOnLogin",
+              "id": "INPUT-VALIDATION",
+              "name": "MissingInputValidation",
               "shortDescription": {
-                "text": "Session not regenerated on login allowing session fixation"
+                "text": "No input validation or sanitization on user registration fields"
               },
               "fullDescription": {
-                "text": "The handleLoginRequest sets req.session.userId without calling req.session.regenerate(). The code comments explicitly document this as an intentional vulnerability. An attacker who obtains a session ID before login (e.g., via network sniffing on HTTP) can hijack the session after the victim authenticates."
+                "text": "The addUser function accepts userName, firstName, lastName, password, and email parameters directly from the request without any validation for type, length, format, or content. This allows injection of arbitrary data types (objects instead of strings), excessively long values, or malicious content."
               },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#renew-the-session-id-after-any-privilege-level-change",
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/",
               "properties": {
-                "tags": ["security", "CWE-384", "A07:2021"],
-                "precision": "very-high"
+                "tags": ["security", "CWE-20", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "CSRF",
+              "name": "MissingCSRFProtection",
+              "shortDescription": {
+                "text": "POST /signup endpoint lacks CSRF token validation"
+              },
+              "fullDescription": {
+                "text": "The POST /signup route is registered without any CSRF protection middleware. An attacker can craft a malicious page that submits a signup form on behalf of a victim, potentially creating accounts or consuming resources."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "CWE-352", "OWASP-A01"]
               }
             }
           ]
@@ -134,115 +98,72 @@
       },
       "results": [
         {
-          "ruleId": "PLAINTEXT-PASSWORD",
+          "ruleId": "BROKEN-AUTH",
           "level": "error",
           "message": {
-            "text": "Password is stored in plaintext in MongoDB. The bcrypt.hashSync call on line 542 is commented out, so the raw password from the request is inserted directly into the user document. Any database breach exposes all user credentials."
+            "text": "Password is stored in plaintext in the MongoDB document. The bcrypt hashing code on line 29 is commented out. Any database compromise exposes all user credentials."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 535,
+                  "startLine": 25,
                   "startColumn": 13,
-                  "endLine": 546,
-                  "endColumn": 14
+                  "endLine": 25,
+                  "endColumn": 21
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 1.0
+            "confidence": 0.99
           }
         },
         {
-          "ruleId": "WEAK-PASSWORD-POLICY",
+          "ruleId": "BROKEN-AUTH-COMPARE",
           "level": "error",
           "message": {
-            "text": "Password validation regex PASS_RE = /^.{1,20}$/ accepts any string of 1 to 20 characters. No minimum length, no complexity requirements. A password of 'a' passes validation. The commented-out fix at line 381 shows the intended stricter regex."
+            "text": "Password comparison uses direct string equality (fromDB === fromUser) instead of bcrypt.compareSync. This confirms the authentication system relies entirely on plaintext passwords."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/session.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 377,
-                  "startColumn": 9,
-                  "endLine": 377,
-                  "endColumn": 38
+                  "startLine": 61,
+                  "startColumn": 20,
+                  "endLine": 61,
+                  "endColumn": 40
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 1.0
+            "confidence": 0.99
           }
         },
         {
-          "ruleId": "NOSQL-INJECTION",
-          "level": "error",
-          "message": {
-            "text": "userName from req.body is passed unsanitized to usersCol.findOne({userName: userName}). If body-parser parses JSON, an attacker can send {\"userName\": {\"$gt\": \"\"}} to match any user. This affects both getUserByUserName (signup duplicate check) and validateLogin (authentication)."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 619,
-                  "startColumn": 9,
-                  "endLine": 621,
-                  "endColumn": 22
-                }
-              }
-            },
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 606,
-                  "startColumn": 9,
-                  "endLine": 608,
-                  "endColumn": 32
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "NO-RATE-LIMIT",
+          "ruleId": "DEPRECATED-CRYPTO",
           "level": "warning",
           "message": {
-            "text": "POST /signup has no rate limiting middleware. Route is registered at app.post('/signup', sessionHandler.handleSignup) with no throttling. Enables automated mass account creation and username enumeration."
+            "text": "The bcrypt-nodejs package is deprecated and unmaintained. Even if hashing were enabled, using this library introduces supply-chain risk and potential cryptographic weaknesses. Migrate to 'bcrypt' or 'bcryptjs'."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/index.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 181,
-                  "startColumn": 5,
-                  "endLine": 181,
-                  "endColumn": 52
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 40
                 }
               }
             }
@@ -252,107 +173,78 @@
           }
         },
         {
-          "ruleId": "USER-ENUMERATION",
-          "level": "warning",
+          "ruleId": "NOSQLI",
+          "level": "error",
           "message": {
-            "text": "Signup handler returns 'User name already in use. Please choose another' when a duplicate username is submitted, allowing attackers to enumerate valid usernames. Combined with absent rate limiting, automated enumeration is trivial."
+            "text": "The userName parameter is passed directly into MongoDB findOne() without type checking or sanitization. An attacker can submit {\"userName\": {\"$gt\": \"\"}} to bypass authentication and log in as the first user in the collection."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/session.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 446,
-                  "startColumn": 21,
-                  "endLine": 446,
-                  "endColumn": 84
+                  "startLine": 91,
+                  "startColumn": 9,
+                  "endLine": 93,
+                  "endColumn": 11
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.9
+            "confidence": 0.90
           }
         },
         {
-          "ruleId": "DEPRECATED-CRYPTO-LIB",
+          "ruleId": "INPUT-VALIDATION",
           "level": "warning",
           "message": {
-            "text": "Project depends on bcrypt-nodejs@0.0.3, a deprecated and unmaintained package. Even if password hashing were enabled, the underlying library may contain unpatched security issues. Replace with 'bcrypt' (native) or 'bcryptjs' (pure JS)."
+            "text": "The addUser function (line 17) accepts userName, firstName, lastName, password, and email from untrusted request input without any type, length, or format validation. This enables injection of arbitrary data types into MongoDB documents."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "package.json",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 9,
+                  "startLine": 17,
                   "startColumn": 5,
-                  "endLine": 9,
-                  "endColumn": 30
+                  "endLine": 17,
+                  "endColumn": 79
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 1.0
+            "confidence": 0.85
           }
         },
         {
-          "ruleId": "PLAINTEXT-PASSWORD-COMPARISON",
-          "level": "error",
+          "ruleId": "CSRF",
+          "level": "warning",
           "message": {
-            "text": "validateLogin compares passwords with direct string equality (fromDB === fromUser) instead of bcrypt.compareSync. Confirms passwords are stored in plaintext and comparison is vulnerable to timing side-channel attacks."
+            "text": "POST /signup route is registered without CSRF protection middleware. An attacker can forge cross-site signup requests to create accounts or exhaust resources."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/routes/index.js"
                 },
                 "region": {
-                  "startLine": 576,
-                  "startColumn": 13,
-                  "endLine": 576,
-                  "endColumn": 39
+                  "startLine": 38,
+                  "startColumn": 5,
+                  "endLine": 38,
+                  "endColumn": 52
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 1.0
-          }
-        },
-        {
-          "ruleId": "SESSION-FIXATION",
-          "level": "error",
-          "message": {
-            "text": "handleLoginRequest assigns req.session.userId without calling req.session.regenerate(). The session ID remains the same before and after authentication, enabling session fixation attacks. The code comments on lines 337-348 explicitly acknowledge this as a known vulnerability."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/session.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 349,
-                  "startColumn": 13,
-                  "endLine": 349,
-                  "endColumn": 44
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 1.0
+            "confidence": 0.80
           }
         }
       ]

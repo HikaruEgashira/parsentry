@@ -7,70 +7,39 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
               "id": "SSRF",
               "name": "ServerSideRequestForgery",
               "shortDescription": {
-                "text": "Server-Side Request Forgery via remote URL file fetch"
+                "text": "Server-Side Request Forgery allowing internal network probing or cloud metadata access"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "UNRESTRICTED-UPLOAD",
-              "name": "UnrestrictedFileUpload",
+              "id": "SSRF-SCHEME",
+              "name": "SSRFSchemeBypass",
               "shortDescription": {
-                "text": "Unrestricted file type upload allows dangerous file types"
+                "text": "Missing URL scheme validation allows non-HTTP protocols (file://, gopher://) to bypass SSRF proxy"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "SQLI",
-              "name": "SQLInjection",
+              "id": "TOCTOU",
+              "name": "TimeOfCheckTimeOfUse",
               "shortDescription": {
-                "text": "SQL Injection via unsanitized string interpolation in SQL queries"
+                "text": "Double-fetch race condition between HEAD validation and GET download"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/367.html"
             },
             {
-              "id": "PATH-TRAVERSAL",
-              "name": "PathTraversal",
+              "id": "INFO-LEAK",
+              "name": "InformationDisclosure",
               "shortDescription": {
-                "text": "Path traversal via user-controlled filename in storage operations"
+                "text": "Error messages expose internal URL and response content to the client"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
-            },
-            {
-              "id": "AUTHZ-BYPASS",
-              "name": "AuthorizationBypass",
-              "shortDescription": {
-                "text": "Authorization bypass through tool file validation exemption"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/863.html"
-            },
-            {
-              "id": "SENSITIVE-DATA",
-              "name": "SensitiveDataExposure",
-              "shortDescription": {
-                "text": "Sensitive credentials stored in Redis without encryption"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/312.html"
-            },
-            {
-              "id": "WEAK-HASH",
-              "name": "WeakHashAlgorithm",
-              "shortDescription": {
-                "text": "Use of MD5 for file integrity checksum"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/328.html"
-            },
-            {
-              "id": "PERM-BYPASS",
-              "name": "PermissionBypass",
-              "shortDescription": {
-                "text": "Permission check fallback grants access on failure"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/280.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
             }
           ]
         }
@@ -78,232 +47,194 @@
       "results": [
         {
           "ruleId": "SSRF",
-          "level": "error",
-          "message": {
-            "text": "The _build_from_remote_url function accepts a user-supplied URL from the mapping payload (mapping.get('url') or mapping.get('remote_url')) and passes it to get_remote_file_info(), which issues an HTTP HEAD request via ssrf_proxy.head(). While an SSRF proxy is used, the URL itself is not validated against allowlists or scheme restrictions before being passed. If the ssrf_proxy configuration is misconfigured or bypassed, an attacker could probe internal network services."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/factories/file_factory/builders.py"
-                },
-                "region": {
-                  "startLine": 1394,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "UNRESTRICTED-UPLOAD",
-          "level": "error",
-          "message": {
-            "text": "The PluginUploadFileApi.post endpoint accepts any file uploaded by a plugin with signature verification, but does not enforce an allowlist of permitted MIME types or file extensions. The file.mimetype is taken directly from the client-provided Content-Type header without server-side validation. An attacker who compromises the signing mechanism (or a malicious plugin) could upload executable files (e.g., .html, .svg with embedded scripts, .exe) that may be served to other users."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/files/upload.py"
-                },
-                "region": {
-                  "startLine": 909,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "In volume_permissions.py, the _get_table_permissions method constructs a SQL query using f-string interpolation with the table_name variable: 'SELECT COUNT(*) FROM {table_name} LIMIT 1'. The table_name is derived from user-controlled dataset_id input. Although the dataset_id goes through a prefix check, no proper SQL parameterization or escaping is applied, enabling SQL injection if an attacker can control the dataset_id value."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/extensions/storage/clickzetta_volume/volume_permissions.py"
-                },
-                "region": {
-                  "startLine": 2907,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "In volume_permissions.py, the _get_external_volume_permissions method uses f-string interpolation to build SQL: 'SHOW GRANTS ON VOLUME {volume_name}'. The volume_name comes from configuration but could be influenced by user input in multi-tenant scenarios. No parameterization or escaping is applied."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/extensions/storage/clickzetta_volume/volume_permissions.py"
-                },
-                "region": {
-                  "startLine": 2995,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "In clickzetta_volume_storage.py, the _ensure_table_volume_exists method constructs SQL using f-string interpolation with table_name derived from dataset_id: 'SHOW TABLES LIKE '{table_name}'' and 'CREATE TABLE {table_name} ...'. The dataset_id is extracted from user-supplied file paths without proper sanitization, allowing SQL injection."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/extensions/storage/clickzetta_volume/clickzetta_volume_storage.py"
-                },
-                "region": {
-                  "startLine": 4080,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "PATH-TRAVERSAL",
           "level": "warning",
           "message": {
-            "text": "Storage backend implementations (OpenDALStorage, AliyunOssStorage, AwsS3Storage, etc.) accept filename parameters directly from callers without path normalization or traversal prevention. While filenames are typically generated server-side, if any caller passes user-controlled input, an attacker could use path traversal sequences (e.g., '../../etc/passwd') to read or overwrite arbitrary files in the storage backend. The _contains_path_traversal check exists only in the ClickZetta permission manager and is not applied universally."
+            "text": "The GetRemoteFileInfo endpoint accepts a user-controlled URL in the path and issues HEAD/GET requests via ssrf_proxy. SSRF protection relies entirely on external Squid proxy configuration. If the proxy is misconfigured, absent, or bypassed (e.g., via DNS rebinding), an attacker can probe internal services (169.254.169.254 cloud metadata, localhost services, internal APIs). The URL is taken directly from the path parameter with only URL-decoding applied."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/extensions/storage/base_storage.py"
+                  "uri": "api/controllers/console/remote_files.py"
                 },
                 "region": {
-                  "startLine": 2328,
+                  "startLine": 27,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.6
+            "confidence": 0.7,
+            "surface_id": "SURFACE-004"
           }
         },
         {
-          "ruleId": "AUTHZ-BYPASS",
+          "ruleId": "SSRF",
           "level": "warning",
           "message": {
-            "text": "In validation.py, the is_file_valid_with_config function unconditionally returns True for any file with transfer_method == FileTransferMethod.TOOL_FILE, bypassing all file type and upload method restrictions. A malicious plugin or compromised tool could upload arbitrary file types by marking them as TOOL_FILE, circumventing the user-configured upload restrictions intended to limit file types."
+            "text": "The RemoteFileInfoApi (web) endpoint has the same SSRF pattern as the console variant. A user-supplied URL path parameter is decoded and used to make HEAD/GET requests. The web endpoint is accessible to end users (not just console admins), widening the attack surface. Protection depends on external proxy infrastructure."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/factories/file_factory/validation.py"
+                  "uri": "api/controllers/web/remote_files.py"
                 },
                 "region": {
-                  "startLine": 1862,
+                  "startLine": 40,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.75
+            "confidence": 0.7,
+            "surface_id": "SURFACE-004"
           }
         },
         {
-          "ruleId": "SENSITIVE-DATA",
+          "ruleId": "SSRF-SCHEME",
+          "level": "error",
+          "message": {
+            "text": "The console RemoteFileUploadPayload defines url as a bare 'str' field with no URL scheme validation. An attacker could supply file://, gopher://, or other non-HTTP schemes. While httpx may reject some schemes, the lack of application-level validation means the defense is implicit and fragile. The web endpoint uses Pydantic HttpUrl which enforces http/https schemes, but the console endpoint does not. This inconsistency suggests the console endpoint was not hardened intentionally."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/remote_files.py"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "surface_id": "SURFACE-004"
+          }
+        },
+        {
+          "ruleId": "SSRF",
           "level": "warning",
           "message": {
-            "text": "In azure_blob_storage.py, SAS tokens are stored in Redis with plaintext key format 'azure_blob_sas_token_{account_name}_{account_key}', which embeds the account_key directly into the Redis cache key. This exposes the secret key in Redis key listings and monitoring tools. The SAS token value is also stored unencrypted in Redis."
+            "text": "The RemoteFileUpload (console) endpoint fetches content from a user-supplied URL. The ssrf_proxy delegates protection to an external Squid proxy that may or may not be deployed. The proxy detects Squid via Server/Via headers (status 401/403), but a non-Squid proxy or direct connection would bypass this detection entirely. The get_remote_file_info() helper in remote.py also makes HEAD requests to arbitrary URLs for metadata resolution in workflow contexts."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/extensions/storage/azure_blob_storage.py"
+                  "uri": "api/controllers/console/remote_files.py"
                 },
                 "region": {
-                  "startLine": 2154,
+                  "startLine": 42,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.8
+            "confidence": 0.65,
+            "surface_id": "SURFACE-004"
           }
         },
         {
-          "ruleId": "PERM-BYPASS",
+          "ruleId": "SSRF",
           "level": "warning",
           "message": {
-            "text": "In volume_permissions.py, the _get_external_volume_permissions method has a fallback path (lines 3056-3069) that grants both read and write permissions when the primary permission check fails with an exception. This 'fail-open' pattern means any transient error in the permission system results in full access being granted to the external volume, violating the principle of fail-safe defaults."
+            "text": "The RemoteFileUploadApi (web) endpoint has identical SSRF exposure. It fetches user-supplied URLs and downloads their content. The web endpoint is exposed to end users of deployed Dify apps, not just admin console users, making exploitation more accessible."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/extensions/storage/clickzetta_volume/volume_permissions.py"
+                  "uri": "api/controllers/web/remote_files.py"
                 },
                 "region": {
-                  "startLine": 3064,
+                  "startLine": 72,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.9
+            "confidence": 0.65,
+            "surface_id": "SURFACE-004"
           }
         },
         {
-          "ruleId": "WEAK-HASH",
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The get_remote_file_info() factory helper in remote.py issues HEAD requests to arbitrary URLs using ssrf_proxy for metadata resolution. This function is used in workflow file normalization paths, meaning any workflow that processes remote file references will trigger server-side requests. The URL is not validated for scheme or destination before the request is made."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/factories/file_factory/remote.py"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6,
+            "surface_id": "SURFACE-004"
+          }
+        },
+        {
+          "ruleId": "TOCTOU",
           "level": "note",
           "message": {
-            "text": "In file_lifecycle.py, the _calculate_checksum method uses MD5 (hashlib.md5) for file integrity verification. MD5 is cryptographically broken and susceptible to collision attacks. An attacker could craft two different files with the same MD5 checksum, undermining the integrity guarantees of the lifecycle management system."
+            "text": "Both upload endpoints perform a HEAD request to check file metadata (size, type), then a separate GET request to download content. Between these two requests, the remote resource could change — an attacker could serve a small benign file for HEAD, then a large malicious payload for GET, bypassing size and type validation. The console endpoint line 'content = resp.content if resp.request.method == \"GET\" else ssrf_proxy.get(url).content' explicitly shows the double-fetch pattern."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/extensions/storage/clickzetta_volume/file_lifecycle.py"
+                  "uri": "api/controllers/console/remote_files.py"
                 },
                 "region": {
-                  "startLine": 3806,
+                  "startLine": 59,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.9
+            "confidence": 0.75,
+            "surface_id": "SURFACE-004"
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "note",
+          "message": {
+            "text": "Error messages in both upload endpoints include the user-supplied URL and the response text from the remote server (resp.text). If an attacker targets an internal service, the error response body may leak internal service information, headers, or error pages back to the attacker. Example: 'raise RemoteFileUploadError(f\"Failed to fetch file from {url}: {resp.text}\")' exposes the response body of internal services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/remote_files.py"
+                },
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8,
+            "surface_id": "SURFACE-004"
           }
         }
       ]

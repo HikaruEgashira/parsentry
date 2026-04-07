@@ -6,88 +6,45 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "version": "1.0.0",
           "rules": [
             {
-              "id": "REDOS",
-              "name": "RegularExpressionDenialOfService",
-              "shortDescription": {
-                "text": "ReDoS via catastrophic backtracking in bankRouting regex"
-              },
-              "fullDescription": {
-                "text": "The regex pattern /([0-9]+)+\\#/ uses nested quantifiers that cause exponential backtracking on crafted input. An attacker can submit a bankRouting value like '0000000000000000000000000000!' to freeze the event loop and deny service to all users."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS",
-              "properties": {
-                "tags": ["security", "DoS", "CWE-1333"]
-              }
-            },
-            {
               "id": "XSS",
-              "name": "StoredCrossScriptScripting",
               "shortDescription": {
-                "text": "Stored XSS via unescaped profile fields rendered in Swig templates"
+                "text": "Stored Cross-Site Scripting"
               },
-              "fullDescription": {
-                "text": "User-supplied profile fields (firstName, lastName, address, etc.) are stored without sanitization and rendered in Swig templates with autoescape disabled. An attacker can inject malicious JavaScript that executes in other users' browsers when viewing the profile."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/xss/",
-              "properties": {
-                "tags": ["security", "XSS", "CWE-79"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html"
             },
             {
               "id": "SENSITIVE-DATA-EXPOSURE",
-              "name": "SensitiveDataExposurePlaintext",
               "shortDescription": {
-                "text": "SSN and date of birth stored in plaintext in MongoDB"
+                "text": "Sensitive Data Stored in Plaintext"
               },
-              "fullDescription": {
-                "text": "Social Security Number (SSN) and date of birth (DOB) are stored as plaintext strings in MongoDB. The encryption code is commented out. An attacker with database access gains direct access to PII, violating data protection regulations (GDPR, CCPA, PCI-DSS)."
-              },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/04-Testing_for_Weak_Encryption",
-              "properties": {
-                "tags": ["security", "sensitive-data", "CWE-312"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/312.html"
             },
             {
-              "id": "MASS-ASSIGNMENT",
-              "name": "MassAssignmentViaUnsanitizedInput",
+              "id": "REDOS",
               "shortDescription": {
-                "text": "No input validation or type checking on profile update fields"
+                "text": "Regular Expression Denial of Service"
               },
-              "fullDescription": {
-                "text": "Profile fields from req.body are passed directly to MongoDB $set operation without type validation. An attacker can submit object values instead of strings (e.g., firstName={$gt:''}) enabling NoSQL injection, or submit excessively long strings to cause storage-based DoS."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "injection", "CWE-915"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/1333.html"
             },
             {
               "id": "XSS-CONTEXT",
-              "name": "IncorrectOutputEncodingContext",
               "shortDescription": {
-                "text": "Website field encoded for HTML context but used in URL context"
+                "text": "Incorrect Output Encoding Context"
               },
-              "fullDescription": {
-                "text": "The website field is encoded using ESAPI encodeForHTML but is rendered in a URL href attribute context. This mismatch allows an attacker to inject javascript: URIs or other protocol-level attacks that HTML encoding does not prevent."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html#output-encoding-for-url-contexts",
-              "properties": {
-                "tags": ["security", "XSS", "CWE-838"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/838.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "REDOS",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "The regex /([0-9]+)+\\#/ contains nested quantifiers ([0-9]+)+ causing catastrophic backtracking. An attacker can send a crafted bankRouting value (e.g., '0'.repeat(30) + '!') to block the Node.js event loop for minutes, denying service to all concurrent users."
+            "text": "User-supplied profile fields (firstName, lastName, address, etc.) are stored in MongoDB via updateUser() without any sanitization or encoding. When these values are rendered in the profile template via res.render('profile', ...user), they produce stored XSS. An attacker can inject script tags into firstName or other fields that execute in any user's browser viewing the profile."
           },
           "locations": [
             {
@@ -96,9 +53,8 @@
                   "uri": "app/routes/profile.js"
                 },
                 "region": {
-                  "startLine": 292,
-                  "startColumn": 31,
-                  "endColumn": 47
+                  "startLine": 82,
+                  "endLine": 91
                 }
               }
             }
@@ -111,7 +67,7 @@
           "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "User-supplied firstName is stored without sanitization and rendered directly in Swig template with autoescape disabled (line 298). When bank routing validation fails, the raw firstName value is passed to res.render as firstNameSafeString without encoding. On successful update, all user fields are spread into the template without encoding."
+            "text": "In the bankRouting validation error path, user-supplied values (firstName, lastName, ssn, dob, address, bankAcc, bankRouting) are passed directly to res.render() without sanitization. This reflects unsanitized input back into the rendered HTML, enabling reflected XSS."
           },
           "locations": [
             {
@@ -120,94 +76,21 @@
                   "uri": "app/routes/profile.js"
                 },
                 "region": {
-                  "startLine": 297,
-                  "startColumn": 13,
-                  "endLine": 309
+                  "startLine": 64,
+                  "endLine": 76
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "XSS",
-          "level": "error",
-          "message": {
-            "text": "On successful profile update, the user document from MongoDB is spread directly into the Swig template via res.render('profile', {...user}). With Swig autoescape disabled, all stored profile fields (firstName, lastName, address, bankAcc, bankRouting) are rendered without encoding, enabling persistent XSS."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/profile.js"
-                },
-                "region": {
-                  "startLine": 333,
-                  "startColumn": 24,
-                  "endLine": 336
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.90
-          }
-        },
-        {
-          "ruleId": "SENSITIVE-DATA-EXPOSURE",
-          "level": "error",
-          "message": {
-            "text": "SSN and DOB are stored as plaintext strings in MongoDB. The encryption functions (lines 366-389) are entirely commented out. The updateUser method directly assigns user.ssn = ssn and user.dob = dob without encryption, exposing PII to anyone with database access."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/profile-dao.js"
-                },
-                "region": {
-                  "startLine": 410,
-                  "startColumn": 13,
-                  "endLine": 415
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "MASS-ASSIGNMENT",
-          "level": "warning",
-          "message": {
-            "text": "Profile fields from req.body are passed to MongoDB $set without type checking or length validation. Since body-parser can parse nested objects, an attacker can submit structured objects (e.g., firstName[$gt]='') for NoSQL operator injection, or extremely long strings for storage DoS."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/profile-dao.js"
-                },
-                "region": {
-                  "startLine": 391,
-                  "startColumn": 5,
-                  "endLine": 441
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
+            "confidence": 0.9
           }
         },
         {
           "ruleId": "XSS-CONTEXT",
           "level": "warning",
           "message": {
-            "text": "The website field is encoded with ESAPI encodeForHTML() but used in a URL href attribute context. This encoding mismatch means javascript: protocol URIs and data: URIs are not neutralized by HTML entity encoding, allowing script execution when a user clicks the link."
+            "text": "The website field is encoded using encodeForHTML() but is used in the context of a URL href attribute. This is the wrong encoding context — encodeForURL() should be used instead. An attacker can craft a javascript: URI that bypasses HTML encoding but executes when clicked as a link."
           },
           "locations": [
             {
@@ -216,9 +99,77 @@
                   "uri": "app/routes/profile.js"
                 },
                 "region": {
-                  "startLine": 261,
-                  "startColumn": 28,
-                  "endColumn": 67
+                  "startLine": 28,
+                  "endLine": 28
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "SSN and date of birth are stored in plaintext in MongoDB. The encryption code in profile-dao.js is commented out (lines 15-40). An attacker who gains database access obtains all users' SSNs and dates of birth in cleartext, enabling identity theft."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 66
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "REDOS",
+          "level": "error",
+          "message": {
+            "text": "The regex /([0-9]+)+\\#/ used to validate bankRouting contains nested quantifiers ([0-9]+)+, making it vulnerable to catastrophic backtracking (ReDoS). An attacker can send a specially crafted bankRouting value like '0000000000000000000000000000!' to cause the server to hang, consuming 100% CPU."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 59,
+                  "endLine": 59
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Bank account number (bankAcc) and bank routing number (bankRouting) are stored in plaintext in MongoDB without encryption. The updateUser function stores these financial fields directly, exposing them to anyone with database access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 55,
+                  "endLine": 60
                 }
               }
             }

@@ -7,34 +7,62 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
               "id": "AUTH-BYPASS",
+              "name": "MissingAuthentication",
               "shortDescription": {
-                "text": "Weak internal API authentication allowing tenant/user impersonation"
+                "text": "Unauthenticated endpoint allows arbitrary workflow invocation"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/287.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "properties": {
+                "tags": ["security", "CWE-306"]
+              }
             },
             {
               "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
               "shortDescription": {
-                "text": "Insecure Direct Object Reference - missing authorization checks on resource access"
+                "text": "Webhook ID enumeration allows unauthorized workflow triggering"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "properties": {
+                "tags": ["security", "CWE-639"]
+              }
             },
             {
-              "id": "INFO-DISCLOSURE",
+              "id": "INFO-LEAK",
+              "name": "InformationDisclosure",
               "shortDescription": {
-                "text": "Sensitive information disclosure through API responses or error messages"
+                "text": "Internal error details leaked to external callers"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209"]
+              }
             },
             {
-              "id": "PRIV-ESCALATION",
+              "id": "INFO-LEAK-DEBUG",
+              "name": "InformationDisclosureViaDebugEndpoint",
               "shortDescription": {
-                "text": "Privilege escalation through automatic account/resource creation"
+                "text": "Debug endpoint exposes internal URLs and tenant metadata"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/269.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "CWE-200"]
+              }
+            },
+            {
+              "id": "RATE-LIMIT",
+              "name": "MissingRateLimiting",
+              "shortDescription": {
+                "text": "No rate limiting on unauthenticated webhook endpoints"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/770.html",
+              "properties": {
+                "tags": ["security", "CWE-770"]
+              }
             }
           ]
         }
@@ -44,17 +72,90 @@
           "ruleId": "AUTH-BYPASS",
           "level": "error",
           "message": {
-            "text": "The get_user_tenant decorator extracts tenant_id and user_id directly from the JSON request body without server-side validation of the caller's relationship to those identities. If the plugin_inner_api_only decorator only checks a shared static API key, any service or plugin holding that key can impersonate any tenant and user by supplying arbitrary tenant_id/user_id values. This enables cross-tenant data access across all plugin invoke endpoints."
+            "text": "The webhook endpoint at /triggers/webhook/<webhook_id> accepts GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS methods without any authentication or authorization checks. Any external caller who knows or guesses a webhook_id can invoke the associated workflow. The only gate is knowledge of the webhook_id string, which is passed directly to WebhookService.get_webhook_trigger_and_workflow() for a database lookup. There is no HMAC signature verification, no shared secret validation, and no IP allowlisting."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                  "uri": "api/controllers/trigger/webhook.py"
                 },
                 "region": {
-                  "startLine": 1369,
-                  "endLine": 1398
+                  "startLine": 40,
+                  "startColumn": 1,
+                  "endLine": 60
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "Webhook IDs serve as the sole authorization token for triggering workflows. The webhook_id is a plain string path parameter looked up directly in the database (WorkflowWebhookTrigger.webhook_id == webhook_id). If webhook IDs are predictable (e.g., sequential integers, short UUIDs, or low-entropy tokens), an attacker can enumerate valid IDs and trigger arbitrary tenant workflows. The lack of additional authentication means possession of the ID equals authorization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1,
+                  "endLine": 41
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "The handle_webhook exception handler catches all exceptions and returns the raw exception message to the caller via str(e) in the JSON response body: `jsonify({\"error\": \"Internal server error\", \"message\": str(e)}), 500`. This can leak internal implementation details such as database table names, SQL error messages, file paths, or service configuration to unauthenticated external callers. The debug endpoint (handle_webhook_debug) correctly returns a generic message instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 9,
+                  "endLine": 58
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK-DEBUG",
+          "level": "warning",
+          "message": {
+            "text": "The debug webhook endpoint at /triggers/webhook-debug/<webhook_id> is also unauthenticated. When no active debug listener is registered, the 409 response includes the production webhook URL via `webhook_trigger.webhook_url` in the `execution_url` field. This leaks the production trigger URL to any unauthenticated caller who discovers a debug webhook ID, potentially enabling them to invoke the production workflow."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/trigger/webhook.py"
+                },
+                "region": {
+                  "startLine": 100,
+                  "startColumn": 13,
+                  "endLine": 112
                 }
               }
             }
@@ -64,158 +165,21 @@
           }
         },
         {
-          "ruleId": "PRIV-ESCALATION",
+          "ruleId": "RATE-LIMIT",
           "level": "warning",
           "message": {
-            "text": "The get_user function automatically creates a new EndUser record when the supplied user_id is not found in the database (lines 1352-1359). An attacker with inner API access can create arbitrary end-user records in any tenant by supplying non-existent user_id values. This can pollute user tables, bypass user count limits, or create phantom users for later exploitation."
+            "text": "Neither the production webhook endpoint nor the debug webhook endpoint implements rate limiting at the controller or decorator level. While backend AppTriggerStatus.RATE_LIMITED status exists as an account-level quota mechanism, there is no per-IP or per-webhook request rate limiting to prevent brute-force enumeration of webhook IDs or denial-of-service via high-volume webhook invocations that consume workflow execution resources."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                  "uri": "api/controllers/trigger/webhook.py"
                 },
                 "region": {
-                  "startLine": 1326,
-                  "endLine": 1366
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "level": "error",
-          "message": {
-            "text": "The PluginInvokeAppApi endpoint takes app_id from the request payload and passes it directly to PluginAppBackwardsInvocation.invoke_app without verifying that the resolved tenant_model has authorization to access that specific application. A plugin can invoke any app across tenants by supplying an arbitrary app_id along with its own tenant_id."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/inner_api/plugin/plugin.py"
-                },
-                "region": {
-                  "startLine": 1184,
-                  "endLine": 1196
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "INFO-DISCLOSURE",
-          "level": "warning",
-          "message": {
-            "text": "The DSL export endpoint accepts an include_secret query parameter that, when set to 'true', exports application secrets in the DSL YAML output. If inner API authentication is compromised (e.g., via SSRF or leaked API key), an attacker can exfiltrate all application secrets by iterating over app_ids with include_secret=true."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/inner_api/app/dsl.py"
-                },
-                "region": {
-                  "startLine": 810,
-                  "endLine": 823
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "level": "warning",
-          "message": {
-            "text": "In the DSL import endpoint, account.set_tenant_id(workspace_id) uses the workspace_id from the URL path without server-side verification that the resolved account actually belongs to that workspace. The comment states 'workspace/membership validation is done by the Go admin-api caller', but if this inner API is reachable via SSRF or a compromised internal service, the trust boundary is violated, enabling cross-workspace DSL imports."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/inner_api/app/dsl.py"
-                },
-                "region": {
-                  "startLine": 771,
-                  "endLine": 796
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "INFO-DISCLOSURE",
-          "level": "note",
-          "message": {
-            "text": "Multiple plugin invoke endpoints (text-embedding, rerank, speech2text, moderation, parameter-extractor, question-classifier, encrypt, summary) catch generic Exception and return str(e) in the response. This can leak internal stack traces, file paths, database connection details, or other sensitive implementation details to the caller."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/inner_api/plugin/plugin.py"
-                },
-                "region": {
-                  "startLine": 962,
-                  "endLine": 963
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "INFO-DISCLOSURE",
-          "level": "note",
-          "message": {
-            "text": "The ownerless workspace creation endpoint returns encrypt_public_key in its response body. While this is a public key, exposing cryptographic material in API responses increases the attack surface for protocol-level attacks and may leak information about the encryption scheme in use."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/inner_api/workspace/workspace.py"
-                },
-                "region": {
-                  "startLine": 1531,
-                  "endLine": 1542
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.5
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "level": "warning",
-          "message": {
-            "text": "The PluginFetchAppInfoApi endpoint accepts an app_id from the request payload and fetches app information without verifying that the requesting tenant has access to that application. This allows cross-tenant information gathering by enumerating app_ids."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/inner_api/plugin/plugin.py"
-                },
-                "region": {
-                  "startLine": 1297,
-                  "endLine": 1300
+                  "startLine": 40,
+                  "startColumn": 1,
+                  "endLine": 62
                 }
               }
             }

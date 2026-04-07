@@ -11,44 +11,30 @@
             {
               "id": "AUTH-BYPASS",
               "shortDescription": {
-                "text": "Missing Authentication on Webhook Endpoints"
+                "text": "Missing authentication on security-sensitive endpoint"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
             },
             {
-              "id": "INFO-LEAK",
+              "id": "IDOR",
               "shortDescription": {
-                "text": "Internal Error Message Disclosure"
+                "text": "Insecure Direct Object Reference via predictable or guessable token"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
             },
             {
-              "id": "DEBUG-ENDPOINT",
+              "id": "IP-SPOOF",
               "shortDescription": {
-                "text": "Debug Endpoint Exposed in Production"
+                "text": "Rate limiter bypass via IP address spoofing through client-controlled headers"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/489.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/290.html"
             },
             {
-              "id": "WEBHOOK-REPLAY",
+              "id": "WORKFLOW-HIJACK",
               "shortDescription": {
-                "text": "Missing Webhook Replay Protection"
+                "text": "Unauthorized workflow continuation by unauthenticated form submission"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/294.html"
-            },
-            {
-              "id": "INFO-DISCLOSURE",
-              "shortDescription": {
-                "text": "Internal URL Disclosure in Error Response"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
-            },
-            {
-              "id": "LOG-INJECTION",
-              "shortDescription": {
-                "text": "Format String Used in Logger Exception Call"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/134.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
             }
           ]
         }
@@ -58,63 +44,40 @@
           "ruleId": "AUTH-BYPASS",
           "level": "error",
           "message": {
-            "text": "The webhook endpoint /triggers/webhook/<webhook_id> accepts requests on all HTTP methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS) without any authentication or authorization check. Any external party who knows or guesses a webhook_id can trigger workflow execution. The webhook_id appears to be the sole secret, but there is no rate limiting, HMAC signature verification, or token-based authentication to prevent unauthorized invocation."
+            "text": "The POST /api/form/human_input/<form_token> endpoint is intentionally unauthenticated (comment: 'this endpoint is unauthenticated on purpose for now'). The commented-out _end_user parameter means submission_end_user_id is always None, so there is no identity binding between the form and the submitter. Any party who obtains or guesses a form_token can submit the form and trigger workflow continuation (resume_app_execution). This defeats authorization controls on workflow state transitions."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/trigger/webhook.py"
+                  "uri": "api/controllers/web/human_input_form.py"
                 },
                 "region": {
-                  "startLine": 766,
-                  "endLine": 793
+                  "startLine": 95,
+                  "startColumn": 5
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.9
+            "confidence": 0.92
           }
         },
         {
-          "ruleId": "DEBUG-ENDPOINT",
-          "level": "error",
-          "message": {
-            "text": "The debug webhook endpoint /triggers/webhook-debug/<webhook_id> is registered unconditionally in the Flask blueprint with no environment check (e.g., DEBUG mode only) and no authentication. This endpoint bypasses production workflow execution and dispatches events to the in-memory debug event bus. An attacker can use this to probe draft workflows, enumerate active debug listeners, and inject arbitrary debug events into the Variable Inspector without authentication."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/trigger/webhook.py"
-                },
-                "region": {
-                  "startLine": 795,
-                  "endLine": 863
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "INFO-LEAK",
+          "ruleId": "IP-SPOOF",
           "level": "warning",
           "message": {
-            "text": "The production webhook handler at handle_webhook() returns the raw exception message in the 500 error response via str(e). This can leak internal implementation details such as database errors, file paths, library versions, or stack trace fragments to external callers, aiding reconnaissance."
+            "text": "The rate limiter keys on the client IP obtained via extract_remote_ip(), which trusts the X-Forwarded-For and CF-Connecting-IP headers without validation. An attacker can rotate these header values to bypass the rate limit entirely, enabling brute-force enumeration of form tokens or repeated submission attempts. The rate limiter is the only protective control on this unauthenticated endpoint."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/trigger/webhook.py"
+                  "uri": "api/controllers/web/human_input_form.py"
                 },
                 "region": {
-                  "startLine": 792,
-                  "endLine": 792
+                  "startLine": 107,
+                  "startColumn": 9
                 }
               }
             }
@@ -124,43 +87,20 @@
           }
         },
         {
-          "ruleId": "INFO-DISCLOSURE",
+          "ruleId": "IDOR",
           "level": "warning",
           "message": {
-            "text": "When no active debug listener is found, the debug endpoint responds with the production webhook execution URL in the 'execution_url' field (webhook_trigger.webhook_url). This leaks the production webhook URL to unauthenticated callers, enabling them to pivot from the debug endpoint to the production endpoint."
+            "text": "Form tokens are the sole authorization gate for both GET (reading form definitions including rendered content) and POST (submitting input and resuming workflows). If tokens are insufficiently random (e.g., UUIDs without cryptographic randomness) or leaked via logs/referrer headers, any unauthenticated user can access or submit arbitrary forms. The service layer (get_form_by_token) performs no caller identity check beyond token possession."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/trigger/webhook.py"
+                  "uri": "api/controllers/web/human_input_form.py"
                 },
                 "region": {
-                  "startLine": 849,
-                  "endLine": 849
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "WEBHOOK-REPLAY",
-          "level": "warning",
-          "message": {
-            "text": "The webhook handler has no replay protection mechanism. There is no nonce, timestamp validation window, or idempotency key check. An attacker who captures a valid webhook request (e.g., via network interception or log access) can replay it indefinitely to re-trigger workflow executions. The debug endpoint compounds this by using a predictable request_id format (webhook_debug_{webhook_id}_{timestamp_ms})."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/trigger/webhook.py"
-                },
-                "region": {
-                  "startLine": 774,
-                  "endLine": 784
+                  "startLine": 112,
+                  "startColumn": 9
                 }
               }
             }
@@ -170,49 +110,26 @@
           }
         },
         {
-          "ruleId": "LOG-INJECTION",
-          "level": "note",
+          "ruleId": "WORKFLOW-HIJACK",
+          "level": "error",
           "message": {
-            "text": "In trigger.py line 927, an f-string is used inside logger.exception() instead of a format parameter: logger.exception('Webhook processing failed for {endpoint_id}'). The f-string literal is missing the 'f' prefix, so it logs the literal '{endpoint_id}' string rather than the actual value. While not a direct injection in this case, using f-strings or .format() in logger calls is a bad practice that can lead to log injection when user-controlled input is interpolated. The correct pattern is logger.exception('...%s', endpoint_id)."
+            "text": "A successful POST submission by an unauthenticated attacker calls submit_form_by_token which invokes enqueue_resume → resume_app_execution.apply_async, continuing a paused workflow. Because submission_end_user_id is hardcoded to None, there is no audit trail of who actually submitted the form. An attacker with a valid form_token can approve or reject workflow steps, potentially authorizing actions (e.g., financial approvals, deployments) without legitimate user consent."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/trigger/trigger.py"
+                  "uri": "api/controllers/web/human_input_form.py"
                 },
                 "region": {
-                  "startLine": 927,
-                  "endLine": 927
+                  "startLine": 118,
+                  "startColumn": 13
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.6
-          }
-        },
-        {
-          "ruleId": "AUTH-BYPASS",
-          "level": "warning",
-          "message": {
-            "text": "The plugin trigger endpoint /triggers/plugin/<endpoint_id> validates that endpoint_id is a UUID but performs no authentication or authorization. While UUID provides some obscurity (128-bit random space), it is not a substitute for proper authentication. The handling chain delegates to TriggerService.process_endpoint and TriggerSubscriptionBuilderService without verifying the caller's identity, allowing anyone who discovers or brute-forces a UUID to invoke plugin trigger processing."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/trigger/trigger.py"
-                },
-                "region": {
-                  "startLine": 902,
-                  "endLine": 928
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.65
+            "confidence": 0.88
           }
         }
       ]

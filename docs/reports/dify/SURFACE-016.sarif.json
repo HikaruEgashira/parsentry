@@ -7,89 +7,50 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "DESER-001",
-              "name": "UnsafeJsonDeserialization",
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
               "shortDescription": {
-                "text": "Unsafe JSON deserialization of task payloads from message broker without schema validation"
+                "text": "Server-Side Request Forgery via unvalidated URL input"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918"]
+              }
             },
             {
-              "id": "SSTI-001",
-              "name": "ServerSideTemplateInjection",
+              "id": "MISSING-INPUT-VALIDATION",
+              "name": "MissingInputValidation",
               "shortDescription": {
-                "text": "Unsafe Jinja2 template rendering in UNSAFE mode allows server-side template injection"
+                "text": "User-supplied parameters passed to backend without validation"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html"
-            },
-            {
-              "id": "DOS-001",
-              "name": "UnboundedThreadPoolExhaustion",
-              "shortDescription": {
-                "text": "Unbounded task processing in thread pool without payload size limits enables resource exhaustion"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
-            },
-            {
-              "id": "DOS-002",
-              "name": "UnboundedRecursiveTaskSpawning",
-              "shortDescription": {
-                "text": "Recursive task re-queuing in finally blocks without depth limits can cause infinite task loops"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/674.html"
-            },
-            {
-              "id": "PATH-001",
-              "name": "PathTraversal",
-              "shortDescription": {
-                "text": "Unsanitized file path construction from user-controlled app_id allows path traversal"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
-            },
-            {
-              "id": "INFO-001",
-              "name": "SensitiveDataInLogs",
-              "shortDescription": {
-                "text": "Logging of tenant IDs, user IDs, and error details may leak sensitive information"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/532.html"
-            },
-            {
-              "id": "PRIV-001",
-              "name": "InsufficientTenantIsolation",
-              "shortDescription": {
-                "text": "Task parameters (tenant_id, user_id) accepted from broker without re-validation enables cross-tenant access"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/284.html"
-            },
-            {
-              "id": "DESER-002",
-              "name": "UnsafeEnvelopeDeserialization",
-              "shortDescription": {
-                "text": "Telemetry envelope deserialized from JSON string without integrity verification"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "CWE-20"]
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "SSTI-001",
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "When MAIL_TEMPLATING_MODE is set to UNSAFE, the _render_template_with_strategy function calls Flask's render_template_string with user-controlled substitutions, enabling full Jinja2 SSTI. An attacker who can control the 'body' parameter of send_inner_email_task can execute arbitrary code on the worker. Even in SANDBOX mode, the timeout-based sandboxing has race conditions."
+            "text": "The get_website_crawl method in WebsiteCrawlDatasourcePlugin forwards user-supplied datasource_parameters (which contain the target URL) directly to the plugin daemon via PluginDatasourceManager without any URL validation, scheme restriction, or SSRF protection. There is no check against internal/private IP ranges (e.g., 169.254.169.254, 10.0.0.0/8, 127.0.0.0/8), no URL scheme allowlist (e.g., restricting to http/https), and no DNS rebinding protection. An attacker who can control the crawl URL can probe internal services, access cloud metadata endpoints, or reach other internal infrastructure."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/tasks/mail_inner_task.py"
+                  "uri": "api/core/datasource/website_crawl/website_crawl_plugin.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 107
+                  "startLine": 33,
+                  "endLine": 47
                 }
               }
             }
@@ -99,41 +60,45 @@
           }
         },
         {
-          "ruleId": "DESER-001",
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "The rag_pipeline_run_task and priority_rag_pipeline_run_task functions retrieve a file by ID from FileService, then call json.loads() on its contents and iterate over the result to construct RagPipelineInvokeEntity objects via model_validate(). If an attacker can manipulate the stored file content (e.g., via a race condition or compromised storage), they can inject arbitrary data into the pipeline execution context, potentially leading to code execution through the PipelineGenerator."
+            "text": "PluginDatasourceManager.get_website_crawl dispatches user-controlled datasource_parameters to the plugin daemon HTTP endpoint without any server-side URL validation or SSRF mitigation. The parameters are serialized directly into the POST body sent to the plugin daemon. Even if individual plugins implement their own validation, the platform layer provides no defense-in-depth. A malicious or misconfigured plugin, or a plugin that trusts the platform to validate inputs, would be fully exposed to SSRF attacks targeting internal networks and cloud metadata services."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                  "uri": "api/core/plugin/impl/datasource.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 71
+                  "startLine": 117,
+                  "endLine": 148
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.7
+            "confidence": 0.85
           }
         },
         {
-          "ruleId": "DOS-002",
+          "ruleId": "MISSING-INPUT-VALIDATION",
           "level": "warning",
           "message": {
-            "text": "Both rag_pipeline_run_task and priority_rag_pipeline_run_task contain finally blocks that pull next tasks from a TenantIsolatedTaskQueue and re-enqueue themselves via .delay() or group().apply_async(). There is no maximum recursion depth or circuit breaker. If the queue continuously has items (e.g., due to a bug or malicious flooding), this creates an unbounded chain of task spawning that can exhaust Celery worker resources and the Redis-backed queue."
+            "text": "datasource_parameters is typed as Mapping[str, Any] and passed through multiple layers (WebsiteCrawlDatasourcePlugin -> PluginDatasourceManager -> plugin daemon) without any schema validation, type checking, or sanitization at the platform level. The WebsiteCrawlDatasourcePlugin.get_website_crawl method accepts arbitrary key-value pairs and forwards them unchanged. This lack of input validation at the orchestration layer means that any unexpected or malicious parameters (e.g., extra fields that override plugin behavior, excessively large payloads) will reach the plugin daemon unchecked."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                  "uri": "api/core/datasource/website_crawl/website_crawl_plugin.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1001
+                  "startLine": 33,
+                  "endLine": 38
                 }
               }
             }
@@ -143,113 +108,27 @@
           }
         },
         {
-          "ruleId": "DOS-001",
+          "ruleId": "MISSING-INPUT-VALIDATION",
           "level": "warning",
           "message": {
-            "text": "The rag_pipeline_run_task spawns a ThreadPoolExecutor(max_workers=10) and processes all entities from the deserialized JSON file without any limit on the number of entities. An attacker who can control the content of the stored file could provide millions of entities, exhausting worker memory and thread resources. The same pattern exists in priority_rag_pipeline_run_task."
+            "text": "The WebsiteCrawlDatasourcePluginProviderController.get_datasource method constructs a WebsiteCrawlDatasourcePlugin using entity data looked up by user-supplied datasource_name. While the lookup itself uses an equality check against known entities, the returned plugin object carries runtime credentials that will be forwarded to the plugin daemon alongside unvalidated user parameters. The provider layer performs no validation of the datasource_parameters that will eventually be passed to the plugin, creating a gap where the controller trusts downstream components to validate inputs that they also do not validate."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/tasks/rag_pipeline/priority_rag_pipeline_run_task.py"
+                  "uri": "api/core/datasource/website_crawl/website_crawl_provider.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 78
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "PRIV-001",
-          "level": "warning",
-          "message": {
-            "text": "Multiple Celery tasks accept tenant_id, user_id, and dataset_id as plain string parameters from the message broker without re-validating that the caller has authorization to act on behalf of that tenant/user. If the Celery broker (Redis/RabbitMQ) is compromised or an attacker can inject messages, they can impersonate any tenant or user. This affects rag_pipeline_run_task, document_indexing_task, delete_account_task, workflow_based_app_execution_task, and many others."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
-                },
-                "region": {
-                  "startLine": 54
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "PATH-001",
-          "level": "warning",
-          "message": {
-            "text": "In process_trace_tasks, the file_path is constructed as f'{OPS_FILE_PATH}{app_id}/{file_id}.json' where app_id and file_id come from the task payload (file_info dict). If an attacker can control these values via the Celery broker, they could use path traversal sequences (e.g., '../') to read or delete arbitrary files from object storage."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/tasks/ops_trace_task.py"
-                },
-                "region": {
-                  "startLine": 93
+                  "startLine": 31,
+                  "endLine": 48
                 }
               }
             }
           ],
           "properties": {
             "confidence": 0.65
-          }
-        },
-        {
-          "ruleId": "DESER-002",
-          "level": "note",
-          "message": {
-            "text": "The process_enterprise_telemetry task deserializes a JSON string into a TelemetryEnvelope via model_validate without verifying the integrity or origin of the envelope. While the best-effort error handling prevents crashes, a compromised broker could inject crafted telemetry envelopes to poison metrics or trigger unexpected behavior in EnterpriseMetricHandler."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/tasks/enterprise_telemetry_task.py"
-                },
-                "region": {
-                  "startLine": 51
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.55
-          }
-        },
-        {
-          "ruleId": "INFO-001",
-          "level": "note",
-          "message": {
-            "text": "Throughout the task modules, tenant_id, user_id, document_id, dataset_id, email addresses, and full exception stack traces are logged at INFO and ERROR levels. In a multi-tenant SaaS environment, this sensitive data in logs could be exposed to operators or log aggregation systems, potentially violating data isolation requirements. For example, send_email_register_mail_task logs the recipient email address."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/tasks/mail_register_task.py"
-                },
-                "region": {
-                  "startLine": 99
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.6
           }
         }
       ]

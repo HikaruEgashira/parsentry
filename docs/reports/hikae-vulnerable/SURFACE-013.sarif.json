@@ -1,76 +1,214 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
             {
-              "id": "UNSAFE_DESERIALIZATION",
-              "name": "UnsafeDeserialization",
-              "shortDescription": { "text": "Unsafe YAML Deserialization" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": {
+                "text": "Unsafe YAML deserialization with yaml.FullLoader enables arbitrary object instantiation"
+              },
+              "fullDescription": {
+                "text": "yaml.load() is called with Loader=yaml.FullLoader on untrusted user input. FullLoader can instantiate arbitrary Python objects via YAML tags such as !!python/object/apply, !!python/object/new, and !!python/name, allowing remote code execution."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "properties": {
+                "tags": ["security", "CWE-502", "deserialization"]
+              }
             },
             {
-              "id": "MISSING_AUTHN",
-              "name": "MissingAuthentication",
-              "shortDescription": { "text": "Missing Authentication for Critical Function" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
-            },
-            {
-              "id": "MISSING_INPUT_VALIDATION",
+              "id": "INPUT-VALIDATION",
               "name": "MissingInputValidation",
-              "shortDescription": { "text": "Improper Input Validation" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+              "shortDescription": {
+                "text": "No validation or size limit on untrusted YAML input before deserialization"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "CWE-20"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Exception details leaked to client in error response"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209"]
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "UNSAFE_DESERIALIZATION",
+          "ruleId": "RCE",
           "level": "error",
-          "message": { "text": "Unsafe YAML deserialization using yaml.FullLoader on untrusted user input: `yaml.load(yaml_data, Loader=yaml.FullLoader)`. FullLoader can instantiate arbitrary Python objects for any class that defines a `__init__` or `__set_state__` method, enabling remote code execution through crafted YAML payloads (e.g., using `!!python/object/apply:os.system`). While FullLoader is safer than the default Loader, it still permits dangerous tag resolution. Replace with `yaml.safe_load(yaml_data)` which restricts deserialization to basic Python types (str, int, float, list, dict, bool, None)." },
+          "message": {
+            "text": "Unsafe YAML deserialization at POST /api/yaml/load: yaml.load() called with yaml.FullLoader on untrusted user-supplied input (request.data). yaml.FullLoader can instantiate arbitrary Python objects via !!python/object/apply and related YAML tags, enabling remote code execution. For example, a payload like '!!python/object/apply:os.system [\"id\"]' would execute shell commands. Use yaml.safe_load() instead which only permits basic Python types."
+          },
+          "properties": {
+            "confidence": 0.95
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 204, "endLine": 204 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 145,
+                  "startColumn": 23,
+                  "endLine": 145,
+                  "endColumn": 68
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "load_yaml",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 0.95 }
-        },
-        {
-          "ruleId": "MISSING_AUTHN",
-          "level": "error",
-          "message": { "text": "The POST /api/yaml/load endpoint has no authentication or authorization checks. Any unauthenticated user can submit arbitrary YAML payloads for server-side deserialization. Combined with the unsafe FullLoader usage, this gives any remote attacker a direct path to code execution. Require authentication (e.g., JWT token validation or session check) before processing YAML input." },
-          "locations": [
+          "relatedLocations": [
             {
+              "id": 1,
+              "message": {
+                "text": "Untrusted user input originates here: request.data decoded as UTF-8 without any validation or sanitization"
+              },
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 197, "endLine": 208 }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 141,
+                  "startColumn": 17,
+                  "endLine": 141,
+                  "endColumn": 49
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "fixes": [
+            {
+              "description": {
+                "text": "Replace yaml.load(yaml_data, Loader=yaml.FullLoader) with yaml.safe_load(yaml_data) to prevent arbitrary object instantiation"
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "api.py",
+                    "uriBaseId": "%SRCROOT%"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 145,
+                        "startColumn": 23,
+                        "endLine": 145,
+                        "endColumn": 68
+                      },
+                      "insertedContent": {
+                        "text": "yaml.safe_load(yaml_data)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         },
         {
-          "ruleId": "MISSING_INPUT_VALIDATION",
+          "ruleId": "INPUT-VALIDATION",
           "level": "warning",
-          "message": { "text": "User-supplied YAML data from `request.data` is decoded and passed directly to the YAML parser without any validation of content type, size, or structure. There is no Content-Type header check, no payload size limit, and no schema validation on the parsed output. An attacker can submit arbitrarily large payloads to cause denial of service via memory exhaustion (billion laughs / YAML bomb) or submit unexpected data types. Add Content-Type verification, enforce a maximum payload size, and validate the parsed structure against an expected schema." },
+          "message": {
+            "text": "The endpoint reads the raw request body via request.data and passes it directly to yaml.load() without any input validation, content-type enforcement, or payload size limiting. An attacker can submit arbitrarily large YAML payloads causing denial-of-service via memory exhaustion (billion laughs / YAML bomb), or craft deeply nested structures to crash the parser. Apply Content-Length limits and validate input structure before parsing."
+          },
+          "properties": {
+            "confidence": 0.9
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 200, "endLine": 206 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 141,
+                  "startColumn": 17,
+                  "endLine": 141,
+                  "endColumn": 49
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "load_yaml",
+                  "kind": "function"
+                }
+              ]
             }
-          ],
-          "properties": { "confidence": 0.9 }
+          ]
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "The except clause returns the full exception message to the client via jsonify({'error': str(e)}). This can reveal internal implementation details such as file paths, library versions, and stack context that help attackers refine exploits. Return a generic error message to clients and log exception details server-side."
+          },
+          "properties": {
+            "confidence": 0.85
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 148,
+                  "startColumn": 9,
+                  "endLine": 148,
+                  "endColumn": 54
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "load_yaml",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "mimeType": "text/x-python"
         }
       ]
     }

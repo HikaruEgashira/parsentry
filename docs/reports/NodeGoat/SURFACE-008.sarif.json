@@ -1,308 +1,116 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "version": "1.0.0",
           "rules": [
             {
-              "id": "VULN-008-001",
-              "name": "ServerSideJavaScriptInjection",
+              "id": "BROKEN-ACCESS-CONTROL",
               "shortDescription": {
-                "text": "Remote Code Execution via eval() on user-controlled input"
+                "text": "Missing Function Level Access Control"
               },
-              "fullDescription": {
-                "text": "The handleContributionsUpdate function passes req.body.preTax, req.body.afterTax, and req.body.roth directly to eval() without any sanitization. An attacker can submit arbitrary JavaScript code as contribution values, achieving full remote code execution on the server. For example, sending preTax=process.exit(1) would crash the server, and more sophisticated payloads could read files, exfiltrate data, or establish reverse shells."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "correctness",
-                  "CWE-95",
-                  "OWASP-A03:2021"
-                ],
-                "security-severity": "10.0"
-              }
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
             },
             {
-              "id": "VULN-008-002",
-              "name": "BusinessLogicBypass",
+              "id": "OPEN-REDIRECT",
               "shortDescription": {
-                "text": "Validation occurs after eval() execution, allowing code execution regardless of validation outcome"
+                "text": "Unvalidated Redirect via user-controlled URL"
               },
-              "fullDescription": {
-                "text": "The 30% contribution limit validation and NaN/negative checks occur after eval() has already executed the user-supplied input on lines 32-34. Even if the validation subsequently rejects the input and renders an error page, the injected code has already been executed server-side. This ordering flaw means the business logic validation provides zero protection against code injection."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "correctness",
-                  "CWE-20"
-                ],
-                "security-severity": "9.0"
-              }
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
             },
             {
-              "id": "VULN-008-003",
-              "name": "MissingInputTypeValidation",
+              "id": "MASS-ASSIGNMENT",
               "shortDescription": {
-                "text": "No type validation or sanitization before eval() processes user input"
+                "text": "User-controlled input passed directly to database update without validation"
               },
-              "fullDescription": {
-                "text": "The contribution values from req.body are passed directly to eval() without verifying they are numeric strings. There is no schema validation, type coercion, or allowlist filtering applied before the dangerous eval() call. The commented-out fix on lines 38-40 shows parseInt() was the intended safe alternative but was never enabled."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "correctness",
-                  "CWE-20"
-                ],
-                "security-severity": "8.5"
-              }
-            },
-            {
-              "id": "VULN-008-004",
-              "name": "MongoDBUpsertWithUserData",
-              "shortDescription": {
-                "text": "MongoDB upsert with eval-processed user input enables data manipulation"
-              },
-              "fullDescription": {
-                "text": "The contributionsDAO.update method performs a MongoDB update with upsert:true using values that originated from eval() of user-controlled input. While the userId is taken from the session, the contribution values (preTax, afterTax, roth) are eval-processed user input. Combined with the eval vulnerability, an attacker could manipulate these values to store arbitrary data types or crafted objects in the database, potentially affecting other users or application state."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "correctness",
-                  "CWE-943"
-                ],
-                "security-severity": "6.5"
-              }
-            },
-            {
-              "id": "VULN-008-005",
-              "name": "MissingCSRFProtection",
-              "shortDescription": {
-                "text": "No CSRF protection on state-changing POST /contributions endpoint"
-              },
-              "fullDescription": {
-                "text": "The POST /contributions endpoint modifies user contribution data but has no Cross-Site Request Forgery protection. The jslint evil:true directive and commented-out CSRF middleware indicate security controls were intentionally disabled. An attacker can craft a malicious page that submits a forged contribution update request on behalf of an authenticated user, modifying their retirement contributions without consent."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "correctness",
-                  "CWE-352",
-                  "OWASP-A01:2021"
-                ],
-                "security-severity": "6.0"
-              }
-            },
-            {
-              "id": "VULN-008-006",
-              "name": "MongoDBQueryTypeMismatch",
-              "shortDescription": {
-                "text": "MongoDB query uses unparsed userId in find but parsed userId in document"
-              },
-              "fullDescription": {
-                "text": "In contributions-dao.js line 28-30, the update query filter uses the raw userId (string from session), but the contributions document stores parseInt(userId). This type mismatch means the upsert may create duplicate records instead of updating existing ones, since MongoDB treats string '1' and integer 1 as different values in query matching. This could lead to orphaned contribution records and data integrity issues."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/704.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "correctness",
-                  "CWE-704"
-                ],
-                "security-severity": "4.0"
-              }
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "VULN-008-001",
+          "ruleId": "BROKEN-ACCESS-CONTROL",
           "level": "error",
           "message": {
-            "text": "eval() is called with user-controlled input req.body.preTax, req.body.afterTax, and req.body.roth on lines 32-34. An attacker can submit arbitrary JavaScript (e.g., 'process.mainModule.require(\"child_process\").execSync(\"id\")') as a contribution value to achieve full remote code execution on the server."
+            "text": "The GET /benefits and POST /benefits routes are protected only by isLoggedIn middleware, but lack the isAdmin check. Any authenticated user can access admin-only benefits management functionality. The fix (isAdmin middleware) is present in the source code but commented out on lines 58-59."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
+                  "uri": "app/routes/index.js"
                 },
                 "region": {
-                  "startLine": 32,
-                  "startColumn": 27,
-                  "endLine": 32,
-                  "endColumn": 51
+                  "startLine": 55,
+                  "endLine": 56
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "error",
+          "message": {
+            "text": "The /learn endpoint takes a URL directly from the query string parameter 'url' and passes it to res.redirect() without any validation or allowlisting. An attacker can craft a link such as /learn?url=https://evil.com to redirect authenticated users to a malicious site, enabling phishing attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 70,
+                  "endLine": 73
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MASS-ASSIGNMENT",
+          "level": "warning",
+          "message": {
+            "text": "The POST /benefits handler extracts userId and benefitStartDate directly from req.body without authorization checks (any authenticated user can modify any other user's benefits). The userId is passed to parseInt() then used as a MongoDB _id filter, and benefitStartDate is written directly to the database without sanitization or format validation. Combined with the missing isAdmin check, this allows any authenticated user to modify arbitrary users' benefit records."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 53
                 }
               }
             },
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
+                  "uri": "app/data/benefits-dao.js"
                 },
                 "region": {
-                  "startLine": 33,
-                  "startColumn": 28,
-                  "endLine": 33,
-                  "endColumn": 53
-                }
-              }
-            },
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
-                },
-                "region": {
-                  "startLine": 34,
-                  "startColumn": 24,
-                  "endLine": 34,
-                  "endColumn": 45
+                  "startLine": 23,
+                  "endLine": 39
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-008-002",
-          "level": "error",
-          "message": {
-            "text": "Business logic validation (NaN check on line 47, 30% cap on line 57) executes after eval() on lines 32-34. The injected code runs unconditionally before any validation. Even rejected inputs achieve code execution."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
-                },
-                "region": {
-                  "startLine": 32,
-                  "startColumn": 9,
-                  "endLine": 34,
-                  "endColumn": 46
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-008-003",
-          "level": "error",
-          "message": {
-            "text": "No input type validation, sanitization, or allowlist filtering is applied to req.body.preTax, req.body.afterTax, or req.body.roth before they are passed to eval(). The safe alternative (parseInt on lines 38-40) is commented out."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
-                },
-                "region": {
-                  "startLine": 28,
-                  "startColumn": 5,
-                  "endLine": 34,
-                  "endColumn": 46
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-008-004",
-          "level": "warning",
-          "message": {
-            "text": "contributionsDB.update() on line 28 of contributions-dao.js uses upsert:true with contribution values that originated from eval() of user input. Combined with the RCE vulnerability, arbitrary values or object types could be persisted to MongoDB."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/contributions-dao.js"
-                },
-                "region": {
-                  "startLine": 28,
-                  "startColumn": 9,
-                  "endLine": 33,
-                  "endColumn": 14
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "VULN-008-005",
-          "level": "warning",
-          "message": {
-            "text": "The POST /contributions endpoint modifies user financial data without CSRF token validation. An attacker-controlled page can forge contribution update requests against authenticated users."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
-                },
-                "region": {
-                  "startLine": 28,
-                  "startColumn": 5,
-                  "endLine": 76,
-                  "endColumn": 6
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-008-006",
-          "level": "note",
-          "message": {
-            "text": "MongoDB update query on line 28-30 uses raw userId (string) in the filter but parseInt(userId) in the document body on line 18. This type mismatch with upsert:true may create duplicate contribution records instead of updating existing ones."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/contributions-dao.js"
-                },
-                "region": {
-                  "startLine": 28,
-                  "startColumn": 9,
-                  "endLine": 30,
-                  "endColumn": 14
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
+            "confidence": 0.8
           }
         }
       ]

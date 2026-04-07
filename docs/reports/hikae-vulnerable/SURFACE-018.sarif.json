@@ -1,76 +1,190 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
             {
-              "id": "SSTI",
-              "name": "ServerSideTemplateInjection",
-              "shortDescription": { "text": "Server-Side Template Injection" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html"
+              "id": "LDAPI",
+              "name": "LDAPInjection",
+              "shortDescription": {
+                "text": "LDAP Injection via unsanitized user input in filter string"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is directly interpolated into an LDAP filter string without escaping or validation. An attacker can manipulate the filter logic to bypass authentication, enumerate directory entries, or exfiltrate sensitive data from the LDAP directory."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/LDAP_Injection",
+              "properties": {
+                "tags": ["security", "CWE-90"]
+              }
             },
             {
-              "id": "MISSING_AUTHN",
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "LDAP query structure leaked in API response"
+              },
+              "fullDescription": {
+                "text": "The endpoint echoes back the constructed LDAP filter string and the raw username in the JSON response body, leaking internal directory query structure to the caller and aiding attacker reconnaissance."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "CWE-200"]
+              }
+            },
+            {
+              "id": "AUTH-BYPASS",
               "name": "MissingAuthentication",
-              "shortDescription": { "text": "Missing Authentication for Critical Function" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
-            },
-            {
-              "id": "RCE",
-              "name": "RemoteCodeExecution",
-              "shortDescription": { "text": "Remote Code Execution via Template Injection" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/94.html"
+              "shortDescription": {
+                "text": "No authentication required to query LDAP directory"
+              },
+              "fullDescription": {
+                "text": "The /api/ldap/search endpoint does not require any authentication token, session, or API key. Any unauthenticated client can perform LDAP queries against the directory, compounding the impact of the injection vulnerability."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "CWE-306"]
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "SSTI",
+          "ruleId": "LDAPI",
           "level": "error",
-          "message": { "text": "Server-Side Template Injection in render_template(). User-supplied `template` string is passed directly to `jinja2.Template(template)` without any sandboxing or input validation. Jinja2's default environment allows access to Python internals via `__class__`, `__mro__`, `__subclasses__()`, enabling arbitrary code execution. An attacker can send `{{ ''.__class__.__mro__[1].__subclasses__() }}` to enumerate classes and invoke `os.popen()` or `subprocess.Popen` to execute system commands. Use `jinja2.SandboxedEnvironment` and restrict template input to a predefined allowlist." },
+          "message": {
+            "text": "LDAP injection in POST /api/ldap/search: the 'username' field from the request body is embedded directly into the LDAP filter '(&(objectClass=user)(cn={username}))' via f-string interpolation without escaping special characters. An attacker can supply a crafted value such as '*)(uid=*))(|(uid=*' to alter filter logic, bypass authentication checks, or dump arbitrary directory objects."
+          },
+          "properties": {
+            "confidence": 0.98
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 342, "endLine": 343 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 254,
+                  "startColumn": 5,
+                  "endLine": 254,
+                  "endColumn": 57
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ldap_search",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "fixes": [
+            {
+              "description": {
+                "text": "Escape all LDAP special characters in user input before interpolation using ldap.filter.escape_filter_chars() from python-ldap, or validate the username against a strict allowlist pattern (e.g., ^[a-zA-Z0-9._-]+$) and reject any input that does not match."
+              }
+            }
+          ]
         },
         {
-          "ruleId": "RCE",
-          "level": "error",
-          "message": { "text": "Remote Code Execution via user-controlled template context. Both the `template` string and `context` dictionary are fully user-controlled (`data.get('template')` and `data.get('context', {})`). Combined with the unsandboxed Jinja2 Template, an attacker can inject callable objects through the context or use Jinja2 introspection chains like `{{ config.__class__.__init__.__globals__['os'].popen('id').read() }}` to achieve arbitrary command execution on the server. The context parameter amplifies the attack surface by allowing the attacker to inject arbitrary Python objects as template variables." },
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "The endpoint returns the full LDAP filter string and the raw username in the JSON response body. This reveals internal directory query structure to the caller and aids attacker reconnaissance for crafting injection payloads."
+          },
+          "properties": {
+            "confidence": 0.92
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 334, "endLine": 343 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 257,
+                  "startColumn": 5,
+                  "endLine": 261,
+                  "endColumn": 6
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ldap_search",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "fixes": [
+            {
+              "description": {
+                "text": "Remove 'ldap_query' and 'username' from the response body. Return only the search results required by the caller."
+              }
+            }
+          ]
         },
         {
-          "ruleId": "MISSING_AUTHN",
-          "level": "error",
-          "message": { "text": "The POST /api/template/render endpoint has no authentication or authorization check. Any unauthenticated attacker can invoke template rendering, which when combined with the SSTI vulnerability provides unauthenticated remote code execution. Critical endpoints that execute server-side logic must require authentication and enforce least-privilege authorization." },
+          "ruleId": "AUTH-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "The /api/ldap/search endpoint has no authentication or authorization checks. Any unauthenticated client can submit arbitrary LDAP queries, which combined with the injection vulnerability allows unrestricted directory enumeration and data exfiltration."
+          },
+          "properties": {
+            "confidence": 0.90
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 330, "endLine": 347 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 1,
+                  "endLine": 248,
+                  "endColumn": 22
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ldap_search",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "fixes": [
+            {
+              "description": {
+                "text": "Add authentication middleware (e.g., JWT token verification or session check) before processing the LDAP search request."
+              }
+            }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          }
         }
       ]
     }

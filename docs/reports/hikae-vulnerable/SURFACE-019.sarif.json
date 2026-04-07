@@ -1,76 +1,149 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
             {
-              "id": "LDAP_INJECTION",
-              "name": "LDAPInjection",
-              "shortDescription": { "text": "LDAP Injection" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/90.html"
+              "id": "OPEN_REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": {
+                "text": "Open Redirect - unvalidated URL redirection"
+              },
+              "fullDescription": {
+                "text": "The application redirects users to a URL supplied in a request parameter without validating that the target URL belongs to a trusted domain. An attacker can craft a link that redirects victims to a phishing or malicious site while the URL appears to originate from the trusted application."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "properties": {
+                "tags": ["security", "CWE-601", "OWASP-A10", "phishing", "redirect"]
+              }
             },
             {
-              "id": "MISSING_AUTHN",
-              "name": "MissingAuthentication",
-              "shortDescription": { "text": "Missing Authentication for Critical Function" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
-            },
-            {
-              "id": "INFO_DISCLOSURE",
-              "name": "InformationDisclosure",
-              "shortDescription": { "text": "Information Disclosure via Error Response" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+              "id": "OPEN_REDIRECT_SCHEME_BYPASS",
+              "name": "OpenRedirectSchemeBypas",
+              "shortDescription": {
+                "text": "No scheme restriction on redirect target allows javascript: and data: URIs"
+              },
+              "fullDescription": {
+                "text": "The redirect endpoint performs no parsing of the URL scheme. Besides redirecting to external HTTPS domains, an attacker may supply javascript: or data: scheme URIs. While Flask's redirect() issues a 302 with a Location header (so javascript: URIs do not execute directly), some intermediate proxies and older browsers may interpret these schemes differently, and data: URIs can serve attacker-controlled HTML content."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "CWE-601"]
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "LDAP_INJECTION",
+          "ruleId": "OPEN_REDIRECT",
           "level": "error",
-          "message": { "text": "LDAP injection in POST /api/ldap/search endpoint. User-supplied `username` parameter is interpolated directly into an LDAP filter string via f-string: `f\"(&(objectClass=user)(cn={username}))\"`. An attacker can inject LDAP filter metacharacters (e.g., `*)(uid=*))(|(uid=*` ) to bypass intended query logic, enumerate all directory entries, or extract sensitive attributes. Sanitize input by escaping LDAP special characters (RFC 4515 Section 3) or use a parameterized LDAP query builder." },
+          "message": {
+            "text": "GET /api/redirect accepts an unvalidated 'next' query parameter and passes it directly to Flask's redirect(). No scheme, host, or allowlist check is performed, so an attacker can redirect users to any external domain (e.g. /api/redirect?next=https://evil.example.com) enabling phishing attacks. The application imports urlparse but never uses it in this handler."
+          },
+          "properties": {
+            "confidence": 0.98
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 349, "endLine": 358 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 229,
+                  "endLine": 234,
+                  "startColumn": 1,
+                  "snippet": {
+                    "text": "@api_bp.route('/redirect', methods=['GET'])\ndef open_redirect():\n    \"\"\"Open redirect vulnerability\"\"\"\n    next_url = request.args.get('next', '/')\n\n    # Vulnerable: No URL validation (Open Redirect)\n    return redirect(next_url)"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "open_redirect",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "MISSING_AUTHN",
-          "level": "error",
-          "message": { "text": "The POST /api/ldap/search endpoint has no authentication or authorization check. Any unauthenticated client can query the LDAP directory, which combined with the LDAP injection flaw allows unrestricted enumeration of directory objects (users, groups, organizational units). Require authentication (e.g., session token or API key validation) and enforce least-privilege authorization before processing LDAP search requests." },
-          "locations": [
+          "fixes": [
             {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 349, "endLine": 364 }
-              }
+              "description": {
+                "text": "Validate that the redirect target is a relative path or belongs to an allowlisted domain before redirecting. Parse the URL with urlparse and reject any scheme/netloc that is not in a trusted set."
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "api.py",
+                    "uriBaseId": "%SRCROOT%"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 232,
+                        "endLine": 234
+                      },
+                      "insertedContent": {
+                        "text": "    next_url = request.args.get('next', '/')\n    parsed = urlparse(next_url)\n    if parsed.scheme or parsed.netloc:\n        return jsonify({'error': 'Invalid redirect target'}), 400\n    return redirect(next_url)\n"
+                      }
+                    }
+                  ]
+                }
+              ]
             }
-          ],
-          "properties": { "confidence": 0.95 }
+          ]
         },
         {
-          "ruleId": "INFO_DISCLOSURE",
+          "ruleId": "OPEN_REDIRECT_SCHEME_BYPASS",
           "level": "warning",
-          "message": { "text": "The LDAP query result is returned directly in the HTTP response body. When combined with the LDAP injection vulnerability, this creates a data exfiltration channel: an attacker can craft injected filters to enumerate arbitrary directory attributes (e.g., userPassword, mail, memberOf) and receive the full results. Restrict returned attributes to an explicit allow-list and never echo the raw LDAP query or its full result set to the client." },
+          "message": {
+            "text": "The redirect endpoint accepts arbitrary URI schemes because no URL parsing or allowlist is applied to the 'next' parameter. An attacker could supply next=//evil.com (protocol-relative URL) to bypass naive checks that only look for 'http' prefixes, or next=data:text/html,<script>... to serve malicious content. The urlparse module is imported but unused in this handler."
+          },
+          "properties": {
+            "confidence": 0.85
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 359, "endLine": 364 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 232,
+                  "endLine": 232,
+                  "startColumn": 5,
+                  "snippet": {
+                    "text": "    next_url = request.args.get('next', '/')"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "open_redirect",
+                  "kind": "function"
+                }
+              ]
             }
-          ],
-          "properties": { "confidence": 0.9 }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask API blueprint with multiple vulnerability patterns including open redirect at /api/redirect"
+          }
         }
       ]
     }

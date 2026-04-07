@@ -9,38 +9,63 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "SSRF",
-              "name": "ServerSideRequestForgery",
+              "id": "AUTHZ-MISSING-ROLE-CHECK",
               "shortDescription": {
-                "text": "User-controlled URLs passed to HTTP clients without validation, enabling SSRF attacks."
+                "text": "Missing authorization check on inviter role"
+              },
+              "fullDescription": {
+                "text": "The invite-email endpoint does not verify the inviter's role before allowing member invitations. Any authenticated and initialized workspace member can invite new members with any non-owner role (admin, editor, normal, dataset_operator). The check_workspace_member_invite_permission function only validates workspace-level policy (enterprise feature), not whether the current user has sufficient privileges (e.g., admin or owner) to perform invitations. A normal or dataset_operator user could invite new admin-level members."
+              },
+              "defaultConfiguration": {
+                "level": "error"
               }
             },
             {
-              "id": "CREDENTIAL-LEAK-ENV",
-              "name": "CredentialLeakageViaEnvironment",
+              "id": "PRIVESC-ROLE-ASSIGNMENT",
               "shortDescription": {
-                "text": "Secrets written to process-global os.environ, risking cross-thread credential leakage."
+                "text": "Privilege escalation via role assignment in invitation"
+              },
+              "fullDescription": {
+                "text": "A low-privileged user (e.g., 'normal' or 'dataset_operator') can invite new members with the 'admin' role because the endpoint only checks that the role is a non-owner role via is_non_owner_role(). There is no check ensuring the inviter's own role is at least as privileged as the role being assigned. This allows horizontal and vertical privilege escalation through invitation."
+              },
+              "defaultConfiguration": {
+                "level": "error"
               }
             },
             {
-              "id": "PII-EXPOSURE",
-              "name": "PIIExposureInTracePayload",
+              "id": "INFO-LEAK-TOKEN-RESPONSE",
               "shortDescription": {
-                "text": "User prompts, responses, and file URLs sent to external tracing services without sanitization."
+                "text": "Invitation token leaked in API response"
+              },
+              "fullDescription": {
+                "text": "The invitation token is returned directly in the API response as part of the activation URL. If the inviter's session is compromised or the response is logged/intercepted, the token can be used to activate accounts. The token should ideally be sent only via the invitation email, not returned to the inviter in the HTTP response body."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
               }
             },
             {
-              "id": "INFO-DISCLOSURE",
-              "name": "InformationDisclosureViaErrorMessage",
+              "id": "INFO-LEAK-EXCEPTION",
               "shortDescription": {
-                "text": "Internal error details including potential connection strings or credentials exposed in exception messages."
+                "text": "Exception message leakage in error response"
+              },
+              "fullDescription": {
+                "text": "When invitation fails with a generic Exception, the raw exception message is returned to the client via str(e). This can leak internal implementation details, stack trace fragments, or database error messages to an attacker, aiding further exploitation."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
               }
             },
             {
-              "id": "WEAK-HASH",
-              "name": "WeakHashForIdentifier",
+              "id": "EMAIL-INJECTION",
               "shortDescription": {
-                "text": "Use of MD5 for identifier generation, which is cryptographically weak."
+                "text": "Insufficient email input validation before invitation processing"
+              },
+              "fullDescription": {
+                "text": "The emails list from user input is iterated and passed to RegisterService.invite_new_member() with only .lower() normalization. There is no explicit validation of email format (e.g., RFC 5321 compliance) at the controller level. If the downstream invite_new_member service does not properly validate or sanitize the email, this could lead to email header injection or delivery to unintended recipients. The Pydantic model declares emails as list[str] without email validation constraints."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
               }
             }
           ]
@@ -48,20 +73,20 @@
       },
       "results": [
         {
-          "ruleId": "SSRF",
+          "ruleId": "AUTHZ-MISSING-ROLE-CHECK",
           "level": "error",
           "message": {
-            "text": "The Langfuse client is instantiated with a user-configured 'host' parameter passed directly to the Langfuse SDK without URL validation or allowlist checks. An attacker who controls the tracing configuration can direct requests to internal services (e.g., cloud metadata endpoints, internal APIs)."
+            "text": "The POST /console/api/workspaces/current/members/invite-email endpoint does not check the inviter's role. Any authenticated workspace member can invite new members regardless of their own privilege level. The check_workspace_member_invite_permission() only verifies enterprise workspace-level policy, not the user's role within the workspace."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/ops/langfuse_trace/langfuse_trace.py"
+                  "uri": "api/controllers/console/workspace/members.py"
                 },
                 "region": {
-                  "startLine": 783,
-                  "endLine": 788
+                  "startLine": 85,
+                  "endLine": 100
                 }
               }
             }
@@ -71,19 +96,66 @@
           }
         },
         {
-          "ruleId": "SSRF",
+          "ruleId": "PRIVESC-ROLE-ASSIGNMENT",
           "level": "error",
           "message": {
-            "text": "The LangSmith client is instantiated with a user-configured 'api_url' (from langsmith_config.endpoint) without URL validation. An attacker who controls the tracing configuration can redirect trace data to arbitrary internal endpoints."
+            "text": "A user with 'normal' or 'dataset_operator' role can invite new members with the 'admin' role. The only role validation is is_non_owner_role() which permits admin, editor, normal, and dataset_operator. No check compares the inviter's role against the requested invitee role to prevent privilege escalation."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/ops/langsmith_trace/langsmith_trace.py"
+                  "uri": "api/controllers/console/workspace/members.py"
                 },
                 "region": {
-                  "startLine": 1615
+                  "startLine": 91,
+                  "endLine": 93
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK-TOKEN-RESPONSE",
+          "level": "warning",
+          "message": {
+            "text": "The invitation token generated by RegisterService.invite_new_member() is embedded in a URL and returned in the HTTP response body. This token should only be delivered via the invitation email to limit exposure. Returning it in the response increases the attack surface for token theft."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/members.py"
+                },
+                "region": {
+                  "startLine": 108,
+                  "endLine": 115
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK-EXCEPTION",
+          "level": "warning",
+          "message": {
+            "text": "Generic Exception handler at line 120 returns str(e) directly in the response. Internal error messages may disclose sensitive implementation details such as database schema, file paths, or service internals."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/members.py"
+                },
+                "region": {
+                  "startLine": 119,
+                  "endLine": 120
                 }
               }
             }
@@ -93,229 +165,26 @@
           }
         },
         {
-          "ruleId": "SSRF",
-          "level": "error",
-          "message": {
-            "text": "MLflow tracking URI is set from user-provided config.tracking_uri via mlflow.set_tracking_uri() without validation. This can be exploited to send trace data to attacker-controlled or internal endpoints."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
-                },
-                "region": {
-                  "startLine": 2332
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "SSRF",
-          "level": "error",
-          "message": {
-            "text": "Opik client is instantiated with user-configured 'host' (opik_config.url) without URL allowlist validation, enabling SSRF to internal services."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/opik_trace/opik_trace.py"
-                },
-                "region": {
-                  "startLine": 2888,
-                  "endLine": 2893
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "SSRF",
-          "level": "error",
-          "message": {
-            "text": "Databricks host is set from user-provided config directly into os.environ['DATABRICKS_HOST'] and used as the MLflow tracking URI. No URL validation or allowlist restricts the target, enabling SSRF."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
-                },
-                "region": {
-                  "startLine": 2308,
-                  "endLine": 2323
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "CREDENTIAL-LEAK-ENV",
-          "level": "error",
-          "message": {
-            "text": "Databricks credentials (DATABRICKS_TOKEN, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET) are written to process-global os.environ. In a multi-tenant server, other request handlers or threads can read these environment variables, leading to cross-tenant credential leakage."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
-                },
-                "region": {
-                  "startLine": 2308,
-                  "endLine": 2323
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "CREDENTIAL-LEAK-ENV",
-          "level": "error",
-          "message": {
-            "text": "MLflow tracking credentials (MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD) are written to process-global os.environ. In a multi-tenant deployment, concurrent requests from different tenants can overwrite or read each other's credentials."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
-                },
-                "region": {
-                  "startLine": 2336,
-                  "endLine": 2338
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "PII-EXPOSURE",
+          "ruleId": "EMAIL-INJECTION",
           "level": "warning",
           "message": {
-            "text": "All tracing integrations (Langfuse, LangSmith, MLflow, Opik) send full user prompts, LLM responses, file URLs, user IDs, session IDs, and error messages to external third-party services without any PII scrubbing or data minimization. This risks exposing sensitive user data, credentials embedded in prompts, and internal system details to external observability platforms."
+            "text": "User-supplied email strings from the 'emails' field are passed through with only .lower() normalization. The Pydantic model uses list[str] without EmailStr or regex validation. If downstream services do not validate email format, this could enable email header injection or abuse of the invitation flow for spam."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/ops/langfuse_trace/langfuse_trace.py"
+                  "uri": "api/controllers/console/workspace/members.py"
                 },
                 "region": {
-                  "startLine": 790,
-                  "endLine": 805
+                  "startLine": 88,
+                  "endLine": 105
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "PII-EXPOSURE",
-          "level": "warning",
-          "message": {
-            "text": "LangSmith message_trace sends complete user inputs, LLM outputs, file URLs (constructed from user-controlled message_file_data.url), and account metadata to the external LangSmith service without sanitization."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/langsmith_trace/langsmith_trace.py"
-                },
-                "region": {
-                  "startLine": 1814,
-                  "endLine": 1861
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "INFO-DISCLOSURE",
-          "level": "warning",
-          "message": {
-            "text": "Multiple error handlers use str(e) to construct ValueError messages (e.g., 'LangFuse Failed to create trace: {str(e)}'). The original exception may contain connection strings, partial API keys, or internal hostnames that get exposed to the caller."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/langfuse_trace/langfuse_trace.py"
-                },
-                "region": {
-                  "startLine": 1167
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "INFO-DISCLOSURE",
-          "level": "warning",
-          "message": {
-            "text": "LangSmith and Opik error handlers propagate raw exception messages via str(e) in ValueError, potentially leaking internal API URLs, authentication details, or infrastructure topology to end users."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/langsmith_trace/langsmith_trace.py"
-                },
-                "region": {
-                  "startLine": 2053
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "WEAK-HASH",
-          "level": "note",
-          "message": {
-            "text": "The _seed_to_uuid4 function in the Opik trace integration uses MD5 (hashlib.md5) for deterministic UUID generation. While this is used for identifier derivation rather than security, MD5 is considered cryptographically broken and could lead to collision-based identifier conflicts."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/ops/opik_trace/opik_trace.py"
-                },
-                "region": {
-                  "startLine": 2858
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.6
+            "confidence": 0.60
           }
         }
       ]

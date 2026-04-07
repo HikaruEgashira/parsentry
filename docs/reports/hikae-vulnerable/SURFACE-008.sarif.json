@@ -7,59 +7,39 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "IDOR-001",
+              "id": "IDOR",
               "name": "InsecureDirectObjectReference",
               "shortDescription": {
-                "text": "IDOR: No authorization check on user lookup endpoint"
+                "text": "Endpoint exposes user data without authorization check"
               },
-              "fullDescription": {
-                "text": "The GET /api/user/<user_id> endpoint does not verify that the authenticated user is authorized to access the requested user profile. Any authenticated (or unauthenticated) user can retrieve any other user's data by manipulating the user_id parameter."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "helpUri": "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-639",
-                  "OWASP-A01"
-                ]
+                "tags": ["security", "owasp-api1", "access-control"]
               }
             },
             {
-              "id": "SQLI-001",
-              "name": "SqlInjection",
+              "id": "SQLI",
+              "name": "SQLInjection",
               "shortDescription": {
-                "text": "SQL injection via f-string interpolation in get_user_by_id()"
+                "text": "SQL query constructed via f-string with unsanitized user input"
               },
-              "fullDescription": {
-                "text": "The get_user_by_id() function constructs a SQL query using an f-string that directly interpolates the user_id parameter without sanitization or parameterized queries. An attacker can inject arbitrary SQL via the user_id path parameter."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "helpUri": "https://owasp.org/www-community/attacks/SQL_Injection",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-89",
-                  "OWASP-A03"
-                ]
+                "tags": ["security", "owasp-a03", "injection"]
               }
             },
             {
-              "id": "INFO-LEAK-001",
-              "name": "ErrorInformationLeak",
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
               "shortDescription": {
-                "text": "Exception details propagated to client in error response"
+                "text": "Internal exception details leaked to client in error response"
               },
-              "fullDescription": {
-                "text": "When get_user_by_id() raises an exception, the raw exception message is returned to the client. This can reveal internal database schema, table names, query structure, and stack traces to an attacker."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-209",
-                  "OWASP-A04"
-                ]
+                "tags": ["security", "information-disclosure"]
               }
             }
           ]
@@ -67,75 +47,126 @@
       },
       "results": [
         {
-          "ruleId": "IDOR-001",
+          "ruleId": "IDOR",
           "level": "error",
           "message": {
-            "text": "GET /api/user/<user_id> has no authorization check. Any caller can access any user's profile by enumerating user_id values, leading to horizontal privilege escalation."
+            "text": "The GET /api/user/<user_id> endpoint retrieves any user's data by ID without verifying that the requesting user is authorized to access that record. An authenticated or unauthenticated attacker can enumerate user IDs to exfiltrate all user profiles including emails and roles. The handler calls user_model.get_user_by_id(user_id) directly with the path parameter and returns the full user dict."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api.py"
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 121,
-                  "endLine": 133
+                  "startLine": 73,
+                  "endLine": 83,
+                  "snippet": {
+                    "text": "@api_bp.route('/user/<user_id>', methods=['GET'])\ndef get_user(user_id):\n    try:\n        user = user_model.get_user_by_id(user_id)\n        if user:\n            return jsonify(user)"
+                  }
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_user",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.95,
+            "impact": "Any user record can be read by any caller without authentication or authorization",
+            "remediation": "Verify the caller's identity via JWT/session and ensure the requested user_id matches the authenticated principal or the caller has an admin role"
           }
         },
         {
-          "ruleId": "SQLI-001",
+          "ruleId": "SQLI",
           "level": "error",
           "message": {
-            "text": "SQL injection in get_user_by_id(): the query `f\"SELECT * FROM users WHERE id = {user_id}\"` directly interpolates unsanitized user input. An attacker can submit a crafted user_id such as `1 OR 1=1` or `1; DROP TABLE users--` to exfiltrate data or modify the database."
+            "text": "In models.py, get_user_by_id() builds a SQL query using an f-string: `f\"SELECT * FROM users WHERE id = {user_id}\"`. The user_id value comes directly from the URL path parameter without any validation or parameterization. An attacker can supply payloads such as '1 OR 1=1' or '1 UNION SELECT ...' to extract arbitrary data from the database including passwords and API keys stored in plaintext."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "models.py"
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 490,
-                  "endLine": 514
+                  "startLine": 100,
+                  "endLine": 115,
+                  "snippet": {
+                    "text": "query = f\"SELECT * FROM users WHERE id = {user_id}\""
+                  }
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "UserModel.get_user_by_id",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.99,
+            "impact": "Full database read/write via UNION-based or stacked-query injection; passwords and API keys stored in plaintext are directly extractable",
+            "remediation": "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))"
           }
         },
         {
-          "ruleId": "INFO-LEAK-001",
+          "ruleId": "INFO-DISCLOSURE",
           "level": "warning",
           "message": {
-            "text": "Exception details from the database layer are returned directly in the HTTP response body. This leaks internal implementation details (table names, column names, query structure) that assist further exploitation of SQLI-001."
+            "text": "The get_user endpoint catches all exceptions and returns the raw exception string to the client via jsonify({'error': str(e)}). This leaks internal implementation details such as database schema, table names, file paths, and driver error messages, aiding further exploitation of the SQL injection vulnerability."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api.py"
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 121,
-                  "endLine": 133
+                  "startLine": 82,
+                  "endLine": 83,
+                  "snippet": {
+                    "text": "    except Exception as e:\n        return jsonify({'error': str(e)}), 500"
+                  }
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_user",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.90,
+            "impact": "Internal error details (table names, SQL syntax errors, file paths) exposed to attacker, facilitating targeted injection payloads",
+            "remediation": "Return a generic error message to the client and log the full exception server-side only"
           }
         }
-      ]
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          }
+        },
+        {
+          "location": {
+            "uri": "models.py",
+            "uriBaseId": "%SRCROOT%"
+          }
+        }
+      ],
+      "columnKind": "utf16CodeUnits"
     }
   ]
 }

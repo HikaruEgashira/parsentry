@@ -9,231 +9,65 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "SQLI",
-              "name": "SQLInjection",
-              "shortDescription": {
-                "text": "SQL Injection vulnerability"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
-            },
-            {
               "id": "SSRF",
-              "name": "InsecureSSLConfiguration",
+              "name": "ServerSideRequestForgery",
               "shortDescription": {
-                "text": "Insecure SSL/TLS configuration disabling certificate verification"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/295.html"
+                "text": "Server-Side Request Forgery allowing attackers to make the server issue requests to arbitrary destinations."
+              }
             },
             {
-              "id": "TENANT-ISOLATION",
-              "name": "TenantIsolationBypass",
+              "id": "XXE",
+              "name": "XMLExternalEntityInjection",
               "shortDescription": {
-                "text": "Potential cross-tenant data access due to insufficient isolation enforcement"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/284.html"
+                "text": "XML External Entity injection via document parsing that may allow reading local files or SSRF."
+              }
+            },
+            {
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": {
+                "text": "Remote code execution through malicious document processing."
+              }
+            },
+            {
+              "id": "PATH-TRAVERSAL",
+              "name": "PathTraversal",
+              "shortDescription": {
+                "text": "Path traversal allowing access to files outside the intended directory."
+              }
+            },
+            {
+              "id": "DESERIALIZATION",
+              "name": "InsecureDeserialization",
+              "shortDescription": {
+                "text": "Insecure deserialization of untrusted data leading to code execution or data tampering."
+              }
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakage",
+              "shortDescription": {
+                "text": "Exposure of sensitive information through error messages, logs, or responses."
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "SQLI",
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "SQL Injection in PGVector.search_by_vector: document_ids_filter values are directly interpolated into SQL WHERE clause via f-string formatting without parameterized queries. An attacker who controls document_ids_filter can inject arbitrary SQL. The pattern `document_ids = \", \".join(f\"'{id}'\" for id in document_ids_filter)` followed by f-string interpolation into the query is exploitable."
+            "text": "WordExtractor fetches external image URLs embedded in DOCX documents via ssrf_proxy.get(url). A malicious DOCX file can contain external image references pointing to internal network resources (e.g., http://169.254.169.254/latest/meta-data/). While ssrf_proxy is used, the URL is derived from the document's rel.target_ref without additional validation or allowlist filtering. An attacker can craft a DOCX with OLE relationships pointing to internal services, cloud metadata endpoints, or other sensitive infrastructure."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py"
+                  "uri": "api/core/rag/extractor/word_extractor.py"
                 },
                 "region": {
-                  "startLine": 228,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.92
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in PGVector.search_by_full_text: document_ids_filter values are directly interpolated into WHERE clause via f-string. Same vulnerable pattern as search_by_vector - IDs are formatted with single quotes and concatenated into SQL without parameterization."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py"
-                },
-                "region": {
-                  "startLine": 256,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.92
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in BaiduVector.delete_by_ids: Document IDs are formatted into a filter string using f-string interpolation with single-quote wrapping (`f\"'{id}'\"`) and joined directly into a filter expression. An attacker controlling document IDs can break out of the quotes and inject arbitrary filter expressions."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
-                },
-                "region": {
-                  "startLine": 162,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in BaiduVector.search_by_vector: document_ids_filter values are interpolated into filter string via f-string formatting (`f\"'{id}'\"`) without proper escaping. The constructed filter is passed directly to the vector search API."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
-                },
-                "region": {
-                  "startLine": 174,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in BaiduVector.search_by_full_text: Same vulnerable pattern as search_by_vector - document_ids_filter values interpolated into filter string for BM25 search without parameterization."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
-                },
-                "region": {
-                  "startLine": 196,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in IRIS IrisConnectionPool.ensure_schema_exists: The schema name is directly interpolated into a CREATE SCHEMA DDL statement via f-string (`f\"CREATE SCHEMA {schema}\"`). While the schema name currently originates from configuration, if an attacker can influence the IRIS_SCHEMA config value, they can execute arbitrary SQL DDL commands."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/iris/iris_vector.py"
-                },
-                "region": {
-                  "startLine": 84,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in IrisVector SQL queries: Multiple methods (add_texts, text_exists, delete_by_ids, delete_by_metadata_field, search_by_vector, search_by_full_text, delete, _create_collection) use f-string interpolation of self.schema and self.table_name into SQL. While these values derive from configuration and dataset IDs, the schema/table names are not validated against SQL identifier rules, and the pattern is dangerous if any upstream control is possible."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/iris/iris_vector.py"
-                },
-                "region": {
-                  "startLine": 158,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.65
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "SQL Injection in OracleVector.delete_by_metadata_field: The metadata key parameter is directly concatenated into the SQL query string via string concatenation (`f\"...JSON_VALUE(meta, '$.\" + key + \"') = :1\"`). If an attacker controls the key parameter, they can inject arbitrary SQL by breaking out of the JSON_VALUE function call."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/oracle/oraclevector.py"
-                },
-                "region": {
-                  "startLine": 163,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.88
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "warning",
-          "message": {
-            "text": "SQL Injection in ClickzettaVector.delete_by_metadata_field_impl: The metadata key is interpolated into a JSON path expression via f-string (`f\"...json_extract_string({Field.METADATA_KEY}, '$.{key}') = ?\"`). While the value uses parameterized query, the key itself is unescaped and directly embedded in the SQL string."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py"
-                },
-                "region": {
-                  "startLine": 130,
+                  "startLine": 83,
                   "startColumn": 1
                 }
               }
@@ -244,19 +78,19 @@
           }
         },
         {
-          "ruleId": "SQLI",
-          "level": "warning",
+          "ruleId": "SSRF",
+          "level": "error",
           "message": {
-            "text": "Insufficient SQL escaping in ClickzettaVector.search_by_full_text: User search query is escaped only by replacing single quotes with doubled quotes (`query.replace(\"'\", \"''\")`), then interpolated into a MATCH_ALL function call. This escaping may be insufficient depending on the SQL dialect and could be bypassed with backslash sequences or multi-byte character attacks."
+            "text": "ExtractProcessor.load_from_url() accepts a URL parameter and fetches it via ssrf_proxy.get(). The URL is used to download content which is then processed by file extractors based on the Content-Type or file extension derived from the response. If the URL or redirect target points to internal services, the server will fetch internal resources. The suffix/extension is derived from Content-Type header or Content-Disposition filename via regex, which can be manipulated by the remote server to influence which extractor handles the content."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py"
+                  "uri": "api/core/rag/extractor/extract_processor.py"
                 },
                 "region": {
-                  "startLine": 254,
+                  "startLine": 44,
                   "startColumn": 1
                 }
               }
@@ -267,39 +101,16 @@
           }
         },
         {
-          "ruleId": "SSRF",
-          "level": "warning",
+          "ruleId": "XXE",
+          "level": "error",
           "message": {
-            "text": "Insecure SSL configuration in HuaweiCloudVector: The create_ssl_context function explicitly disables certificate hostname checking (`check_hostname = False`) and certificate verification (`verify_mode = ssl.CERT_NONE`). This makes the connection vulnerable to man-in-the-middle attacks, allowing an attacker to intercept or modify data in transit between Dify and the Huawei Cloud Elasticsearch backend."
+            "text": "UnstructuredXmlExtractor calls partition_xml(filename=self._file_path, xml_keep_tags=True) on user-uploaded XML files. The unstructured library's XML parser may not disable external entity resolution by default, potentially allowing XXE attacks. A malicious XML file with external entity declarations could read local files (e.g., /etc/passwd) or trigger SSRF. The xml_keep_tags=True parameter preserves XML structure including potentially dangerous entity references."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/huawei/huawei_cloud_vector.py"
-                },
-                "region": {
-                  "startLine": 30,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "TENANT-ISOLATION",
-          "level": "warning",
-          "message": {
-            "text": "Potential cross-tenant data leakage in vector search: Multiple VDB implementations (PGVector, OpenGauss, Vastbase, etc.) construct table names from dataset IDs via `Dataset.gen_collection_name_by_id()`. The vector search methods accept document_ids_filter as an opaque list without validating that the requested document IDs belong to the same tenant. If a user can manipulate the document_ids_filter parameter, they may query documents from other tenants' datasets that happen to share the same vector store infrastructure."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/vector_factory.py"
+                  "uri": "api/core/rag/extractor/unstructured/unstructured_xml_extractor.py"
                 },
                 "region": {
                   "startLine": 1,
@@ -309,23 +120,23 @@
             }
           ],
           "properties": {
-            "confidence": 0.6
+            "confidence": 0.7
           }
         },
         {
-          "ruleId": "SQLI",
+          "ruleId": "RCE",
           "level": "warning",
           "message": {
-            "text": "SQL Injection via table name in OpenGauss: Multiple methods use f-string interpolation of self.table_name into SQL queries (e.g., `f\"INSERT INTO {self.table_name}\"`, `f\"DELETE FROM {self.table_name}\"`, `f\"DROP TABLE IF EXISTS {self.table_name}\"`). The table_name is derived from collection_name which comes from dataset.index_struct_dict['vector_store']['class_prefix']. If this stored value is tampered with (e.g., via database manipulation), it could lead to SQL injection across DDL and DML operations."
+            "text": "UnstructuredEpubExtractor calls pypandoc.download_pandoc() at extraction time, which downloads and installs a pandoc binary from the internet. This is called in the code path for processing user-uploaded EPUB files. If the download source is compromised (supply chain attack) or a MITM occurs, a malicious pandoc binary could be executed. Additionally, pandoc itself processes complex document formats that have historically been vectors for code execution."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/opengauss/opengauss.py"
+                  "uri": "api/core/rag/extractor/unstructured/unstructured_epub_extractor.py"
                 },
                 "region": {
-                  "startLine": 104,
+                  "startLine": 38,
                   "startColumn": 1
                 }
               }
@@ -336,26 +147,164 @@
           }
         },
         {
-          "ruleId": "SQLI",
+          "ruleId": "RCE",
           "level": "warning",
           "message": {
-            "text": "SQL Injection in BaiduVector.delete_by_metadata_field: While the value is escaped by replacing double quotes, the key parameter is directly interpolated into a filter expression via f-string (`f'metadata[\"{key}\"] = \"{escaped_value}\"'`). An attacker controlling the key can inject arbitrary filter expressions by breaking out of the metadata accessor syntax."
+            "text": "Multiple extractors process complex binary file formats (PDF via pypdfium2, DOCX via python-docx, XLSX via openpyxl, PPT/PPTX via unstructured) on user-uploaded content without sandboxing. These parsing libraries handle complex formats with known historical CVEs. A specially crafted document could exploit a parser vulnerability to achieve remote code execution. The extract_processor.py dispatches to these parsers based solely on file extension, meaning an attacker controls which parser handles their malicious payload."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
+                  "uri": "api/core/rag/extractor/extract_processor.py"
                 },
                 "region": {
-                  "startLine": 167,
+                  "startLine": 73,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.8
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL",
+          "level": "warning",
+          "message": {
+            "text": "In ExtractProcessor.load_from_url(), the file suffix is extracted from the URL path via Path(url).suffix or from the Content-Disposition header filename via regex. The suffix is concatenated directly into a temp file path without sanitization: file_path = f\"{temp_dir}/{next(tempfile._get_candidate_names())}{suffix}\". Although the file is within a temp directory, a crafted suffix containing path separators or null bytes could potentially escape the temp directory on certain OS/filesystem configurations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/extract_processor.py"
+                },
+                "region": {
+                  "startLine": 52,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL",
+          "level": "warning",
+          "message": {
+            "text": "WordExtractor accepts a file_path in the constructor and uses os.path.expanduser() on it if it contains '~'. If the file_path is user-controlled, tilde expansion could resolve to unexpected home directories. Additionally, the _is_valid_url() check only validates URL structure, and if the path is not a local file, it attempts to download it via ssrf_proxy without validating the destination. The downloaded content is written to a NamedTemporaryFile and processed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/word_extractor.py"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.45
+          }
+        },
+        {
+          "ruleId": "DESERIALIZATION",
+          "level": "error",
+          "message": {
+            "text": "CacheEmbedding uses pickle.dumps() to serialize embedding vectors and pickle.loads() (via embedding.get_embedding()) to deserialize them from the database. While the embeddings are generated server-side, if an attacker gains write access to the Embedding table (e.g., via SQL injection in another component), they could store a malicious pickle payload that executes arbitrary code when deserialized during embedding cache lookups. The pickle protocol is used at HIGHEST_PROTOCOL level."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/embedding/cached_embedding.py"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "NotionExtractor makes outbound HTTP requests to Notion API endpoints using httpx.post() and httpx.request() without using the ssrf_proxy helper. While these requests target api.notion.com, the notion_obj_id parameter is user-controlled and is interpolated into URL templates (BLOCK_CHILD_URL_TMPL, DATABASE_URL_TMPL, etc.). The block data fetching recursively follows has_children references, meaning the Notion API response controls further request targets. If the Notion API token has broad access, this could be used to exfiltrate data from unintended Notion workspaces."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/notion_extractor.py"
+                },
+                "region": {
+                  "startLine": 97,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "note",
+          "message": {
+            "text": "CacheEmbedding.embed_query() logs the first 10 characters of user query text when DEBUG mode is enabled: logger.exception(\"Failed to embed query text '%s...(%s chars)'\", text[:10], len(text)). Similarly, error paths in embed_documents expose processing details. This could leak sensitive user query content into log files accessible to operators or log aggregation systems."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/embedding/cached_embedding.py"
+                },
+                "region": {
+                  "startLine": 150,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The UnstructuredWordExtractor, UnstructuredPPTXExtractor, UnstructuredEpubExtractor, and UnstructuredEmailExtractor all call partition_via_api() which sends the uploaded file content to an external unstructured API endpoint configured via dify_config.UNSTRUCTURED_API_URL. This URL is server-configured but the file content (which is user-controlled) is sent to this endpoint. If the UNSTRUCTURED_API_URL is misconfigured or points to an attacker-controlled server, user document content would be exfiltrated. The API key is also transmitted with each request."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/unstructured/unstructured_doc_extractor.py"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
           }
         }
       ]

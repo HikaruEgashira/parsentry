@@ -9,77 +9,133 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "PRIV-ESCALATION",
+              "id": "PLUGIN-SIGNATURE-BYPASS",
               "shortDescription": {
-                "text": "Privilege escalation via backwards invocation allowing plugins to invoke platform apps and models"
+                "text": "Plugin signature verification disabled by default"
               },
-              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+              "fullDescription": {
+                "text": "The upload_pkg and upload_bundle methods default verify_signature to False, allowing installation of unsigned or tampered plugin packages. An attacker who compromises a plugin distribution channel can inject malicious code that will be executed without any integrity check."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
-              "id": "SSRF",
+              "id": "PRIV-ESCALATION",
               "shortDescription": {
-                "text": "Server-Side Request Forgery via plugin installation from user-controlled URLs"
+                "text": "Privilege escalation via backwards invocation into host app"
               },
-              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery/"
+              "fullDescription": {
+                "text": "PluginAppBackwardsInvocation.invoke_app allows any plugin to invoke any application within the same tenant using InvokeFrom.SERVICE_API privilege level. The only access control is tenant_id scoping, meaning a low-privilege plugin can invoke high-privilege apps (e.g., admin workflows) and exfiltrate data or trigger sensitive operations."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
               "id": "RCE",
               "shortDescription": {
-                "text": "Remote Code Execution risk through malicious plugin package upload and execution"
+                "text": "Unrestricted tool invocation from plugin backwards invocation"
               },
-              "helpUri": "https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/"
+              "fullDescription": {
+                "text": "PluginToolBackwardsInvocation.invoke_tool allows plugins to invoke arbitrary tools (including builtin tools) within the host application with no scope restriction or allowlist. A malicious plugin can invoke any tool type (ToolProviderType) with arbitrary parameters, potentially achieving remote code execution through code-execution tools or SSRF through HTTP-based tools."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
-              "id": "CRYPTO-WEAK",
+              "id": "CRYPTO-ORACLE",
               "shortDescription": {
-                "text": "Use of MD5 for credential hashing in cache keys"
+                "text": "Encryption/decryption oracle exposed to plugins"
               },
-              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+              "fullDescription": {
+                "text": "PluginEncrypter.invoke_encrypt exposes encrypt, decrypt, and cache-clear operations to plugins. A malicious plugin can decrypt arbitrary provider credentials for the tenant by supplying the appropriate namespace and identity, gaining access to API keys, secrets, and other sensitive configuration."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
-              "id": "IDOR",
+              "id": "HTTP-SMUGGLING",
               "shortDescription": {
-                "text": "Insecure Direct Object Reference in backwards invocation app access"
+                "text": "HTTP request deserialization vulnerable to request smuggling and header injection"
               },
-              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+              "fullDescription": {
+                "text": "The deserialize_request function in http_parser.py parses raw HTTP bytes into a Flask Request object without validating header names/values for injection characters (CR/LF), without enforcing Content-Length consistency with actual body length, and without restricting which headers can be set. An attacker can craft raw bytes that inject additional headers or smuggle requests."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
-              "id": "SQLI",
+              "id": "SSRF",
               "shortDescription": {
-                "text": "SQL Injection via string formatting in data migration"
+                "text": "Server-side request forgery via Host header in HTTP parser"
               },
-              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+              "fullDescription": {
+                "text": "In deserialize_request, the Host header from untrusted raw bytes is used directly to set SERVER_NAME and SERVER_PORT in the WSGI environ without validation. This can be exploited to manipulate server-side routing, redirect internal requests, or bypass host-based access controls."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
             },
             {
-              "id": "INFO-LEAK",
+              "id": "AUTHZ-BYPASS",
               "shortDescription": {
-                "text": "Information disclosure through verbose error messages exposing internal state"
+                "text": "Missing per-user authorization in backwards app invocation"
               },
-              "helpUri": "https://owasp.org/Top10/A04_2021-Insecure_Design/"
+              "fullDescription": {
+                "text": "PluginAppBackwardsInvocation.invoke_app creates or retrieves an EndUser if user_id is empty, and otherwise performs only a database lookup without verifying that the calling plugin is authorized to act on behalf of that user. A malicious plugin can impersonate any user within the tenant by supplying their user_id."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
               "id": "SUPPLY-CHAIN",
               "shortDescription": {
-                "text": "Supply chain attack risk through optional signature verification on plugin packages"
+                "text": "No size limit or content validation on plugin package upload"
               },
-              "helpUri": "https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/"
-            },
-            {
-              "id": "PROMPT-INJECTION",
-              "shortDescription": {
-                "text": "Prompt injection via plugin-controlled instruction in summary backwards invocation"
+              "fullDescription": {
+                "text": "The upload_pkg method accepts arbitrary bytes as pkg with no size limit enforced at the application layer. Combined with disabled signature verification, this enables denial-of-service via large uploads and supply-chain attacks through malicious package content."
               },
-              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+              "defaultConfiguration": {
+                "level": "warning"
+              }
             }
           ]
         }
       },
       "results": [
         {
+          "ruleId": "PLUGIN-SIGNATURE-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "upload_pkg defaults verify_signature=False, allowing installation of unsigned plugin packages. An attacker compromising the plugin distribution channel can inject arbitrary code. The same issue exists in upload_bundle."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/impl/plugin.py"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
           "ruleId": "PRIV-ESCALATION",
           "level": "error",
           "message": {
-            "text": "The backwards invocation system (PluginAppBackwardsInvocation.invoke_app) allows plugins to call back into the platform and invoke arbitrary apps within the same tenant. A malicious plugin can invoke any app by providing an app_id, effectively escalating its privileges to access other apps' data, workflows, and LLM capabilities. The invocation uses InvokeFrom.SERVICE_API which may bypass user-facing rate limits and access controls. Additionally, if user_id is empty, the system auto-creates an EndUser, allowing anonymous access."
+            "text": "PluginAppBackwardsInvocation.invoke_app allows any plugin to invoke any app in the tenant with SERVICE_API privilege. No per-app permission check or plugin-scope restriction is enforced. A malicious plugin can invoke admin-level workflows, exfiltrate data from other apps, or trigger destructive operations."
           },
           "locations": [
             {
@@ -88,7 +144,76 @@
                   "uri": "api/core/plugin/backwards_invocation/app.py"
                 },
                 "region": {
-                  "startLine": 29,
+                  "startLine": 56,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "level": "error",
+          "message": {
+            "text": "PluginToolBackwardsInvocation.invoke_tool accepts arbitrary tool_type, provider, tool_name, and tool_parameters from plugin context with no allowlist or scope restriction. A malicious plugin can invoke any registered tool (including code execution, HTTP request, or file system tools) to achieve remote code execution or server-side request forgery."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/backwards_invocation/tool.py"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "CRYPTO-ORACLE",
+          "level": "error",
+          "message": {
+            "text": "PluginEncrypter.invoke_encrypt exposes decrypt operation to plugins, allowing a malicious plugin to decrypt arbitrary provider credentials by specifying the target namespace and identity. This leaks API keys and secrets for all configured providers in the tenant."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/backwards_invocation/encrypt.py"
+                },
+                "region": {
+                  "startLine": 8,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "HTTP-SMUGGLING",
+          "level": "error",
+          "message": {
+            "text": "deserialize_request parses raw HTTP bytes without validating header names/values for CRLF injection, without verifying Content-Length matches actual body length, and without restricting sensitive headers. An attacker can inject arbitrary headers or craft malformed requests that are interpreted differently by upstream and downstream components."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/plugin/utils/http_parser.py"
+                },
+                "region": {
+                  "startLine": 25,
                   "startColumn": 1
                 }
               }
@@ -100,65 +225,19 @@
         },
         {
           "ruleId": "SSRF",
-          "level": "error",
-          "message": {
-            "text": "In PluginService.upload_pkg_from_github(), the 'repo', 'version', and 'package' parameters are used to construct a GitHub URL for downloading plugin packages: f'https://github.com/{repo}/releases/download/{version}/{package}'. While the domain is restricted to github.com, a malicious user could craft 'repo' values with path traversal sequences or redirect to unexpected GitHub resources. The download_with_size_limit function fetches from this URL on the server side. Additionally, the extract_asset method accepts a user-controlled filename parameter that is passed to the plugin daemon without sanitization."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/services/plugin/plugin_service.py"
-                },
-                "region": {
-                  "startLine": 168,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "RCE",
-          "level": "error",
-          "message": {
-            "text": "The plugin upload system (PluginInstaller.upload_pkg) accepts arbitrary binary packages that are forwarded to the plugin daemon for execution. The verify_signature parameter defaults to false, meaning unsigned and potentially malicious plugin code can be uploaded and executed. A plugin, once installed, gains backwards invocation capabilities to invoke LLMs, tools, apps, and workflow nodes on the platform. The PluginToolBackwardsInvocation.invoke_tool allows plugins to invoke other tools with arbitrary parameters, creating a chain of execution that could be exploited."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/plugin/impl/plugin.py"
-                },
-                "region": {
-                  "startLine": 50,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "CRYPTO-WEAK",
           "level": "warning",
           "message": {
-            "text": "In PluginModelRuntime._get_schema_cache_key(), MD5 is used to hash credential key-value pairs for cache key construction: hashlib.md5(f'{key}:{value}'.encode()).hexdigest(). MD5 is cryptographically broken and susceptible to collision attacks. While this is used for caching rather than security-critical operations, credential values are being hashed and an attacker who can observe cache keys could potentially exploit MD5 collisions to cause cache poisoning."
+            "text": "The Host header from untrusted raw HTTP bytes is used to populate SERVER_NAME and SERVER_PORT in the WSGI environ without validation. This allows manipulation of server-side URL generation, routing decisions, and can bypass host-based access controls."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/plugin/impl/model_runtime.py"
+                  "uri": "api/core/plugin/utils/http_parser.py"
                 },
                 "region": {
-                  "startLine": 220,
-                  "startColumn": 1
+                  "startLine": 68,
+                  "startColumn": 5
                 }
               }
             }
@@ -168,10 +247,10 @@
           }
         },
         {
-          "ruleId": "IDOR",
+          "ruleId": "AUTHZ-BYPASS",
           "level": "error",
           "message": {
-            "text": "In PluginAppBackwardsInvocation._get_user(), a user_id provided by the plugin is used to look up users. The method queries both EndUser and Account tables without verifying that the requesting plugin has authorization to act on behalf of the returned user. A malicious plugin could provide any user_id to impersonate another user when invoking apps. Similarly, _get_app only checks tenant_id but does not verify plugin-level permissions to access the specific app."
+            "text": "invoke_app allows plugins to specify an arbitrary user_id to impersonate any user in the tenant. When user_id is empty, it auto-creates an EndUser, and when provided, it performs a database lookup without verifying the calling plugin's authorization to act as that user. This enables cross-user data access and action impersonation."
           },
           "locations": [
             {
@@ -180,77 +259,8 @@
                   "uri": "api/core/plugin/backwards_invocation/app.py"
                 },
                 "region": {
-                  "startLine": 83,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "SQLI",
-          "level": "error",
-          "message": {
-            "text": "In PluginDataMigration.migrate_datasets() and migrate_db_records(), SQL queries are constructed using f-string formatting with table_name and provider_column_name variables. While these values currently come from hardcoded strings within the class, the pattern of using f-strings for SQL query construction is dangerous. The retrieval_model JSON is also serialized and used in a parameterized query, but the table/column names themselves are interpolated directly: f'select id, {provider_column_name} as provider_name... from {table_name}'."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/services/plugin/data_migration.py"
-                },
-                "region": {
-                  "startLine": 41,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.5
-          }
-        },
-        {
-          "ruleId": "INFO-LEAK",
-          "level": "warning",
-          "message": {
-            "text": "Multiple error handlers in the plugin system expose internal implementation details. In BasePluginClient._handle_plugin_daemon_error(), error messages from the plugin daemon including error_type and full message content are propagated to callers. The PluginInvokeError.to_user_friendly_error() method includes error_type and error details that may reveal internal architecture. The PluginDaemonError.__str__() includes request_id which could be used for correlation attacks. Error messages in _request_with_plugin_daemon_response include the URL path which reveals internal API structure."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/plugin/impl/base.py"
-                },
-                "region": {
-                  "startLine": 200,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "SUPPLY-CHAIN",
-          "level": "error",
-          "message": {
-            "text": "Plugin signature verification is optional and controlled by the 'restrict_to_marketplace_only' feature flag. When this flag is not set (which is the default for non-enterprise deployments), plugins can be installed from GitHub or local packages without any signature verification (verify_signature defaults to false). This allows a supply chain attack where a malicious actor could serve a compromised plugin package. The upload_pkg method passes verify_signature='false' as a string to the daemon, meaning the daemon makes the final verification decision."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/services/plugin/plugin_service.py"
-                },
-                "region": {
-                  "startLine": 148,
-                  "startColumn": 1
+                  "startLine": 65,
+                  "startColumn": 9
                 }
               }
             }
@@ -260,72 +270,26 @@
           }
         },
         {
-          "ruleId": "PROMPT-INJECTION",
+          "ruleId": "SUPPLY-CHAIN",
           "level": "warning",
           "message": {
-            "text": "In PluginModelBackwardsInvocation.invoke_summary(), the payload.instruction field provided by the plugin is directly interpolated into the system prompt via string replacement: SUMMARY_PROMPT.replace('{payload.instruction}', payload.instruction). A malicious plugin can inject arbitrary instructions into the LLM system prompt to manipulate the model's behavior, potentially extracting sensitive information from the text being summarized or altering the summary output to include malicious content."
+            "text": "upload_pkg accepts arbitrary bytes with no application-level size limit and signature verification disabled by default. This enables denial-of-service via oversized uploads and supply-chain attacks via malicious package content that passes no integrity check."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/core/plugin/backwards_invocation/model.py"
+                  "uri": "api/core/plugin/impl/plugin.py"
                 },
                 "region": {
                   "startLine": 75,
-                  "startColumn": 1
+                  "startColumn": 5
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "PRIV-ESCALATION",
-          "level": "error",
-          "message": {
-            "text": "The PluginEncrypter.invoke_encrypt backwards invocation allows plugins to request encryption and decryption of arbitrary credential data via the 'opt' parameter. When opt='decrypt', a plugin can request decryption of credentials belonging to other providers within the same tenant, potentially exposing API keys and secrets. The 'clear' option allows plugins to delete credential caches, causing denial of service for other plugin/provider configurations."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/plugin/backwards_invocation/encrypt.py"
-                },
-                "region": {
-                  "startLine": 1,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "PRIV-ESCALATION",
-          "level": "warning",
-          "message": {
-            "text": "PluginNodeBackwardsInvocation allows plugins to invoke parameter_extractor and question_classifier workflow nodes with arbitrary parameters. The node_id is hardcoded to '1919810' which could collide with actual workflow node IDs. The instruction parameter is passed directly without sanitization, and a malicious plugin could use this to execute arbitrary workflow logic by crafting model_config and parameters to extract sensitive data from the system."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/plugin/backwards_invocation/node.py"
-                },
-                "region": {
-                  "startLine": 1,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.65
+            "confidence": 0.7
           }
         }
       ]

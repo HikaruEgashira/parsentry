@@ -9,185 +9,135 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "PATH-INJECTION",
-              "name": "PathInjection",
+              "id": "DOS-001",
+              "name": "UnboundedFileUploadResourceExhaustion",
               "shortDescription": {
-                "text": "User-controlled values interpolated into URL path segments without sanitization"
+                "text": "Audio file is fully read into memory before size check, enabling memory exhaustion"
               },
-              "helpUri": "https://owasp.org/www-community/attacks/Path_Traversal"
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html",
+              "properties": {
+                "tags": ["security", "CWE-400"]
+              }
             },
             {
-              "id": "API-KEY-EXPOSURE",
-              "name": "ApiKeyExposure",
+              "id": "DOS-002",
+              "name": "MissingRequestLevelFileSizeLimit",
               "shortDescription": {
-                "text": "API key transmitted in every request header with no scope restriction or environment check"
+                "text": "No Content-Length or streaming size check before reading file into memory"
               },
-              "helpUri": "https://owasp.org/www-community/vulnerabilities/Use_of_hard-coded_credentials"
+              "helpUri": "https://cwe.mitre.org/data/definitions/770.html",
+              "properties": {
+                "tags": ["security", "CWE-770"]
+              }
             },
             {
-              "id": "SSRF",
-              "name": "ServerSideRequestForgery",
+              "id": "INPUT-001",
+              "name": "MissingFileKeyValidation",
               "shortDescription": {
-                "text": "Base URL is user-configurable with no allowlist validation, enabling SSRF if SDK is used server-side"
+                "text": "Accessing request.files['file'] without checking key existence causes unhandled 400 error"
               },
-              "helpUri": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "CWE-20"]
+              }
             },
             {
-              "id": "LOG-INJECTION",
-              "name": "LogInjection",
+              "id": "INPUT-002",
+              "name": "FilenameNotSanitized",
               "shortDescription": {
-                "text": "User-controlled URL values logged without sanitization when enableLogging is true"
+                "text": "Uploaded file buffer is hardcoded to 'temp.mp3' regardless of actual format, but original filename is not validated"
               },
-              "helpUri": "https://owasp.org/www-community/attacks/Log_Injection"
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "CWE-20"]
+              }
             },
             {
-              "id": "INSUFFICIENT-INPUT-VALIDATION",
-              "name": "InsufficientInputValidation",
+              "id": "MIME-001",
+              "name": "MimeTypeBasedValidationBypass",
               "shortDescription": {
-                "text": "Validation only checks length and type but does not sanitize path-unsafe characters in IDs used in URL paths"
+                "text": "File type validation relies solely on client-supplied MIME type, which can be spoofed"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/345.html",
+              "properties": {
+                "tags": ["security", "CWE-345"]
+              }
+            },
+            {
+              "id": "INFO-001",
+              "name": "ExceptionDetailLeakage",
+              "shortDescription": {
+                "text": "ValueError exceptions are re-raised directly, potentially leaking internal details to API consumers"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209"]
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "PATH-INJECTION",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "The messageId parameter is interpolated directly into the URL path `/messages/${messageId}/feedbacks` without sanitization. An attacker can inject path traversal characters (e.g., '../') or additional path segments to target unintended API endpoints. The ensureNonEmptyString check only validates non-emptiness and length, not the absence of path-unsafe characters like '/', '..', or URL-encoded variants."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/client/base.ts"
-                },
-                "region": {
-                  "startLine": 1019,
-                  "startColumn": 13
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "PATH-INJECTION",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "The fileId parameter is interpolated into `/files/${fileId}/preview` without path-safe validation. An attacker controlling fileId could inject path traversal sequences to access arbitrary API endpoints. This applies to multiple methods across ChatClient, WorkflowClient, and KnowledgeBaseClient that interpolate user-supplied IDs (conversationId, taskId, workflowId, datasetId, documentId, segmentId, etc.) directly into URL paths."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/client/base.ts"
-                },
-                "region": {
-                  "startLine": 1069,
-                  "startColumn": 13
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "PATH-INJECTION",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "Multiple methods in ChatClient interpolate conversationId into URL paths (e.g., `/conversations/${conversationId}/name`, `/conversations/${conversationId}/variables/${variableId}`) without sanitizing path-unsafe characters. Similarly, annotationId is interpolated into `/apps/annotations/${annotationId}` and action into `/apps/annotation-reply/${action}`. Any of these can be exploited to redirect requests to unintended server endpoints."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/client/chat.ts"
-                },
-                "region": {
-                  "startLine": 1859,
-                  "startColumn": 13
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "PATH-INJECTION",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "KnowledgeBaseClient interpolates datasetId, documentId, segmentId, childChunkId, metadataId, and nodeId into deeply nested URL paths (e.g., `/datasets/${datasetId}/documents/${documentId}/segments/${segmentId}/child_chunks/${childChunkId}`). None of these IDs are validated for path-unsafe characters. A single malicious ID could alter the request target."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/client/knowledge-base.ts"
-                },
-                "region": {
-                  "startLine": 3039,
-                  "startColumn": 13
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "PATH-INJECTION",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "WorkflowClient interpolates workflowId, workflowRunId, and taskId into URL paths (`/workflows/${workflowId}/run`, `/workflows/run/${workflowRunId}`, `/workflows/tasks/${taskId}/stop`) and modelType in WorkspaceClient into `/workspaces/current/models/model-types/${modelType}` without path-character validation."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/client/workflow.ts"
-                },
-                "region": {
-                  "startLine": 1431,
-                  "startColumn": 13
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "API-KEY-EXPOSURE",
-          "ruleIndex": 1,
+          "ruleId": "DOS-001",
           "level": "warning",
           "message": {
-            "text": "The HttpClient sends the API key as a Bearer token in the Authorization header on every request. There is no mechanism to detect or warn when the SDK is used in a browser/client-side context where the API key would be exposed to end users via network inspection. The SDK description acknowledges this risk ('Risk of API key exposure in client-side code') but implements no safeguard such as environment detection or documentation warnings in the constructor."
+            "text": "In AudioService.transcript_asr(), the entire uploaded file is read into memory via file.read() before the size check (len(file_content) > FILE_SIZE_LIMIT). An attacker can send a file much larger than the 30MB limit, causing the server to allocate that memory before rejecting it. This enables memory exhaustion denial-of-service attacks."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/http/client.ts"
+                  "uri": "api/services/audio_service.py"
                 },
                 "region": {
-                  "startLine": 4394,
-                  "startColumn": 9
+                  "startLine": 54,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "DOS-002",
+          "level": "warning",
+          "message": {
+            "text": "None of the three audio endpoint controllers (console, service_api, web) enforce a Content-Length check or use streaming size-limited reads before passing the file to AudioService. The Flask request.files object will buffer the entire upload. Without a WSGI-level or reverse proxy limit, this allows arbitrarily large payloads to consume server memory."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/app/audio.py"
+                },
+                "region": {
+                  "startLine": 73,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/audio.py"
+                },
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/audio.py"
+                },
+                "region": {
+                  "startLine": 65,
+                  "startColumn": 1
                 }
               }
             }
@@ -197,75 +147,139 @@
           }
         },
         {
-          "ruleId": "SSRF",
-          "ruleIndex": 2,
+          "ruleId": "INPUT-001",
           "level": "warning",
           "message": {
-            "text": "The baseUrl configuration is accepted without any validation or allowlist. If a server-side application allows user input to influence the SDK's baseUrl configuration (e.g., through environment variables or request parameters), an attacker could redirect API calls to an internal service. The buildRequestUrl function constructs the final URL by concatenating baseUrl and path without validating the resulting URL's host."
+            "text": "All three audio controllers access request.files['file'] directly without first checking if the 'file' key exists. If no file is uploaded, this raises a KeyError (HTTP 400) with a raw traceback rather than the intended NoAudioUploadedError. The NoAudioUploadedServiceError check in AudioService only triggers if file is None, but a missing key raises before that."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/http/client.ts"
+                  "uri": "api/controllers/console/app/audio.py"
                 },
                 "region": {
-                  "startLine": 3987,
-                  "startColumn": 3
+                  "startLine": 73,
+                  "startColumn": 1
                 }
               }
-            }
-          ],
-          "properties": {
-            "confidence": 0.5
-          }
-        },
-        {
-          "ruleId": "LOG-INJECTION",
-          "ruleIndex": 3,
-          "level": "note",
-          "message": {
-            "text": "When enableLogging is true, the full request URL (which includes user-controlled query parameters and path segments) is logged via console.info without sanitization. An attacker could inject newline characters or log-format-breaking sequences through query parameter values (keyword, status, etc.) to forge log entries or corrupt log analysis."
-          },
-          "locations": [
+            },
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/http/client.ts"
+                  "uri": "api/controllers/service_api/app/audio.py"
                 },
                 "region": {
-                  "startLine": 4386,
-                  "startColumn": 7
+                  "startLine": 57,
+                  "startColumn": 1
                 }
               }
-            }
-          ],
-          "properties": {
-            "confidence": 0.6
-          }
-        },
-        {
-          "ruleId": "INSUFFICIENT-INPUT-VALIDATION",
-          "ruleIndex": 4,
-          "level": "warning",
-          "message": {
-            "text": "The validation module (ensureNonEmptyString, validateParams) checks for type, emptiness, and max length, but does not validate that string values used as URL path segments contain only safe characters (alphanumeric, hyphens, underscores). Characters like '/', '..', '%2F', '%00', or query-string delimiters ('?', '#') in ID fields would pass validation but alter the semantics of the constructed URL. This is the root cause enabling the PATH-INJECTION findings."
-          },
-          "locations": [
+            },
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "sdks/nodejs-client/src/client/validation.ts"
+                  "uri": "api/controllers/web/audio.py"
                 },
                 "region": {
-                  "startLine": 731,
+                  "startLine": 65,
                   "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.9
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "MIME-001",
+          "level": "warning",
+          "message": {
+            "text": "File type validation in AudioService.transcript_asr() checks file.mimetype against an allowed list of audio MIME types. However, the MIME type is supplied by the client in the Content-Type header of the multipart upload and can be trivially spoofed. No magic-byte or file header validation is performed. An attacker could upload arbitrary content (e.g., a crafted binary) with a spoofed audio/mp3 MIME type, which would pass validation and be forwarded to the speech-to-text model provider."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/audio_service.py"
+                },
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INPUT-002",
+          "level": "note",
+          "message": {
+            "text": "In AudioService.transcript_asr(), the in-memory buffer is hardcoded with buffer.name = 'temp.mp3' regardless of the actual uploaded file extension or detected MIME type. While this prevents path traversal via filename, it also means that files validated as wav/m4a/amr/mpga are mislabeled as mp3 when passed to the transcription provider, which could cause unexpected behavior or processing errors."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/audio_service.py"
+                },
+                "region": {
+                  "startLine": 62,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-001",
+          "level": "note",
+          "message": {
+            "text": "All three audio controllers catch ValueError and re-raise it directly ('raise e'). ValueError exceptions from deeper service layers may contain internal implementation details (e.g., model configuration, workflow state) that get exposed to API consumers in error responses."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/app/audio.py"
+                },
+                "region": {
+                  "startLine": 94,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/audio.py"
+                },
+                "region": {
+                  "startLine": 77,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/audio.py"
+                },
+                "region": {
+                  "startLine": 85,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
           }
         }
       ]

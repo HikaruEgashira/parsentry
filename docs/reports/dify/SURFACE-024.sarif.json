@@ -9,59 +9,173 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "OPEN-REDIRECT",
+              "id": "HARDCODED-SECRET",
+              "name": "HardcodedSecret",
               "shortDescription": {
-                "text": "Open Redirect via unvalidated redirect_url parameter"
+                "text": "Hardcoded default credentials in infrastructure configuration"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
-            },
-            {
-              "id": "ACCOUNT-ENUM",
-              "shortDescription": {
-                "text": "Account enumeration via differentiated error responses"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/204.html"
-            },
-            {
-              "id": "BRUTE-FORCE",
-              "shortDescription": {
-                "text": "Insufficient brute-force protection on verification code"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/307.html"
-            },
-            {
-              "id": "INFO-LEAK",
-              "shortDescription": {
-                "text": "Sensitive token exposed in URL query parameters"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/598.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
             },
             {
               "id": "SSRF",
+              "name": "SSRFProxyBypass",
               "shortDescription": {
-                "text": "SSO redirect URL passed without origin validation"
+                "text": "SSRF proxy misconfiguration allowing bypass"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "NETWORK-EXPOSURE",
+              "name": "NetworkExposure",
+              "shortDescription": {
+                "text": "Internal service ports exposed to host network"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/668.html"
+            },
+            {
+              "id": "INSECURE-DEFAULT",
+              "name": "InsecureDefault",
+              "shortDescription": {
+                "text": "Insecure default configuration value"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1188.html"
+            },
+            {
+              "id": "MISSING-AUTH",
+              "name": "MissingAuthentication",
+              "shortDescription": {
+                "text": "Missing or weak authentication on infrastructure component"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "OPEN-REDIRECT",
+          "ruleId": "HARDCODED-SECRET",
           "level": "error",
           "message": {
-            "text": "The redirect_url query parameter is decoded and used directly in router.replace() after successful login without validating that the URL belongs to the same origin. An attacker can craft a webapp-signin link with a malicious redirect_url (e.g., an attacker-controlled phishing domain) to redirect authenticated users after they log in, enabling credential theft or session hijacking."
+            "text": "Hardcoded default PostgreSQL password 'difyai123456' in docker-compose. If .env is not configured, the database is accessible with this well-known credential. An attacker on the same network can connect and exfiltrate all application data."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-signin/components/mail-and-password-auth.tsx"
+                  "uri": "docker/docker-compose.middleware.yaml"
                 },
                 "region": {
-                  "startLine": 1264,
-                  "startColumn": 9
+                  "startLine": 12
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded default Redis password 'difyai123456' in docker-compose. Redis stores session data, task queues, and cached secrets. An attacker can read/write arbitrary keys, potentially hijacking sessions or injecting malicious task payloads."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 83
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded default SECRET_KEY 'sk-REDACTED' used for Flask session signing and token generation. If unchanged, any attacker can forge session cookies and authentication tokens, achieving full account takeover."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.yaml"
+                },
+                "region": {
+                  "startLine": 30
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded default Sandbox API key 'dify-sandbox' protects the code execution sandbox endpoint. An attacker who can reach the sandbox service can execute arbitrary code within the sandbox container, which may lead to container escape or lateral movement."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 108
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded default plugin daemon SERVER_KEY and DIFY_INNER_API_KEY in docker-compose. These keys gate internal API access between plugin daemon and the Dify API. If unchanged, any attacker on the Docker network can impersonate the plugin daemon and invoke internal-only API endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 140
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "warning",
+          "message": {
+            "text": "Hardcoded default Weaviate API key 'WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih' used for vector database authentication. If unchanged, an attacker can read, modify, or delete all vector embeddings, corrupting RAG pipeline results."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 240
                 }
               }
             }
@@ -71,20 +185,85 @@
           }
         },
         {
-          "ruleId": "OPEN-REDIRECT",
-          "level": "error",
+          "ruleId": "HARDCODED-SECRET",
+          "level": "warning",
           "message": {
-            "text": "In the email verification code flow, after successful code verification the user is redirected via router.replace(decodeURIComponent(redirectUrl)) where redirectUrl comes from an unvalidated query parameter. This allows post-authentication open redirect attacks."
+            "text": "Hardcoded default Celery broker URL 'redis://:difyai123456@redis:6379/1' embeds Redis password in plaintext. This password appears in process listings, logs, and container inspect output, expanding the credential exposure surface."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-signin/check-code/page.tsx"
+                  "uri": "docker/docker-compose.yaml"
                 },
                 "region": {
-                  "startLine": 1011,
-                  "startColumn": 9
+                  "startLine": 103
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "NETWORK-EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "PostgreSQL port 5432 is exposed to the host network by default (EXPOSE_POSTGRES_PORT:-5432). Combined with the hardcoded default password, this allows any host-reachable attacker to directly connect to the database and perform full CRUD operations, data exfiltration, or destructive queries."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 26
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "NETWORK-EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "Redis port 6379 is exposed to the host network by default (EXPOSE_REDIS_PORT:-6379). Combined with the hardcoded default password, an attacker can connect to Redis, read session data, inject malicious Celery tasks, or use Redis as a pivot for further attacks (e.g., writing SSH keys via CONFIG SET)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 90
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "NETWORK-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Weaviate ports 8080 and 50051 (HTTP and gRPC) are exposed to the host network by default. Combined with the hardcoded default API key, this allows direct vector database manipulation from outside the Docker network."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 246
                 }
               }
             }
@@ -94,89 +273,175 @@
           }
         },
         {
-          "ruleId": "ACCOUNT-ENUM",
+          "ruleId": "NETWORK-EXPOSURE",
           "level": "warning",
           "message": {
-            "text": "The password reset flow returns a distinct 'account_not_found' error code when an email does not exist in the system (res.code === 'account_not_found'). This differentiated response allows an attacker to enumerate valid email addresses by observing whether the reset request succeeds or returns this specific error."
+            "text": "Plugin daemon ports 5002 and 5003 (service and remote debugging) are exposed to host by default. The debugging port allows remote plugin installation, enabling an attacker to install malicious plugins that execute within the Dify runtime."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-reset-password/page.tsx"
+                  "uri": "docker/docker-compose.middleware.yaml"
                 },
                 "region": {
-                  "startLine": 2023,
-                  "startColumn": 12
+                  "startLine": 183
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.9
+            "confidence": 0.85
           }
         },
         {
-          "ruleId": "BRUTE-FORCE",
+          "ruleId": "SSRF",
           "level": "warning",
           "message": {
-            "text": "The 6-digit verification code check for password reset has no client-side rate limiting or lockout mechanism. The regex validation /\\d{6}/ lacks anchors (should be /^\\d{6}$/) allowing codes like '123456abc' to pass. While server-side rate limiting may exist, the client does not enforce any cooldown between verify attempts, facilitating automated brute-force attacks against the 6-digit code space (1 million combinations)."
+            "text": "The Squid SSRF proxy reverse-proxy section uses 'acl src_all src all' with 'http_access allow src_all', granting unrestricted access to the reverse proxy endpoint. This overrides the earlier 'http_access deny all' for the reverse proxy port, allowing any client that reaches the proxy to access the sandbox backend without authentication."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-reset-password/check-code/page.tsx"
+                  "uri": "docker/ssrf_proxy/squid.conf.template"
                 },
                 "region": {
-                  "startLine": 1660,
-                  "startColumn": 10
+                  "startLine": 53,
+                  "endLine": 54
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.7
+            "confidence": 0.80
           }
         },
         {
-          "ruleId": "BRUTE-FORCE",
+          "ruleId": "SSRF",
           "level": "warning",
           "message": {
-            "text": "The 6-digit email login verification code check has the same weak regex validation (/\\d{6}/ without anchors) and no client-side rate limiting. The verify function can be called repeatedly without cooldown, enabling brute-force attacks against the verification code."
+            "text": "The Squid SSRF proxy allows outbound connections to Safe_ports range 1025-65535 (line 16). While the forward proxy denies non-allowed domains, the wide port range combined with the 'include /etc/squid/conf.d/*.conf' directive (line 29) means any additional config dropped into conf.d/ can expand access. An attacker who achieves file write to /etc/squid/conf.d/ inside the container can bypass the SSRF allowlist entirely."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-signin/check-code/page.tsx"
+                  "uri": "docker/ssrf_proxy/squid.conf.template"
                 },
                 "region": {
-                  "startLine": 994,
-                  "startColumn": 10
+                  "startLine": 16
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.7
+            "confidence": 0.65
           }
         },
         {
-          "ruleId": "INFO-LEAK",
-          "level": "warning",
+          "ruleId": "SSRF",
+          "level": "note",
           "message": {
-            "text": "Authentication-related tokens (verification tokens, password reset tokens) are passed in URL query parameters throughout the signin and password reset flows. URL parameters are logged in browser history, server access logs, and can leak via the Referer header to third-party resources. The token parameter is visible in the URL during the check-code and set-password steps."
+            "text": "The SSRF proxy binds outgoing connections to 0.0.0.0 (tcp_outgoing_address 0.0.0.0), allowing the proxy to reach any network interface on the host. In cloud environments with metadata services at 169.254.169.254, this could be leveraged for SSRF to cloud metadata endpoints if the domain allowlist is bypassed."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-signin/components/mail-and-code-auth.tsx"
+                  "uri": "docker/ssrf_proxy/squid.conf.template"
                 },
                 "region": {
-                  "startLine": 1393,
-                  "startColumn": 9
+                  "startLine": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.60
+          }
+        },
+        {
+          "ruleId": "INSECURE-DEFAULT",
+          "level": "error",
+          "message": {
+            "text": "CORS is configured to allow all origins by default (WEB_API_CORS_ALLOW_ORIGINS:-* and CONSOLE_CORS_ALLOW_ORIGINS:-*). This permits any website to make authenticated cross-origin requests to the Dify API if a user is logged in, enabling CSRF-like attacks to steal data or perform actions on behalf of the user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.yaml"
+                },
+                "region": {
+                  "startLine": 111,
+                  "endLine": 112
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "INSECURE-DEFAULT",
+          "level": "warning",
+          "message": {
+            "text": "NGINX HTTPS is disabled by default (NGINX_HTTPS_ENABLED:-false) and listens on port 80. All traffic including authentication tokens, API keys, and user data is transmitted in cleartext, vulnerable to network sniffing and man-in-the-middle attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.yaml"
+                },
+                "region": {
+                  "startLine": 565
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INSECURE-DEFAULT",
+          "level": "warning",
+          "message": {
+            "text": "NGINX server_name defaults to '_' (wildcard), accepting requests for any Host header. This can facilitate host-header injection attacks, cache poisoning, and password reset link manipulation if the application uses the Host header to generate URLs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/nginx/conf.d/default.conf.template"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "INSECURE-DEFAULT",
+          "level": "warning",
+          "message": {
+            "text": "REDIS_SSL_CERT_REQS defaults to CERT_NONE (line 88), meaning even when Redis SSL is enabled, the certificate is not validated. This allows man-in-the-middle attacks between the application and Redis, potentially leaking session data and credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.yaml"
+                },
+                "region": {
+                  "startLine": 88
                 }
               }
             }
@@ -186,49 +451,113 @@
           }
         },
         {
-          "ruleId": "SSRF",
+          "ruleId": "MISSING-AUTH",
           "level": "warning",
           "message": {
-            "text": "The SSO authentication components pass the redirect_url query parameter directly to backend SSO URL fetch functions (fetchWebSAMLSSOUrl, fetchWebOIDCSSOUrl, fetchWebOAuth2SSOUrl, fetchMembersSAMLSSOUrl, etc.) without validating the URL origin or scheme on the client side. If the server also fails to validate, this could lead to SSRF or redirect manipulation attacks where the SSO callback is directed to an attacker-controlled endpoint."
+            "text": "WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED defaults to true in the shared environment block (line 525), though the middleware config sets it to false. If the shared env takes precedence or is used independently, anonymous users can read and write vector data without any authentication."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-signin/components/sso-auth.tsx"
+                  "uri": "docker/docker-compose.yaml"
                 },
                 "region": {
-                  "startLine": 1469,
-                  "startColumn": 7
+                  "startLine": 525
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.6
+            "confidence": 0.75
           }
         },
         {
-          "ruleId": "OPEN-REDIRECT",
+          "ruleId": "MISSING-AUTH",
           "level": "warning",
           "message": {
-            "text": "In the password reset set-password page, after successful password change the getSignInUrl() function constructs a redirect URL using the raw redirect_url search parameter without validation: `/webapp-signin?redirect_url=${searchParams.get('redirect_url') || ''}`. This passes the unvalidated redirect_url forward to the signin page, perpetuating the open redirect chain."
+            "text": "Plugin daemon binds PLUGIN_REMOTE_INSTALLING_HOST to 0.0.0.0 (line 145), accepting remote plugin installation connections from any interface. Combined with the exposed debugging port and hardcoded SERVER_KEY, an attacker can remotely install arbitrary plugins into the running Dify instance."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/(shareLayout)/webapp-reset-password/set-password/page.tsx"
+                  "uri": "docker/docker-compose.middleware.yaml"
                 },
                 "region": {
-                  "startLine": 1805,
-                  "startColumn": 5
+                  "startLine": 145
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.8
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "HARDCODED-SECRET",
+          "level": "warning",
+          "message": {
+            "text": "Hardcoded default MySQL root password 'difyai123456' in docker-compose middleware. If the MySQL profile is activated without overriding this value, the database is fully accessible with a well-known credential."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "NETWORK-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "MySQL port 3306 is exposed to the host network by default (EXPOSE_MYSQL_PORT:-3306). If the MySQL profile is activated with the hardcoded default root password, the database is directly reachable for remote exploitation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "NETWORK-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "SSRF proxy port 3128 is exposed to the host network by default (EXPOSE_SSRF_PROXY_PORT:-3128). An external attacker who can reach this port can use the proxy to access internal Docker network services or, via the reverse proxy configuration, access the sandbox directly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 213
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
           }
         }
       ]

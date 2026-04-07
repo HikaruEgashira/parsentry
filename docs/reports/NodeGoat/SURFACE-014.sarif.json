@@ -7,106 +7,85 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "NOSQL-INJECTION-WHERE",
-              "name": "NoSQLInjectionWhereClause",
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
               "shortDescription": {
-                "text": "NoSQL injection via $where clause with string interpolation of user input"
+                "text": "Server-Side Request Forgery via user-controlled URL in needle.get()"
               },
-              "fullDescription": {
-                "text": "The getByUserIdAndThreshold function constructs a MongoDB $where clause using template literal string interpolation with the threshold parameter sourced from req.query.threshold. The $where operator executes arbitrary JavaScript on the MongoDB server. An attacker can inject JavaScript code via the threshold parameter to bypass query logic (e.g., `1'; return 1 == '1`) or cause denial of service (e.g., `0';while(true){}'`). This is a critical server-side JavaScript injection vulnerability."
-              },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
-              "properties": {
-                "tags": [
-                  "security",
-                  "injection",
-                  "nosql",
-                  "CWE-943",
-                  "CWE-94",
-                  "A03:2021"
-                ]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "JS-INJECTION-MONGODB",
-              "name": "ServerSideJavaScriptInjection",
+              "id": "XSS",
+              "name": "ReflectedCrosssSiteScripting",
               "shortDescription": {
-                "text": "Server-side JavaScript injection via MongoDB $where operator"
+                "text": "Reflected XSS via unsanitized HTTP response body written directly to client"
               },
-              "fullDescription": {
-                "text": "The $where clause in MongoDB evaluates JavaScript expressions on the server. By injecting into the threshold parameter, an attacker achieves arbitrary server-side JavaScript execution within the MongoDB context. This can be used to exfiltrate data from other collections, manipulate query results, or perform denial-of-service attacks via infinite loops."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "injection",
-                  "javascript",
-                  "CWE-94",
-                  "A03:2021"
-                ]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html"
             },
             {
-              "id": "DOS-VIA-INJECTION",
-              "name": "DenialOfServiceViaInjection",
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
               "shortDescription": {
-                "text": "Denial of service via infinite loop injection in $where clause"
+                "text": "Open redirect via unvalidated user-supplied URL in query parameter"
               },
-              "fullDescription": {
-                "text": "An attacker can inject an infinite loop (e.g., `0';while(true){}'`) into the threshold parameter. Because the $where clause executes JavaScript on the MongoDB server, this blocks the database thread, causing denial of service for all database operations. MongoDB's $where does not enforce execution time limits by default."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/Denial_of_Service",
-              "properties": {
-                "tags": [
-                  "security",
-                  "dos",
-                  "availability",
-                  "CWE-400",
-                  "A03:2021"
-                ]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
             },
             {
-              "id": "UPSERT-DATA-INTEGRITY",
-              "name": "UncontrolledUpsert",
+              "id": "PROTO-POLLUTION",
+              "name": "PrototypePollution",
               "shortDescription": {
-                "text": "Upsert flag enables unintended document creation"
+                "text": "Known prototype pollution vulnerability in needle 2.2.4 dependency"
               },
-              "fullDescription": {
-                "text": "The update method in allocations-dao.js uses {upsert: true}, which creates a new document if no matching document exists. If an attacker manipulates the userId or other query parameters, this could create unexpected allocation records in the database, violating data integrity constraints and potentially enabling privilege escalation through fabricated financial data."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "data-integrity",
-                  "CWE-20",
-                  "A04:2021"
-                ]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/1321.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "NOSQL-INJECTION-WHERE",
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "The getByUserIdAndThreshold function builds a MongoDB $where clause via string interpolation: `$where: \\`this.userId == ${parsedUserId} && this.stocks > '${threshold}'\\``. The threshold parameter originates from req.query.threshold with no sanitization, enabling NoSQL injection. An attacker can inject `1'; return 1 == '1` to bypass the filter and retrieve all allocation records."
+            "text": "The URL passed to needle.get() is constructed entirely from user-controlled query parameters (req.query.url + req.query.symbol). An attacker can set 'url' to an internal service address (e.g., http://169.254.169.254/latest/meta-data/) to reach internal infrastructure, read cloud metadata, or scan internal networks. No validation, allowlisting, or URL parsing is applied to the input."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/allocations-dao.js"
+                  "uri": "app/routes/research.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 15,
+                  "startColumn": 13,
+                  "endLine": 16,
+                  "endColumn": 56
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.98
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "The response body from the external needle.get() request is written directly to the HTTP response via res.write(body) without any sanitization or encoding. If the remote server (or an attacker-controlled server via SSRF) returns HTML/JavaScript content, it will be rendered in the victim's browser as the Content-Type is set to text/html. This is a reflected XSS vulnerability chained with the SSRF."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 21,
+                  "endLine": 25,
+                  "endColumn": 37
                 }
               }
             }
@@ -116,69 +95,53 @@
           }
         },
         {
-          "ruleId": "JS-INJECTION-MONGODB",
-          "level": "error",
-          "message": {
-            "text": "The $where operator in getByUserIdAndThreshold executes a JavaScript expression on the MongoDB server. Because the threshold value is interpolated directly into this expression without escaping, an attacker gains server-side JavaScript execution within the MongoDB process. This allows reading data from arbitrary collections, manipulating results, or executing privileged database operations."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/allocations-dao.js"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "DOS-VIA-INJECTION",
-          "level": "error",
-          "message": {
-            "text": "An attacker can cause denial of service by injecting `0';while(true){}'` as the threshold parameter. This creates an infinite loop in the MongoDB $where JavaScript evaluation, blocking the database thread. No input validation or query timeout is configured to prevent this attack."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/allocations-dao.js"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "UPSERT-DATA-INTEGRITY",
+          "ruleId": "OPEN-REDIRECT",
           "level": "warning",
           "message": {
-            "text": "The update method uses {upsert: true}, which will create a new allocation document if no match is found. Combined with the lack of input validation on query parameters, an attacker could create fabricated financial allocation records, compromising data integrity in the allocations collection."
+            "text": "The /learn route redirects to a URL taken directly from req.query.url without any validation. An attacker can craft a link such as /learn?url=https://evil.com to redirect authenticated users to a phishing site. No allowlist or domain check is applied."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/allocations-dao.js"
+                  "uri": "app/routes/index.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 72,
+                  "startColumn": 16,
+                  "endLine": 72,
+                  "endColumn": 46
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.75
+            "confidence": 0.97
+          }
+        },
+        {
+          "ruleId": "PROTO-POLLUTION",
+          "level": "warning",
+          "message": {
+            "text": "needle 2.2.4 is affected by CVE-2020-7669 (prototype pollution via crafted response headers) and related vulnerabilities. If an attacker controls the target server (possible via the SSRF), malicious response headers can pollute Object.prototype, potentially leading to denial of service or remote code execution depending on downstream usage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 2,
+                  "startColumn": 1,
+                  "endLine": 2,
+                  "endColumn": 32
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
           }
         }
       ]

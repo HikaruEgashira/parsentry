@@ -9,260 +9,234 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "CSRF-OAUTH-STATE",
-              "name": "MissingOAuthStateValidation",
+              "id": "SSRF",
               "shortDescription": {
-                "text": "OAuth flow lacks CSRF protection via state parameter"
+                "text": "Server-Side Request Forgery"
               },
-              "fullDescription": {
-                "text": "The OAuth login flow passes invite_token as the state parameter rather than a cryptographically random CSRF token. The OAuthCallback handler treats the state value solely as an invite_token and never validates it against a server-side or cookie-stored nonce. An attacker can craft a malicious OAuth callback URL with a stolen authorization code to perform authorization code injection (login CSRF), forcing the victim to authenticate as the attacker's account."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "confidence": 0.9
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "OPEN-REDIRECT",
-              "name": "OpenRedirectInOAuthCallback",
+              "id": "MALICIOUS-FILE-UPLOAD",
               "shortDescription": {
-                "text": "User-controlled data reflected in redirect URL without validation"
+                "text": "Unrestricted file upload leading to malicious file processing"
               },
-              "fullDescription": {
-                "text": "In the OAuth callback error handling path, ValueError exception messages are URL-encoded and appended to a redirect to the signin page. While the base URL is server-configured (CONSOLE_WEB_URL), the message parameter value is user-influenced via the OAuth provider response. Additionally, the data_source_oauth callback directly interpolates query parameters (code, error) into redirect URLs. If CONSOLE_WEB_URL is misconfigured or if the message is interpreted as a URL by downstream JavaScript, this could enable open redirect attacks."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "properties": {
-                "confidence": 0.7
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
             },
             {
-              "id": "OPEN-REDIRECT-POSTLOGIN",
-              "name": "OpenRedirectViaPostLoginRedirect",
+              "id": "SQLI",
               "shortDescription": {
-                "text": "Post-login redirect value is not validated against an allowlist"
+                "text": "SQL Injection via LIKE pattern"
               },
-              "fullDescription": {
-                "text": "The postLoginRedirect module-level variable in post-login-redirect.ts can be set via setPostLoginRedirect() to any arbitrary URL string. When resolvePostLoginRedirect() is called after successful authentication, the value is used directly in router.replace() without validating that it is a relative path or belongs to an allowed domain. An attacker who can influence this value (e.g., via another XSS or DOM manipulation) could redirect authenticated users to a malicious site."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "properties": {
-                "confidence": 0.6
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
             },
             {
-              "id": "CSRF-SSO-STATE",
-              "name": "InsecureSSOStateCookie",
+              "id": "MASS-ASSIGNMENT",
               "shortDescription": {
-                "text": "SSO state cookie set without Secure, HttpOnly, or SameSite attributes"
+                "text": "Mass assignment via unvalidated JSON deserialization into internal config"
               },
-              "fullDescription": {
-                "text": "In sso-auth.tsx, the OIDC and OAuth2 SSO flows store the state parameter in a cookie using raw document.cookie assignment (e.g., 'user-oidc-state=<value>;Path=/') without setting Secure, HttpOnly, or SameSite attributes. This means the state cookie is accessible to JavaScript (XSS can read/modify it), transmitted over non-HTTPS connections, and sent on cross-site requests. An attacker could tamper with the state value to bypass CSRF protection in the SSO callback flow."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "confidence": 0.9
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/915.html"
             },
             {
-              "id": "XSS-REFLECTED",
-              "name": "ReflectedMessageParameterInToast",
+              "id": "IDOR",
               "shortDescription": {
-                "text": "URL message parameter decoded and displayed without sanitization"
+                "text": "Insecure Direct Object Reference allowing cross-tenant access"
               },
-              "fullDescription": {
-                "text": "In normal-form.tsx, the 'message' query parameter is extracted from the URL via searchParams.get('message'), decoded with decodeURIComponent, and passed directly to toast.error(). While React's toast component likely renders text safely, the pattern of reflecting URL-controlled input into the UI without explicit sanitization is a risk. If the toast component or a future change renders HTML, this becomes a reflected XSS vector."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "properties": {
-                "confidence": 0.5
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
             },
             {
               "id": "INFO-LEAK",
-              "name": "ErrorMessageLeakageInOAuthRedirect",
               "shortDescription": {
-                "text": "Internal error details exposed in OAuth redirect URL"
+                "text": "Information leakage through verbose error messages"
               },
-              "fullDescription": {
-                "text": "In oauth.py OAuthCallback, ValueError exceptions from the OAuth process are caught and their string representation is URL-encoded and placed into a redirect URL query parameter. These error messages may contain internal implementation details, OAuth provider responses, or configuration information that should not be exposed to end users. The data_source_oauth.py callback similarly reflects error parameters from the OAuth provider directly into redirect URLs."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "properties": {
-                "confidence": 0.7
-              }
-            },
-            {
-              "id": "AUTH-BYPASS",
-              "name": "RefreshTokenEndpointMissingCSRFProtection",
-              "shortDescription": {
-                "text": "Refresh token endpoint lacks CSRF validation and rate limiting"
-              },
-              "fullDescription": {
-                "text": "The /refresh-token endpoint in login.py has no decorators for setup_required, login_required, or any CSRF protection. It reads the refresh token from a cookie and issues new token pairs. Since cookies are automatically sent by the browser, a cross-site attacker could trigger token refresh requests. While the refresh token itself provides some protection, the lack of CSRF token validation on this state-changing POST endpoint creates a potential for session fixation or token theft when combined with other vulnerabilities."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "properties": {
-                "confidence": 0.7
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "CSRF-OAUTH-STATE",
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "The OAuth callback at /oauth/authorize/<provider> uses the 'state' query parameter solely as an invite_token without generating or validating a random CSRF nonce. This allows authorization code injection attacks where an attacker can force a victim to log in with the attacker's OAuth account."
+            "text": "The website crawl endpoint accepts a user-supplied URL and passes it directly to WebsiteService.crawl_url() via WebsiteCrawlApiRequest without server-side URL validation or allowlist enforcement. An authenticated user can supply internal/private network URLs (e.g., http://169.254.169.254/latest/meta-data/, http://localhost:6379/) to scan internal services, read cloud metadata, or pivot within the network. The provider field is limited to three values but the url field has no restrictions."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/console/auth/oauth.py"
+                  "uri": "api/controllers/console/datasets/website.py"
                 },
                 "region": {
-                  "startLine": 564,
-                  "startColumn": 1
+                  "startLine": 38,
+                  "endLine": 52
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
         },
         {
-          "ruleId": "CSRF-SSO-STATE",
+          "ruleId": "MALICIOUS-FILE-UPLOAD",
           "level": "error",
           "message": {
-            "text": "SSO state values for OIDC and OAuth2 are stored in cookies via document.cookie without Secure, HttpOnly, or SameSite attributes. The cookie 'user-oidc-state' and 'user-oauth2-state' can be read/modified by JavaScript and are vulnerable to cross-site leakage."
+            "text": "The document-create-by-file endpoint (service API) reads file content from the multipart upload and passes it to FileService.upload_file() using the client-supplied filename and mimetype. The filename is taken directly from file.filename without sanitization for path traversal characters. The mimetype is client-controlled. Although FileService may perform some checks, the controller itself does not validate file extension against an allowlist, does not verify the actual content type matches the declared mimetype, and does not restrict filename characters. Malicious filenames (e.g., containing '../') or specially crafted files (polyglots) could exploit the downstream extraction pipeline."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/signin/components/sso-auth.tsx"
+                  "uri": "api/controllers/service_api/dataset/document.py"
                 },
                 "region": {
-                  "startLine": 1705,
-                  "startColumn": 1
+                  "startLine": 370,
+                  "endLine": 390
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
         },
         {
-          "ruleId": "OPEN-REDIRECT",
+          "ruleId": "MASS-ASSIGNMENT",
           "level": "warning",
           "message": {
-            "text": "In the data source OAuth callback at /oauth/data-source/callback/<provider>, user-controlled query parameters 'code' and 'error' are directly interpolated into redirect URLs (e.g., redirect(f'{CONSOLE_WEB_URL}?type=notion&code={code}')). While the base URL is server-configured, the parameter values are not sanitized."
+            "text": "In the service API document-create-by-file endpoint, arbitrary JSON from request.form['data'] is parsed via json.loads() and then merged into args dict without field-level filtering. This dict is passed to KnowledgeConfig.model_validate(args) which constructs the full knowledge configuration. An attacker can inject unexpected fields (e.g., original_document_id, embedding_model_provider, data_source overrides) into the configuration. While Pydantic will ignore truly unknown fields, any fields that match the model schema but are not intended to be user-settable (like original_document_id) can be overridden."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/console/auth/data_source_oauth.py"
+                  "uri": "api/controllers/service_api/dataset/document.py"
                 },
                 "region": {
-                  "startLine": 3044,
-                  "startColumn": 1
+                  "startLine": 333,
+                  "endLine": 392
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
         },
         {
-          "ruleId": "OPEN-REDIRECT-POSTLOGIN",
+          "ruleId": "MASS-ASSIGNMENT",
           "level": "warning",
           "message": {
-            "text": "The resolvePostLoginRedirect() function returns a URL value from a module-level variable without validating it is a safe relative path. This value is used directly in router.replace() after authentication, potentially enabling open redirect if the value is externally influenced."
+            "text": "In the console API DatasetDocumentListApi.post(), the entire console_ns.payload is passed to KnowledgeConfig.model_validate() without explicit field filtering. The KnowledgeConfig model is a broad internal configuration type and any field matching its schema can be set by the caller. This allows an API consumer to set internal-only fields if they exist in the Pydantic model schema, potentially overriding data_source type, embedding model settings, or other sensitive configuration."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/signin/utils/post-login-redirect.ts"
+                  "uri": "api/controllers/console/datasets/datasets_document.py"
                 },
                 "region": {
-                  "startLine": 1339,
-                  "startColumn": 1
+                  "startLine": 391,
+                  "endLine": 410
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
         },
         {
-          "ruleId": "AUTH-BYPASS",
-          "level": "warning",
+          "ruleId": "SQLI",
+          "level": "note",
           "message": {
-            "text": "The /refresh-token endpoint has no CSRF protection decorators. It reads the refresh token from an HTTP cookie and issues a new token pair. Since cookies are sent automatically by the browser, this endpoint is vulnerable to cross-site request forgery that could lead to token refresh on behalf of the victim."
+            "text": "In the service API DocumentListApi.get(), user-supplied keyword is interpolated into a LIKE pattern using f-string formatting: search = f'%{query_params.keyword}%'. While SQLAlchemy parameterizes the value preventing classic SQL injection, the LIKE wildcards ('%' and '_') within the user input are not escaped. An attacker can craft keyword values containing '%' or '_' to manipulate query matching behavior, potentially causing denial of service through expensive wildcard scans or extracting information about document names through targeted pattern matching."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/console/auth/login.py"
+                  "uri": "api/controllers/service_api/dataset/document.py"
                 },
                 "region": {
-                  "startLine": 3423,
-                  "startColumn": 1
+                  "startLine": 537,
+                  "endLine": 539
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "note",
+          "message": {
+            "text": "Same LIKE wildcard injection pattern in the console API DatasetDocumentListApi.get(). User search input is wrapped with '%' delimiters without escaping SQL LIKE meta-characters: search = f'%{search}%'. This allows manipulation of pattern matching behavior."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/datasets/datasets_document.py"
+                },
+                "region": {
+                  "startLine": 288,
+                  "endLine": 290
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "In the service API DocumentAddByFileApi.post() (line 399-403), the document is saved using dataset.created_by_account as the acting account rather than current_user. This means the uploaded document is attributed to the dataset creator, not the API caller. While tenant_id is checked on the dataset lookup, an API token holder who has access to any dataset within the tenant could upload documents attributed to the dataset owner. The same pattern appears in DocumentUpdateByFileApi.post() at line 496-503."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/dataset/document.py"
+                },
+                "region": {
+                  "startLine": 398,
+                  "endLine": 410
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
         },
         {
           "ruleId": "INFO-LEAK",
-          "level": "warning",
-          "message": {
-            "text": "ValueError exceptions from the OAuth token exchange or user info retrieval are caught and their string representation is passed directly into a redirect URL query parameter. This can expose internal error details, OAuth provider error messages, or configuration information to the end user."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/console/auth/oauth.py"
-                },
-                "region": {
-                  "startLine": 3584,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "XSS-REFLECTED",
           "level": "note",
           "message": {
-            "text": "The 'message' URL query parameter is decoded via decodeURIComponent and rendered in a toast notification. While React typically escapes output, this pattern of reflecting untrusted URL input into the UI should be reviewed to ensure no HTML rendering path exists."
+            "text": "The website crawl endpoint catches broad Exception and re-raises it as WebsiteCrawlError(str(e)), which may expose internal error details such as internal hostnames, network topology, stack traces, or third-party API error messages to the client. This is especially dangerous when combined with SSRF, as connection errors to internal services reveal their existence."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/signin/normal-form.tsx"
+                  "uri": "api/controllers/console/datasets/website.py"
                 },
                 "region": {
-                  "startLine": 766,
-                  "startColumn": 1
+                  "startLine": 48,
+                  "endLine": 52
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
         }
       ]
     }

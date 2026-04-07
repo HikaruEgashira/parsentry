@@ -7,88 +7,89 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "PRIV-ESCALATION-001",
-              "name": "MissingFunctionLevelAccessControl",
+              "id": "PLAINTEXT-PASSWORD-STORAGE",
               "shortDescription": {
-                "text": "Missing admin authorization check on benefits modification endpoint"
+                "text": "Passwords stored in plaintext without hashing"
               },
               "fullDescription": {
-                "text": "The POST /benefits route only checks isLoggedIn but does not verify isAdmin. Any authenticated user can invoke updateBenefits, which should be restricted to administrators. This constitutes a broken function-level access control vulnerability (OWASP A01:2021)."
+                "text": "User passwords are stored as plaintext in MongoDB. The bcrypt hashing code is commented out, meaning passwords are stored exactly as received from the user. An attacker who gains read access to the database (via NoSQL injection, backup leak, or compromised admin) obtains all credentials immediately."
               },
-              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
-              "properties": {
-                "tags": [
-                  "security",
-                  "access-control",
-                  "privilege-escalation",
-                  "CWE-285"
-                ],
-                "precision": "high",
-                "security-severity": "9.1"
+              "defaultConfiguration": {
+                "level": "error"
               }
             },
             {
-              "id": "IDOR-001",
-              "name": "InsecureDirectObjectReference",
+              "id": "NOSQL-INJECTION",
               "shortDescription": {
-                "text": "User-controlled userId parameter allows modification of other users' benefits"
+                "text": "NoSQL injection via unsanitized query parameters"
               },
               "fullDescription": {
-                "text": "The updateBenefits handler accepts userId from req.body without verifying that the authenticated user is authorized to modify that user's benefits. An attacker can supply an arbitrary userId to modify any user's benefit records. The benefitsDAO.updateBenefits function uses parseInt(userId) directly from the request body, enabling horizontal privilege escalation."
+                "text": "User-supplied values are passed directly into MongoDB query objects without type validation or sanitization. An attacker can supply an object like {\"$gt\": \"\"} instead of a string for userName, bypassing authentication or extracting data."
               },
-              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
-              "properties": {
-                "tags": [
-                  "security",
-                  "access-control",
-                  "IDOR",
-                  "CWE-639"
-                ],
-                "precision": "high",
-                "security-severity": "8.6"
+              "defaultConfiguration": {
+                "level": "error"
               }
             },
             {
-              "id": "CSRF-001",
-              "name": "MissingCSRFProtection",
+              "id": "SENSITIVE-DATA-EXPOSURE",
               "shortDescription": {
-                "text": "No CSRF protection on state-changing POST /benefits endpoint"
+                "text": "PII stored in plaintext without encryption"
               },
               "fullDescription": {
-                "text": "The POST /benefits endpoint performs a state-changing operation (benefit modification) but has no CSRF token validation. The CSRF middleware is commented out in the application configuration, leaving all POST endpoints vulnerable to cross-site request forgery attacks."
+                "text": "Sensitive personal data (SSN, date of birth, bank account, bank routing number) is stored in MongoDB in plaintext. The encryption code using crypto module is commented out. A database compromise exposes all PII directly."
               },
-              "helpUri": "https://owasp.org/www-community/attacks/csrf",
-              "properties": {
-                "tags": [
-                  "security",
-                  "csrf",
-                  "CWE-352"
-                ],
-                "precision": "high",
-                "security-severity": "7.5"
+              "defaultConfiguration": {
+                "level": "error"
               }
             },
             {
-              "id": "AUTH-BYPASS-001",
-              "name": "MissingAuthorizationCheck",
+              "id": "HARDCODED-CREDENTIALS",
               "shortDescription": {
-                "text": "No authorization verification on benefit data modification"
+                "text": "Hardcoded plaintext credentials in database seed script"
               },
               "fullDescription": {
-                "text": "The benefits modification flow from route handler through DAO layer contains no authorization check whatsoever. Authentication (isLoggedIn) is present but authorization (verifying the user has permission to modify benefits) is entirely absent. Combined with the IDOR via userId, this allows any authenticated user to escalate privileges and modify any user's benefits."
+                "text": "The database reset script contains hardcoded plaintext passwords for admin and user accounts. These credentials are committed to source control and are trivially discoverable."
               },
-              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
-              "properties": {
-                "tags": [
-                  "security",
-                  "authorization",
-                  "CWE-862"
-                ],
-                "precision": "high",
-                "security-severity": "9.1"
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "BROKEN-AUTH",
+              "shortDescription": {
+                "text": "Plaintext password comparison enables credential theft"
+              },
+              "fullDescription": {
+                "text": "The validateLogin function compares passwords using direct string equality (fromDB === fromUser) instead of bcrypt.compareSync. Combined with plaintext storage, this means the entire authentication chain provides zero cryptographic protection for credentials."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "IDOR",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference in profile update"
+              },
+              "fullDescription": {
+                "text": "The updateUser and getByUserId functions in profile-dao.js accept a userId parameter that is used directly in the MongoDB query. If the calling route does not enforce that the authenticated user can only access their own profile, an attacker can modify or read any user's profile by changing the userId parameter."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "DEPRECATED-LIBRARY",
+              "shortDescription": {
+                "text": "Use of deprecated bcrypt-nodejs library"
+              },
+              "fullDescription": {
+                "text": "The codebase imports bcrypt-nodejs which is deprecated and unmaintained. Even if the commented-out hashing code were enabled, it relies on a library with known issues. The maintained alternative is the 'bcrypt' or 'bcryptjs' package."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
               }
             }
           ]
@@ -96,121 +97,187 @@
       },
       "results": [
         {
-          "ruleId": "PRIV-ESCALATION-001",
-          "ruleIndex": 0,
+          "ruleId": "PLAINTEXT-PASSWORD-STORAGE",
           "level": "error",
           "message": {
-            "text": "POST /benefits route uses isLoggedIn middleware but omits isAdmin check. Any authenticated user can call updateBenefits to modify benefit records, which should be an admin-only operation. Add isAdmin middleware: app.post('/benefits', isLoggedIn, isAdmin, benefitsHandler.updateBenefits)."
+            "text": "Password is stored as plaintext. The bcrypt hashing on line 29 is commented out, so the raw password from the request is written directly to MongoDB. Any database compromise yields all user credentials in cleartext."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/index.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 25,
+                  "endLine": 31
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
           }
         },
         {
-          "ruleId": "IDOR-001",
-          "ruleIndex": 1,
+          "ruleId": "NOSQL-INJECTION",
           "level": "error",
           "message": {
-            "text": "updateBenefits handler reads userId from req.body and passes it to benefitsDAO.updateBenefits(parseInt(userId), ...) without verifying the authenticated user owns that userId. An attacker can set userId to any value in the POST body to modify another user's benefits (horizontal privilege escalation). The userId should be derived from the authenticated session, not from user-supplied input."
+            "text": "The userName parameter is passed directly into MongoDB findOne query without type checking. If the HTTP layer passes a parsed JSON object (e.g. {\"$gt\": \"\"}), the attacker can bypass authentication entirely by matching any user document."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/benefits.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 1
-                }
-              }
-            },
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/benefits-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1
+                  "startLine": 91,
+                  "endLine": 93
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.9
           }
         },
         {
-          "ruleId": "CSRF-001",
-          "ruleIndex": 2,
+          "ruleId": "NOSQL-INJECTION",
           "level": "error",
           "message": {
-            "text": "The POST /benefits endpoint modifies user benefit data but lacks CSRF token validation. The CSRF middleware is commented out in the application, so no state-changing endpoints are protected. An attacker can craft a malicious page that submits a forged POST request to /benefits while the victim is authenticated, silently modifying benefit records."
+            "text": "The userName parameter in getUserByUserName is passed unsanitized into MongoDB findOne. An attacker-controlled object can manipulate the query operator to extract or match unintended documents."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/index.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/user-dao.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 103,
+                  "endLine": 107
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.85
           }
         },
         {
-          "ruleId": "AUTH-BYPASS-001",
-          "ruleIndex": 3,
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
           "level": "error",
           "message": {
-            "text": "The entire benefits modification flow (route \u2192 handler \u2192 DAO) lacks authorization checks. Authentication via isLoggedIn confirms the user's identity but never verifies they are permitted to perform benefit modifications. This missing authorization, combined with the user-controlled userId parameter, creates a compound vulnerability allowing any authenticated user to modify any other user's benefits."
+            "text": "SSN, date of birth, bank account number, and bank routing number are stored in plaintext in MongoDB. The encryption code (lines 15-40) is entirely commented out. A database breach exposes all PII without any cryptographic barrier."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/benefits.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/profile-dao.js"
                 },
                 "region": {
-                  "startLine": 1
-                }
-              }
-            },
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/benefits-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1
+                  "startLine": 42,
+                  "endLine": 91
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "HARDCODED-CREDENTIALS",
+          "level": "error",
+          "message": {
+            "text": "Plaintext passwords ('Admin_123', 'User1_123', 'User2_123') are hardcoded in the database seed script and committed to version control. The bcrypt hashed alternatives are commented out. These default credentials are trivially discoverable and may persist in production."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/db-reset.js"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "level": "error",
+          "message": {
+            "text": "Password validation uses direct string equality (fromDB === fromUser) instead of bcrypt comparison. The secure bcrypt.compareSync call on line 65 is commented out. This, combined with plaintext password storage, means the authentication system offers no cryptographic protection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 60,
+                  "endLine": 67
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "updateUser accepts a userId parameter and uses it directly in the MongoDB update query with no authorization check at the DAO layer. If the route handler does not verify that the authenticated session user matches the target userId, any authenticated user can modify another user's profile including SSN, bank account, and routing number."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 78,
+                  "endLine": 81
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "DEPRECATED-LIBRARY",
+          "level": "warning",
+          "message": {
+            "text": "The file imports bcrypt-nodejs which has been deprecated since 2017 and is no longer maintained. Even if the commented-out hashing code were re-enabled, it would rely on an unmaintained library with potential security issues. Replace with 'bcrypt' or 'bcryptjs'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
           }
         }
       ]

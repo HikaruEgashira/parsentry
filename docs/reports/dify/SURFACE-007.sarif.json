@@ -10,104 +10,90 @@
           "rules": [
             {
               "id": "RCE-001",
-              "name": "UnsanitizedCodeInjectionViaPlaceholder",
+              "name": "ArbitraryCodeExecution",
               "shortDescription": {
-                "text": "User-supplied code injected directly into runner script via string replacement"
+                "text": "User-supplied code is executed directly via sandbox with network enabled"
               },
-              "fullDescription": {
-                "text": "The assemble_runner_script method in TemplateTransformer performs a raw string replacement of the {{code}} placeholder with user-supplied code. For Python3 and JavaScript transformers, the user's code is embedded verbatim into the runner script without any sanitization, validation, or allowlisting. An attacker who controls the code parameter can execute arbitrary system commands, read environment variables (including CODE_EXECUTION_API_KEY), or pivot to other services accessible from the sandbox."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
               "properties": {
-                "tags": ["security", "RCE", "code-injection"],
-                "confidence": 0.95
-              }
-            },
-            {
-              "id": "SSRF-001",
-              "name": "NetworkEnabledByDefaultInCodeExecution",
-              "shortDescription": {
-                "text": "Code execution sandbox has network access unconditionally enabled"
-              },
-              "fullDescription": {
-                "text": "The execute_code method hardcodes 'enable_network': True in the request payload sent to the sandbox service. This allows any user-defined code to make arbitrary outbound HTTP requests from the sandbox environment, enabling SSRF attacks against internal services, data exfiltration of processed inputs/outputs, and potential lateral movement within the network."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "tags": ["security", "SSRF", "data-exfiltration"],
-                "confidence": 0.95
+                "tags": ["security", "CWE-94"]
               }
             },
             {
               "id": "RCE-002",
-              "name": "Jinja2TemplateInjectionWithoutSandbox",
+              "name": "CodeInjectionViaTemplateSubstitution",
               "shortDescription": {
-                "text": "Jinja2 templates rendered using unsandboxed jinja2.Template"
+                "text": "User code is injected into runner script via string replacement without sanitization"
               },
-              "fullDescription": {
-                "text": "The Jinja2TemplateTransformer runner script uses jinja2.Template directly instead of jinja2.sandbox.SandboxedEnvironment. This allows template authors to access Python's object hierarchy (e.g., __class__.__mro__.__subclasses__) to escape the Jinja2 context and execute arbitrary Python code. Even though the code runs in an external sandbox, if the sandbox has any weaknesses, this provides an additional exploit vector. The use of SandboxedEnvironment would add defense-in-depth."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
               "properties": {
-                "tags": ["security", "RCE", "SSTI", "jinja2"],
-                "confidence": 0.9
+                "tags": ["security", "CWE-94"]
+              }
+            },
+            {
+              "id": "SSTI-001",
+              "name": "Jinja2ServerSideTemplateInjection",
+              "shortDescription": {
+                "text": "User-controlled Jinja2 templates rendered with default jinja2.Template without sandboxed environment"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html",
+              "properties": {
+                "tags": ["security", "CWE-1336"]
               }
             },
             {
               "id": "RCE-003",
-              "name": "NoCodeSizeOrComplexityLimits",
+              "name": "SandboxBypassViaNetworkEnabled",
               "shortDescription": {
-                "text": "No application-level limits on code size or execution resource consumption"
+                "text": "Code execution sandbox has enable_network=True allowing outbound connections"
               },
-              "fullDescription": {
-                "text": "The CodeExecutor.execute_code and execute_workflow_code_template methods do not enforce any limits on the size of the code payload, the number of inputs, or the size of the output. An attacker can submit extremely large code payloads or craft code that produces enormous stdout output, potentially causing memory exhaustion in the sandbox service or in the Dify API server when parsing the response. While there are HTTP timeouts, there are no payload size guards."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html",
               "properties": {
-                "tags": ["security", "DoS", "resource-exhaustion"],
-                "confidence": 0.8
-              }
-            },
-            {
-              "id": "INFO-001",
-              "name": "InternalServiceInfoLeakageViaErrorMessages",
-              "shortDescription": {
-                "text": "Error messages expose internal sandbox service details"
-              },
-              "fullDescription": {
-                "text": "Error handling in execute_code propagates raw exception messages including HTTP status codes and internal error details to callers. The error message at line 830 includes the status code and a reference to the sandbox service, and the catch-all at line 839 includes the raw exception string which may contain internal URLs, hostnames, or stack traces. This information can help attackers map internal infrastructure."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "properties": {
-                "tags": ["security", "information-disclosure"],
-                "confidence": 0.75
+                "tags": ["security", "CWE-284"]
               }
             },
             {
               "id": "RCE-004",
-              "name": "APIKeyExposedToSandboxViaEnvironmentOrConfig",
+              "name": "PythonRunnerCodeInjectionViaPlaceholder",
               "shortDescription": {
-                "text": "CODE_EXECUTION_API_KEY sent as header is accessible if sandbox is compromised"
+                "text": "Python runner script injects user code at {{code}} placeholder with no AST validation or sanitization"
               },
-              "fullDescription": {
-                "text": "The CODE_EXECUTION_API_KEY is sent in the X-Api-Key header to the sandbox service. If the sandbox service itself is compromised or if an attacker can intercept traffic between the Dify API and the sandbox (e.g., via SSRF or network sniffing when CODE_EXECUTION_SSL_VERIFY is disabled), they can obtain this API key. The key could then be used to submit arbitrary code execution requests directly to the sandbox service, bypassing any application-level controls in Dify."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
               "properties": {
-                "tags": ["security", "credential-exposure", "RCE"],
-                "confidence": 0.7
+                "tags": ["security", "CWE-94"]
+              }
+            },
+            {
+              "id": "RCE-005",
+              "name": "JavaScriptRunnerCodeInjectionViaPlaceholder",
+              "shortDescription": {
+                "text": "Node.js runner script injects user code at {{code}} placeholder with no validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "properties": {
+                "tags": ["security", "CWE-94"]
+              }
+            },
+            {
+              "id": "SSRF-001",
+              "name": "SSRFViaSandboxNetworkAccess",
+              "shortDescription": {
+                "text": "Executed code has network access enabling SSRF to internal services"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918"]
+              }
+            },
+            {
+              "id": "INFO-001",
+              "name": "ErrorMessageInformationDisclosure",
+              "shortDescription": {
+                "text": "Sandbox error messages and stdout are returned to the caller potentially leaking internal details"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209"]
               }
             }
           ]
@@ -115,10 +101,10 @@
       },
       "results": [
         {
-          "ruleId": "RCE-001",
+          "ruleId": "RCE-002",
           "level": "error",
           "message": {
-            "text": "User-supplied code is injected directly into the runner script via raw string replacement (script.replace(cls._code_placeholder, code)). No sanitization, validation, or allowlisting is applied to the code before embedding it into the executable script. This allows arbitrary code execution including system command execution, environment variable access, and file system operations."
+            "text": "User-supplied code is injected into the runner script via simple string replacement (script.replace(cls._code_placeholder, code)) in assemble_runner_script(). There is no AST validation, allow-listing, or sanitization of the code parameter before it is concatenated into the executable script. An attacker who controls the 'code' input can inject arbitrary Python code that runs outside the intended main() function boundary, potentially importing dangerous modules or performing operations the sandbox does not restrict."
           },
           "locations": [
             {
@@ -127,8 +113,100 @@
                   "uri": "api/core/helper/code_executor/template_transformer.py"
                 },
                 "region": {
-                  "startLine": 1170,
-                  "startColumn": 9
+                  "startLine": 72,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "RCE-004",
+          "level": "error",
+          "message": {
+            "text": "The Python3 runner script embeds user code directly at the top of the generated script via the {{code}} placeholder. The user code executes in the same Python process as the runner harness. Since the code is placed before the harness logic (import json, b64decode, etc.), a malicious user can define code that overrides built-in modules, monkey-patches json.loads, or executes arbitrary side effects at import time before the main() call. No AST transformation or restriction is applied to the user code."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/helper/code_executor/python3/python3_transformer.py"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "RCE-005",
+          "level": "error",
+          "message": {
+            "text": "The Node.js runner script embeds user code directly at the top of the generated script via the {{code}} placeholder. User-supplied JavaScript is concatenated without validation. A malicious user can require('child_process').execSync() or access the file system via require('fs'), access environment variables, or perform other Node.js-level operations that the sandbox may not fully restrict. The code runs with full Node.js capabilities available in the sandbox container."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/helper/code_executor/javascript/javascript_code_provider.py"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSTI-001",
+          "level": "error",
+          "message": {
+            "text": "The Jinja2 transformer uses jinja2.Template (the default unsandboxed environment) to render user-controlled templates. Although the code runs inside the remote sandbox service, the Jinja2 template itself is rendered with full Jinja2 capabilities. An attacker can craft a template using Jinja2 introspection (e.g., {{''.__class__.__mro__[1].__subclasses__()}}) to escape the template engine and execute arbitrary Python code within the sandbox process. The jinja2.SandboxedEnvironment is NOT used. This is a classic Server-Side Template Injection (SSTI) vector."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/helper/code_executor/jinja2/jinja2_formatter.py"
+                },
+                "region": {
+                  "startLine": 8,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "RCE-003",
+          "level": "error",
+          "message": {
+            "text": "The execute_code() method sends 'enable_network': True to the sandbox service for all code executions. This allows user-supplied code running in the sandbox to make outbound network requests. Combined with the ability to execute arbitrary code (RCE-002/RCE-004/RCE-005), an attacker can exfiltrate data, perform SSRF attacks against internal infrastructure, download additional payloads, or establish reverse shells. Network access should be disabled by default and only enabled when explicitly required."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/helper/code_executor/code_executor.py"
+                },
+                "region": {
+                  "startLine": 72,
+                  "startColumn": 1
                 }
               }
             }
@@ -141,7 +219,7 @@
           "ruleId": "SSRF-001",
           "level": "error",
           "message": {
-            "text": "The execute_code method unconditionally sets 'enable_network': True in the sandbox execution request. User-defined code can make arbitrary outbound network requests, enabling SSRF against internal services and data exfiltration. This should be configurable per-execution and default to False."
+            "text": "Because enable_network=True is hardcoded in execute_code(), any code running in the sandbox can reach internal network endpoints. The sandbox service endpoint itself (CODE_EXECUTION_ENDPOINT) is likely on an internal network. User-supplied code can probe internal services, access cloud metadata endpoints (e.g., 169.254.169.254), or reach other services that trust the sandbox's network position. This is a direct SSRF vector when combined with arbitrary code execution."
           },
           "locations": [
             {
@@ -150,44 +228,21 @@
                   "uri": "api/core/helper/code_executor/code_executor.py"
                 },
                 "region": {
-                  "startLine": 809,
-                  "startColumn": 13
+                  "startLine": 72,
+                  "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.85
           }
         },
         {
-          "ruleId": "RCE-002",
-          "level": "error",
-          "message": {
-            "text": "Jinja2 templates are rendered using jinja2.Template (unsandboxed) instead of jinja2.sandbox.SandboxedEnvironment. Malicious templates can exploit Jinja2's object traversal (e.g., ''.__class__.__mro__[1].__subclasses__()) to execute arbitrary Python code within the sandbox. Using SandboxedEnvironment would provide defense-in-depth."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/helper/code_executor/jinja2/jinja2_transformer.py"
-                },
-                "region": {
-                  "startLine": 1012,
-                  "startColumn": 17
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "RCE-003",
+          "ruleId": "RCE-001",
           "level": "warning",
           "message": {
-            "text": "No application-level limits on code payload size or output size are enforced before sending code to the sandbox. An attacker can submit arbitrarily large code or craft code producing massive stdout, potentially causing memory exhaustion in the sandbox or the API server parsing the response."
+            "text": "The CodeExecutor relies entirely on the external sandbox service for security isolation. The application itself performs zero validation, sanitization, or restriction on the code before sending it to the sandbox. If the sandbox service is misconfigured, has vulnerabilities, or is bypassed, there is no defense-in-depth. The API key for the sandbox (CODE_EXECUTION_API_KEY) is the sole authentication mechanism. A compromised or poorly-configured sandbox service would result in full RCE on the sandbox host."
           },
           "locations": [
             {
@@ -196,8 +251,8 @@
                   "uri": "api/core/helper/code_executor/code_executor.py"
                 },
                 "region": {
-                  "startLine": 792,
-                  "startColumn": 5
+                  "startLine": 57,
+                  "startColumn": 1
                 }
               }
             }
@@ -210,7 +265,7 @@
           "ruleId": "INFO-001",
           "level": "note",
           "message": {
-            "text": "Error handling in execute_code exposes internal details including HTTP status codes, sandbox service status, and raw exception strings. These messages may reveal internal hostnames, ports, or stack traces that help attackers map the internal network architecture."
+            "text": "Error messages from the sandbox execution (response_data.get('message'), response_code.data.error) are propagated back through CodeExecutionError exceptions. These may contain stack traces, file paths, environment details, or other internal information from the sandbox that could aid an attacker in crafting more targeted exploits."
           },
           "locations": [
             {
@@ -219,31 +274,8 @@
                   "uri": "api/core/helper/code_executor/code_executor.py"
                 },
                 "region": {
-                  "startLine": 830,
-                  "startColumn": 17
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "RCE-004",
-          "level": "warning",
-          "message": {
-            "text": "CODE_EXECUTION_API_KEY is transmitted to the sandbox service via X-Api-Key header. If SSL verification is disabled (CODE_EXECUTION_SSL_VERIFY) or the sandbox is compromised, this key can be intercepted and used to submit arbitrary code execution requests directly to the sandbox, bypassing all Dify application-level security controls."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/core/helper/code_executor/code_executor.py"
-                },
-                "region": {
-                  "startLine": 802,
-                  "startColumn": 9
+                  "startLine": 95,
+                  "startColumn": 1
                 }
               }
             }

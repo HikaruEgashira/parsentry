@@ -10,103 +10,25 @@
           "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "VULN-013-001",
-              "name": "PlaintextPasswordStorage",
+              "id": "XSS",
+              "name": "StoredCrossScriptSripting",
               "shortDescription": {
-                "text": "Passwords stored in plaintext without hashing"
+                "text": "Stored XSS via unsanitized memo content persisted in MongoDB"
               },
-              "fullDescription": {
-                "text": "The user-dao.js module stores passwords in plaintext. The bcrypt hashing code has been commented out, meaning all user passwords are written directly to MongoDB without any cryptographic protection. An attacker who gains read access to the database (via injection, backup leak, or misconfiguration) obtains every credential immediately."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-256",
-                  "OWASP-A02:2021"
-                ],
-                "precision": "very-high",
-                "security-severity": "9.8"
+                "tags": ["security", "CWE-79"]
               }
             },
             {
-              "id": "VULN-013-002",
-              "name": "PlaintextPasswordComparison",
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
               "shortDescription": {
-                "text": "Password verification uses plaintext string comparison"
+                "text": "NoSQL injection via unvalidated memo parameter passed directly to MongoDB insert"
               },
-              "fullDescription": {
-                "text": "Password authentication in user-dao.js compares the user-supplied password directly against the stored value using the === operator instead of a constant-time hash comparison. This confirms passwords are never hashed and also introduces a timing side-channel that could allow an attacker to infer password characters incrementally."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-261",
-                  "CWE-208"
-                ],
-                "precision": "very-high",
-                "security-severity": "9.1"
-              }
-            },
-            {
-              "id": "VULN-013-003",
-              "name": "HardcodedCredentials",
-              "shortDescription": {
-                "text": "Hardcoded credentials in database seed script"
-              },
-              "fullDescription": {
-                "text": "The db-reset.js script contains hardcoded usernames and passwords (admin/Admin_123, user1/User1_123, user2/User2_123) committed to source control. These credentials are inserted directly into the users collection. If these defaults are not changed after deployment, attackers can authenticate with known credentials. Even if changed, the commit history permanently exposes them."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-798",
-                  "OWASP-A07:2021"
-                ],
-                "precision": "very-high",
-                "security-severity": "8.6"
-              }
-            },
-            {
-              "id": "VULN-013-004",
-              "name": "DeprecatedBcryptLibrary",
-              "shortDescription": {
-                "text": "Deprecated bcrypt-nodejs 0.0.3 with known vulnerabilities"
-              },
-              "fullDescription": {
-                "text": "The project depends on bcrypt-nodejs version 0.0.3, which has been deprecated and has known security vulnerabilities. Even though the bcrypt code is currently commented out, the dependency remains and could be re-enabled without updating, leading to weak or broken password hashing."
-              },
-              "helpUri": "https://www.npmjs.com/package/bcrypt-nodejs",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-327",
-                  "OWASP-A06:2021"
-                ],
-                "precision": "high",
-                "security-severity": "7.5"
-              }
-            },
-            {
-              "id": "VULN-013-005",
-              "name": "SeedDataWithCredentials",
-              "shortDescription": {
-                "text": "Seed data with plaintext credentials committed to source control"
-              },
-              "fullDescription": {
-                "text": "Database seed data containing plaintext usernames and passwords is committed to the source code repository. This violates the principle of separating secrets from code. Anyone with repository access (including public access if the repo is open source) can read these credentials and use them to authenticate against any deployment that was initialized with this seed data."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/540.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-540",
-                  "CWE-259"
-                ],
-                "precision": "very-high",
-                "security-severity": "7.8"
+                "tags": ["security", "CWE-943"]
               }
             }
           ]
@@ -114,21 +36,23 @@
       },
       "results": [
         {
-          "ruleId": "VULN-013-001",
-          "ruleIndex": 0,
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Passwords are stored in plaintext in the MongoDB users collection. The bcrypt hashing code in user-dao.js has been commented out, so passwords passed during user registration are written directly to the database without any cryptographic transformation. This allows mass credential theft if the database is compromised."
+            "text": "The 'memo' parameter is inserted into MongoDB without any input sanitization or output encoding. Since memos are rendered as HTML via the marked library (as indicated by the surface description), an attacker can store arbitrary JavaScript in the memo field. When other users view the memo, the script executes in their browser context, enabling session hijacking, credential theft, or defacement."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/memos-dao.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 15,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "    this.insert = (memo, callback) => {\n\n        // Create allocations document\n        const memos = {\n            memo,\n            timestamp: new Date()\n        };\n\n        memosCol.insert(memos, (err, result) => !err ? callback(null, result) : callback(err, null));"
+                  }
                 }
               }
             }
@@ -138,99 +62,55 @@
           }
         },
         {
-          "ruleId": "VULN-013-002",
-          "ruleIndex": 1,
-          "level": "error",
-          "message": {
-            "text": "Password authentication uses direct string comparison (===) against the plaintext stored password instead of bcrypt.compare() or an equivalent constant-time hash verification. This confirms the absence of password hashing and introduces a timing side-channel."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-013-003",
-          "ruleIndex": 2,
-          "level": "error",
-          "message": {
-            "text": "Hardcoded credentials found in db-reset.js: admin/Admin_123, user1/User1_123, user2/User2_123. These are inserted into the users collection as seed data and are permanently visible in source control history."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "artifacts/db-reset.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-013-004",
-          "ruleIndex": 3,
+          "ruleId": "XSS",
           "level": "warning",
           "message": {
-            "text": "The project uses bcrypt-nodejs version 0.0.3 which is deprecated and has known vulnerabilities. Although the bcrypt usage is currently commented out in user-dao.js, the dependency remains and could be re-enabled without upgrading to a secure alternative (e.g., bcrypt or argon2)."
+            "text": "The getAllMemos function retrieves all memos from MongoDB and returns them without any output encoding or sanitization. This is the read path that delivers stored XSS payloads to the rendering layer. Any malicious content previously stored via the insert function will be returned verbatim to the caller, which then renders it as HTML."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/memos-dao.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 26,
+                  "endLine": 35,
+                  "snippet": {
+                    "text": "    this.getAllMemos = (callback) => {\n\n        memosCol.find({}).sort({\n            timestamp: -1\n        }).toArray((err, memos) => {\n            if (err) return callback(err, null);\n            if (!memos) return callback(\"ERROR: No memos found\", null);\n            callback(null, memos);\n        });\n    };"
+                  }
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.9
           }
         },
         {
-          "ruleId": "VULN-013-005",
-          "ruleIndex": 4,
-          "level": "error",
+          "ruleId": "NOSQLI",
+          "level": "warning",
           "message": {
-            "text": "Plaintext credentials are embedded in the db-reset.js seed script and committed to source control. These credentials (admin/Admin_123, user1/User1_123, user2/User2_123) are accessible to anyone with repository read access and persist in git history even if removed from the current branch."
+            "text": "The 'memo' parameter is embedded directly into the MongoDB document without type checking or validation. If the caller passes a user-controlled object (e.g., from req.body) without ensuring it is a string, an attacker could inject MongoDB operators or manipulate the document structure. The lack of schema validation at the DAO layer means arbitrary fields or nested objects could be persisted."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "artifacts/db-reset.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/memos-dao.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 18,
+                  "endLine": 21,
+                  "snippet": {
+                    "text": "        const memos = {\n            memo,\n            timestamp: new Date()\n        };"
+                  }
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.7
           }
         }
       ]

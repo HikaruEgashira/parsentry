@@ -6,19 +6,59 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
               "id": "SQLI",
               "name": "SQLInjection",
-              "shortDescription": { "text": "SQL Injection" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+              "shortDescription": {
+                "text": "SQL Injection vulnerability"
+              },
+              "fullDescription": {
+                "text": "User-controlled input is directly interpolated into an SQL query string without parameterization, allowing an attacker to manipulate query logic."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "CWE-89"]
+              }
             },
             {
               "id": "LFI",
               "name": "LocalFileInclusion",
-              "shortDescription": { "text": "Local File Inclusion / Path Traversal" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+              "shortDescription": {
+                "text": "Local File Inclusion vulnerability"
+              },
+              "fullDescription": {
+                "text": "A file path retrieved from the database (itself reachable via SQL injection) is passed directly to open() without any path sanitization or restriction, enabling arbitrary file reads."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "CWE-22"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Sensitive error details exposed to client"
+              },
+              "fullDescription": {
+                "text": "Internal exception messages are returned in HTTP responses, revealing implementation details that aid further exploitation."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "CWE-209"]
+              }
             }
           ]
         }
@@ -27,23 +67,154 @@
         {
           "ruleId": "SQLI",
           "level": "error",
-          "message": { "text": "User-supplied doc_id is interpolated directly into SQL query via f-string (f\"SELECT file_path FROM documents WHERE id = {doc_id}\"). No parameterized query or input validation is used. An attacker can inject arbitrary SQL to extract file_path values pointing to sensitive files, manipulate query logic via UNION-based injection, or exfiltrate database contents. This SQLi is the first stage of a chained attack that feeds attacker-controlled file paths into the subsequent open() call." },
-          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 146, "endLine": 150 } } }],
-          "properties": { "confidence": 1.0 }
+          "message": {
+            "text": "SQL injection in DocumentModel.get_document_content(): the doc_id parameter from the URL path is interpolated directly into an SQL query via f-string: `f\"SELECT file_path FROM documents WHERE id = {doc_id}\"`. An attacker can craft a doc_id such as `0 UNION SELECT '/etc/passwd'--` to return an arbitrary file_path, which is then read by the subsequent LFI vulnerability. No parameterized query or input validation is applied."
+          },
+          "properties": {
+            "confidence": 0.99
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 143,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "        query = f\"SELECT file_path FROM documents WHERE id = {doc_id}\""
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "DocumentModel.get_document_content",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
         },
         {
           "ruleId": "LFI",
           "level": "error",
-          "message": { "text": "The file_path value retrieved from the SQL query is passed directly to open(file_path, 'r') without any path validation, canonicalization, or allowlist check. When chained with the preceding SQL injection, an attacker can inject a UNION SELECT to return an arbitrary file path (e.g., '/etc/shadow', '/proc/self/environ', application source code), which is then read and returned in the HTTP response. Even without SQLi, if file_path values in the database are attacker-influenced, this constitutes a local file inclusion vulnerability." },
-          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "api.py" }, "region": { "startLine": 152, "endLine": 157 } } }],
-          "properties": { "confidence": 1.0 }
+          "message": {
+            "text": "Local File Inclusion in DocumentModel.get_document_content(): the file_path value returned by the SQL query (attacker-controlled via the chained SQLI) is passed directly to `open(file_path, 'r')` with no path validation, canonicalization, chroot restriction, or allowlist. This enables reading any file accessible to the process, including /etc/passwd, /etc/shadow, application source code, environment files, and secret keys."
+          },
+          "properties": {
+            "confidence": 0.98
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 151,
+                  "startColumn": 17,
+                  "snippet": {
+                    "text": "                with open(file_path, 'r') as f:"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "DocumentModel.get_document_content",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
         },
         {
           "ruleId": "SQLI",
-          "level": "error",
-          "message": { "text": "The database model method that retrieves document metadata constructs SQL queries using string interpolation with the doc_id parameter rather than parameterized queries. This is the underlying data access layer vulnerability that enables the SQL injection at the endpoint level." },
-          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "models.py" }, "region": { "startLine": 572, "endLine": 593 } } }],
-          "properties": { "confidence": 1.0 }
+          "level": "warning",
+          "message": {
+            "text": "Missing input validation at controller layer: the Flask route handler get_document_content() in api.py passes the URL path parameter doc_id directly to DocumentModel.get_document_content() without type coercion (e.g., int()), length check, or character allowlist. The route uses `<doc_id>` (string type) instead of `<int:doc_id>`, removing any framework-level defense against SQL injection payloads."
+          },
+          "properties": {
+            "confidence": 0.95
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 83,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "        content = doc_model.get_document_content(doc_id)"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_document_content",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Information disclosure in error handler: the except clause returns the full Python exception string to the client via `jsonify({'error': str(e)})`. When the SQLI payload triggers a database error, the response may expose internal file paths, table/column names, SQL syntax details, or OS-level error messages that aid further exploitation of this endpoint's SQLI and LFI vulnerabilities."
+          },
+          "properties": {
+            "confidence": 0.90
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 88,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "        return jsonify({'error': str(e)}), 500"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "get_document_content",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask API endpoint definitions including GET /api/documents/<doc_id>/content"
+          }
+        },
+        {
+          "location": {
+            "uri": "models.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Database model layer containing vulnerable SQL query construction and unvalidated file I/O"
+          }
         }
       ]
     }

@@ -1,96 +1,159 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
-            {
-              "id": "UNRESTRICTED_UPLOAD",
-              "name": "UnrestrictedFileUpload",
-              "shortDescription": { "text": "Unrestricted File Upload" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
-            },
             {
               "id": "PATH_TRAVERSAL",
               "name": "PathTraversal",
-              "shortDescription": { "text": "Path Traversal" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+              "shortDescription": {
+                "text": "Path traversal via unsanitized filename"
+              },
+              "fullDescription": {
+                "text": "User-controlled filename is passed directly to os.path.join without sanitization, allowing directory traversal sequences (e.g. '../') to write files outside the intended upload directory."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Path_Traversal",
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "UNRESTRICTED_FILE_UPLOAD",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": {
+                "text": "Unrestricted file upload with no type or content validation"
+              },
+              "fullDescription": {
+                "text": "The endpoint accepts and saves any file without validating its MIME type, extension, or content. This allows an attacker to upload executable scripts (e.g. PHP webshells, Python scripts) that may be executed by the server."
+              },
+              "helpUri": "https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload",
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
               "id": "INFO_DISCLOSURE",
               "name": "InformationDisclosure",
-              "shortDescription": { "text": "Information Disclosure" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
-            },
-            {
-              "id": "MISSING_AUTHN",
-              "name": "MissingAuthentication",
-              "shortDescription": { "text": "Missing Authentication for Critical Function" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+              "shortDescription": {
+                "text": "Absolute file path returned to caller"
+              },
+              "fullDescription": {
+                "text": "The response includes the full server-side absolute path of the saved file, disclosing internal directory structure to the attacker."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "UNRESTRICTED_UPLOAD",
-          "level": "error",
-          "message": { "text": "No file type validation on uploaded files. The endpoint accepts any file type including executable scripts (e.g., .py, .php, .sh, .jsp). An attacker can upload a web shell or malicious executable. Validate file extensions against an allowlist, check MIME types, and store uploads outside the web root with randomized filenames." },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 249, "endLine": 272 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
           "ruleId": "PATH_TRAVERSAL",
           "level": "error",
-          "message": { "text": "Path traversal via unsanitized filename in `file_path = os.path.join(upload_dir, file.filename)`. The user-controlled `file.filename` can contain directory traversal sequences (e.g., `../../etc/cron.d/backdoor`), allowing an attacker to write arbitrary files anywhere on the filesystem that the process has write access to. Use `werkzeug.utils.secure_filename()` to sanitize the filename before constructing the path." },
+          "message": {
+            "text": "file.filename is used directly in os.path.join without sanitization. An attacker can supply a filename like '../../etc/cron.d/shell' to write arbitrary files outside /tmp/uploads, achieving arbitrary file write and potentially remote code execution."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 265, "endLine": 266 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 186,
+                  "endLine": 187
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "upload_file",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 0.98
+          }
+        },
+        {
+          "ruleId": "UNRESTRICTED_FILE_UPLOAD",
+          "level": "error",
+          "message": {
+            "text": "No file type, extension, or magic-byte validation is performed before saving the uploaded file. An attacker can upload a malicious script (e.g. a Python/PHP webshell) that, combined with the path traversal, can be placed in an executable location and triggered remotely."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 170,
+                  "endLine": 193
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "upload_file",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.97
+          }
         },
         {
           "ruleId": "INFO_DISCLOSURE",
           "level": "warning",
-          "message": { "text": "Server-side file path disclosed in the upload response: `'path': file_path`. This reveals the internal directory structure (`/tmp/uploads/...`) to the client, aiding attackers in planning further exploitation such as path traversal or local file inclusion attacks. Return only an opaque file identifier or relative URI instead of the absolute filesystem path." },
+          "message": {
+            "text": "The JSON response at line 221-224 returns both 'path' (absolute server path) and 'filename' (attacker-controlled) to the caller. This reveals internal filesystem layout and confirms successful path traversal write locations to an attacker."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 268, "endLine": 272 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 189,
+                  "endLine": 193
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "upload_file",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
-        },
+          "properties": {
+            "confidence": 0.90
+          }
+        }
+      ],
+      "artifacts": [
         {
-          "ruleId": "MISSING_AUTHN",
-          "level": "error",
-          "message": { "text": "The file upload endpoint has no authentication or authorization check. Any unauthenticated user can upload arbitrary files to the server. This amplifies all other upload vulnerabilities (path traversal, unrestricted file type) by making them exploitable without credentials. Add authentication middleware and verify the user has upload permissions before processing the request." },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 249, "endLine": 250 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask API blueprint containing the vulnerable POST /api/file/upload endpoint"
+          }
         }
       ]
     }

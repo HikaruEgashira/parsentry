@@ -6,122 +6,39 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "version": "1.0.0",
           "rules": [
             {
-              "id": "STORED-XSS-001",
-              "name": "StoredCrossSiteScripting",
+              "id": "RCE",
               "shortDescription": {
-                "text": "Stored XSS via unsanitized memo content"
+                "text": "Remote Code Execution via eval()"
               },
               "fullDescription": {
-                "text": "User-supplied memo content from req.body.memo is inserted directly into MongoDB via addMemos/memosDAO.insert without any input sanitization. When displayMemos renders all stored memos and swig autoescape is disabled, arbitrary JavaScript executes in the context of other users' browsers."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "xss",
-                  "stored-xss",
-                  "CWE-79"
-                ],
-                "precision": "high",
-                "confidence": "high"
+                "text": "User-controlled input is passed directly to eval(), allowing an attacker to execute arbitrary server-side JavaScript code."
               },
               "defaultConfiguration": {
                 "level": "error"
               }
             },
             {
-              "id": "VULN-DEPENDENCY-001",
-              "name": "VulnerableMarkdownParser",
+              "id": "NOSQLI",
               "shortDescription": {
-                "text": "Vulnerable marked 0.3.5 dependency with known XSS bypasses"
+                "text": "NoSQL Injection via unsanitized MongoDB query"
               },
               "fullDescription": {
-                "text": "The application uses marked version 0.3.5, which has multiple known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427, CVE-2017-17461). The sanitize option in this version is deprecated and provides incomplete protection, allowing crafted markdown input to execute arbitrary JavaScript."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/1395.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "dependency",
-                  "xss",
-                  "CWE-1395"
-                ],
-                "precision": "high",
-                "confidence": "high"
+                "text": "User-supplied values are inserted into MongoDB queries without sanitization, potentially allowing query manipulation."
               },
               "defaultConfiguration": {
-                "level": "error"
+                "level": "warning"
               }
             },
             {
-              "id": "INPUT-VALIDATION-001",
-              "name": "MissingInputValidation",
+              "id": "IDOR",
               "shortDescription": {
-                "text": "No input validation on memo content"
+                "text": "Insecure Direct Object Reference on userId"
               },
               "fullDescription": {
-                "text": "The POST /memos endpoint accepts arbitrary memo content from req.body.memo without any validation of length, format, or allowed characters. This enables injection of malicious payloads including script tags, event handlers, and markdown-based XSS vectors."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "input-validation",
-                  "CWE-20"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
-              "id": "CSRF-001",
-              "name": "MissingCSRFProtection",
-              "shortDescription": {
-                "text": "CSRF middleware is commented out on memo creation endpoint"
-              },
-              "fullDescription": {
-                "text": "The CSRF protection middleware is commented out, allowing cross-site request forgery attacks against the POST /memos endpoint. An attacker can craft a malicious page that submits memo content on behalf of an authenticated user, enabling stored XSS delivery without direct interaction."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "csrf",
-                  "CWE-352"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
-              "id": "NOSQL-INJECTION-001",
-              "name": "NoSQLInjectionViaMemoInsert",
-              "shortDescription": {
-                "text": "Unsanitized user input passed directly to MongoDB insert"
-              },
-              "fullDescription": {
-                "text": "The req.body.memo value is passed directly to memosDAO.insert without type checking or sanitization. If req.body.memo is an object (e.g., via JSON content-type), MongoDB operator injection is possible, potentially allowing data exfiltration or manipulation of stored documents."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "nosql-injection",
-                  "mongodb",
-                  "CWE-943"
-                ],
-                "precision": "medium",
-                "confidence": "medium"
+                "text": "The userId used in the database update query comes from the session but the update document uses parseInt(userId) for the stored record, while the query filter uses the raw userId. Mismatch between query filter and stored value types can lead to authorization issues."
               },
               "defaultConfiguration": {
                 "level": "warning"
@@ -132,158 +49,125 @@
       },
       "results": [
         {
-          "ruleId": "STORED-XSS-001",
-          "ruleIndex": 0,
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "Stored XSS: req.body.memo is inserted into MongoDB without sanitization via addMemos(). When displayMemos renders stored memos with swig autoescape disabled, injected scripts execute in victim browsers. Insert DOMPurify.sanitize() or equivalent before storage, and enable swig autoescape."
+            "text": "Server-Side JavaScript Injection: req.body.preTax is passed directly to eval(). An attacker can submit arbitrary JavaScript (e.g., 'require(\"child_process\").exec(\"rm -rf /\")') as the preTax field value to achieve Remote Code Execution on the server."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/memos.js"
+                  "uri": "app/routes/contributions.js"
                 },
                 "region": {
-                  "startLine": 1
-                }
-              },
-              "logicalLocations": [
-                {
-                  "name": "addMemos",
-                  "kind": "function"
-                }
-              ]
-            }
-          ],
-          "relatedLocations": [
-            {
-              "id": 1,
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/memos-dao.js"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              },
-              "message": {
-                "text": "memosDAO.insert stores unsanitized memo content to MongoDB"
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VULN-DEPENDENCY-001",
-          "ruleIndex": 1,
-          "level": "error",
-          "message": {
-            "text": "Vulnerable dependency: marked 0.3.5 has multiple known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427). The sanitize option is deprecated and does not prevent all XSS vectors. Upgrade to marked >=4.0.0 and use DOMPurify for output sanitization."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/memos.js"
-                },
-                "region": {
-                  "startLine": 1
+                  "startLine": 32,
+                  "startColumn": 25,
+                  "endColumn": 49
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
           }
         },
         {
-          "ruleId": "INPUT-VALIDATION-001",
-          "ruleIndex": 2,
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "Missing input validation: POST /memos accepts arbitrary content in req.body.memo with no length limit, format validation, or character filtering. Apply allowlist-based validation and enforce a maximum length to limit abuse surface."
+            "text": "Server-Side JavaScript Injection: req.body.afterTax is passed directly to eval(). An attacker can execute arbitrary server-side code by crafting a malicious afterTax input value."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/memos.js"
+                  "uri": "app/routes/contributions.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 33,
+                  "startColumn": 26,
+                  "endColumn": 51
                 }
-              },
-              "logicalLocations": [
-                {
-                  "name": "addMemos",
-                  "kind": "function"
-                }
-              ]
+              }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
           }
         },
         {
-          "ruleId": "CSRF-001",
-          "ruleIndex": 3,
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "Missing CSRF protection: the csrf middleware on POST /memos is commented out. An attacker can forge cross-origin requests to create memos containing XSS payloads on behalf of authenticated users. Re-enable csurf middleware or implement SameSite cookie + custom header validation."
+            "text": "Server-Side JavaScript Injection: req.body.roth is passed directly to eval(). An attacker can execute arbitrary server-side code by crafting a malicious roth input value."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/memos.js"
+                  "uri": "app/routes/contributions.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 34,
+                  "startColumn": 22,
+                  "endColumn": 44
                 }
-              },
-              "logicalLocations": [
-                {
-                  "name": "POST /memos",
-                  "kind": "function"
-                }
-              ]
+              }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 1.0
           }
         },
         {
-          "ruleId": "NOSQL-INJECTION-001",
-          "ruleIndex": 4,
+          "ruleId": "NOSQLI",
           "level": "warning",
           "message": {
-            "text": "Potential NoSQL injection: req.body.memo is passed directly to memosDAO.insert without type checking. If the application parses JSON request bodies, an attacker can send an object with MongoDB operators (e.g., {\"$gt\": \"\"}) instead of a string. Validate that memo is a string before insertion."
+            "text": "The contributions-dao.js update() method passes user-controlled values (preTax, afterTax, roth) directly into a MongoDB document without type validation or sanitization at the DAO layer. While the route handler calls eval() (a separate, more severe issue), if eval returns an object instead of a number, it could manipulate the MongoDB document structure. The isNaN check occurs after eval, but crafted payloads can pass isNaN while still being objects with valueOf()."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/memos-dao.js"
+                  "uri": "app/data/contributions-dao.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 21,
+                  "startColumn": 9,
+                  "endLine": 26,
+                  "endColumn": 10
                 }
-              },
-              "logicalLocations": [
-                {
-                  "name": "insert",
-                  "kind": "function"
-                }
-              ]
+              }
             }
           ],
           "properties": {
-            "confidence": 0.75
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "In contributions-dao.js update(), the MongoDB query filter uses the raw userId ({userId}) while the document stores parseInt(userId) as parsedUserId. This type mismatch means the upsert query filter and the stored userId field may differ in type (string vs integer), potentially causing duplicate records or query mismatches that could be exploited to read or modify another user's contributions."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/contributions-dao.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 9,
+                  "endLine": 33,
+                  "endColumn": 14
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
           }
         }
       ]

@@ -6,56 +6,28 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "version": "0.1.0",
           "rules": [
             {
               "id": "SENSITIVE-DATA-EXPOSURE",
-              "name": "SensitiveDataExposure",
               "shortDescription": {
-                "text": "Sensitive personal data (SSN, DOB) stored and returned in plaintext without encryption"
+                "text": "Sensitive data stored in plaintext without encryption"
               },
-              "fullDescription": {
-                "text": "The profile DAO stores and retrieves sensitive personally identifiable information (SSN and date of birth) in plaintext. The code contains commented-out encryption/decryption logic using crypto module but it is not active. An attacker who gains access to the database or intercepts the response can read SSN and DOB values directly. This violates OWASP A3:2017 Sensitive Data Exposure."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "tags": ["security", "CWE-312", "CWE-311", "OWASP-A3"]
-              }
+              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
             },
             {
               "id": "REDOS",
-              "name": "RegularExpressionDenialOfService",
               "shortDescription": {
-                "text": "Regex with catastrophic backtracking in bank routing validation"
+                "text": "Regular expression vulnerable to catastrophic backtracking (ReDoS)"
               },
-              "fullDescription": {
-                "text": "The regex pattern /([0-9]+)+\\#/ used to validate bankRouting contains nested quantifiers ([0-9]+)+ which causes catastrophic backtracking (exponential time complexity) on crafted input. An attacker can submit a long string of digits without a trailing '#' to cause the server to hang, resulting in denial of service. The fix is to remove the redundant '+' quantifier: /([0-9]+)\\#/."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "tags": ["security", "CWE-1333", "CWE-400", "OWASP-A1"]
-              }
+              "helpUri": "https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS"
             },
             {
-              "id": "INCORRECT-OUTPUT-ENCODING",
-              "name": "IncorrectOutputEncodingContext",
+              "id": "XSS",
               "shortDescription": {
-                "text": "encodeForHTML used in URL context, allowing XSS via crafted website URL"
+                "text": "Cross-site scripting via incorrect output encoding context"
               },
-              "fullDescription": {
-                "text": "The profile handler uses ESAPI.encoder().encodeForHTML() to encode the user-supplied website field. However, this value is rendered in the template as an href attribute (URL context). HTML encoding does not prevent javascript: or data: URI schemes from being injected. The correct function is encodeForURL() which sanitizes the value for use in URL contexts, preventing protocol-based XSS attacks."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "tags": ["security", "CWE-838", "CWE-79", "OWASP-A7"]
-              }
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
             }
           ]
         }
@@ -65,32 +37,17 @@
           "ruleId": "SENSITIVE-DATA-EXPOSURE",
           "level": "error",
           "message": {
-            "text": "SSN and DOB are stored in plaintext in MongoDB and returned without encryption. The encryption code exists but is commented out. Any database compromise or MITM attack exposes PII directly."
+            "text": "SSN and date-of-birth are stored and retrieved in plaintext. The encryption/decryption helpers in profile-dao.js are commented out, leaving sensitive PII unprotected in the database. An attacker who gains read access to the database (e.g. via NoSQL injection in another endpoint) obtains raw SSN and DOB values."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/profile-dao.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/profile-dao.js"
                 },
                 "region": {
-                  "startLine": 391,
-                  "startColumn": 5,
-                  "endLine": 416
-                }
-              }
-            },
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/profile-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 443,
-                  "startColumn": 5,
-                  "endLine": 459
+                  "startLine": 62,
+                  "endLine": 66
                 }
               }
             }
@@ -100,63 +57,72 @@
           }
         },
         {
-          "ruleId": "REDOS",
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
           "level": "error",
           "message": {
-            "text": "The regex /([0-9]+)+\\#/ contains nested quantifiers causing catastrophic backtracking. Input like '0000000000000000000000000000!' triggers exponential evaluation time, causing denial of service. Fix: change to /([0-9]+)\\#/ by removing the outer '+'."
+            "text": "The getByUserId method returns the full user document including SSN, DOB, bank account, and bank routing numbers directly to the view template without any field filtering or masking. Any user who can trigger profile retrieval receives all sensitive fields in the rendered HTML."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/profile.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/data/profile-dao.js"
                 },
                 "region": {
-                  "startLine": 292,
-                  "startColumn": 31,
-                  "endLine": 292
+                  "startLine": 94,
+                  "endLine": 110
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.98
+            "confidence": 0.9
           }
         },
         {
-          "ruleId": "INCORRECT-OUTPUT-ENCODING",
-          "level": "error",
+          "ruleId": "REDOS",
+          "level": "warning",
           "message": {
-            "text": "ESAPI.encoder().encodeForHTML() is applied to doc.website, but the value is used in an href attribute (URL context). HTML encoding does not block javascript: or data: URI schemes. An attacker can set their website to 'javascript:alert(document.cookie)' which will pass HTML encoding but execute as XSS when clicked. Use encodeForURL() instead."
+            "text": "The regex /([0-9]+)+\\#/ used to validate bankRouting contains nested quantifiers ('+' inside a group followed by '+'). This causes catastrophic backtracking on crafted input such as '000000000000000000000000000!' — an attacker can send this value to exhaust CPU and cause denial of service."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/profile.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/routes/profile.js"
                 },
                 "region": {
-                  "startLine": 261,
-                  "startColumn": 13,
-                  "endLine": 261
+                  "startLine": 59,
+                  "endLine": 59
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.92
+            "confidence": 0.95
           }
-        }
-      ],
-      "invocations": [
+        },
         {
-          "executionSuccessful": true,
+          "ruleId": "XSS",
+          "level": "warning",
+          "message": {
+            "text": "The user-supplied 'website' field is encoded with ESAPI encodeForHTML(), but the value is also used as a URL in an anchor href attribute. HTML-entity encoding does not prevent javascript: URI schemes or other URL-context attacks. The correct mitigation is encodeForURL() as noted in the source comment."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "endLine": 28
+                }
+              }
+            }
+          ],
           "properties": {
-            "surface_id": "SURFACE-003",
-            "surface_kind": "endpoint",
-            "surface_identifier": "GET /profile"
+            "confidence": 0.85
           }
         }
       ]

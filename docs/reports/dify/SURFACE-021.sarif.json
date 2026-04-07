@@ -7,81 +7,160 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "SETUP-REPLAY",
-              "name": "SetupPageReaccessRace",
+              "id": "DESER-001",
+              "name": "UnsafeDeserialization",
               "shortDescription": {
-                "text": "Race condition in setup status check allows re-initialization"
+                "text": "Unsafe JSON deserialization of task payload from Redis queue"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/362.html",
-              "properties": {
-                "tags": ["security", "CWE-362"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
             },
             {
-              "id": "PLAINTEXT-PASSWORD",
-              "name": "PlaintextPasswordInSetupRequest",
+              "id": "IDOR-001",
+              "name": "InsecureDirectObjectReference",
               "shortDescription": {
-                "text": "Admin password sent in plaintext to setup endpoint"
+                "text": "Missing authorization check on account deletion task"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/319.html",
-              "properties": {
-                "tags": ["security", "CWE-319"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
             },
             {
-              "id": "CLIENT-SIDE-GUARD",
-              "name": "ClientSideOnlySetupGuard",
+              "id": "IDOR-002",
+              "name": "InsecureDirectObjectReference",
               "shortDescription": {
-                "text": "Setup completion guard relies on client-side check with localStorage"
+                "text": "Missing tenant isolation check in document indexing task"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/602.html",
-              "properties": {
-                "tags": ["security", "CWE-602"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
             },
             {
-              "id": "SQLI",
-              "name": "RawSQLInjection",
+              "id": "RACE-001",
+              "name": "RaceCondition",
               "shortDescription": {
-                "text": "Raw SQL queries constructed via string concatenation or f-strings"
+                "text": "TOCTOU race condition in delete_account_task between billing deletion and account lookup"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
-              "properties": {
-                "tags": ["security", "CWE-89"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/367.html"
             },
             {
-              "id": "INFO-DISCLOSURE",
-              "name": "ExceptionMessageExposure",
+              "id": "DESER-002",
+              "name": "UnsafeDeserialization",
               "shortDescription": {
-                "text": "Exception class name and message exposed in CLI output"
+                "text": "Deserialization of untrusted data from file storage in RAG pipeline task"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
-              "properties": {
-                "tags": ["security", "CWE-209"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+            },
+            {
+              "id": "PRIVESC-001",
+              "name": "PrivilegeEscalation",
+              "shortDescription": {
+                "text": "Arbitrary tenant impersonation via tenant_id parameter in task payload"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/269.html"
+            },
+            {
+              "id": "QUEUE-POISON-001",
+              "name": "QueuePoisoning",
+              "shortDescription": {
+                "text": "Tenant-isolated task queue pulls next tasks from Redis without integrity validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "DOS-001",
+              "name": "DenialOfService",
+              "shortDescription": {
+                "text": "Unbounded thread pool execution with user-controlled entity count"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "SETUP-REPLAY",
-          "level": "error",
+          "ruleId": "DESER-001",
+          "level": "warning",
           "message": {
-            "text": "The install form checks setup status via fetchSetupStatus() and redirects if 'finished', but this check is purely client-side and asynchronous. An attacker can race between the status check and setup submission, or directly POST to the /install API endpoint bypassing the frontend guard, to re-initialize the admin account and take over the instance. The server-side setup endpoint must enforce idempotency by rejecting requests after initial setup is complete."
+            "text": "The tenant-isolated task queue deserializes task data from Redis using DocumentTask(**next_task) without schema validation. If an attacker gains access to the Redis queue (e.g., via SSRF or misconfigured network), they could inject malicious task payloads that alter dataset_id/document_ids to process arbitrary documents or cause exceptions that disrupt the queue processing pipeline."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/install/installForm.tsx"
+                  "uri": "api/tasks/document_indexing_task.py"
                 },
                 "region": {
-                  "startLine": 776,
-                  "endLine": 803
+                  "startLine": 149,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "IDOR-001",
+          "level": "warning",
+          "message": {
+            "text": "delete_account_task accepts an account_id parameter and deletes the account from billing and sends a success email without verifying that the caller is authorized to delete that account. The task trusts the account_id passed to it entirely. If the Celery queue is compromised or an internal service dispatches a deletion with a wrong ID, any account can be deleted. The billing deletion also proceeds before verifying the account exists in the database, meaning billing state can be corrupted for non-existent accounts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/delete_account_task.py"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "IDOR-002",
+          "level": "warning",
+          "message": {
+            "text": "document_indexing_task and its variants accept dataset_id and document_ids as trusted parameters without verifying that the requesting tenant actually owns the dataset. While document lookup filters by dataset_id, there is no cross-tenant authorization check ensuring that tenant_id matches the dataset's owning tenant. A compromised or misbehaving queue message could cause documents from one tenant's dataset to be re-indexed or manipulated by referencing another tenant's dataset_id."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/document_indexing_task.py"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "RACE-001",
+          "level": "warning",
+          "message": {
+            "text": "In delete_account_task, the billing service deletion (BillingService.delete_account) is executed before verifying the account exists in the local database. If the account does not exist, billing state is already mutated but the task returns early without sending a confirmation email, leaving an inconsistent state. Additionally, the billing deletion and account lookup are not atomic, creating a TOCTOU window where the account could be deleted between billing service call and local lookup."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/delete_account_task.py"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
                 }
               }
             }
@@ -91,43 +170,20 @@
           }
         },
         {
-          "ruleId": "PLAINTEXT-PASSWORD",
-          "level": "warning",
+          "ruleId": "DESER-002",
+          "level": "error",
           "message": {
-            "text": "In the setup request (line 778-783), the admin password is sent as plaintext in the request body to the setup endpoint. While the subsequent login call uses encodePassword() to encrypt the password, the initial setup call transmits the raw password. If TLS is not enforced or if an intermediary logs request bodies, the admin password is exposed. The setup endpoint should receive the password with the same encryption applied as the login endpoint."
+            "text": "rag_pipeline_run_task retrieves serialized pipeline invoke entities from file storage via FileService.get_file_content() and deserializes them with json.loads() followed by model_validate on each entity. The file content is fetched using a file ID passed as a task argument. If an attacker can control the file_id parameter (via queue poisoning or SSRF to the task broker), they could point to a crafted file containing malicious pipeline configurations that execute arbitrary workflows, access unauthorized tenants, or cause resource exhaustion through large payloads."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "web/app/install/installForm.tsx"
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
                 },
                 "region": {
-                  "startLine": 778,
-                  "endLine": 783
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "CLIENT-SIDE-GUARD",
-          "level": "warning",
-          "message": {
-            "text": "The setup completion state is stored in localStorage ('setup_status' = 'finished') and used as a guard. This is a client-side only check that can be trivially bypassed by clearing localStorage or using a different browser. If the server-side /install endpoint does not independently enforce that setup has already been completed, an attacker can access the setup page and re-run initialization."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "web/app/install/installForm.tsx"
-                },
-                "region": {
-                  "startLine": 811,
-                  "endLine": 824
+                  "startLine": 49,
+                  "startColumn": 1
                 }
               }
             }
@@ -137,49 +193,83 @@
           }
         },
         {
-          "ruleId": "SQLI",
-          "level": "warning",
+          "ruleId": "PRIVESC-001",
+          "level": "error",
           "message": {
-            "text": "The convert_to_agent_apps command uses a raw SQL query string passed to sa.text(). While this particular query does not incorporate user input directly, the pattern of using raw SQL strings in CLI commands establishes a dangerous precedent. The f-string pattern used in storage.py (lines 2945-2946, 2966, 2980-2981, 2999, 3032) dynamically constructs SQL from dictionary values in files_tables and ids_tables. Although these values are currently hardcoded, if the pattern is extended with external input it becomes exploitable."
+            "text": "In run_single_rag_pipeline_task, the user_id and tenant_id are extracted from the deserialized pipeline entity and used to load an Account object which is then set as the current user via g._login_user. The pipeline generator is then invoked with InvokeFrom.PUBLISHED_PIPELINE. There is no validation that user_id is authorized to act on behalf of tenant_id, or that the pipeline_id belongs to that tenant. An attacker who can inject entities into the file storage or poison the queue can impersonate any user in any tenant and execute arbitrary pipeline workflows."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/commands/storage.py"
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
                 },
                 "region": {
-                  "startLine": 2945,
-                  "endLine": 2946
+                  "startLine": 96,
+                  "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.45
+            "confidence": 0.6
           }
         },
         {
-          "ruleId": "INFO-DISCLOSURE",
-          "level": "note",
+          "ruleId": "QUEUE-POISON-001",
+          "level": "warning",
           "message": {
-            "text": "Multiple CLI commands expose exception class names and messages via click.echo (e.g., convert_to_agent_apps line 1286, storage cleanup). While these are CLI-only commands, in containerized environments CLI output may be captured in logging systems accessible to broader audiences. Exception details can reveal internal class structure, database schema, or connection strings."
+            "text": "Both document_indexing_task and rag_pipeline_run_task use TenantIsolatedTaskQueue.pull_tasks() to retrieve the next batch of tasks from Redis and immediately dispatch them without any integrity or authenticity check on the queue contents. If Redis is compromised or accessible without authentication, an attacker can inject arbitrary task payloads into the tenant isolation queue, leading to unauthorized document processing, pipeline execution, or denial of service through queue flooding."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/commands/system.py"
+                  "uri": "api/tasks/document_indexing_task.py"
                 },
                 "region": {
-                  "startLine": 1286,
-                  "endLine": 1286
+                  "startLine": 141,
+                  "startColumn": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.4
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "DOS-001",
+          "level": "warning",
+          "message": {
+            "text": "rag_pipeline_run_task deserializes an array of pipeline invoke entities from file storage and submits each one to a ThreadPoolExecutor with max_workers=10. The number of entities in the array is not bounded by the task itself -- it depends on what was stored in the file. An attacker who controls the file content (via queue poisoning or file storage manipulation) could supply thousands of entities, causing the thread pool to process an unbounded workload. Additionally, each entity spawns a full pipeline execution with database sessions and Flask app contexts, amplifying resource consumption."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                },
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
           }
         }
       ]

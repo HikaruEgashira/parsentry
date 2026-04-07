@@ -1,68 +1,43 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "CMDI-001",
-              "name": "OSCommandInjectionViaPopen",
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
               "shortDescription": {
-                "text": "OS command injection via os.popen() with unsanitized user input"
+                "text": "OS Command Injection via unsanitized user input"
               },
               "fullDescription": {
-                "text": "The hostname and count parameters from the HTTP request are interpolated directly into an os.popen() call without any sanitization or validation. An attacker can inject arbitrary OS commands using shell metacharacters (e.g., hostname=;cat /etc/passwd or count=1;whoami)."
+                "text": "User-controlled input is passed directly to os.popen() or os.system() without sanitization, allowing arbitrary OS command execution."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "help": {
+                "text": "Use subprocess with a list of arguments (never shell=True) and validate/allowlist inputs. Never interpolate user input into shell command strings."
+              },
               "properties": {
-                "tags": ["security", "CWE-78", "command-injection"]
+                "tags": ["security", "injection", "CWE-78"]
               }
             },
             {
-              "id": "CMDI-002",
-              "name": "OSCommandInjectionViaSystem",
+              "id": "PATH_INJECTION",
+              "name": "PathInjection",
               "shortDescription": {
-                "text": "OS command injection via os.system() with unsanitized user input"
+                "text": "Unsanitized user input used in file path construction"
               },
               "fullDescription": {
-                "text": "The hostname parameter is interpolated directly into an os.system() call that also writes output to a file. An attacker can chain commands via shell metacharacters to execute arbitrary commands on the server."
+                "text": "User-controlled hostname parameter is embedded in a file path string, enabling path traversal or unintended file creation."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "help": {
+                "text": "Sanitize filenames with a strict allowlist (alphanumeric only) before using in path construction. Use os.path.basename() and validate against a safe base directory."
+              },
               "properties": {
-                "tags": ["security", "CWE-78", "command-injection"]
-              }
-            },
-            {
-              "id": "CMDI-003",
-              "name": "FilenameInjectionViaTempPath",
-              "shortDescription": {
-                "text": "Path injection via unsanitized hostname in temp file path"
-              },
-              "fullDescription": {
-                "text": "The hostname parameter is interpolated into a file path string f\"/tmp/ping_result_{hostname}.txt\" without sanitization. An attacker can inject path traversal sequences (e.g., ../../etc/cron.d/malicious) to write to arbitrary file locations, or use shell metacharacters in the filename to manipulate the os.system() call that references this path."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
-              "properties": {
-                "tags": ["security", "CWE-22", "path-traversal"]
-              }
-            },
-            {
-              "id": "CMDI-004",
-              "name": "NoInputValidationOnCount",
-              "shortDescription": {
-                "text": "Missing numeric validation on count parameter enables command injection"
-              },
-              "fullDescription": {
-                "text": "The count parameter is expected to be a numeric value for the ping -c flag but is used as a raw string with no type validation. An attacker can supply arbitrary shell commands via this parameter (e.g., count=1;id) which are passed directly to os.popen()."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
-              "properties": {
-                "tags": ["security", "CWE-78", "input-validation"]
+                "tags": ["security", "path-traversal", "CWE-22"]
               }
             }
           ]
@@ -70,10 +45,13 @@
       },
       "results": [
         {
-          "ruleId": "CMDI-001",
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "User-controlled parameter 'hostname' and 'count' are passed unsanitized to os.popen(f\"ping -c {count} {hostname}\"). An attacker can execute arbitrary OS commands by injecting shell metacharacters (e.g., hostname=localhost;cat /etc/passwd)."
+            "text": "os.popen() called with unsanitized 'count' and 'hostname' query parameters interpolated directly into a shell command string via f-string. An attacker can inject arbitrary shell commands through either parameter, e.g. hostname='; cat /etc/passwd #' or count='1; id'. Both parameters reach the sink without any validation or escaping."
+          },
+          "properties": {
+            "confidence": 0.99
           },
           "locations": [
             {
@@ -83,25 +61,33 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 373,
+                  "startLine": 210,
                   "startColumn": 19,
-                  "endLine": 373,
                   "snippet": {
-                    "text": "        output1 = os.popen(f\"ping -c {count} {hostname}\").read()"
+                    "text": "output1 = os.popen(f\"ping -c {count} {hostname}\").read()"
                   }
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "command_injection",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 0.99
+          "fingerprints": {
+            "primaryLocationLineHash": "os.popen-cmdi-count-hostname"
           }
         },
         {
-          "ruleId": "CMDI-002",
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "User-controlled parameter 'hostname' is passed unsanitized to os.system(f\"ping -c 1 {hostname} > {temp_file}\"). An attacker can execute arbitrary OS commands via shell metacharacters. The os.system() function invokes a subshell, making this trivially exploitable."
+            "text": "os.system() called with unsanitized 'hostname' query parameter interpolated directly into a shell command string with output redirection. An attacker can inject arbitrary shell commands via the hostname parameter, e.g. hostname='localhost; rm -rf /'. The os.system() call spawns a full shell, making exploitation trivial."
+          },
+          "properties": {
+            "confidence": 0.99
           },
           "locations": [
             {
@@ -111,80 +97,107 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 377,
+                  "startLine": 214,
                   "startColumn": 9,
-                  "endLine": 377,
                   "snippet": {
-                    "text": "        os.system(f\"ping -c 1 {hostname} > {temp_file}\")"
+                    "text": "os.system(f\"ping -c 1 {hostname} > {temp_file}\")"
                   }
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "command_injection",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 0.99
+          "fingerprints": {
+            "primaryLocationLineHash": "os.system-cmdi-hostname"
           }
         },
         {
-          "ruleId": "CMDI-003",
+          "ruleId": "RCE",
           "level": "error",
           "message": {
-            "text": "User-controlled parameter 'hostname' is interpolated into a file path f\"/tmp/ping_result_{hostname}.txt\" without sanitization. An attacker can use path traversal (e.g., ../../etc/cron.d/job) to control where the ping output is written, enabling arbitrary file write. Combined with the os.system() call on line 377, this creates a compound injection vector."
+            "text": "The 'count' query parameter is accepted as a string with no numeric validation and interpolated into the os.popen() shell command. This is an independent injection vector from 'hostname' — an attacker can pass count='1; whoami' to execute arbitrary commands even if hostname is hardcoded or filtered."
           },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 376,
-                  "startColumn": 21,
-                  "endLine": 376,
-                  "snippet": {
-                    "text": "        temp_file = f\"/tmp/ping_result_{hostname}.txt\""
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "CMDI-004",
-          "level": "error",
-          "message": {
-            "text": "The 'count' query parameter (line 368) is used as a raw string without numeric validation before being passed to os.popen() on line 373. An attacker can supply values like '1;whoami' or '$(id)' to inject arbitrary commands via the count field."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 368,
-                  "startColumn": 13,
-                  "endLine": 368,
-                  "snippet": {
-                    "text": "    count = request.args.get(\"count\", \"1\")"
-                  }
-                }
-              }
-            }
-          ],
           "properties": {
             "confidence": 0.97
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 207,
+                  "startColumn": 5,
+                  "snippet": {
+                    "text": "count = request.args.get(\"count\", \"1\")"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "command_injection",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "no-validation-count-param"
+          }
+        },
+        {
+          "ruleId": "PATH_INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "The 'hostname' query parameter is embedded in a temporary file path '/tmp/ping_result_{hostname}.txt' without sanitization. An attacker can include path separators or traversal sequences (e.g. hostname='../../etc/cron.d/evil') to write ping output to arbitrary filesystem locations, potentially enabling further exploitation."
+          },
+          "properties": {
+            "confidence": 0.92
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 213,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "temp_file = f\"/tmp/ping_result_{hostname}.txt\""
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "command_injection",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "path-injection-cmdi-hostname-tempfile"
           }
         }
       ],
-      "invocations": [
+      "artifacts": [
         {
-          "executionSuccessful": true
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask application entry point containing the /cmdi endpoint with os.popen() and os.system() command injection vulnerabilities"
+          }
         }
       ]
     }

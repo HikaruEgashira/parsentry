@@ -6,207 +6,50 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "version": "1.0.0",
           "rules": [
             {
-              "id": "NOSQLI-001",
-              "name": "NoSQLInjectionViaWhereClause",
+              "id": "SSRF",
               "shortDescription": {
-                "text": "NoSQL injection via unsanitized user input in MongoDB $where clause"
+                "text": "Server-Side Request Forgery"
               },
-              "fullDescription": {
-                "text": "The 'threshold' query parameter is interpolated directly into a MongoDB $where JavaScript string without sanitization or parameterization. An attacker can inject arbitrary JavaScript code that executes within the MongoDB engine, enabling data exfiltration, authentication bypass, or denial of service (e.g., infinite loops)."
-              },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
-              "properties": {
-                "tags": [
-                  "security",
-                  "injection",
-                  "nosql",
-                  "mongodb",
-                  "CWE-943"
-                ],
-                "precision": "very-high"
-              }
+              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/"
             },
             {
-              "id": "NOSQLI-002",
-              "name": "NoSQLInjectionDoS",
+              "id": "XSS",
               "shortDescription": {
-                "text": "Denial of service via JavaScript injection in MongoDB $where clause"
+                "text": "Cross-Site Scripting"
               },
-              "fullDescription": {
-                "text": "The unsanitized threshold parameter allows injection of JavaScript that runs inside MongoDB's server-side evaluation. An attacker can inject an infinite loop (e.g., `0'; while(true){}; '`) to exhaust server resources and cause denial of service."
-              },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
-              "properties": {
-                "tags": [
-                  "security",
-                  "injection",
-                  "nosql",
-                  "dos",
-                  "CWE-400"
-                ],
-                "precision": "very-high"
-              }
+              "helpUri": "https://owasp.org/www-community/attacks/xss/"
             },
             {
-              "id": "IDOR-001",
-              "name": "InsecureDirectObjectReference",
+              "id": "OPEN-REDIRECT",
               "shortDescription": {
-                "text": "User ID taken from URL parameter instead of authenticated session"
+                "text": "Unvalidated Redirect"
               },
-              "fullDescription": {
-                "text": "The displayAllocations handler reads userId from req.params (URL path) rather than from req.session. This allows any authenticated user to view other users' allocation data by modifying the userId in the URL, constituting an Insecure Direct Object Reference (IDOR) vulnerability."
-              },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References",
-              "properties": {
-                "tags": [
-                  "security",
-                  "authorization",
-                  "idor",
-                  "CWE-639"
-                ],
-                "precision": "very-high"
-              }
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "NOSQLI-001",
-          "ruleIndex": 0,
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "The 'threshold' query parameter is string-interpolated directly into a MongoDB $where clause: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`. An attacker can inject JavaScript code (e.g., threshold=`1'; return 1 == '1`) to bypass query filters and access unauthorized data."
+            "text": "Server-Side Request Forgery via user-controlled URL. The `req.query.url` parameter is directly concatenated with `req.query.symbol` and passed to `needle.get()` without any validation or allowlisting. An attacker can supply an arbitrary URL (e.g., http://169.254.169.254/latest/meta-data/ for cloud metadata, or internal service URLs) to make the server issue requests to internal or external resources on the attacker's behalf."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/data/allocations-dao.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/routes/research.js"
                 },
                 "region": {
-                  "startLine": 78,
-                  "startColumn": 21,
-                  "endLine": 78,
-                  "endColumn": 87
-                }
-              }
-            }
-          ],
-          "relatedLocations": [
-            {
-              "id": 1,
-              "message": {
-                "text": "Unsanitized 'threshold' parameter received from query string"
-              },
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/allocations.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 19,
-                  "startColumn": 9,
-                  "endLine": 21,
-                  "endColumn": 10
-                }
-              }
-            },
-            {
-              "id": 2,
-              "message": {
-                "text": "Threshold passed to DAO without validation"
-              },
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/allocations.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 23,
-                  "startColumn": 9,
-                  "endLine": 23,
-                  "endColumn": 78
-                }
-              }
-            }
-          ],
-          "fixes": [
-            {
-              "description": {
-                "text": "Parse threshold as integer and validate range before use in $where clause"
-              },
-              "artifactChanges": [
-                {
-                  "artifactLocation": {
-                    "uri": "app/data/allocations-dao.js",
-                    "uriBaseId": "%SRCROOT%"
-                  },
-                  "replacements": [
-                    {
-                      "deletedRegion": {
-                        "startLine": 77,
-                        "startColumn": 1,
-                        "endLine": 79,
-                        "endColumn": 1
-                      },
-                      "insertedContent": {
-                        "text": "                const parsedThreshold = parseInt(threshold, 10);\n                if (parsedThreshold >= 0 && parsedThreshold <= 99) {\n                    return {$where: `this.userId == ${parsedUserId} && this.stocks > ${parsedThreshold}`};\n                }\n                throw `The user supplied threshold: ${parsedThreshold} was not valid.`;\n"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "NOSQLI-002",
-          "ruleIndex": 1,
-          "level": "error",
-          "message": {
-            "text": "The $where clause accepts arbitrary JavaScript from the 'threshold' parameter. An attacker can inject `0'; while(true){}; '` to cause an infinite loop inside MongoDB's JavaScript engine, resulting in denial of service."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/allocations-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 78,
-                  "startColumn": 21,
-                  "endLine": 78,
-                  "endColumn": 87
-                }
-              }
-            }
-          ],
-          "relatedLocations": [
-            {
-              "id": 1,
-              "message": {
-                "text": "User-controlled threshold flows into $where without sanitization"
-              },
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/allocations.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 19,
-                  "startColumn": 9,
-                  "endLine": 21,
-                  "endColumn": 10
+                  "startLine": 15,
+                  "startColumn": 13,
+                  "endLine": 16,
+                  "endColumn": 58
                 }
               }
             }
@@ -216,74 +59,49 @@
           }
         },
         {
-          "ruleId": "IDOR-001",
-          "ruleIndex": 2,
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "The displayAllocations handler extracts userId from req.params (URL path segment) at line 17 instead of from the authenticated session (req.session.userId). Any authenticated user can enumerate and access other users' allocation data by modifying the userId in the request URL."
+            "text": "Reflected Cross-Site Scripting via unescaped response body. The response body from the external `needle.get()` request is written directly to the HTTP response via `res.write(body)` with Content-Type `text/html` and no output encoding or sanitization. If the attacker controls the target URL (via the SSRF above) or the remote server returns malicious HTML/JavaScript, it will be rendered in the victim's browser. This is a second-order XSS chained with the SSRF."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/allocations.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/routes/research.js"
                 },
                 "region": {
-                  "startLine": 16,
-                  "startColumn": 15,
-                  "endLine": 18,
-                  "endColumn": 10
+                  "startLine": 25,
+                  "startColumn": 21,
+                  "endLine": 25,
+                  "endColumn": 37
                 }
               }
             }
           ],
-          "relatedLocations": [
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "warning",
+          "message": {
+            "text": "Unvalidated redirect on the `/learn` route. The `req.query.url` value is passed directly to `res.redirect()` without any validation or allowlisting. An attacker can craft a link such as `/learn?url=https://evil.com` to redirect authenticated users to a phishing site. This is a classic A10 (Unvalidated Redirects and Forwards) vulnerability."
+          },
+          "locations": [
             {
-              "id": 1,
-              "message": {
-                "text": "Commented-out fix shows the intended secure pattern: const { userId } = req.session"
-              },
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/allocations.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "app/routes/index.js"
                 },
                 "region": {
-                  "startLine": 12,
-                  "startColumn": 9,
-                  "endLine": 15,
-                  "endColumn": 11
+                  "startLine": 72,
+                  "startColumn": 16,
+                  "endLine": 72,
+                  "endColumn": 45
                 }
               }
-            }
-          ],
-          "fixes": [
-            {
-              "description": {
-                "text": "Use session-based userId instead of URL parameter"
-              },
-              "artifactChanges": [
-                {
-                  "artifactLocation": {
-                    "uri": "app/routes/allocations.js",
-                    "uriBaseId": "%SRCROOT%"
-                  },
-                  "replacements": [
-                    {
-                      "deletedRegion": {
-                        "startLine": 16,
-                        "startColumn": 1,
-                        "endLine": 18,
-                        "endColumn": 11
-                      },
-                      "insertedContent": {
-                        "text": "        const { userId } = req.session;\n"
-                      }
-                    }
-                  ]
-                }
-              ]
             }
           ],
           "properties": {

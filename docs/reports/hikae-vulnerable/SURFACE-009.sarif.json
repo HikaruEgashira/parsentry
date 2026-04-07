@@ -1,66 +1,67 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "SSRF-001",
+              "id": "SSRF",
               "name": "ServerSideRequestForgery",
               "shortDescription": {
-                "text": "Unvalidated URL passed to requests.get() enables SSRF"
+                "text": "Server-Side Request Forgery (SSRF)"
               },
               "fullDescription": {
-                "text": "User-supplied URL from JSON body is passed directly to requests.get() without any validation, allowlist, or blocklist. An attacker can force the server to make HTTP requests to arbitrary internal or external hosts, including cloud metadata endpoints (e.g., http://169.254.169.254/), internal services, and localhost."
+                "text": "User-controlled URL is passed directly to an HTTP client without validation, allowing requests to internal services, cloud metadata endpoints (e.g. 169.254.169.254), and other restricted hosts."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "helpUri": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
               "properties": {
-                "tags": [
-                  "security",
-                  "ssrf",
-                  "CWE-918"
-                ]
+                "tags": ["security", "ssrf"]
               }
             },
             {
-              "id": "SSRF-002",
-              "name": "InternalNetworkInformationDisclosure",
+              "id": "SSRF-METADATA",
+              "name": "CloudMetadataExposure",
               "shortDescription": {
-                "text": "Response content and headers returned to client leak internal network information"
+                "text": "Cloud metadata endpoint accessible via SSRF"
               },
               "fullDescription": {
-                "text": "The response body (up to 1000 chars) and all HTTP headers from the internal request are returned to the caller. This enables data exfiltration from internal services, cloud metadata APIs, and other resources not intended to be externally accessible."
+                "text": "No blocklist prevents requests to cloud instance metadata services (AWS 169.254.169.254, GCP metadata.google.internal, Azure 169.254.169.254). An attacker can steal IAM credentials, service account tokens, and instance configuration."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/19-Testing_for_Server-Side_Request_Forgery",
               "properties": {
-                "tags": [
-                  "security",
-                  "information-disclosure",
-                  "CWE-200"
-                ]
+                "tags": ["security", "ssrf", "cloud"]
               }
             },
             {
-              "id": "SSRF-003",
-              "name": "MissingAuthentication",
+              "id": "SSRF-INTERNAL",
+              "name": "InternalNetworkScanning",
               "shortDescription": {
-                "text": "SSRF endpoint requires no authentication"
+                "text": "Internal network scanning via SSRF"
               },
               "fullDescription": {
-                "text": "The /api/ssrf/fetch endpoint has no authentication or authorization checks. Any unauthenticated client can use the server as an open proxy to reach internal network resources."
+                "text": "No restriction on private/internal IP ranges (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16). An attacker can enumerate internal services and access unauthenticated admin panels or databases."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "helpUri": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
               "properties": {
-                "tags": [
-                  "security",
-                  "authentication",
-                  "CWE-306"
-                ]
+                "tags": ["security", "ssrf", "internal-network"]
+              }
+            },
+            {
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Sensitive information disclosure via response headers"
+              },
+              "fullDescription": {
+                "text": "Internal service response headers and body content are forwarded to the client, leaking infrastructure details such as server versions, internal hostnames, and potentially sensitive data."
+              },
+              "helpUri": "https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure",
+              "properties": {
+                "tags": ["security", "information-disclosure"]
               }
             }
           ]
@@ -68,10 +69,13 @@
       },
       "results": [
         {
-          "ruleId": "SSRF-001",
+          "ruleId": "SSRF",
           "level": "error",
           "message": {
-            "text": "User-controlled 'url' parameter from request JSON body is passed directly to requests.get(url, timeout=10) with no URL validation, scheme restriction, or host allowlist. Attackers can reach internal networks (e.g., 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), cloud metadata (169.254.169.254), and localhost services."
+            "text": "The 'url' parameter from the JSON request body (line 113) is passed directly to requests.get() (line 117) with no validation whatsoever — no URL scheme restriction, no hostname allowlist, no IP blocklist, and no DNS resolution check. An attacker can supply any URL to make the server issue arbitrary HTTP requests."
+          },
+          "properties": {
+            "confidence": 1.0
           },
           "locations": [
             {
@@ -81,23 +85,75 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 168,
-                  "startColumn": 20,
-                  "endLine": 168,
+                  "startLine": 112,
+                  "endLine": 129,
+                  "startColumn": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ssrf_fetch",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "Validate the URL against an allowlist of permitted schemes (http/https only) and hostnames. Block private/link-local IP ranges (RFC 1918, 169.254.0.0/16, ::1). Resolve hostnames before making requests and verify they do not resolve to internal addresses (DNS rebinding protection). Consider using a dedicated SSRF-protection library."
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SSRF-METADATA",
+          "level": "error",
+          "message": {
+            "text": "No blocklist prevents requests to cloud instance metadata services. An attacker can fetch http://169.254.169.254/latest/meta-data/ (AWS), http://metadata.google.internal/ (GCP), or http://169.254.169.254/metadata/instance (Azure) to steal IAM credentials, service account tokens, and instance configuration. The response body (up to 1000 chars) and all headers are returned to the attacker."
+          },
+          "properties": {
+            "confidence": 0.95
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 117,
+                  "endLine": 117,
+                  "startColumn": 9,
                   "endColumn": 52
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ssrf_fetch",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 0.95
-          }
+          "fixes": [
+            {
+              "description": {
+                "text": "Explicitly block requests to link-local addresses (169.254.0.0/16) and well-known metadata hostnames (metadata.google.internal, metadata.azure.com). Resolve the target hostname and verify the resolved IP is not in a blocked range before issuing the request."
+              }
+            }
+          ]
         },
         {
-          "ruleId": "SSRF-002",
+          "ruleId": "SSRF-INTERNAL",
           "level": "error",
           "message": {
-            "text": "Response from the arbitrary internal request is returned to the client: response body (up to 1000 characters via response.text[:1000]), status code, and all HTTP headers (dict(response.headers)). This enables exfiltration of sensitive data from cloud metadata endpoints, internal APIs, and other backend services."
+            "text": "No restriction on requests to private/internal IP ranges. An attacker can scan the internal network by requesting URLs targeting 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16, enumerating live hosts and open ports. The timeout of 10 seconds (line 117) enables reliable port scanning by distinguishing between open, closed, and filtered ports based on response timing."
+          },
+          "properties": {
+            "confidence": 0.95
           },
           "locations": [
             {
@@ -107,23 +163,36 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 170,
-                  "startColumn": 16,
-                  "endLine": 174,
-                  "endColumn": 10
+                  "startLine": 117,
+                  "endLine": 117,
+                  "startColumn": 9,
+                  "endColumn": 52
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ssrf_fetch",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 0.95
-          }
+          "fixes": [
+            {
+              "description": {
+                "text": "Block all RFC 1918 private ranges, loopback (127.0.0.0/8), and link-local (169.254.0.0/16) addresses. Resolve DNS before connecting and validate the resolved IP against the blocklist to prevent DNS rebinding attacks."
+              }
+            }
+          ]
         },
         {
-          "ruleId": "SSRF-003",
+          "ruleId": "INFO_DISCLOSURE",
           "level": "warning",
           "message": {
-            "text": "The /api/ssrf/fetch endpoint has no authentication decorator or token check. Combined with the SSRF vulnerability, any anonymous internet user can use this endpoint as an open proxy to scan and exfiltrate data from the server's internal network."
+            "text": "The endpoint returns the full response headers (line 126) and up to 1000 characters of the response body (line 125) from the fetched URL back to the caller. When combined with SSRF, this leaks internal HTTP server banners, Set-Cookie headers, internal API responses, and other infrastructure details from internal services."
+          },
+          "properties": {
+            "confidence": 0.9
           },
           "locations": [
             {
@@ -133,17 +202,37 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 159,
-                  "startColumn": 1,
-                  "endLine": 160,
-                  "endColumn": 17
+                  "startLine": 119,
+                  "endLine": 123,
+                  "startColumn": 9,
+                  "endColumn": 10
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ssrf_fetch",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 0.95
-          }
+          "fixes": [
+            {
+              "description": {
+                "text": "Do not forward raw response headers from fetched URLs to clients. Return only necessary structured data, and strip or sanitize headers before including them in the response."
+              }
+            }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "length": 326,
+          "mimeType": "text/x-python"
         }
       ]
     }

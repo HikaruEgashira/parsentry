@@ -6,101 +6,61 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.1.0",
+          "version": "1.0.0",
           "rules": [
             {
-              "id": "SSJS-001",
-              "name": "ServerSideJavaScriptInjectionViaEval",
+              "id": "XSS",
+              "name": "StoredCrossSkSiteScripting",
               "shortDescription": {
-                "text": "Server-Side JavaScript Injection via eval() on user-controlled input"
+                "text": "Stored XSS via unsanitized memo content rendered through marked"
               },
-              "fullDescription": {
-                "text": "The handleContributionsUpdate function calls eval() directly on req.body.preTax, req.body.afterTax, and req.body.roth without any sanitization. An attacker can submit arbitrary JavaScript code in these form fields, achieving Remote Code Execution (RCE) on the server. For example, submitting preTax=process.exit() crashes the server, while preTax=require('child_process').execSync('id') executes OS commands."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-95",
-                  "RCE",
-                  "eval-injection",
-                  "OWASP-A03:2021"
-                ]
+                "cwe": "CWE-79"
               }
             },
             {
-              "id": "SSJS-002",
-              "name": "ServerSideJavaScriptInjectionViaEvalAfterTax",
+              "id": "INSECURE-DEPENDENCY",
+              "name": "InsecureDependency",
               "shortDescription": {
-                "text": "Server-Side JavaScript Injection via eval() on afterTax parameter"
+                "text": "Use of marked 0.3.5 with known XSS bypass vulnerabilities"
               },
-              "fullDescription": {
-                "text": "eval(req.body.afterTax) executes arbitrary JavaScript from user input. This is the same class of vulnerability as SSJS-001 but on the afterTax parameter."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/1395.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-95",
-                  "RCE",
-                  "eval-injection"
-                ]
+                "cwe": "CWE-1395"
               }
             },
             {
-              "id": "SSJS-003",
-              "name": "ServerSideJavaScriptInjectionViaEvalRoth",
+              "id": "XSS-TEMPLATE",
+              "name": "TemplateAutoescapeDisabled",
               "shortDescription": {
-                "text": "Server-Side JavaScript Injection via eval() on roth parameter"
+                "text": "Swig autoescape disabled allowing unescaped HTML output"
               },
-              "fullDescription": {
-                "text": "eval(req.body.roth) executes arbitrary JavaScript from user input. This is the same class of vulnerability as SSJS-001 but on the roth parameter."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-95",
-                  "RCE",
-                  "eval-injection"
-                ]
+                "cwe": "CWE-79"
               }
             },
             {
-              "id": "VALIDATE-AFTER-EXEC-001",
-              "name": "ValidationAfterCodeExecution",
+              "id": "MISSING-INPUT-VALIDATION",
+              "name": "MissingInputValidation",
               "shortDescription": {
-                "text": "Input validation occurs after eval() has already executed attacker-controlled code"
-              },
-              "fullDescription": {
-                "text": "The isNaN() and range checks on lines 47-55 occur after eval() has already executed on lines 32-34. By the time validation rejects malicious input, the attacker's code has already run on the server. Validation must occur before any interpretation of user input."
+                "text": "No input validation or sanitization on memo content before storage"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-20",
-                  "defense-in-depth"
-                ]
+                "cwe": "CWE-20"
               }
             },
             {
-              "id": "CSRF-001",
-              "name": "MissingCSRFProtection",
+              "id": "NOSQL-INJECTION",
+              "name": "NoSQLInjection",
               "shortDescription": {
-                "text": "Contributions update endpoint lacks CSRF token validation"
+                "text": "Unsanitized user input passed directly to MongoDB insert"
               },
-              "fullDescription": {
-                "text": "The handleContributionsUpdate handler processes POST requests that modify server-side state (updating contribution percentages in the database) without requiring or validating a CSRF token. An attacker can craft a malicious page that submits a form to this endpoint on behalf of an authenticated user."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-352",
-                  "CSRF",
-                  "OWASP-A01:2021"
-                ]
+                "cwe": "CWE-943"
               }
             }
           ]
@@ -108,93 +68,55 @@
       },
       "results": [
         {
-          "ruleId": "SSJS-001",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "eval(req.body.preTax) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. An attacker can execute arbitrary OS commands (e.g., require('child_process').execSync('cat /etc/passwd')). Replace eval() with parseInt() or Number()."
+            "text": "Stored XSS: User-supplied memo content from req.body.memo is stored in MongoDB without any sanitization, then rendered via marked() in the Swig template with autoescape disabled. An attacker can submit a memo containing malicious JavaScript (e.g., `[clickme](javascript:alert('XSS'))` or HTML injection payloads that bypass marked 0.3.5's sanitize option) that executes in every user's browser when viewing the memos page."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
+                  "uri": "app/views/memos.html"
                 },
                 "region": {
-                  "startLine": 32,
-                  "startColumn": 26,
-                  "endColumn": 48
+                  "startLine": 31,
+                  "startColumn": 17,
+                  "endColumn": 41
                 }
               }
             }
           ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "SSJS-002",
-          "level": "error",
-          "message": {
-            "text": "eval(req.body.afterTax) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. Replace eval() with parseInt() or Number()."
-          },
-          "locations": [
+          "relatedLocations": [
             {
+              "id": 1,
+              "message": {
+                "text": "User input ingested from req.body.memo without validation"
+              },
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
+                  "uri": "app/routes/memos.js"
                 },
                 "region": {
-                  "startLine": 33,
-                  "startColumn": 27,
-                  "endColumn": 50
+                  "startLine": 13,
+                  "startColumn": 25,
+                  "endColumn": 39
                 }
               }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "SSJS-003",
-          "level": "error",
-          "message": {
-            "text": "eval(req.body.roth) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. Replace eval() with parseInt() or Number()."
-          },
-          "locations": [
+            },
             {
+              "id": 2,
+              "message": {
+                "text": "Memo inserted into MongoDB without sanitization"
+              },
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
+                  "uri": "app/data/memos-dao.js"
                 },
                 "region": {
-                  "startLine": 34,
-                  "startColumn": 22,
-                  "endColumn": 42
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "VALIDATE-AFTER-EXEC-001",
-          "level": "warning",
-          "message": {
-            "text": "Validation via isNaN() and range checks on line 47 occurs after eval() has already executed attacker code on lines 32-34. The validation provides no security benefit because malicious payloads execute before any check runs. Move validation (and switch to parseInt/Number) before processing input."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
-                },
-                "region": {
-                  "startLine": 47,
+                  "startLine": 23,
                   "startColumn": 9,
-                  "endLine": 48
+                  "endColumn": 85
                 }
               }
             }
@@ -204,27 +126,118 @@
           }
         },
         {
-          "ruleId": "CSRF-001",
-          "level": "warning",
+          "ruleId": "INSECURE-DEPENDENCY",
+          "level": "error",
           "message": {
-            "text": "The handleContributionsUpdate handler modifies contribution data in MongoDB without CSRF token validation. Combined with the eval() vulnerability, this allows a drive-by attack where visiting a malicious page triggers RCE on the server under the victim's session."
+            "text": "marked 0.3.5 has multiple known XSS vulnerabilities (CVE-2017-17461, CVE-2022-21680, CVE-2022-21681). The sanitize option used in server.js (line 127) is deprecated and trivially bypassable in this version. Attackers can craft markdown payloads that bypass the sanitize filter and inject arbitrary HTML/JavaScript."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app/routes/contributions.js"
+                  "uri": "server.js"
                 },
                 "region": {
-                  "startLine": 28,
+                  "startLine": 126,
                   "startColumn": 5,
-                  "endLine": 76
+                  "endLine": 128,
+                  "endColumn": 7
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.75
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-TEMPLATE",
+          "level": "error",
+          "message": {
+            "text": "Swig template engine autoescape is explicitly disabled (autoescape: false on line 137). This means all template variables including marked() output are rendered as raw HTML without escaping. Combined with the stored memo content, this creates a direct stored XSS vector affecting all users who view the memos page."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 137,
+                  "startColumn": 9,
+                  "endColumn": 25
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "The memo content from req.body.memo is passed directly to memosDAO.insert() without any input validation, length checks, or content sanitization. There is no server-side check on the type, length, or content of the memo field before it is stored in the database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 9,
+                  "endColumn": 55
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "NOSQL-INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "req.body.memo is passed directly into a MongoDB insert operation. Since bodyParser.urlencoded with extended:false is used, the memo field is a string and direct NoSQL operator injection via this field is limited. However, if the content type were changed to JSON (bodyParser.json is also enabled), an attacker could send an object instead of a string for the memo field, potentially causing unexpected document structures in the database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/memos-dao.js"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 9,
+                  "endColumn": 85
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "bodyParser.json() enabled, allowing JSON content type requests"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 71,
+                  "startColumn": 5,
+                  "endColumn": 29
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.60
           }
         }
       ]

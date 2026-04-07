@@ -10,87 +10,45 @@
           "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "NOSQL-INJECTION",
+              "id": "NOSQLI",
               "name": "NoSQLInjection",
               "shortDescription": {
-                "text": "NoSQL injection via unsanitized MongoDB query parameter"
+                "text": "NoSQL Injection vulnerability"
               },
               "fullDescription": {
-                "text": "The userName parameter from req.body is passed directly to MongoDB's findOne() without type validation. An attacker can submit an object like {\"$gt\": \"\"} as userName, bypassing authentication entirely. This is a critical authentication bypass."
+                "text": "User-controlled input is passed directly into a MongoDB query without sanitization, allowing an attacker to inject query operators such as $gt, $ne, or $regex to manipulate query logic."
               },
               "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
               "properties": {
-                "tags": ["security", "injection", "nosql", "CWE-943", "A03:2021"]
+                "tags": ["security", "injection", "nosql", "A03:2021"]
               }
             },
             {
-              "id": "PLAINTEXT-PASSWORD",
-              "name": "PlaintextPasswordStorage",
+              "id": "BROKEN-AUTH",
+              "name": "BrokenAuthentication",
               "shortDescription": {
-                "text": "Passwords stored and compared in plaintext"
+                "text": "Broken Authentication - Plaintext password storage and comparison"
               },
               "fullDescription": {
-                "text": "Password comparison uses direct string equality (fromDB === fromUser) instead of bcrypt hash comparison. The bcrypt hashing code is commented out, leaving passwords stored in plaintext in MongoDB. This violates OWASP password storage guidelines."
+                "text": "Passwords are stored and compared in plaintext instead of using a secure hashing algorithm such as bcrypt. This allows credential theft if the database is compromised."
               },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/04-Authentication_Testing/",
               "properties": {
-                "tags": ["security", "cryptography", "CWE-256", "CWE-261", "A02:2021"]
+                "tags": ["security", "authentication", "A07:2021"]
               }
             },
             {
-              "id": "USER-ENUMERATION",
-              "name": "UserEnumeration",
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
               "shortDescription": {
-                "text": "User enumeration via differentiated error messages"
+                "text": "Open Redirect vulnerability"
               },
               "fullDescription": {
-                "text": "The login handler returns distinct error messages for 'user not found' vs 'invalid password', allowing attackers to enumerate valid usernames. Authentication failures should return a single generic message regardless of which credential was incorrect."
+                "text": "User-controlled input from query string is used directly in a redirect without validation, allowing an attacker to redirect users to malicious sites."
               },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account",
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
               "properties": {
-                "tags": ["security", "authentication", "CWE-204", "A07:2021"]
-              }
-            },
-            {
-              "id": "SESSION-FIXATION",
-              "name": "SessionFixation",
-              "shortDescription": {
-                "text": "Session not regenerated after successful authentication"
-              },
-              "fullDescription": {
-                "text": "After successful login, the session ID is not regenerated via req.session.regenerate(). An attacker who can set a victim's session cookie before login can hijack the authenticated session. The session should be regenerated after any privilege level change."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/Session_fixation",
-              "properties": {
-                "tags": ["security", "session-management", "CWE-384", "A07:2021"]
-              }
-            },
-            {
-              "id": "LOG-INJECTION",
-              "name": "LogInjection",
-              "shortDescription": {
-                "text": "Log injection via unsanitized user input in console.log"
-              },
-              "fullDescription": {
-                "text": "The userName value from user input is logged directly via console.log without sanitization. An attacker can inject newline characters or ANSI escape sequences to forge log entries, obscure attack traces, or exploit log viewers."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/Log_Injection",
-              "properties": {
-                "tags": ["security", "logging", "CWE-117", "A09:2021"]
-              }
-            },
-            {
-              "id": "DEPRECATED-CRYPTO-LIB",
-              "name": "DeprecatedCryptoLibrary",
-              "shortDescription": {
-                "text": "Use of deprecated bcrypt-nodejs 0.0.3 with known issues"
-              },
-              "fullDescription": {
-                "text": "bcrypt-nodejs 0.0.3 is deprecated and unmaintained. Even if bcrypt hashing were enabled, this library has known compatibility and security issues. It should be replaced with the actively maintained 'bcrypt' or 'bcryptjs' package."
-              },
-              "helpUri": "https://www.npmjs.com/package/bcrypt-nodejs",
-              "properties": {
-                "tags": ["security", "dependency", "CWE-327", "A06:2021"]
+                "tags": ["security", "redirect", "A01:2021"]
               }
             }
           ]
@@ -98,10 +56,11 @@
       },
       "results": [
         {
-          "ruleId": "NOSQL-INJECTION",
+          "ruleId": "NOSQLI",
+          "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "NoSQL injection in MongoDB findOne() query. The userName parameter from req.body is passed directly as a query filter without type checking: usersCol.findOne({userName: userName}). If userName is an object like {\"$gt\": \"\"}, all users match, bypassing authentication. Fix: validate that userName is a string before querying, e.g., if (typeof userName !== 'string') return callback(error)."
+            "text": "The 'userName' parameter from the login request is passed directly into MongoDB's findOne() query without sanitization. An attacker can submit a JSON object such as {\"$gt\": \"\"} as the userName field, causing the query to match unintended documents and bypass authentication."
           },
           "locations": [
             {
@@ -111,8 +70,11 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 572,
-                  "endLine": 609
+                  "startLine": 91,
+                  "endLine": 93,
+                  "snippet": {
+                    "text": "        usersCol.findOne({\n            userName: userName\n        }, validateUserDoc);"
+                  }
                 }
               }
             }
@@ -122,10 +84,11 @@
           }
         },
         {
-          "ruleId": "PLAINTEXT-PASSWORD",
+          "ruleId": "NOSQLI",
+          "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "Passwords are stored and compared in plaintext. The validateLogin function compares passwords using direct string equality (fromDB === fromUser) instead of bcrypt.compare(). The bcrypt hashing logic is commented out. All stored passwords are recoverable if the database is compromised. Fix: uncomment and use bcrypt (or replace with bcryptjs) for hashing on registration and comparison on login."
+            "text": "The 'password' parameter in validateLogin is not type-checked or sanitized before being compared. When combined with NoSQL injection on the userName field, an attacker can pass an operator object as the password (e.g., {\"$gt\": \"\"}) that evaluates to true in the plaintext comparison, fully bypassing authentication."
           },
           "locations": [
             {
@@ -135,110 +98,102 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 590,
-                  "endLine": 600
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "USER-ENUMERATION",
-          "level": "warning",
-          "message": {
-            "text": "Login handler distinguishes between 'noSuchUser' and 'invalidPassword' error cases, returning different error messages to the client. This allows attackers to enumerate valid usernames by observing response differences. Fix: return a single generic error message such as 'Invalid username or password' for all authentication failures."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/session.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 286,
-                  "endLine": 352
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.90
-          }
-        },
-        {
-          "ruleId": "SESSION-FIXATION",
-          "level": "error",
-          "message": {
-            "text": "Session is not regenerated after successful login. The handler sets session properties (userId, userName) on the existing session without calling req.session.regenerate(). An attacker who pre-sets the session cookie (via XSS, network sniffing, or subdomain cookie injection) retains access after the victim authenticates. Fix: call req.session.regenerate() before setting authenticated session properties."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/session.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 320,
-                  "endLine": 340
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.90
-          }
-        },
-        {
-          "ruleId": "LOG-INJECTION",
-          "level": "warning",
-          "message": {
-            "text": "User-supplied userName is passed directly to console.log without sanitization. An attacker can inject newline characters (\\n) to forge log entries or inject ANSI escape sequences to exploit log viewers. Fix: sanitize userName by stripping control characters before logging, or use a structured logging library that encodes values."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/routes/session.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 290,
-                  "endLine": 295
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.80
-          }
-        },
-        {
-          "ruleId": "DEPRECATED-CRYPTO-LIB",
-          "level": "warning",
-          "message": {
-            "text": "bcrypt-nodejs 0.0.3 is imported but the hashing is commented out. Even if re-enabled, this package is deprecated and unmaintained with known issues. Fix: replace bcrypt-nodejs with the actively maintained 'bcrypt' (native) or 'bcryptjs' (pure JS) package."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/data/user-dao.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1,
-                  "endLine": 5
+                  "startLine": 57,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "    this.validateLogin = (userName, password, callback) => {\n\n        // Helper function to compare passwords\n        const comparePassword = (fromDB, fromUser) => {\n            return fromDB === fromUser;\n        };"
+                  }
                 }
               }
             }
           ],
           "properties": {
             "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "name": "BrokenAuthentication",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored in plaintext in MongoDB. The bcrypt hashing code in addUser (line 29) is commented out. If the database is compromised, all user credentials are immediately exposed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "        const user = {\n            userName,\n            firstName,\n            lastName,\n            benefitStartDate: this.getRandomFutureDate(),\n            password //received from request param\n            /*\n            // Fix for A2-1 - Broken Auth\n            // Stores password  in a safer way using one way encryption and salt hashing\n            password: bcrypt.hashSync(password, bcrypt.genSaltSync())\n            */\n        };"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Password comparison uses strict equality (===) on plaintext values instead of bcrypt.compareSync(). The secure comparison code is commented out at line 65. This, combined with plaintext storage, means authentication offers no defense against database credential leaks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 60,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "        const comparePassword = (fromDB, fromUser) => {\n            return fromDB === fromUser;\n            /*\n            // Fix for A2-Broken Auth\n            // compares decrypted password stored in this.addUser()\n            return bcrypt.compareSync(fromDB, fromUser);\n            */\n        };"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "The /learn route uses req.query.url directly in res.redirect() without any validation or allowlist check. An attacker can craft a link such as /learn?url=https://evil.com to redirect authenticated users to a phishing or malware site."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 70,
+                  "endLine": 73,
+                  "snippet": {
+                    "text": "    app.get(\"/learn\", isLoggedIn, (req, res) => {\n        // Insecure way to handle redirects by taking redirect url from query string\n        return res.redirect(req.query.url);\n    });"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
           }
         }
       ]

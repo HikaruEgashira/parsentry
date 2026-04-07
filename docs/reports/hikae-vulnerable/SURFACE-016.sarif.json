@@ -1,30 +1,82 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
             {
               "id": "ZIP_SLIP",
-              "name": "ZipSlipPathTraversal",
-              "shortDescription": { "text": "Zip Slip Path Traversal" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+              "name": "ZipSlip",
+              "shortDescription": {
+                "text": "Zip Slip - Path Traversal via Archive Extraction"
+              },
+              "fullDescription": {
+                "text": "Using zipfile.ZipFile.extractall() without validating archive entry paths allows crafted archives with entries like '../../etc/cron.d/evil' to write files outside the intended extraction directory, enabling arbitrary file overwrite or creation (including web shells, cron jobs, SSH keys, etc.)."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "path-traversal",
+                  "zip-slip"
+                ]
+              }
             },
             {
               "id": "INFO_DISCLOSURE",
               "name": "InformationDisclosure",
-              "shortDescription": { "text": "Information Disclosure" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+              "shortDescription": {
+                "text": "Sensitive Path Information Disclosed in Response"
+              },
+              "fullDescription": {
+                "text": "The endpoint returns the full server-side paths of extracted files and the temporary extraction directory in the JSON response. This leaks internal filesystem layout to the caller."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "information-disclosure"
+                ]
+              }
             },
             {
-              "id": "MISSING_AUTH",
-              "name": "MissingAuthentication",
-              "shortDescription": { "text": "Missing Authentication for Critical Function" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+              "id": "UNRESTRICTED_UPLOAD",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": {
+                "text": "No file type or size validation on uploaded archive"
+              },
+              "fullDescription": {
+                "text": "The endpoint accepts any uploaded file as a ZIP archive without validating MIME type, magic bytes, or content size. An attacker can upload a zip bomb or other malicious archive."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "unrestricted-upload"
+                ]
+              }
+            },
+            {
+              "id": "RESOURCE_LEAK",
+              "name": "TemporaryDirectoryResourceLeak",
+              "shortDescription": {
+                "text": "Temporary directory never cleaned up after extraction"
+              },
+              "fullDescription": {
+                "text": "tempfile.mkdtemp() creates a temporary directory that is never removed. Repeated requests accumulate extracted files on disk indefinitely, enabling denial of service through disk exhaustion."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/459.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "resource-leak",
+                  "denial-of-service"
+                ]
+              }
             }
           ]
         }
@@ -33,44 +85,169 @@
         {
           "ruleId": "ZIP_SLIP",
           "level": "error",
-          "message": { "text": "Zip Slip vulnerability in POST /api/file/extract. `zipfile.extractall(extract_dir)` is called without validating that archive entry paths do not contain directory traversal sequences (e.g., `../../etc/passwd`). A malicious zip file can write arbitrary files outside the intended extract directory, achieving remote code execution or overwriting critical system files. Validate each entry's resolved path with `os.path.commonpath()` or use `ZipFile.extract()` with per-entry path sanitization to ensure all extracted files remain within the target directory." },
+          "message": {
+            "text": "zipfile.ZipFile.extractall() is called without validating or sanitising archive entry paths. An attacker can craft a ZIP file containing entries with path traversal sequences (e.g. '../../etc/passwd') to overwrite arbitrary files on the server filesystem, achieving RCE or persistent backdoor installation. Fix: iterate zip.namelist(), resolve each with os.path.realpath(), and reject any path that does not start with the extract directory prefix."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 274, "endLine": 307 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 224,
+                  "endLine": 225,
+                  "snippet": {
+                    "text": "        with zipfile.ZipFile(archive_path, 'r') as zip_ref:\n            zip_ref.extractall(extract_dir)"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "extract_archive",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 0.98,
+            "cwe": [
+              "CWE-22"
+            ],
+            "owasp": [
+              "A01:2021"
+            ]
+          }
         },
         {
           "ruleId": "INFO_DISCLOSURE",
           "level": "warning",
-          "message": { "text": "The extract directory path is disclosed in the API response after extraction. This leaks internal server filesystem structure to the client, aiding attackers in crafting targeted path traversal payloads or understanding the deployment layout. Return only a logical identifier or relative path instead of the absolute filesystem path." },
+          "message": {
+            "text": "The JSON response includes 'extracted_files' (full absolute server paths) and 'extract_dir' (the temporary directory path). This discloses internal server filesystem layout and aids further exploitation via path traversal or local file inclusion."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 300, "endLine": 307 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 233,
+                  "endLine": 237,
+                  "snippet": {
+                    "text": "        return jsonify({\n            'message': 'Archive extracted successfully',\n            'extracted_files': extracted_files,\n            'extract_dir': extract_dir\n        })"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "extract_archive",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 0.9 }
+          "properties": {
+            "confidence": 0.95,
+            "cwe": [
+              "CWE-200"
+            ],
+            "owasp": [
+              "A05:2021"
+            ]
+          }
         },
         {
-          "ruleId": "MISSING_AUTH",
-          "level": "error",
-          "message": { "text": "POST /api/file/extract endpoint requires no authentication. Any unauthenticated user can upload and extract zip files on the server. Combined with the Zip Slip vulnerability, this allows anonymous remote code execution. Apply authentication middleware and enforce authorization checks before processing file uploads." },
+          "ruleId": "UNRESTRICTED_UPLOAD",
+          "level": "warning",
+          "message": {
+            "text": "The endpoint saves the uploaded file without any content-type, magic-byte, or size validation. An attacker can upload a zip bomb causing resource exhaustion, or an unexpected file format that triggers parsing vulnerabilities in the zipfile module."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 274, "endLine": 276 }
-              }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 211,
+                  "endLine": 221,
+                  "snippet": {
+                    "text": "    if 'archive' not in request.files:\n        return jsonify({'error': 'No archive uploaded'}), 400\n\n    archive = request.files['archive']\n\n    # Create temporary directory\n    extract_dir = tempfile.mkdtemp()\n\n    try:\n        # Save uploaded archive\n        archive_path = os.path.join(extract_dir, 'archive.zip')"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "extract_archive",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": { "confidence": 0.95 }
+          "properties": {
+            "confidence": 0.85,
+            "cwe": [
+              "CWE-434"
+            ],
+            "owasp": [
+              "A04:2021"
+            ]
+          }
+        },
+        {
+          "ruleId": "RESOURCE_LEAK",
+          "level": "warning",
+          "message": {
+            "text": "tempfile.mkdtemp() creates a temporary directory that is never removed after the request completes. There is no finally block calling shutil.rmtree(). Each request leaves extracted files on disk indefinitely, enabling disk exhaustion denial of service."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 216,
+                  "endLine": 216,
+                  "snippet": {
+                    "text": "    extract_dir = tempfile.mkdtemp()"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "extract_archive",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.9,
+            "cwe": [
+              "CWE-459"
+            ],
+            "owasp": [
+              "A05:2021"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask API blueprint with Zip Slip vulnerability in extract_archive() endpoint"
+          }
         }
       ]
     }

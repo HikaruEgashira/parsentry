@@ -1,6 +1,6 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
@@ -9,45 +9,56 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "LFI-001",
-              "name": "ArbitraryFileRead",
+              "id": "LFI",
+              "name": "LocalFileInclusion",
               "shortDescription": {
-                "text": "Arbitrary file read via user-controlled path passed directly to open()"
+                "text": "Local File Inclusion via arbitrary file read"
               },
               "fullDescription": {
-                "text": "The 'file' query parameter from the HTTP request is passed directly to Python's open() built-in without any path validation, sanitization, or restriction. An attacker can read any file accessible to the application process, including /etc/passwd, /etc/shadow (if permissions allow), application source code, environment files, and secrets."
+                "text": "User-controlled input is passed directly to a file open call without any path validation or sanitization, allowing an attacker to read arbitrary files from the filesystem including sensitive files such as /etc/passwd, /etc/shadow, or application secrets."
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
               "properties": {
-                "tags": ["security", "CWE-22", "CWE-73", "OWASP-A01"]
+                "tags": [
+                  "security",
+                  "CWE-22",
+                  "OWASP-A01"
+                ]
               }
             },
             {
-              "id": "LFI-002",
-              "name": "PathTraversalNoValidation",
+              "id": "PATH_TRAVERSAL",
+              "name": "PathTraversal",
               "shortDescription": {
-                "text": "No path traversal prevention or directory restriction on file read"
+                "text": "Path traversal enabling directory escape"
               },
               "fullDescription": {
-                "text": "The endpoint performs no checks against path traversal sequences (e.g., ../, ..\\), no allowlist of permitted directories, no canonicalization of the path, and no chroot or sandboxing. This allows reading files anywhere on the filesystem using relative or absolute paths."
+                "text": "The absence of path normalization and base-directory restriction allows sequences such as ../../ to escape the intended directory scope."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/23.html",
               "properties": {
-                "tags": ["security", "CWE-22", "OWASP-A01"]
+                "tags": [
+                  "security",
+                  "CWE-23",
+                  "OWASP-A01"
+                ]
               }
             },
             {
-              "id": "LFI-003",
-              "name": "FileSystemInfoDisclosure",
+              "id": "INFO_DISCLOSURE",
+              "name": "InformationDisclosure",
               "shortDescription": {
-                "text": "Exception message leaks filesystem information to the user"
+                "text": "Error message leaks filesystem structure"
               },
               "fullDescription": {
-                "text": "When open() raises an exception (e.g., FileNotFoundError, PermissionError), the full exception message is returned in the HTTP response. This reveals absolute file paths, permission details, and filesystem structure to the attacker, facilitating further exploitation."
+                "text": "Exceptions from failed file reads are returned verbatim to the client, disclosing internal path structures and operating-system details that aid further attacks."
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
               "properties": {
-                "tags": ["security", "CWE-209", "OWASP-A05"]
+                "tags": [
+                  "security",
+                  "CWE-209"
+                ]
               }
             }
           ]
@@ -55,85 +66,142 @@
       },
       "results": [
         {
-          "ruleId": "LFI-001",
+          "ruleId": "LFI",
           "level": "error",
           "message": {
-            "text": "User-supplied 'file' query parameter is passed directly to open() without any validation. An attacker can read arbitrary files on the server (e.g., /etc/passwd, application secrets, .env files) by sending GET /lfi?file=/etc/passwd."
+            "text": "The `file` query parameter is passed without validation directly to `open(file_path, 'r')`. An attacker can supply any absolute path (e.g. /etc/passwd, /etc/shadow, ~/.ssh/id_rsa) or a relative path to read arbitrary files readable by the process user. The source is `request.args.get(\"file\", \"\")` and the sink is `open(file_path, 'r')` with no intervening sanitization."
+          },
+          "properties": {
+            "confidence": 1.0,
+            "severity": "critical",
+            "attack_vector": "GET /lfi?file=/etc/passwd",
+            "cwe": [
+              "CWE-22"
+            ]
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 411,
-                  "startColumn": 13,
-                  "endLine": 412,
-                  "snippet": {
-                    "text": "            with open(file_path, 'r') as f:\n                content = f.read()"
-                  }
+                  "startLine": 248,
+                  "endLine": 272,
+                  "startColumn": 1
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "local_file_inclusion",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 1.0
-          }
+          "fixes": [
+            {
+              "description": {
+                "text": "Validate and restrict file_path to a safe base directory using os.path.realpath and a whitelist/allowlist check before opening."
+              }
+            }
+          ]
         },
         {
-          "ruleId": "LFI-002",
+          "ruleId": "PATH_TRAVERSAL",
           "level": "error",
           "message": {
-            "text": "No path validation exists between receiving the user input (line 406) and using it in open() (line 411). There is no allowlist, no directory restriction, no normalization via os.path.realpath(), and no check for path traversal sequences. Both absolute paths (/etc/passwd) and relative traversal (../../etc/passwd) succeed."
+            "text": "Because no path canonicalization is applied, sequences like ../../etc/passwd are accepted. The application UI explicitly advertises this attack vector ('Try: /etc/passwd, /etc/hosts, ../../etc/passwd'), confirming the vulnerability is intentional in this test app but would be critical in production."
+          },
+          "properties": {
+            "confidence": 1.0,
+            "severity": "critical",
+            "attack_vector": "GET /lfi?file=../../etc/passwd",
+            "cwe": [
+              "CWE-23"
+            ]
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 406,
-                  "startColumn": 5,
-                  "endLine": 411,
-                  "snippet": {
-                    "text": "    file_path = request.args.get(\"file\", \"\")\n    \n    if file_path:\n        try:\n            # Vulnerable: No path validation\n            with open(file_path, 'r') as f:"
-                  }
+                  "startLine": 253,
+                  "endLine": 254,
+                  "startColumn": 13
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "local_file_inclusion",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 1.0
-          }
+          "fixes": [
+            {
+              "description": {
+                "text": "Use os.path.realpath() to resolve the canonical path and verify it starts with the permitted base directory before any file I/O."
+              }
+            }
+          ]
         },
         {
-          "ruleId": "LFI-003",
+          "ruleId": "INFO_DISCLOSURE",
           "level": "warning",
           "message": {
-            "text": "The except block formats the exception into the HTTP response via f\"Error reading file: {e}\". For FileNotFoundError this reveals the full absolute path; for PermissionError it reveals filesystem permissions. This information disclosure aids attacker reconnaissance."
+            "text": "The exception message from a failed `open()` call (e.g. 'No such file or directory: /secret') is captured and rendered into the HTML response via f-string interpolation, leaking filesystem path information to unauthenticated users."
+          },
+          "properties": {
+            "confidence": 0.95,
+            "severity": "medium",
+            "cwe": [
+              "CWE-209"
+            ]
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 413,
-                  "startColumn": 9,
-                  "endLine": 414,
-                  "snippet": {
-                    "text": "        except Exception as e:\n            content = f\"Error reading file: {e}\""
-                  }
+                  "startLine": 255,
+                  "endLine": 256,
+                  "startColumn": 9
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "local_file_inclusion",
+                  "kind": "function"
+                }
+              ]
             }
           ],
-          "properties": {
-            "confidence": 0.95
-          }
+          "fixes": [
+            {
+              "description": {
+                "text": "Replace the raw exception message with a generic error string. Log the exception server-side only."
+              }
+            }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "length": 462,
+          "mimeType": "text/x-python"
         }
       ]
     }

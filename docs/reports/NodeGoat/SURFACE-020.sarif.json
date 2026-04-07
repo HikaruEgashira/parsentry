@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [
     {
@@ -7,212 +7,66 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "IAC-001",
-              "name": "EOLBaseImage",
+              "id": "NOAUTH",
+              "name": "UnauthenticatedDatabaseConnection",
               "shortDescription": {
-                "text": "Dockerfile uses end-of-life Node.js 12 base image"
+                "text": "MongoDB connection without authentication credentials"
               },
-              "fullDescription": {
-                "text": "The Dockerfile uses FROM node:12-alpine. Node.js 12 reached end-of-life on 2022-04-30 and no longer receives security patches. Any vulnerability discovered in the Node.js runtime or its bundled OpenSSL, libuv, or V8 dependencies will remain unpatched, exposing the container to known exploits including prototype pollution, HTTP request smuggling, and TLS bypass attacks."
-              },
-              "helpUri": "https://endoflife.date/nodejs",
-              "properties": {
-                "tags": [
-                  "security",
-                  "container",
-                  "CWE-1104"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html"
             },
             {
-              "id": "IAC-002",
-              "name": "UnauthenticatedMongoDB",
+              "id": "HARDCODED-SECRET",
+              "name": "HardcodedSecret",
               "shortDescription": {
-                "text": "MongoDB deployed without authentication"
+                "text": "Hardcoded secret value in configuration file"
               },
-              "fullDescription": {
-                "text": "The docker-compose.yml exposes MongoDB on port 27017 without any authentication mechanism. The MONGODB_URI uses mongodb://mongo/nodegoat with no credentials. Any network-reachable attacker can connect to the database, read all documents, modify data, drop collections, or execute arbitrary server-side JavaScript via the $where operator. This is the most critical finding as it provides direct unauthenticated access to the entire data store."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "database",
-                  "CWE-306"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
             },
             {
-              "id": "IAC-003",
-              "name": "CommentedOutPermissionHardening",
+              "id": "WEAK-CRYPTO",
+              "name": "WeakCryptographicKey",
               "shortDescription": {
-                "text": "Permission hardening in Dockerfile is commented out"
+                "text": "Hardcoded cryptographic key used for encryption"
               },
-              "fullDescription": {
-                "text": "The Dockerfile contains commented-out permission hardening commands. Without proper filesystem permission restrictions, a compromised application process running as the 'node' user may still be able to read or modify files outside its intended scope, write to sensitive directories, or escalate privileges through writable setuid binaries."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "container",
-                  "CWE-732"
-                ],
-                "precision": "medium",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/321.html"
             },
             {
-              "id": "IAC-004",
-              "name": "OutdatedMongoDBImage",
+              "id": "CLEARTEXT-TRANSPORT",
+              "name": "CleartextTransport",
               "shortDescription": {
-                "text": "MongoDB 4.4 image is past end-of-life"
+                "text": "Application uses HTTP instead of HTTPS"
               },
-              "fullDescription": {
-                "text": "The docker-compose.yml uses mongo:4.4 which reached end-of-life in February 2024. This version no longer receives security updates, leaving the database vulnerable to known CVEs including potential authentication bypass, denial of service, and data corruption vulnerabilities that have been patched in newer releases."
-              },
-              "helpUri": "https://www.mongodb.com/support-policy/lifecycles",
-              "properties": {
-                "tags": [
-                  "security",
-                  "database",
-                  "CWE-1104"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/319.html"
             },
             {
-              "id": "IAC-005",
-              "name": "NoContainerResourceLimits",
+              "id": "MISCONFIG",
+              "name": "SecurityMisconfiguration",
               "shortDescription": {
-                "text": "No resource limits configured on containers"
+                "text": "Security headers and protections disabled"
               },
-              "fullDescription": {
-                "text": "Neither the web nor mongo services in docker-compose.yml define CPU or memory resource limits. A denial-of-service attack, memory leak, or crypto-mining malware in a compromised container can consume all host resources, affecting other services on the same host and potentially causing system-wide outage."
-              },
-              "helpUri": "https://docs.docker.com/compose/compose-file/deploy/#resources",
-              "properties": {
-                "tags": [
-                  "security",
-                  "container",
-                  "CWE-770"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
-            },
-            {
-              "id": "IAC-006",
-              "name": "PubliclyAccessibleDatabaseURI",
-              "shortDescription": {
-                "text": "app.json describes MongoDB URI as must be publicly accessible"
-              },
-              "fullDescription": {
-                "text": "The app.json manifest describes the MONGODB_URI environment variable with the guidance that it 'Must be publicly accessible'. This encourages deploying MongoDB on a publicly routable network without VPN or firewall restrictions. Combined with the absence of authentication (IAC-002), this creates a direct internet-facing unauthenticated database, which is trivially exploitable by automated scanners like Shodan."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html#network-segmentation",
-              "properties": {
-                "tags": [
-                  "security",
-                  "configuration",
-                  "CWE-668"
-                ],
-                "precision": "high",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
-              "id": "IAC-007",
-              "name": "NoNetworkIsolation",
-              "shortDescription": {
-                "text": "No network segmentation between web and database containers"
-              },
-              "fullDescription": {
-                "text": "The docker-compose.yml does not define custom networks to isolate the web application from the MongoDB service. Both containers share the default bridge network, meaning a compromised web container has unrestricted network access to MongoDB and any other service. Proper segmentation would place the database on a backend-only network unreachable from external-facing containers."
-              },
-              "helpUri": "https://docs.docker.com/network/",
-              "properties": {
-                "tags": [
-                  "security",
-                  "container",
-                  "CWE-653"
-                ],
-                "precision": "medium",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
-            },
-            {
-              "id": "IAC-008",
-              "name": "NoContainerReadOnlyFilesystem",
-              "shortDescription": {
-                "text": "Containers not configured with read-only root filesystem"
-              },
-              "fullDescription": {
-                "text": "Neither container in docker-compose.yml uses read_only: true for the root filesystem. An attacker who gains code execution inside the container can write to any path, enabling persistence via cron jobs, modifying application code to inject backdoors, or writing web shells. A read-only filesystem forces explicit tmpfs mounts for writable directories, reducing the attack surface significantly."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-8-set-filesystem-and-volumes-to-read-only",
-              "properties": {
-                "tags": [
-                  "security",
-                  "container",
-                  "CWE-276"
-                ],
-                "precision": "medium",
-                "confidence": "high"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              }
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "IAC-001",
-          "ruleIndex": 0,
+          "ruleId": "NOAUTH",
           "level": "error",
           "message": {
-            "text": "Dockerfile uses FROM node:12-alpine. Node.js 12 is end-of-life since 2022-04-30 and receives no security patches. Upgrade to a current LTS release (e.g., node:20-alpine)."
+            "text": "MongoDB connection string 'mongodb://localhost:27017/nodegoat' uses no authentication. If the MONGODB_URI environment variable is unset, the application connects to MongoDB without any credentials. An attacker with network access to port 27017 can read, modify, or delete all data in the database."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "Dockerfile",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "config/env/all.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 3,
+                  "startColumn": 1
                 }
               }
             }
@@ -222,69 +76,43 @@
           }
         },
         {
-          "ruleId": "IAC-002",
-          "ruleIndex": 1,
+          "ruleId": "NOAUTH",
           "level": "error",
           "message": {
-            "text": "MongoDB is exposed on port 27017 via docker-compose.yml without any authentication. MONGODB_URI=mongodb://mongo/nodegoat contains no credentials. Any network-reachable actor can read, modify, or drop all data."
+            "text": "MongoClient.connect() is called with the connection string from config without validating that authentication credentials are present. The driver does not enforce authentication by default, so a missing username/password in the URI results in an unauthenticated session."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "docker-compose.yml",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "server.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 30,
+                  "startColumn": 1
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.9
           }
         },
         {
-          "ruleId": "IAC-003",
-          "ruleIndex": 2,
-          "level": "warning",
-          "message": {
-            "text": "Permission hardening commands in Dockerfile are commented out. The container filesystem is not locked down, allowing a compromised process broader read/write access than necessary."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "Dockerfile",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "IAC-004",
-          "ruleIndex": 3,
+          "ruleId": "HARDCODED-SECRET",
           "level": "error",
           "message": {
-            "text": "docker-compose.yml uses mongo:4.4 which is end-of-life (February 2024). No security patches are issued. Upgrade to MongoDB 7.0+ for active support and security updates."
+            "text": "Session cookie secret is hardcoded as 'session_cookie_secret_key_here'. This value is predictable and shared across all deployments, allowing an attacker to forge session cookies and hijack any user's session."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "docker-compose.yml",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "config/env/all.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 8,
+                  "startColumn": 5
                 }
               }
             }
@@ -294,45 +122,20 @@
           }
         },
         {
-          "ruleId": "IAC-005",
-          "ruleIndex": 4,
-          "level": "warning",
-          "message": {
-            "text": "No CPU or memory resource limits are set on web or mongo services. A DoS attack or resource-exhausting exploit can consume all host resources."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "docker-compose.yml",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "IAC-006",
-          "ruleIndex": 5,
+          "ruleId": "WEAK-CRYPTO",
           "level": "error",
           "message": {
-            "text": "app.json describes MONGODB_URI as 'Must be publicly accessible'. Combined with no authentication (IAC-002), this creates an internet-facing unauthenticated MongoDB instance discoverable by automated scanners."
+            "text": "Cryptographic key is hardcoded as 'a_secure_key_for_crypto_here' and used with AES-256. A hardcoded key provides no confidentiality: anyone with source code access can decrypt all data protected by this key."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.json",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "config/env/all.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 9,
+                  "startColumn": 5
                 }
               }
             }
@@ -342,21 +145,20 @@
           }
         },
         {
-          "ruleId": "IAC-007",
-          "ruleIndex": 6,
-          "level": "warning",
+          "ruleId": "CLEARTEXT-TRANSPORT",
+          "level": "error",
           "message": {
-            "text": "No custom Docker networks defined. Web and MongoDB share the default bridge network with no segmentation. A compromised web container has unrestricted access to the database."
+            "text": "The server uses http.createServer() instead of https.createServer(). All traffic including session cookies, credentials, and user data is transmitted in cleartext, vulnerable to network sniffing and man-in-the-middle attacks. The HTTPS implementation exists in comments but is disabled."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "docker-compose.yml",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "server.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 145,
+                  "startColumn": 5
                 }
               }
             }
@@ -366,27 +168,49 @@
           }
         },
         {
-          "ruleId": "IAC-008",
-          "ruleIndex": 7,
+          "ruleId": "MISCONFIG",
           "level": "warning",
           "message": {
-            "text": "Containers do not use read_only: true for the root filesystem. An attacker with code execution can write backdoors, web shells, or persistence mechanisms anywhere in the container filesystem."
+            "text": "Security headers (helmet frameguard, noCache, CSP, HSTS, nosniff) and CSRF protection are commented out. The application is missing critical HTTP security headers, leaving it vulnerable to clickjacking, XSS, MIME-sniffing, and cross-site request forgery attacks."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "docker-compose.yml",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "server.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 39,
+                  "startColumn": 5
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "MISCONFIG",
+          "level": "warning",
+          "message": {
+            "text": "Session cookie is configured without httpOnly or secure flags. The session cookie can be accessed by client-side JavaScript (enabling XSS-based session theft) and transmitted over unencrypted HTTP connections."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 78,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
           }
         }
       ]

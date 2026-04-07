@@ -9,58 +9,37 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "SSRF",
-              "name": "ServerSideRequestForgery",
+              "id": "PROMPT-INJECTION",
               "shortDescription": {
-                "text": "Server-Side Request Forgery via user-controlled URL"
+                "text": "Prompt Injection via user-controlled inputs"
+              },
+              "helpUri": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+            },
+            {
+              "id": "SSRF",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via file references"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
             },
             {
-              "id": "YAML-DESER",
-              "name": "UnsafeYAMLDeserialization",
+              "id": "AUTHZ-BYPASS",
               "shortDescription": {
-                "text": "YAML content from untrusted source processed without sufficient validation"
+                "text": "Authorization bypass on resource operation"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
             },
             {
-              "id": "OPEN-REDIRECT",
-              "name": "OpenRedirect",
+              "id": "INPUT-VALIDATION",
               "shortDescription": {
-                "text": "Redirect to URL constructed with user-controlled path parameter"
+                "text": "Missing input validation on path parameter"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
             },
             {
-              "id": "IDOR",
-              "name": "InsecureDirectObjectReference",
+              "id": "INFO-DISCLOSURE",
               "shortDescription": {
-                "text": "Missing tenant-scoped authorization check on resource access"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
-            },
-            {
-              "id": "COOKIE-SEC",
-              "name": "InsecureCookieAttributes",
-              "shortDescription": {
-                "text": "Cookie set without Secure flag, allowing transmission over HTTP"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/614.html"
-            },
-            {
-              "id": "AUTHN-BYPASS",
-              "name": "AuthenticationBypass",
-              "shortDescription": {
-                "text": "Endpoint missing authentication decorator allowing unauthenticated access"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
-            },
-            {
-              "id": "INFO-LEAK",
-              "name": "InformationExposure",
-              "shortDescription": {
-                "text": "Sensitive information leaked in error messages"
+                "text": "Information disclosure via error messages"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
             }
@@ -69,72 +48,20 @@
       },
       "results": [
         {
-          "ruleId": "SSRF",
+          "ruleId": "PROMPT-INJECTION",
           "level": "error",
           "message": {
-            "text": "The yaml_url parameter in RagPipelineImportApi is user-controlled and fetched server-side via ssrf_proxy.get(). While ssrf_proxy provides some protection, the URL scheme validation is incomplete: only GitHub URLs are specifically handled, but arbitrary https/http URLs are passed through. The URL transformation logic (replacing github.com with raw.githubusercontent.com) could be manipulated with crafted URLs. An attacker could provide internal network URLs to scan internal services or access metadata endpoints."
+            "text": "User-controlled 'inputs' dict and 'query' string from the JSON request body are passed directly to AppGenerateService.generate() without any sanitization or prompt-injection mitigation at the controller layer. These values flow into prompt templates, allowing an attacker to manipulate LLM behavior via crafted input, potentially exfiltrating system prompts or invoking unintended tool calls."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/services/rag_pipeline/rag_pipeline_dsl_service.py"
+                  "uri": "api/controllers/service_api/app/completion.py"
                 },
                 "region": {
-                  "startLine": 12969,
-                  "snippet": {
-                    "text": "response = ssrf_proxy.get(yaml_url.strip(), follow_redirects=True, timeout=(10, 10))"
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.7
-          }
-        },
-        {
-          "ruleId": "SSRF",
-          "level": "warning",
-          "message": {
-            "text": "The datasource content preview endpoint accepts user-controlled 'inputs' dict and 'datasource_type' which are passed to run_datasource_node_preview(). If the datasource_type involves URL-based sources (e.g., website crawl, online documents), the user-supplied inputs could trigger server-side requests to attacker-controlled URLs. The inputs dict is passed without schema validation beyond Pydantic type checking."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/console/datasets/rag_pipeline/datasource_content_preview.py"
-                },
-                "region": {
-                  "startLine": 1241,
-                  "snippet": {
-                    "text": "preview_content = rag_pipeline_service.run_datasource_node_preview(pipeline=pipeline, node_id=node_id, user_inputs=inputs, account=current_user, datasource_type=datasource_type, is_published=True, credential_id=args.credential_id)"
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.6
-          }
-        },
-        {
-          "ruleId": "AUTHN-BYPASS",
-          "level": "error",
-          "message": {
-            "text": "The DatasourceOAuthCallback endpoint at /oauth/plugin/<path:provider_id>/datasource/callback only has @setup_required but lacks @login_required and @account_initialization_required decorators. Authentication relies solely on a context_id cookie or query parameter. An attacker who obtains or guesses a valid context_id can complete the OAuth flow without being authenticated, potentially linking attacker-controlled OAuth credentials to a victim's tenant."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/console/datasets/rag_pipeline/datasource_auth.py"
-                },
-                "region": {
-                  "startLine": 835,
-                  "snippet": {
-                    "text": "class DatasourceOAuthCallback(Resource):\n    @setup_required\n    def get(self, provider_id: str):\n        context_id = request.cookies.get(\"context_id\") or request.args.get(\"context_id\")"
-                  }
+                  "startLine": 104,
+                  "endLine": 121
                 }
               }
             }
@@ -144,22 +71,89 @@
           }
         },
         {
-          "ruleId": "COOKIE-SEC",
-          "level": "warning",
+          "ruleId": "PROMPT-INJECTION",
+          "level": "error",
           "message": {
-            "text": "The context_id cookie is set without the 'secure=True' flag in the OAuth authorization URL endpoint. This means the cookie can be transmitted over unencrypted HTTP connections, allowing an attacker on the network path to intercept the context_id and hijack the OAuth flow. The cookie contains sensitive state tying a user session to an OAuth authorization request."
+            "text": "Chat endpoint passes user-controlled 'inputs' and 'query' directly to AppGenerateService.generate() without sanitization. In agent-chat mode this is especially dangerous as the LLM may invoke tools based on injected instructions, enabling indirect prompt injection to perform unauthorized actions."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/console/datasets/rag_pipeline/datasource_auth.py"
+                  "uri": "api/controllers/service_api/app/completion.py"
                 },
                 "region": {
-                  "startLine": 824,
-                  "snippet": {
-                    "text": "response.set_cookie(\"context_id\", context_id, httponly=True, samesite=\"Lax\", max_age=OAuthProxyService.__MAX_AGE__)"
-                  }
+                  "startLine": 200,
+                  "endLine": 211
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "Workflow run endpoint passes user-controlled 'inputs' dict directly to AppGenerateService.generate(). Workflow inputs are interpolated into prompt templates and may control tool parameters, enabling prompt injection that could alter workflow execution paths or exfiltrate data through tool invocations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 166,
+                  "endLine": 176
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The 'files' parameter accepts a list of arbitrary dicts (list[dict[str, Any]]) from user input and passes them into the generation pipeline. If file URLs or references are resolved server-side without allowlist validation, an attacker could supply internal network URLs to perform SSRF attacks. The controller performs no validation on file contents or URLs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/completion.py"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 48
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "WorkflowTaskStopApi explicitly uses AppQueueManager.set_stop_flag_no_user_check(task_id), which does not verify that the requesting user owns the task being stopped. Any authenticated API token holder for the same app can stop another user's workflow execution by guessing or enumerating task IDs. This is a horizontal privilege escalation (CWE-862: Missing Authorization)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 275,
+                  "endLine": 288
                 }
               }
             }
@@ -169,128 +163,49 @@
           }
         },
         {
-          "ruleId": "YAML-DESER",
+          "ruleId": "INPUT-VALIDATION",
           "level": "warning",
           "message": {
-            "text": "User-supplied yaml_content is parsed with yaml.safe_load() and then used to create or update pipeline objects including workflow graph, nodes, and dependencies. While safe_load prevents arbitrary code execution, the parsed data is used to construct complex objects (KnowledgeConfiguration, PluginDependency, workflow graph) without comprehensive schema validation. Maliciously crafted YAML could inject unexpected node types, override configurations, or supply malformed graph structures that cause downstream processing errors or logic bypasses."
+            "text": "WorkflowRunByIdApi accepts 'workflow_id' from the URL path and injects it directly into the args dict (args['workflow_id'] = workflow_id) without any format validation. While downstream services may validate this, the controller layer should enforce expected format (e.g., UUID) to prevent injection of unexpected values into the generation pipeline."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/services/rag_pipeline/rag_pipeline_dsl_service.py"
+                  "uri": "api/controllers/service_api/app/workflow.py"
                 },
                 "region": {
-                  "startLine": 13012,
-                  "snippet": {
-                    "text": "data = yaml.safe_load(content)"
-                  }
+                  "startLine": 213,
+                  "endLine": 226
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.6
+            "confidence": 0.7
           }
         },
         {
-          "ruleId": "IDOR",
-          "level": "warning",
-          "message": {
-            "text": "The DataSourceNotionDatasetSyncApi endpoint at /datasets/<uuid:dataset_id>/notion/sync fetches a dataset by ID and triggers sync for all documents without verifying that the requesting user has permission to access or modify the dataset. The endpoint lacks DatasetService.check_dataset_permission() call, allowing any authenticated user to trigger re-indexing of another tenant's dataset documents."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/console/datasets/data_source.py"
-                },
-                "region": {
-                  "startLine": 3271,
-                  "snippet": {
-                    "text": "class DataSourceNotionDatasetSyncApi(Resource):\n    @setup_required\n    @login_required\n    @account_initialization_required\n    def get(self, dataset_id):\n        dataset_id_str = str(dataset_id)\n        dataset = DatasetService.get_dataset(dataset_id_str)"
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "level": "warning",
-          "message": {
-            "text": "The DataSourceNotionDocumentSyncApi endpoint at /datasets/<uuid:dataset_id>/documents/<uuid:document_id>/notion/sync fetches a dataset and document by ID and triggers re-indexing without verifying the requesting user's permission. Similar to the dataset sync endpoint, any authenticated user can trigger document re-indexing on datasets they do not own."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/console/datasets/data_source.py"
-                },
-                "region": {
-                  "startLine": 3288,
-                  "snippet": {
-                    "text": "class DataSourceNotionDocumentSyncApi(Resource):\n    @setup_required\n    @login_required\n    @account_initialization_required\n    def get(self, dataset_id, document_id):"
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "IDOR",
+          "ruleId": "INFO-DISCLOSURE",
           "level": "note",
           "message": {
-            "text": "The DatasetEnableApiApi endpoint at /datasets/<uuid:dataset_id>/api-keys/<string:status> updates the API status of a dataset without checking the user's permission on the specific dataset. Any authenticated user could enable or disable API access for any dataset they know the ID of, regardless of ownership."
+            "text": "Exception descriptions from ProviderTokenNotInitError, InvokeError, and InvokeRateLimitError are propagated directly to API error responses (e.g., raise ProviderNotInitializeError(ex.description), raise CompletionRequestError(e.description)). These internal error messages may reveal provider configuration details, model names, rate limit thresholds, or internal infrastructure information to API consumers."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/console/datasets/datasets.py"
+                  "uri": "api/controllers/service_api/app/completion.py"
                 },
                 "region": {
-                  "startLine": 4427,
-                  "snippet": {
-                    "text": "class DatasetEnableApiApi(Resource):\n    @setup_required\n    @login_required\n    @account_initialization_required\n    def post(self, dataset_id, status):\n        dataset_id_str = str(dataset_id)\n        DatasetService.update_dataset_api_status(dataset_id_str, status == \"enable\")"
-                  }
+                  "startLine": 131,
+                  "endLine": 138
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "INFO-LEAK",
-          "level": "note",
-          "message": {
-            "text": "Multiple endpoints expose raw exception messages to the client. For example, in the YAML import flow, error messages like 'Error fetching YAML from URL: {str(e)}' leak internal details about network topology, DNS resolution failures, or internal service URLs. The ValueError in DatasourcePluginOAuthAuthorizationUrl also exposes provider_id in its error message, revealing internal plugin configuration."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/services/rag_pipeline/rag_pipeline_dsl_service.py"
-                },
-                "region": {
-                  "startLine": 12998,
-                  "snippet": {
-                    "text": "error=f\"Error fetching YAML from URL: {str(e)}\""
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
+            "confidence": 0.65
           }
         }
       ]

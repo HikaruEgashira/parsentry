@@ -7,80 +7,38 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "SQLI-001",
-              "name": "SqlInjectionInInsert",
+              "id": "SQLI",
+              "name": "SQLInjection",
               "shortDescription": {
-                "text": "SQL injection via string formatting in INSERT statement"
-              },
-              "fullDescription": {
-                "text": "The log_action method constructs an INSERT query using f-string formatting with user-controlled parameters (action, details, ip_address). An attacker can inject arbitrary SQL through any of these fields, potentially modifying or exfiltrating data from the database."
+                "text": "SQL Injection via unsanitized user input in query construction"
               },
               "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "sql-injection",
-                  "cwe-89"
-                ]
+                "tags": ["security", "CWE-89"]
               }
             },
             {
-              "id": "SQLI-002",
-              "name": "SqlInjectionInSelect",
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
               "shortDescription": {
-                "text": "SQL injection via string formatting in SELECT statement"
+                "text": "Missing authorization check allows access to any user's data"
               },
-              "fullDescription": {
-                "text": "The get_user_logs method constructs a SELECT query using f-string formatting with user_id taken as a string parameter without validation or parameterization. An attacker can inject arbitrary SQL to read, modify, or delete audit log records."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "sql-injection",
-                  "cwe-89"
-                ]
+                "tags": ["security", "CWE-639"]
               }
             },
             {
-              "id": "SENS-001",
-              "name": "SensitiveDataInAuditLog",
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
               "shortDescription": {
-                "text": "Plaintext passwords stored in audit log details field"
+                "text": "Sensitive information exposed through error messages or logs"
               },
-              "fullDescription": {
-                "text": "The audit_logs table stores a free-text 'details' field that callers use to log sensitive information including plaintext passwords. This violates CWE-312 (Cleartext Storage of Sensitive Information) and CWE-532 (Insertion of Sensitive Information into Log File). Compromising the audit_logs table exposes credentials."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/312.html",
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
               "properties": {
-                "tags": [
-                  "security",
-                  "sensitive-data",
-                  "cwe-312",
-                  "cwe-532"
-                ]
-              }
-            },
-            {
-              "id": "SQLI-003",
-              "name": "NoParameterizedQueries",
-              "shortDescription": {
-                "text": "Entire AuditLogger class uses no parameterized queries"
-              },
-              "fullDescription": {
-                "text": "Neither log_action nor get_user_logs uses parameterized queries (placeholder '?'). All SQL is built via f-string interpolation, making every database operation in the AuditLogger class vulnerable to SQL injection. This is a systemic design flaw rather than an isolated oversight."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "sql-injection",
-                  "cwe-89",
-                  "design-flaw"
-                ]
+                "tags": ["security", "CWE-209"]
               }
             }
           ]
@@ -88,143 +46,95 @@
       },
       "results": [
         {
-          "ruleId": "SQLI-001",
-          "ruleIndex": 0,
+          "ruleId": "SQLI",
           "level": "error",
           "message": {
-            "text": "SQL injection in AuditLogger.log_action(). The INSERT query is built with f-string formatting: f\"INSERT INTO audit_logs ... VALUES ({user_id}, '{action}', '{details}', '{ip_address}')\". All four parameters are interpolated without sanitization. An attacker controlling 'action', 'details', or 'ip_address' can inject arbitrary SQL, including stacked queries via SQLite."
+            "text": "SQL Injection in AuditLogger.get_user_logs(): the user_id parameter from the URL path is interpolated directly into an SQL query via f-string (f\"SELECT * FROM audit_logs WHERE user_id = {user_id}\") without parameterization or input validation. An attacker can supply crafted input such as '1 OR 1=1' or '1; DROP TABLE audit_logs--' to extract or destroy arbitrary data."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "models.py",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "models.py"
                 },
                 "region": {
-                  "startLine": 250,
-                  "endLine": 253,
+                  "startLine": 195,
                   "startColumn": 9,
                   "snippet": {
-                    "text": "        query = f\"\"\"\n            INSERT INTO audit_logs (user_id, action, details, ip_address) \n            VALUES ({user_id}, '{action}', '{details}', '{ip_address}')\n        \"\"\""
+                    "text": "query = f\"SELECT * FROM audit_logs WHERE user_id = {user_id} ORDER BY timestamp DESC\""
                   }
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95,
-            "cwe": [
-              "CWE-89"
-            ],
-            "owasp": [
-              "A03:2021 Injection"
-            ]
+            "confidence": 0.95
           }
         },
         {
-          "ruleId": "SQLI-002",
-          "ruleIndex": 1,
+          "ruleId": "IDOR",
           "level": "error",
           "message": {
-            "text": "SQL injection in AuditLogger.get_user_logs(). The SELECT query is built with f-string formatting: f\"SELECT * FROM audit_logs WHERE user_id = {user_id}\". The user_id parameter is typed as str and directly interpolated without validation or parameterization, allowing an attacker to inject arbitrary SQL such as 'UNION SELECT' to extract data from other tables."
+            "text": "Insecure Direct Object Reference in GET /api/logs/<user_id>: the endpoint retrieves audit logs for any user_id without verifying that the requesting user is authenticated or authorized to access the target user's logs. Any unauthenticated client can enumerate and read audit logs of all users by iterating over user_id values."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "models.py",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "api.py"
                 },
                 "region": {
-                  "startLine": 269,
-                  "endLine": 269,
-                  "startColumn": 9,
-                  "snippet": {
-                    "text": "        query = f\"SELECT * FROM audit_logs WHERE user_id = {user_id} ORDER BY timestamp DESC\""
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95,
-            "cwe": [
-              "CWE-89"
-            ],
-            "owasp": [
-              "A03:2021 Injection"
-            ]
-          }
-        },
-        {
-          "ruleId": "SENS-001",
-          "ruleIndex": 2,
-          "level": "error",
-          "message": {
-            "text": "The audit_logs.details column stores arbitrary text including plaintext passwords. The log_action method accepts a free-form 'details' string with no filtering of sensitive data. Callers pass credentials (e.g., password values) into this field, resulting in cleartext credential storage in the database. Any read access to audit_logs (including via SQLI-002) exposes these credentials."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "models.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 244,
-                  "endLine": 244,
-                  "startColumn": 5,
-                  "snippet": {
-                    "text": "    def log_action(self, user_id: int, action: str, details: str, ip_address: str):"
-                  }
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95,
-            "cwe": [
-              "CWE-312"
-            ],
-            "owasp": [
-              "A02:2021 Cryptographic Failures"
-            ]
-          }
-        },
-        {
-          "ruleId": "SQLI-003",
-          "ruleIndex": 3,
-          "level": "warning",
-          "message": {
-            "text": "The entire AuditLogger class (log_action and get_user_logs) constructs all SQL via f-string interpolation and never uses parameterized queries. This systemic pattern means every future method added to this class is likely to inherit the same vulnerability. The fix requires replacing all f-string query construction with cursor.execute('...', (param,)) parameterized calls."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "models.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 240,
-                  "endLine": 290,
+                  "startLine": 247,
                   "startColumn": 1,
                   "snippet": {
-                    "text": "class AuditLogger:"
+                    "text": "def get_user_logs(user_id):\n    \"\"\"Vulnerable log access (IDOR + Injection)\"\"\"\n    try:\n        logs = audit_logger.get_user_logs(user_id)\n        return jsonify({'logs': logs})"
                   }
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.95,
-            "cwe": [
-              "CWE-89"
-            ],
-            "owasp": [
-              "A03:2021 Injection"
-            ]
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Information disclosure via error messages and sensitive log content: when the SQL query fails, the raw exception is returned to the client via jsonify({'error': str(e)}). Additionally, the audit_logs table contains plaintext passwords logged by log_action() during authentication events. An attacker exploiting the IDOR vulnerability can read details fields that include user credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 205,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "logger.error(f\"Log retrieval failed: {e}\")"
+                  }
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api.py"
+                },
+                "region": {
+                  "startLine": 252,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "return jsonify({'error': str(e)}), 500"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
           }
         }
       ]

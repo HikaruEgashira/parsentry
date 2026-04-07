@@ -1,130 +1,26 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "XSS-HTML-BODY",
-              "name": "ReflectedXSSInHTMLBody",
+              "id": "XSS",
+              "name": "CrossSiteScripting",
               "shortDescription": {
-                "text": "Reflected XSS via f-string interpolation in HTML body context"
+                "text": "Cross-Site Scripting (XSS)"
               },
               "fullDescription": {
-                "text": "User-controlled input from query parameter 'name' is interpolated directly into an HTML body context using an f-string, bypassing Jinja2 auto-escaping. An attacker can inject arbitrary HTML and JavaScript via the 'name' parameter."
+                "text": "User-controlled input is reflected into HTML output without sanitization, enabling injection of arbitrary script content."
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "helpUri": "https://owasp.org/www-community/attacks/xss/",
               "properties": {
-                "tags": [
-                  "security",
-                  "CWE-79",
-                  "xss",
-                  "reflected"
-                ]
-              }
-            },
-            {
-              "id": "XSS-HTML-ATTR",
-              "name": "ReflectedXSSInHTMLAttribute",
-              "shortDescription": {
-                "text": "Reflected XSS via f-string interpolation in HTML attribute context"
-              },
-              "fullDescription": {
-                "text": "User-controlled input from query parameter 'name' is interpolated into an HTML attribute value using an f-string without escaping. An attacker can break out of the attribute with a double-quote and inject event handlers or new attributes."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-79",
-                  "xss",
-                  "reflected",
-                  "attribute-context"
-                ]
-              }
-            },
-            {
-              "id": "XSS-JS-CONTEXT",
-              "name": "ReflectedXSSInJavaScriptContext",
-              "shortDescription": {
-                "text": "Reflected XSS via f-string interpolation in JavaScript string literal"
-              },
-              "fullDescription": {
-                "text": "User-controlled inputs from query parameters 'name' and 'comment' are interpolated into JavaScript string literals using f-strings. An attacker can break out of the string with a single-quote and execute arbitrary JavaScript. This is particularly dangerous as it allows direct code execution without requiring HTML parsing."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-79",
-                  "xss",
-                  "reflected",
-                  "javascript-context"
-                ]
-              }
-            },
-            {
-              "id": "XSS-CSS-CONTEXT",
-              "name": "ReflectedXSSInCSSContext",
-              "shortDescription": {
-                "text": "Reflected XSS via f-string interpolation in CSS property value"
-              },
-              "fullDescription": {
-                "text": "User-controlled input from query parameter 'comment' is interpolated into a CSS property value using an f-string. An attacker can inject CSS expressions or use CSS-based exfiltration techniques. In older browsers, this can lead to JavaScript execution via expression() or url() with javascript: scheme."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-79",
-                  "xss",
-                  "reflected",
-                  "css-context"
-                ]
-              }
-            },
-            {
-              "id": "XSS-STORED-DISPLAY",
-              "name": "ReflectedXSSInCommentDisplay",
-              "shortDescription": {
-                "text": "Reflected XSS via unescaped comment display in HTML body"
-              },
-              "fullDescription": {
-                "text": "User-controlled input from query parameter 'comment' is rendered directly in an HTML div element via f-string interpolation. The comment is displayed as 'Stored Comments' without any sanitization, enabling reflected XSS."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-79",
-                  "xss",
-                  "reflected"
-                ]
-              }
-            },
-            {
-              "id": "XSS-ATTR-FORM",
-              "name": "ReflectedXSSInFormInputAttributes",
-              "shortDescription": {
-                "text": "Reflected XSS via f-string in form input value attributes"
-              },
-              "fullDescription": {
-                "text": "Both 'name' and 'comment' query parameters are interpolated into form input value attributes via f-strings. An attacker can break out of the attribute context and inject event handlers such as onfocus or onmouseover."
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "CWE-79",
-                  "xss",
-                  "reflected",
-                  "attribute-context"
-                ]
+                "tags": ["security", "correctness"],
+                "cwe": ["CWE-79"]
               }
             }
           ]
@@ -132,227 +28,214 @@
       },
       "results": [
         {
-          "ruleId": "XSS-HTML-BODY",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Reflected XSS in HTML body context. The 'name' query parameter is embedded directly into an HTML <div> element via f-string interpolation (line 333), completely bypassing Jinja2 auto-escaping. Payload: GET /xss?name=<script>alert(1)</script>"
+            "text": "Reflected XSS in HTML context: the `name` parameter from request.args is interpolated via Python f-string directly into HTML at line 286 (`Hello, {name}!`). Jinja2 autoescaping is entirely bypassed because the f-string builds the raw HTML string before render_template_string() processes it, so any HTML/script payload in `name` is rendered verbatim in the DOM."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 333,
-                  "startColumn": 10,
-                  "endLine": 333,
-                  "endColumn": 30
+                  "startLine": 286,
+                  "endLine": 286,
+                  "startColumn": 18,
+                  "endColumn": 32
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "xss",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
             "confidence": 1.0,
-            "source": "request.args.get('name')",
-            "sink": "f-string -> render_template_string()",
-            "cwe": [
-              "CWE-79"
-            ]
+            "attack_vector": "GET /xss?name=<script>alert(1)</script>",
+            "context": "HTML body"
           }
         },
         {
-          "ruleId": "XSS-HTML-ATTR",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Reflected XSS in HTML attribute context. The 'name' query parameter is embedded into an input element's value attribute via f-string interpolation (line 336), bypassing Jinja2 auto-escaping. An attacker can break out of the attribute with a double-quote. Payload: GET /xss?name=\"onfocus=\"alert(1)\"autofocus=\""
+            "text": "Reflected XSS in HTML attribute context: the `name` parameter is interpolated directly into an HTML attribute value at line 289 (`value=\"{name}\"`). An attacker can break out of the attribute with a double-quote and inject event handlers, e.g. `\" onfocus=alert(1) autofocus x=\"`."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 336,
-                  "startColumn": 31,
-                  "endLine": 336,
-                  "endColumn": 47
+                  "startLine": 289,
+                  "endLine": 289,
+                  "startColumn": 32,
+                  "endColumn": 46
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "xss",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
             "confidence": 1.0,
-            "source": "request.args.get('name')",
-            "sink": "f-string -> render_template_string()",
-            "cwe": [
-              "CWE-79"
-            ]
+            "attack_vector": "GET /xss?name=%22+onfocus%3Dalert(1)+autofocus+x%3D%22",
+            "context": "HTML attribute"
           }
         },
         {
-          "ruleId": "XSS-JS-CONTEXT",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Reflected XSS in JavaScript context. The 'name' parameter is interpolated into a JavaScript string variable assignment via f-string (line 340). An attacker can escape the string literal and execute arbitrary JavaScript. Payload: GET /xss?name=';alert(document.cookie);//"
+            "text": "Reflected XSS in JavaScript context: `name` and `comment` parameters are interpolated into a <script> block inside single-quoted JS string literals at lines 293-294 (`var userName = '{name}'; var userComment = '{comment}';`). An attacker can break out of the string with a single quote and inject arbitrary JavaScript, e.g. `';alert(document.cookie)//`."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 340,
-                  "startColumn": 25,
-                  "endLine": 340,
-                  "endColumn": 39
+                  "startLine": 292,
+                  "endLine": 297,
+                  "startColumn": 5
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "xss",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
             "confidence": 1.0,
-            "source": "request.args.get('name')",
-            "sink": "f-string -> render_template_string() -> <script> block",
-            "cwe": [
-              "CWE-79"
-            ]
+            "attack_vector": "GET /xss?name=%27%3Balert(document.cookie)%2F%2F",
+            "context": "JavaScript string literal"
           }
         },
         {
-          "ruleId": "XSS-JS-CONTEXT",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Reflected XSS in JavaScript context. The 'comment' parameter is interpolated into a JavaScript string variable assignment via f-string (line 341). An attacker can escape the string literal and execute arbitrary JavaScript. Payload: GET /xss?comment=';alert(document.cookie);//"
+            "text": "Reflected XSS in CSS context: the `comment` parameter is interpolated into a <style> block as a CSS property value at line 300 (`color: {comment};`). An attacker can close the style block and inject a script tag, e.g. `red}</style><script>alert(1)</script><style>`."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 341,
-                  "startColumn": 28,
-                  "endLine": 341,
-                  "endColumn": 45
+                  "startLine": 299,
+                  "endLine": 301,
+                  "startColumn": 5
                 }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 1.0,
-            "source": "request.args.get('comment')",
-            "sink": "f-string -> render_template_string() -> <script> block",
-            "cwe": [
-              "CWE-79"
-            ]
-          }
-        },
-        {
-          "ruleId": "XSS-CSS-CONTEXT",
-          "level": "error",
-          "message": {
-            "text": "Reflected XSS in CSS context. The 'comment' parameter is interpolated into a CSS property value via f-string (line 347). An attacker can inject malicious CSS or, in older browsers, execute JavaScript via expression(). Payload: GET /xss?comment=red;background:url(javascript:alert(1))"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app.py"
-                },
-                "region": {
-                  "startLine": 347,
-                  "startColumn": 33,
-                  "endLine": 347,
-                  "endColumn": 51
+              },
+              "logicalLocations": [
+                {
+                  "name": "xss",
+                  "kind": "function"
                 }
-              }
+              ]
             }
           ],
           "properties": {
             "confidence": 0.95,
-            "source": "request.args.get('comment')",
-            "sink": "f-string -> render_template_string() -> <style> block",
-            "cwe": [
-              "CWE-79"
-            ]
+            "attack_vector": "GET /xss?comment=red%7D%3C%2Fstyle%3E%3Cscript%3Ealert(1)%3C%2Fscript%3E",
+            "context": "CSS property value"
           }
         },
         {
-          "ruleId": "XSS-STORED-DISPLAY",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Reflected XSS in comment display area. The 'comment' parameter is rendered directly in an HTML div (line 357) via f-string interpolation without any sanitization. Payload: GET /xss?comment=<img src=x onerror=alert(1)>"
+            "text": "Reflected XSS in HTML body via `comment` parameter: at line 310, the `comment` value is rendered directly inside a <div> (`Comment: {comment}`). This is a separate injection point from the `name` parameter, allowing independent exploitation through the comment query parameter."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 357,
-                  "startColumn": 40,
-                  "endLine": 357,
-                  "endColumn": 58
+                  "startLine": 310,
+                  "endLine": 310,
+                  "startColumn": 5
                 }
-              }
+              },
+              "logicalLocations": [
+                {
+                  "name": "xss",
+                  "kind": "function"
+                }
+              ]
             }
           ],
           "properties": {
             "confidence": 1.0,
-            "source": "request.args.get('comment')",
-            "sink": "f-string -> render_template_string()",
-            "cwe": [
-              "CWE-79"
-            ]
+            "attack_vector": "GET /xss?comment=<img+src=x+onerror=alert(1)>",
+            "context": "HTML body"
           }
         },
         {
-          "ruleId": "XSS-ATTR-FORM",
+          "ruleId": "XSS",
           "level": "error",
           "message": {
-            "text": "Reflected XSS in form input value attributes. Both 'name' (line 351) and 'comment' (line 352) parameters are interpolated into input value attributes via f-strings, allowing attribute breakout. Payload: GET /xss?name=\"><script>alert(1)</script>"
+            "text": "Root cause: the entire HTML template for GET /xss is constructed as a Python f-string (lines 282-313) using unsanitized request.args parameters `name` and `comment`. The resulting string is passed to render_template_string(), but by that point the raw user input is already embedded verbatim in HTML. Jinja2 autoescaping never sees the user data because it was concatenated by the f-string before template rendering. Fix: pass user inputs as Jinja2 template variables via keyword arguments to render_template_string() and use {{ name }} / {{ comment }} placeholders instead of f-string interpolation."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "app.py"
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 351,
-                  "startColumn": 42,
-                  "endLine": 351,
-                  "endColumn": 56
+                  "startLine": 275,
+                  "endLine": 315,
+                  "startColumn": 1
                 }
-              }
-            },
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app.py"
-                },
-                "region": {
-                  "startLine": 352,
-                  "startColumn": 45,
-                  "endLine": 352,
-                  "endColumn": 62
+              },
+              "logicalLocations": [
+                {
+                  "name": "xss",
+                  "kind": "function"
                 }
-              }
+              ]
             }
           ],
           "properties": {
             "confidence": 1.0,
-            "source": "request.args.get('name'), request.args.get('comment')",
-            "sink": "f-string -> render_template_string()",
-            "cwe": [
-              "CWE-79"
-            ]
+            "attack_vector": "Multiple: HTML body, attribute, JS, CSS injection via name/comment query params",
+            "context": "root cause - f-string bypasses Jinja2 autoescaping"
           }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "length": -1,
+          "mimeType": "text/x-python"
         }
       ]
     }

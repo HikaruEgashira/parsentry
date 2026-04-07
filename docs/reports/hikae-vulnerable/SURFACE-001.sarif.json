@@ -6,43 +6,107 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
               "id": "SQLI",
               "name": "SQLInjection",
-              "shortDescription": { "text": "SQL Injection" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+              "shortDescription": {
+                "text": "SQL Injection via string formatting in authentication query"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "CWE-89"]
+              }
             },
             {
-              "id": "HARDCODED_SECRET",
-              "name": "HardcodedSecret",
-              "shortDescription": { "text": "Hardcoded Secret / Credential" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
+              "id": "SENSITIVE-LOG",
+              "name": "SensitiveDataLogging",
+              "shortDescription": {
+                "text": "Plaintext password logged in authentication flow"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["security", "CWE-532"]
+              }
             },
             {
-              "id": "WEAK_CRYPTO",
+              "id": "WEAK-CRYPTO",
               "name": "WeakCryptography",
-              "shortDescription": { "text": "Use of Weak Cryptographic Algorithm" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/328.html"
+              "shortDescription": {
+                "text": "Predictable session token generated with MD5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/328.html",
+              "properties": {
+                "tags": ["security", "CWE-328"]
+              }
             },
             {
-              "id": "INFO_DISCLOSURE",
+              "id": "INFO-DISCLOSURE",
               "name": "InformationDisclosure",
-              "shortDescription": { "text": "Information Disclosure" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+              "shortDescription": {
+                "text": "Username disclosed in authentication error message"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209"]
+              }
             },
             {
-              "id": "WEAK_SESSION",
-              "name": "WeakSessionManagement",
-              "shortDescription": { "text": "Weak Session Management" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/384.html"
+              "id": "HARDCODED-SECRET",
+              "name": "HardcodedSecret",
+              "shortDescription": {
+                "text": "Hardcoded Flask secret key used for session signing"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": ["security", "CWE-798"]
+              }
             },
             {
-              "id": "PLAINTEXT_STORAGE",
+              "id": "SESSION-MISCONFIG",
+              "name": "SessionMisconfiguration",
+              "shortDescription": {
+                "text": "Session cookies lack Secure and HttpOnly flags"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "properties": {
+                "tags": ["security", "CWE-614"]
+              }
+            },
+            {
+              "id": "SENSITIVE-EXPOSURE",
+              "name": "SensitiveDataExposure",
+              "shortDescription": {
+                "text": "API key returned in authentication response and stored in session"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "CWE-200"]
+              }
+            },
+            {
+              "id": "HARDCODED-CREDS",
+              "name": "HardcodedCredentials",
+              "shortDescription": {
+                "text": "Default credentials seeded in database and displayed on login page"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": ["security", "CWE-798"]
+              }
+            },
+            {
+              "id": "PLAINTEXT-PASSWORD",
               "name": "PlaintextPasswordStorage",
-              "shortDescription": { "text": "Plaintext Storage of Password" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/256.html"
+              "shortDescription": {
+                "text": "Passwords stored in database without hashing"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/256.html",
+              "properties": {
+                "tags": ["security", "CWE-256"]
+              }
             }
           ]
         }
@@ -51,128 +115,243 @@
         {
           "ruleId": "SQLI",
           "level": "error",
-          "message": { "text": "SQL injection in authenticate_user(). User-supplied username and password are interpolated directly into SQL via f-string: `f\"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'\"`. An attacker can bypass authentication with payloads like `' OR '1'='1' --` or extract arbitrary data via UNION-based injection. Use parameterized queries with cursor.execute(query, (username, password))." },
+          "message": {
+            "text": "SQL injection in authentication query. User-supplied 'username' and 'password' are interpolated directly into the SQL string via f-string formatting: `f\"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'\"`. An attacker can bypass authentication entirely with payloads like `' OR '1'='1' --`."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "models.py" },
-                "region": { "startLine": 610, "endLine": 612 }
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 9
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 1.0
+          }
         },
         {
-          "ruleId": "HARDCODED_SECRET",
+          "ruleId": "SENSITIVE-LOG",
           "level": "error",
-          "message": { "text": "Hardcoded default credentials seeded into the database: admin/admin123 and guest/guest. These well-known credentials grant immediate access to any deployment that uses the default database. Remove hardcoded credentials and enforce secure initial setup." },
+          "message": {
+            "text": "Plaintext credentials are written to the application log. The line `logger.info(f\"Login attempt: {username}:{password} from {request.remote_addr}\")` records the raw password for every login attempt. Log files are often stored with weak access controls and shipped to centralized logging systems, exposing all user passwords."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "models.py" },
-                "region": { "startLine": 599, "endLine": 608 }
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 123,
+                  "startColumn": 9
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 1.0
+          }
         },
         {
-          "ruleId": "PLAINTEXT_STORAGE",
-          "level": "error",
-          "message": { "text": "Passwords are stored in plaintext in the database. The authenticate_user() function compares user-supplied passwords directly against stored values without any hashing. A database compromise (via SQL injection or backup leak) exposes all user passwords. Use bcrypt or argon2 for password hashing." },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "models.py" },
-                "region": { "startLine": 610, "endLine": 624 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "INFO_DISCLOSURE",
-          "level": "error",
-          "message": { "text": "Plaintext password logged during login attempts via `logger.info(f\"Login attempt: {username}:{password}\")`. Passwords in application logs can be harvested by anyone with log access (developers, log aggregation services, SIEM systems). Log only the username and the outcome (success/failure), never the password." },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 195 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "WEAK_CRYPTO",
-          "level": "error",
-          "message": { "text": "Session token generated using MD5 hash of username concatenated with password: `hashlib.md5(f\"{username}{password}\".encode()).hexdigest()`. MD5 is cryptographically broken and the input is deterministic, making tokens predictable. An attacker who knows or guesses credentials can compute the session token offline without interacting with the server. Use a cryptographically secure random token generator (e.g., secrets.token_hex())." },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 210 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
-        },
-        {
-          "ruleId": "INFO_DISCLOSURE",
+          "ruleId": "SENSITIVE-LOG",
           "level": "warning",
-          "message": { "text": "Login error response reveals whether a username exists: `f\"Invalid credentials for user '{username}'\"`. This enables username enumeration, allowing attackers to build a list of valid accounts before attempting password attacks. Use a generic message like 'Invalid username or password' for all authentication failures." },
+          "message": {
+            "text": "The authentication query containing the plaintext password is logged at DEBUG level: `logger.debug(f\"Executing query: {query}\")`. This exposes both the SQL structure and the user's password in logs."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 240 }
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 9
+                }
               }
             }
           ],
-          "properties": { "confidence": 0.95 }
+          "properties": {
+            "confidence": 1.0
+          }
         },
         {
-          "ruleId": "HARDCODED_SECRET",
+          "ruleId": "WEAK-CRYPTO",
           "level": "error",
-          "message": { "text": "Flask secret key is hardcoded as `app.secret_key = \"vulnerable_secret_key_123\"`. This key signs session cookies; knowledge of it allows an attacker to forge arbitrary session data and impersonate any user including administrators. Load the secret key from an environment variable or secrets manager." },
+          "message": {
+            "text": "Session token is derived from MD5 hash of username+password: `hashlib.md5(f\"{username}{password}\".encode()).hexdigest()`. MD5 is cryptographically broken and the input is deterministic, making session tokens predictable. An attacker who knows or guesses credentials can forge session tokens without interacting with the login endpoint."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 188 }
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 132,
+                  "startColumn": 13
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 1.0
+          }
         },
         {
-          "ruleId": "WEAK_SESSION",
-          "level": "error",
-          "message": { "text": "Insecure session cookie configuration: SESSION_COOKIE_SECURE=False allows session cookies to be transmitted over unencrypted HTTP, and SESSION_COOKIE_HTTPONLY=False exposes cookies to JavaScript access via document.cookie, enabling session theft through XSS. Set both flags to True in production." },
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "The login failure response includes the username in the error message: `f\"Invalid credentials for user '{username}'\"`. This confirms the existence of user accounts to an attacker, enabling username enumeration."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 189, "endLine": 190 }
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 143,
+                  "startColumn": 13
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 1.0
+          }
         },
         {
-          "ruleId": "INFO_DISCLOSURE",
+          "ruleId": "HARDCODED-SECRET",
           "level": "error",
-          "message": { "text": "API key is included in the session user dictionary after successful login, exposing it to the client side. Session data containing the API key can be decoded from the Flask signed cookie (especially trivial given the hardcoded secret key). API keys should be stored server-side only and never included in session data." },
+          "message": {
+            "text": "Flask secret key is hardcoded as `\"vulnerable_secret_key_123\"`. This key signs session cookies; anyone with knowledge of this value can forge arbitrary sessions, impersonating any user including admin."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "app.py" },
-                "region": { "startLine": 220, "endLine": 230 }
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
               }
             }
           ],
-          "properties": { "confidence": 0.9 }
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SESSION-MISCONFIG",
+          "level": "warning",
+          "message": {
+            "text": "Session cookies are configured without Secure flag (`SESSION_COOKIE_SECURE = False`) and without HttpOnly flag (`SESSION_COOKIE_HTTPONLY = False`). This allows session cookie theft via XSS (JavaScript access) and transmission over unencrypted HTTP connections."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "The `authenticate_user` method returns the user's `api_key` in the result dictionary, which is then stored in `session['user']`. API keys should never be stored in client-side session cookies, as they can be extracted via XSS or session cookie theft."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 91,
+                  "startColumn": 21
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED-CREDS",
+          "level": "error",
+          "message": {
+            "text": "Default credentials (admin/admin123, guest/guest) are seeded into the database on initialization and displayed on the login page HTML. These well-known credentials provide immediate administrative access to any deployment."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 53,
+                  "startColumn": 13
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 162,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "PLAINTEXT-PASSWORD",
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored and compared in plaintext. The users table stores raw password strings and `authenticate_user` compares them directly via SQL equality. No hashing algorithm (bcrypt, argon2, scrypt) is applied, so a database breach exposes all passwords immediately."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py"
+                },
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0
+          }
         }
       ]
     }

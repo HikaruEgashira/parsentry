@@ -7,104 +7,40 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "OPEN-REDIRECT",
-              "name": "OpenRedirect",
+              "id": "SESSION-FIXATION",
               "shortDescription": {
-                "text": "Open redirect via unvalidated user-supplied URL in /learn endpoint"
+                "text": "Session Fixation via missing session regeneration on login"
               },
-              "fullDescription": {
-                "text": "The /learn route handler redirects to req.query.url without any validation or allowlist check. An attacker can craft a URL such as /learn?url=https://evil.com to redirect authenticated users to a phishing site. Because the redirect originates from a trusted domain, users are more likely to trust the destination. This can be chained with session fixation or credential harvesting attacks."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "redirect",
-                  "CWE-601",
-                  "A01:2021"
-                ]
-              }
+              "helpUri": "https://owasp.org/www-community/attacks/Session_fixation"
             },
             {
-              "id": "MISSING-CSP-HEADER",
-              "name": "MissingContentSecurityPolicy",
+              "id": "CSRF",
               "shortDescription": {
-                "text": "No Content-Security-Policy header configured to restrict script sources"
+                "text": "Logout endpoint accessible via GET request enables CSRF-triggered logout"
               },
-              "fullDescription": {
-                "text": "The application serves static JavaScript assets from /app/assets without setting a Content-Security-Policy response header. Without CSP, the browser will execute any inline script or script from any origin, making XSS exploitation trivial if any injection point exists. A strict CSP with script-src directive would mitigate reflected, stored, and DOM-based XSS attacks by preventing unauthorized script execution."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "headers",
-                  "xss",
-                  "CWE-693",
-                  "A05:2021"
-                ]
-              }
-            },
-            {
-              "id": "SESSION-ON-STATIC-ASSETS",
-              "name": "UnnecessarySessionOnStaticAssets",
-              "shortDescription": {
-                "text": "Static assets served after session middleware, creating unnecessary sessions"
-              },
-              "fullDescription": {
-                "text": "The express.static middleware for /app/assets is mounted after the session middleware in the middleware chain. Every request for a static asset (JavaScript, CSS, images) triggers session creation and cookie processing. This wastes server resources, increases session store size, and exposes session cookies unnecessarily. Static asset serving should be mounted before session middleware or on a separate path excluded from session handling."
-              },
-              "helpUri": "https://expressjs.com/en/advanced/best-practice-performance.html",
-              "properties": {
-                "tags": [
-                  "security",
-                  "performance",
-                  "session",
-                  "CWE-400"
-                ]
-              }
-            },
-            {
-              "id": "DOM-XSS-CLIENT-JS",
-              "name": "PotentialDOMBasedXSS",
-              "shortDescription": {
-                "text": "Client-side JavaScript in static assets may contain DOM-based XSS sinks"
-              },
-              "fullDescription": {
-                "text": "The client-side JavaScript files served from app/assets/js/ (including chart and tour modules) may use dangerous DOM manipulation methods such as innerHTML, document.write, or jQuery .html() with data derived from URL fragments, query parameters, or other DOM sources. Without Content-Security-Policy and without input sanitization in client-side code, an attacker can inject malicious scripts via crafted URLs that manipulate the DOM. The absence of CSP amplifies this risk since inline scripts will execute unrestricted."
-              },
-              "helpUri": "https://owasp.org/www-community/attacks/DOM_Based_XSS",
-              "properties": {
-                "tags": [
-                  "security",
-                  "xss",
-                  "dom",
-                  "CWE-79",
-                  "A03:2021"
-                ]
-              }
+              "helpUri": "https://owasp.org/www-community/attacks/csrf"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "OPEN-REDIRECT",
+          "ruleId": "SESSION-FIXATION",
           "level": "error",
           "message": {
-            "text": "The /learn endpoint performs res.redirect(req.query.url) with no validation. An attacker can supply an arbitrary URL (e.g., /learn?url=https://evil.com/phish) to redirect users to a malicious site. This enables phishing attacks that leverage the trusted origin domain. Remediation: validate req.query.url against an allowlist of permitted domains, or restrict redirects to relative paths only."
+            "text": "The login handler assigns req.session.userId without calling req.session.regenerate() first. An attacker who sets a known session ID (via cookie injection or URL fixation) before the victim logs in can hijack the authenticated session, since the session ID persists unchanged across the authentication boundary. The code comments at lines 104-115 explicitly acknowledge this vulnerability and show the fix (wrapping in req.session.regenerate()) but it is not applied."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "server.js"
+                  "uri": "app/routes/session.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 116,
+                  "endLine": 117
                 }
               }
             }
@@ -114,69 +50,37 @@
           }
         },
         {
-          "ruleId": "MISSING-CSP-HEADER",
+          "ruleId": "CSRF",
           "level": "warning",
           "message": {
-            "text": "The application does not set a Content-Security-Policy header. Static JavaScript files from app/assets/js/ are served without script-src restrictions, allowing any injected script to execute. Remediation: add helmet.contentSecurityPolicy() middleware or manually set the Content-Security-Policy header with a restrictive script-src directive (e.g., script-src 'self')."
+            "text": "The logout endpoint is mapped as GET /logout (index.js line 41) and the handler destroys the session without any CSRF token verification. An attacker can craft an <img> tag or link pointing to /logout to force-logout a victim, enabling denial-of-service or session fixation attack chains (force logout then fixate a new session). Logout should use POST with CSRF protection."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "server.js"
+                  "uri": "app/routes/index.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 41,
+                  "endLine": 41
                 }
               }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "SESSION-ON-STATIC-ASSETS",
-          "level": "note",
-          "message": {
-            "text": "express.static(__dirname + '/app/assets') is mounted after session middleware. Every static asset request (JS, CSS, images) unnecessarily creates or validates a session, wasting server resources and enlarging the session store. Remediation: move the express.static middleware before session middleware, or use a path prefix excluded from session handling."
-          },
-          "locations": [
+            },
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "server.js"
+                  "uri": "app/routes/session.js"
                 },
                 "region": {
-                  "startLine": 1
+                  "startLine": 121,
+                  "endLine": 123
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.75
-          }
-        },
-        {
-          "ruleId": "DOM-XSS-CLIENT-JS",
-          "level": "warning",
-          "message": {
-            "text": "Client-side JavaScript files in app/assets/js/ (chart/, tour/) may use DOM sinks such as innerHTML, document.write, or jQuery .html() with unsanitized data from URL parameters or DOM sources. Combined with the absence of Content-Security-Policy headers, DOM-based XSS attacks can execute arbitrary scripts. Remediation: audit client-side JS for DOM sink usage, sanitize all DOM-sourced data, and deploy CSP headers."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "app/assets/js/"
-                },
-                "region": {
-                  "startLine": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.75
+            "confidence": 0.85
           }
         }
       ]

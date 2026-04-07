@@ -1,30 +1,32 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [
     {
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "1.0.0",
+          "version": "0.1.0",
           "rules": [
             {
               "id": "SQLI",
               "name": "SQLInjection",
-              "shortDescription": { "text": "SQL Injection" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+              "shortDescription": {
+                "text": "SQL Injection via unsanitized user input in query construction"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             },
             {
               "id": "IDOR",
               "name": "InsecureDirectObjectReference",
-              "shortDescription": { "text": "Insecure Direct Object Reference" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
-            },
-            {
-              "id": "MISSING_AUTHN",
-              "name": "MissingAuthentication",
-              "shortDescription": { "text": "Missing Authentication for Critical Function" },
-              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+              "shortDescription": {
+                "text": "Missing authorization check allows access to other users' resources"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
             }
           ]
         }
@@ -33,50 +35,140 @@
         {
           "ruleId": "SQLI",
           "level": "error",
-          "message": { "text": "SQL injection in document search endpoint. The query parameter 'q' is interpolated directly into a SQL LIKE clause via f-string: `f\"SELECT * FROM documents WHERE title LIKE '%{query}%'\"`. An attacker can break out of the LIKE pattern to execute arbitrary SQL — e.g., `%' UNION SELECT username, password, '', '' FROM users --` to exfiltrate credentials, or `%'; DROP TABLE documents; --` for destructive attacks. Use parameterized queries: `cursor.execute(\"SELECT * FROM documents WHERE title LIKE ?\", (f'%{query}%',))`." },
+          "message": {
+            "text": "SQL injection in document search LIKE clause. The 'q' query parameter is passed unsanitized into an f-string SQL query: `f\"SELECT * FROM documents WHERE title LIKE '%{query}%'\"` in DocumentModel.search_documents(). An attacker can break out of the LIKE pattern with input such as `%' UNION SELECT id,username,password,role,api_key FROM users--` to exfiltrate the entire users table including plaintext passwords and API keys. No parameterized query or input sanitization is used."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 135, "endLine": 144 }
-              }
-            },
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 131,
+                  "startColumn": 15,
+                  "endLine": 131,
+                  "endColumn": 65
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "DocumentModel.search_documents",
+                  "kind": "method"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
             {
+              "id": 1,
+              "message": {
+                "text": "Tainted input: 'q' parameter read from query string without validation and forwarded to vulnerable SQL method"
+              },
               "physicalLocation": {
-                "artifactLocation": { "uri": "models.py" },
-                "region": { "startLine": 542, "endLine": 570 }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 82,
+                  "startColumn": 5,
+                  "endLine": 88,
+                  "endColumn": 51
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-020",
+            "cwe": [
+              "CWE-89"
+            ],
+            "owasp": [
+              "A03:2021-Injection"
+            ]
+          }
         },
         {
           "ruleId": "IDOR",
           "level": "error",
-          "message": { "text": "Insecure Direct Object Reference in document search. The user_id parameter is taken directly from the client-supplied query string with no authorization check to verify the requesting user matches the target user_id. An attacker can enumerate or supply arbitrary user_id values to access other users' documents. The server must derive user_id from the authenticated session rather than accepting it as client input." },
+          "message": {
+            "text": "Insecure Direct Object Reference in document search. The endpoint accepts a caller-supplied 'user_id' from the query string (defaulting to 1) with no authentication or authorization check. Worse, DocumentModel.search_documents() accepts user_id as a parameter but never uses it in the SQL query \u2014 the query `SELECT * FROM documents WHERE title LIKE '%{query}%'` has no owner_id filter. All documents in the database are returned regardless of the caller's identity or the user_id supplied. Any unauthenticated user can search and retrieve all documents belonging to any user."
+          },
           "locations": [
             {
               "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 135, "endLine": 144 }
+                "artifactLocation": {
+                  "uri": "api.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 82,
+                  "startColumn": 1,
+                  "endLine": 88,
+                  "endColumn": 42
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "search_documents",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 2,
+              "message": {
+                "text": "SQL query in search_documents does not filter by owner_id; the user_id parameter is accepted but ignored, providing no access control"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 124,
+                  "startColumn": 5,
+                  "endLine": 150,
+                  "endColumn": 22
+                }
               }
             }
           ],
-          "properties": { "confidence": 1.0 }
+          "properties": {
+            "confidence": 1.0,
+            "surface_id": "SURFACE-020",
+            "cwe": [
+              "CWE-639"
+            ],
+            "owasp": [
+              "A01:2021-Broken Access Control"
+            ]
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "api.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Flask API blueprint defining the /api/documents/search endpoint"
+          }
         },
         {
-          "ruleId": "MISSING_AUTHN",
-          "level": "error",
-          "message": { "text": "The GET /api/documents/search endpoint requires no authentication. Any unauthenticated user can search documents belonging to any user by supplying an arbitrary user_id. This compounds the IDOR vulnerability — without authentication there is no identity to authorize against. Add authentication middleware (e.g., session validation or token verification) and derive the user_id from the authenticated principal." },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": { "uri": "api.py" },
-                "region": { "startLine": 135, "endLine": 144 }
-              }
-            }
-          ],
-          "properties": { "confidence": 1.0 }
+          "location": {
+            "uri": "models.py",
+            "uriBaseId": "%SRCROOT%"
+          },
+          "description": {
+            "text": "Database model layer containing DocumentModel.search_documents with vulnerable SQL"
+          }
         }
       ]
     }

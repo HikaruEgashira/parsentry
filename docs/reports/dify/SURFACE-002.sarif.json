@@ -9,142 +9,98 @@
           "version": "0.1.0",
           "rules": [
             {
-              "id": "PROMPT-INJECTION",
+              "id": "AUTH-ENUM",
               "shortDescription": {
-                "text": "Prompt Injection via unsanitized user input to LLM"
+                "text": "User enumeration via authentication response differentiation"
               },
-              "helpUri": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+              "helpUri": "https://cwe.mitre.org/data/definitions/203.html"
             },
             {
-              "id": "IDOR",
+              "id": "AUTH-TIMING",
               "shortDescription": {
-                "text": "Insecure Direct Object Reference allowing unauthorized resource access"
+                "text": "Timing side-channel in verification code comparison"
               },
-              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/"
+              "helpUri": "https://cwe.mitre.org/data/definitions/208.html"
             },
             {
-              "id": "INFO-LEAK",
+              "id": "AUTH-RATE-LIMIT",
               "shortDescription": {
-                "text": "Information leakage through error messages"
+                "text": "Missing rate limiting on authentication endpoint"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/307.html"
             },
             {
-              "id": "MISSING-AUTH",
+              "id": "AUTH-TOKEN-EXPOSURE",
               "shortDescription": {
-                "text": "Missing or insufficient authorization check"
+                "text": "Sensitive token returned in HTTP response body"
               },
-              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
-            },
-            {
-              "id": "INPUT-VALIDATION",
-              "shortDescription": {
-                "text": "Insufficient input validation on untrusted data"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
-            },
-            {
-              "id": "SQLI",
-              "shortDescription": {
-                "text": "SQL Injection via bypassable blocklist validation"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
-            },
-            {
-              "id": "DOS",
-              "shortDescription": {
-                "text": "Denial of Service through missing rate limiting or resource control"
-              },
-              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "PROMPT-INJECTION",
-          "level": "error",
-          "message": {
-            "text": "User-supplied 'inputs' and 'query' fields from CompletionRequestPayload are passed directly to AppGenerateService.generate() without any sanitization or prompt injection defenses. An attacker with a valid API key can craft malicious prompts to manipulate LLM behavior, extract system prompts, or bypass content policies."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/completion.py"
-                },
-                "region": {
-                  "startLine": 1336,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "PROMPT-INJECTION",
-          "level": "error",
-          "message": {
-            "text": "ChatRequestPayload passes user-controlled 'inputs' and 'query' to AppGenerateService.generate() without sanitization. The chat endpoint is especially dangerous because conversation context can be manipulated over multiple turns to build increasingly effective prompt injection attacks."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/completion.py"
-                },
-                "region": {
-                  "startLine": 1431,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.9
-          }
-        },
-        {
-          "ruleId": "PROMPT-INJECTION",
-          "level": "error",
-          "message": {
-            "text": "WorkflowRunPayload passes user-controlled 'inputs' directly to AppGenerateService.generate(). Workflow inputs may be used in code execution nodes, HTTP request nodes, or LLM nodes, potentially enabling prompt injection or indirect code execution."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/workflow.py"
-                },
-                "region": {
-                  "startLine": 2538,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "INPUT-VALIDATION",
+          "ruleId": "AUTH-ENUM",
           "level": "warning",
           "message": {
-            "text": "The 'files' field in CompletionRequestPayload, ChatRequestPayload, and WorkflowRunPayload is typed as list[dict[str, Any]] with no schema validation. Arbitrary dict structures are passed through to AppGenerateService, which could lead to unexpected behavior or type confusion if the downstream service does not enforce strict schemas."
+            "text": "The forgot-password endpoint raises AuthenticationFailedError when the email is not found but returns a success response with a token when the account exists. This behavioral difference allows an attacker to enumerate valid email addresses by observing whether the response is an error or a success."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/completion.py"
+                  "uri": "api/controllers/web/forgot_password.py"
                 },
                 "region": {
-                  "startLine": 1267,
-                  "startColumn": 1
+                  "startLine": 80,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "AUTH-ENUM",
+          "level": "warning",
+          "message": {
+            "text": "The email-code-login endpoint raises AuthenticationFailedError when the account is not found but returns a success token when the account exists. An attacker can enumerate valid emails by distinguishing error vs success responses on the POST /api/email-code-login endpoint."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/login.py"
+                },
+                "region": {
+                  "startLine": 155,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "AUTH-TIMING",
+          "level": "warning",
+          "message": {
+            "text": "Email verification code comparison uses Python's != operator (token_data['code'] != payload.code) which is not constant-time. An attacker can use timing differences to brute-force the verification code character by character, significantly reducing the search space from O(n^k) to O(n*k)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/login.py"
+                },
+                "region": {
+                  "startLine": 187,
+                  "startColumn": 12
                 }
               }
             }
@@ -154,66 +110,43 @@
           }
         },
         {
-          "ruleId": "MISSING-AUTH",
-          "level": "error",
+          "ruleId": "AUTH-TIMING",
+          "level": "warning",
           "message": {
-            "text": "WorkflowTaskStopApi calls AppQueueManager.set_stop_flag_no_user_check(task_id) which explicitly bypasses user authorization checks. Any authenticated API user can stop any workflow task by guessing or enumerating task IDs, enabling denial of service against other users' workflows."
+            "text": "Password reset code comparison uses Python's != operator (payload.code != token_data.get('code')) which is not constant-time. An attacker could exploit timing differences to brute-force the reset code character by character."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/workflow.py"
+                  "uri": "api/controllers/web/forgot_password.py"
                 },
                 "region": {
-                  "startLine": 2647,
-                  "startColumn": 1
+                  "startLine": 107,
+                  "startColumn": 12
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.85
+            "confidence": 0.7
           }
         },
         {
-          "ruleId": "INFO-LEAK",
+          "ruleId": "AUTH-RATE-LIMIT",
           "level": "warning",
           "message": {
-            "text": "FilePreviewApi raises FileNotFoundError with the internal exception message: f\"Failed to load file content: {str(e)}\". This can leak storage backend details (e.g., S3 bucket names, file paths, permission errors) to the API consumer."
+            "text": "The POST /api/login endpoint has no visible rate limiting on login attempts. While WebAppAuthService.authenticate may implement rate limiting internally, the controller-level code does not enforce it. This could allow brute-force password attacks. The forgot-password endpoint has IP-based rate limiting (is_email_send_ip_limit) but the login endpoint lacks equivalent protection."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/file_preview.py"
+                  "uri": "api/controllers/web/login.py"
                 },
                 "region": {
-                  "startLine": 795,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.8
-          }
-        },
-        {
-          "ruleId": "IDOR",
-          "level": "warning",
-          "message": {
-            "text": "AnnotationUpdateDeleteApi and AnnotationReplyActionApi use @validate_app_token but do not verify that the annotation_id belongs to the requesting app's tenant. An attacker with a valid API key for one app could potentially update or delete annotations belonging to another app in the same tenant if annotation IDs can be enumerated."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/annotation.py"
-                },
-                "region": {
-                  "startLine": 1091,
-                  "startColumn": 1
+                  "startLine": 72,
+                  "startColumn": 9
                 }
               }
             }
@@ -223,20 +156,43 @@
           }
         },
         {
-          "ruleId": "SQLI",
+          "ruleId": "AUTH-RATE-LIMIT",
           "level": "warning",
           "message": {
-            "text": "ConversationVariablesQuery.validate_variable_name uses a blocklist approach for SQL injection prevention (checking for ', \", ;, --, etc.). Blocklist-based validation is inherently bypassable through encoding tricks, unicode normalization, or novel injection patterns. The isalnum() check with allowed characters provides a stronger first line of defense, but the redundant blocklist creates a false sense of security and the variable_name is later passed to ConversationService without parameterized query guarantee at this layer."
+            "text": "The POST /api/email-code-login endpoint that sends verification codes has no visible rate limiting. Unlike the forgot-password endpoint which checks is_email_send_ip_limit, this endpoint allows unlimited email code requests. An attacker could abuse this to flood a victim's inbox or exhaust email-sending quotas."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/conversation.py"
+                  "uri": "api/controllers/web/login.py"
                 },
                 "region": {
-                  "startLine": 1553,
-                  "startColumn": 1
+                  "startLine": 145,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "AUTH-TOKEN-EXPOSURE",
+          "level": "note",
+          "message": {
+            "text": "The email-code-login send endpoint returns the verification token directly in the HTTP response body (return {'result': 'success', 'data': token}). Similarly, the forgot-password send endpoint returns its token in the response. If these tokens contain or can be used to derive the verification code, this weakens the email-based verification since an attacker who intercepts the response does not need access to the victim's email."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/login.py"
+                },
+                "region": {
+                  "startLine": 158,
+                  "startColumn": 9
                 }
               }
             }
@@ -246,72 +202,26 @@
           }
         },
         {
-          "ruleId": "INPUT-VALIDATION",
-          "level": "warning",
-          "message": {
-            "text": "AudioApi.post accesses request.files['file'] directly without first checking if 'file' key exists in request.files, unlike FileApi which properly checks. This will raise an unhandled KeyError (500 Internal Server Error) if no file is provided, potentially exposing stack trace information in debug mode."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/audio.py"
-                },
-                "region": {
-                  "startLine": 2264,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.85
-          }
-        },
-        {
-          "ruleId": "DOS",
-          "level": "warning",
-          "message": {
-            "text": "The AnnotationReplyActionApi 'enable' action triggers embedding operations (AppAnnotationService.enable_app_annotation) that could be computationally expensive. There is no rate limiting on this endpoint, allowing an attacker to repeatedly enable/disable annotation reply to exhaust server resources or incur excessive embedding API costs."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/annotation.py"
-                },
-                "region": {
-                  "startLine": 978,
-                  "startColumn": 1
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.65
-          }
-        },
-        {
-          "ruleId": "INPUT-VALIDATION",
+          "ruleId": "AUTH-TOKEN-EXPOSURE",
           "level": "note",
           "message": {
-            "text": "WorkflowLogQuery accepts 'keyword' as a free-form string with no length or character restrictions. While SQLAlchemy likely parameterizes queries, the keyword is passed to workflow_app_service.get_paginate_workflow_app_logs without validation, which could be problematic if any downstream code constructs queries unsafely."
+            "text": "The forgot-password validity check endpoint returns a new token along with the email address in the response body. The new_token is generated for the 'reset' phase and returned to the client. If this token is predictable or if the response is intercepted, an attacker could use it to reset an arbitrary user's password without email access."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "api/controllers/service_api/app/workflow.py"
+                  "uri": "api/controllers/web/forgot_password.py"
                 },
                 "region": {
-                  "startLine": 2420,
-                  "startColumn": 1
+                  "startLine": 115,
+                  "startColumn": 9
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.4
+            "confidence": 0.5
           }
         }
       ]

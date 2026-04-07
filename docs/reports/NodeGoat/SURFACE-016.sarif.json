@@ -7,126 +7,76 @@
         "driver": {
           "name": "parsentry",
           "version": "0.1.0",
-          "informationUri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
-              "id": "MISSING-SECURITY-HEADERS",
-              "name": "MissingSecurityHeaders",
+              "id": "HARDCODED_SECRET",
+              "name": "HardcodedSecret",
               "shortDescription": {
-                "text": "Helmet security headers middleware commented out"
+                "text": "Hardcoded secret or credential in source code"
               },
-              "fullDescription": {
-                "text": "The helmet middleware is imported but commented out in server.js. Helmet sets critical HTTP security headers including X-Content-Type-Options, X-DNS-Prefetch-Control, X-Download-Options, X-Frame-Options, X-XSS-Protection, and Strict-Transport-Security. Without helmet, the application lacks all standard browser-side security controls."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "headers", "CWE-693", "A05:2021"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
             },
             {
-              "id": "MISSING-CSRF-PROTECTION",
-              "name": "MissingCSRFProtection",
+              "id": "HARDCODED_CRYPTO_KEY",
+              "name": "HardcodedCryptoKey",
               "shortDescription": {
-                "text": "CSRF protection middleware commented out"
+                "text": "Hardcoded cryptographic key in source code"
               },
-              "fullDescription": {
-                "text": "The csurf middleware is imported but commented out in server.js. Without CSRF token validation, all state-changing endpoints (POST/PUT/DELETE) are vulnerable to cross-site request forgery attacks. An attacker can craft a malicious page that submits authenticated requests on behalf of a victim user."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "csrf", "CWE-352", "A01:2021"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/321.html"
             },
             {
-              "id": "TEMPLATE-AUTOESCAPE-DISABLED",
-              "name": "TemplateAutoescapeDisabled",
+              "id": "HARDCODED_API_KEY",
+              "name": "HardcodedApiKey",
               "shortDescription": {
-                "text": "Swig template engine autoescape set to false"
+                "text": "Hardcoded API key exposed in configuration"
               },
-              "fullDescription": {
-                "text": "The Swig template engine is configured with autoescape: false, disabling automatic HTML entity encoding of template variables. Every template variable rendered without manual escaping becomes a stored or reflected XSS vector. This is a global configuration that affects all views in the application."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "xss", "CWE-79", "A03:2021"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
             },
             {
-              "id": "NO-HTTPS-TRANSPORT",
-              "name": "NoHTTPSTransport",
+              "id": "WEAK_CRYPTO",
+              "name": "WeakCryptographicAlgorithm",
               "shortDescription": {
-                "text": "Application runs over HTTP without TLS encryption"
+                "text": "Use of weak or deprecated cryptographic algorithm"
               },
-              "fullDescription": {
-                "text": "The application creates an HTTP server (http.createServer) without TLS. All data including session cookies, authentication credentials, and sensitive user data is transmitted in cleartext. An attacker on the same network can intercept all traffic via passive eavesdropping or active MITM attacks."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "transport", "CWE-319", "A02:2021"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/327.html"
             },
             {
-              "id": "MISSING-CLICKJACKING-PROTECTION",
-              "name": "MissingClickjackingProtection",
+              "id": "INFO_EXPOSURE",
+              "name": "InformationExposure",
               "shortDescription": {
-                "text": "No X-Frame-Options or frame-ancestors CSP directive"
+                "text": "Sensitive configuration dumped to console output"
               },
-              "fullDescription": {
-                "text": "With helmet commented out, no X-Frame-Options header is set and no Content-Security-Policy frame-ancestors directive exists. The application can be embedded in iframes on attacker-controlled pages, enabling clickjacking attacks where users are tricked into clicking hidden UI elements."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "clickjacking", "CWE-1021", "A05:2021"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
             },
             {
-              "id": "MISSING-CSP",
-              "name": "MissingContentSecurityPolicy",
+              "id": "XSS",
+              "name": "CrossSiteScripting",
               "shortDescription": {
-                "text": "No Content-Security-Policy header configured"
+                "text": "Inline script injection via document.write in configuration"
               },
-              "fullDescription": {
-                "text": "No Content-Security-Policy header is set. CSP is the primary defense-in-depth mechanism against XSS. Without it, inline scripts, eval(), and resources from arbitrary origins can execute freely. Combined with autoescape disabled in Swig, this eliminates all XSS mitigations."
-              },
-              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
-              "properties": {
-                "tags": ["security", "csp", "CWE-693", "A05:2021"]
-              }
-            },
-            {
-              "id": "STATIC-AFTER-SESSION",
-              "name": "StaticAssetsAfterSessionMiddleware",
-              "shortDescription": {
-                "text": "Static file serving ordered after session middleware"
-              },
-              "fullDescription": {
-                "text": "Express static file middleware is registered after session middleware in the middleware chain. Every request for static assets (CSS, JS, images) unnecessarily creates or loads a session, wasting server resources and creating unnecessary session store I/O. This can amplify denial-of-service attacks and leak session cookies on public assets."
-              },
-              "helpUri": "https://expressjs.com/en/guide/using-middleware.html",
-              "properties": {
-                "tags": ["security", "performance", "CWE-400", "A05:2021"]
-              }
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html"
             }
           ]
         }
       },
       "results": [
         {
-          "ruleId": "MISSING-SECURITY-HEADERS",
+          "ruleId": "HARDCODED_SECRET",
+          "ruleIndex": 0,
           "level": "error",
           "message": {
-            "text": "Helmet middleware is imported but commented out: '// app.use(helmet())'. This disables all standard security headers including X-Content-Type-Options (nosniff), X-Frame-Options, Strict-Transport-Security, and X-XSS-Protection. The dont-sniff-mimetype middleware is also commented out, and app.disable('x-powered-by') is not called, leaking the Express framework identity. Fix: uncomment app.use(helmet()) and ensure it is placed early in the middleware chain."
+            "text": "The cookie session secret is hardcoded as 'session_cookie_secret_key_here'. This default value is predictable and allows an attacker to forge session cookies, leading to session hijacking. The secret should be loaded from an environment variable with no insecure default."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "config/env/all.js"
                 },
                 "region": {
-                  "startLine": 1,
-                  "endLine": 50
+                  "startLine": 8,
+                  "startColumn": 5,
+                  "endColumn": 52
                 }
               }
             }
@@ -136,21 +86,22 @@
           }
         },
         {
-          "ruleId": "MISSING-CSRF-PROTECTION",
+          "ruleId": "HARDCODED_CRYPTO_KEY",
+          "ruleIndex": 1,
           "level": "error",
           "message": {
-            "text": "CSRF protection middleware (csurf) is imported but commented out. All POST/PUT/DELETE endpoints accept requests without CSRF token validation. An attacker can create a malicious page with auto-submitting forms targeting authenticated endpoints (e.g., fund transfers, password changes, profile updates). Fix: uncomment app.use(csrf()) and ensure CSRF tokens are embedded in all forms and validated on state-changing requests."
+            "text": "The cryptographic key is hardcoded as 'a_secure_key_for_crypto_here'. Any attacker who reads the source code (or the published npm package) can decrypt all data encrypted with this key. The key must be loaded from an external secret store or environment variable."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "config/env/all.js"
                 },
                 "region": {
-                  "startLine": 1,
-                  "endLine": 50
+                  "startLine": 9,
+                  "startColumn": 5,
+                  "endColumn": 52
                 }
               }
             }
@@ -160,123 +111,128 @@
           }
         },
         {
-          "ruleId": "TEMPLATE-AUTOESCAPE-DISABLED",
-          "level": "error",
-          "message": {
-            "text": "Swig template engine is configured with autoescape: false, globally disabling HTML output encoding. Any user-controlled data rendered in templates will be injected as raw HTML, creating stored and reflected XSS vulnerabilities across all views. This is the root cause enabling XSS in every template that renders user input. Fix: set autoescape: true in swig configuration and audit templates for any places that intentionally render raw HTML using the |safe filter."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1,
-                  "endLine": 50
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "NO-HTTPS-TRANSPORT",
-          "level": "error",
-          "message": {
-            "text": "Application uses http.createServer() without TLS. All traffic including session cookies, login credentials, and sensitive data travels in cleartext. Session cookies lack the Secure flag (which requires HTTPS), making them interceptable on any network hop. Fix: use https.createServer() with valid TLS certificates, or deploy behind a TLS-terminating reverse proxy and set the 'trust proxy' setting, and mark session cookies as Secure."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1,
-                  "endLine": 50
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.90
-          }
-        },
-        {
-          "ruleId": "MISSING-CLICKJACKING-PROTECTION",
-          "level": "error",
-          "message": {
-            "text": "No X-Frame-Options header or CSP frame-ancestors directive is set because helmet is commented out. The application can be framed by any origin, enabling clickjacking attacks. An attacker can overlay transparent iframes of the application over decoy UI to trick users into performing unintended actions. Fix: enable helmet (which sets X-Frame-Options: SAMEORIGIN by default) or manually set the header and add a CSP frame-ancestors directive."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1,
-                  "endLine": 50
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.95
-          }
-        },
-        {
-          "ruleId": "MISSING-CSP",
-          "level": "error",
-          "message": {
-            "text": "No Content-Security-Policy header is configured. Without CSP, there is no browser-enforced restriction on script sources, inline script execution, or eval(). Combined with Swig autoescape: false, the application has zero XSS mitigations at any layer. Fix: configure a strict CSP with script-src 'self', disallow unsafe-inline and unsafe-eval, and add nonce-based or hash-based script allowlisting."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1,
-                  "endLine": 50
-                }
-              }
-            }
-          ],
-          "properties": {
-            "confidence": 0.90
-          }
-        },
-        {
-          "ruleId": "STATIC-AFTER-SESSION",
+          "ruleId": "WEAK_CRYPTO",
+          "ruleIndex": 3,
           "level": "warning",
           "message": {
-            "text": "express.static() middleware is registered after the session middleware in the middleware chain. Every request for CSS, JavaScript, images, and other static files triggers session store lookups and session cookie processing unnecessarily. This wastes resources and can leak session cookies on cacheable public assets. Fix: move express.static() before session middleware, or serve static assets from a CDN/separate origin."
+            "text": "The cryptographic algorithm is set to 'aes256' (AES-256-CBC by default in Node.js crypto). CBC mode without authenticated encryption (e.g. AES-256-GCM) is vulnerable to padding oracle attacks. Consider using 'aes-256-gcm' for authenticated encryption."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "server.js",
-                  "uriBaseId": "%SRCROOT%"
+                  "uri": "config/env/all.js"
                 },
                 "region": {
-                  "startLine": 1,
-                  "endLine": 50
+                  "startLine": 10,
+                  "startColumn": 5,
+                  "endColumn": 26
                 }
               }
             }
           ],
           "properties": {
-            "confidence": 0.85
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INFO_EXPOSURE",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "The entire configuration object (including cookieSecret, cryptoKey, and database URI) is logged to the console at startup via console.log and util.inspect. This exposes secrets in log files, CI output, and container logs. Remove or redact sensitive fields before logging."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1,
+                  "endColumn": 46
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "HARDCODED_API_KEY",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "The ZAP API key is hardcoded as 'v9dn0balpqas1pcc281tn5ood1' in the development configuration. Although this is for a testing tool, hardcoded API keys in source code can be accidentally used in production or leak through version control."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/development.js"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 4,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "HARDCODED_API_KEY",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "The ZAP API key is hardcoded as 'v9dn0balpqas1pcc281tn5ood1' in the test configuration. Same key reused across environments increases blast radius if compromised."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/test.js"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 4,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "The development configuration injects an inline script via document.write that loads an external script from a dynamically constructed URL. If an attacker controls the host header or DNS, they can inject arbitrary JavaScript. The livereload script also uses an unencrypted HTTP connection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/development.js"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 7,
+                  "endLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
           }
         }
       ]
