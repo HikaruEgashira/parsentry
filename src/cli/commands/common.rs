@@ -17,10 +17,15 @@ pub fn locate_repository(
     printer: &StatusPrinter,
 ) -> Result<(PathBuf, Option<String>)> {
     if target.contains('/') && !Path::new(target).exists() {
-        let dest = PathBuf::from("repo");
+        let cache_base = dirs::cache_dir()
+            .unwrap_or_else(|| PathBuf::from("/tmp"))
+            .join("parsentry")
+            .join("repos");
+        let dest = cache_base.join(target.replace('/', "__"));
         if dest.exists() {
             std::fs::remove_dir_all(&dest)?;
         }
+        std::fs::create_dir_all(cache_base)?;
         printer.status("Cloning", &format!("{} → {}", target, dest.display()));
         clone_repo(target, &dest)?;
         let repo_name = target
