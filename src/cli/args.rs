@@ -54,24 +54,48 @@ pub enum Commands {
         /// Target to resolve report directory (default: .)
         #[arg(default_value = ".")]
         target: String,
+
+        /// Create GitHub issues for findings (owner/repo format)
+        #[arg(long)]
+        gh_issue: Option<String>,
+
+        /// Create Jira issues for findings (project key, e.g. SEC)
+        #[arg(long)]
+        jira: Option<String>,
+
+        /// Create Linear issues for findings (team ID or key, e.g. ENG)
+        #[arg(long)]
+        linear: Option<String>,
+
+        /// Create Notion pages for findings (database ID)
+        #[arg(long)]
+        notion: Option<String>,
+
+        /// Minimum severity level to report: error, warning, note (default: warning)
+        #[arg(long, default_value = "warning")]
+        min_level: String,
+
+        /// Show what would be created without making changes
+        #[arg(long)]
+        dry_run: bool,
     },
-    /// Monitor scan progress (docker compose logs -f style)
+    /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
     Log {
         /// Target to monitor (omit to show all sessions)
         target: Option<String>,
 
-        /// Disable follow mode
-        #[arg(long = "no-follow", action = clap::ArgAction::SetTrue)]
-        no_follow: bool,
+        /// Follow log output
+        #[arg(short = 'f', long = "follow", action = clap::ArgAction::SetTrue)]
+        follow: bool,
 
-        /// Number of recent events to show initially
-        #[arg(long)]
+        /// Number of lines to show from the end of the logs
+        #[arg(short = 'n', long)]
         tail: Option<usize>,
 
-        /// Disable timestamps
-        #[arg(long = "no-timestamps", action = clap::ArgAction::SetTrue)]
-        no_timestamps: bool,
+        /// Show timestamps
+        #[arg(short = 't', long = "timestamps", action = clap::ArgAction::SetTrue)]
+        timestamps: bool,
 
         /// Polling interval in seconds
         #[arg(long, default_value = "5")]
@@ -81,7 +105,7 @@ pub enum Commands {
         #[arg(long)]
         timeout: Option<u64>,
 
-        /// Disable color output
+        /// Produce monochrome output
         #[arg(long)]
         no_color: bool,
     },

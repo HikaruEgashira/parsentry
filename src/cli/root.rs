@@ -17,18 +17,28 @@ impl RootCommand {
             Commands::Scan { target, diff_base, filter_lang } => {
                 run_scan_command(&target, diff_base.as_deref(), filter_lang.as_deref()).await
             },
-            Commands::Merge { target } => {
+            Commands::Merge { target, gh_issue, jira, linear, notion, min_level, dry_run } => {
                 use crate::cli::commands::common::cache_dir_for;
-                use parsentry_reports::merge_sarif_dir;
+                use crate::github::run_gh_issue_command;
+                use parsentry_reports::{merge_sarif_dir, run_jira_command, run_linear_command, run_notion_command};
                 let reports_dir = cache_dir_for(&target).join("reports");
                 let merged = merge_sarif_dir(&reports_dir, None)?;
-                let json = serde_json::to_string_pretty(&merged)?;
-                println!("{}", json);
+                println!("{}", serde_json::to_string_pretty(&merged)?);
+                if let Some(repo) = gh_issue {
+                    run_gh_issue_command(&reports_dir, &repo, dry_run, &min_level).await?;
+                }
+                if let Some(project) = jira {
+                    run_jira_command(&reports_dir, &project, dry_run, &min_level).await?;
+                }
+                if let Some(team) = linear {
+                    run_linear_command(&reports_dir, &team, dry_run, &min_level).await?;
+                }
+                if let Some(db_id) = notion {
+                    run_notion_command(&reports_dir, &db_id, dry_run, &min_level).await?;
+                }
                 Ok(())
             },
-            Commands::Log { target, no_follow, tail, no_timestamps, interval, timeout, no_color } => {
-                let follow = !no_follow;
-                let timestamps = !no_timestamps;
+            Commands::Log { target, follow, tail, timestamps, interval, timeout, no_color } => {
                 run_log_command(target.as_deref(), follow, tail, timestamps, interval, timeout, no_color).await
             },
         }
