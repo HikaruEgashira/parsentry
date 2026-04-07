@@ -27,6 +27,17 @@ pub fn cache_dir_for(target: &str) -> PathBuf {
     cache_base().join(target.replace('/', "__"))
 }
 
+/// Extract short repository name from a target string.
+/// e.g. "HikaruEgashira/parsentry" → "parsentry", "/local/path/repo" → "repo"
+pub fn repo_name_from_target(target: &str) -> String {
+    target
+        .trim_end_matches('/')
+        .split('/')
+        .last()
+        .unwrap_or(target)
+        .replace(".git", "")
+}
+
 /// Phase 0: Locate and optionally clone the repository.
 /// Returns (root_dir, repo_name).
 pub fn locate_repository(

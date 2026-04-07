@@ -2,12 +2,12 @@ use anyhow::Result;
 
 use crate::cli::ui::StatusPrinter;
 
-use super::common::{build_threat_model_cli_prompt, cache_dir_for, locate_repository};
+use super::common::{build_threat_model_cli_prompt, cache_dir_for, locate_repository, repo_name_from_target};
 
 use parsentry_core::RepoMetadata;
 
 pub async fn run_model_command(target: &str) -> Result<()> {
-    let printer = StatusPrinter::new();
+    let printer = StatusPrinter::with_service(repo_name_from_target(target));
 
     let (root_dir, _repo_name) = locate_repository(target, &printer)?;
 
