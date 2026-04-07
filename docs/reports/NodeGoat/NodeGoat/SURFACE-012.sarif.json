@@ -1,0 +1,176 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "AUTHZ-MISSING-FUNC-LEVEL",
+              "name": "MissingFunctionLevelAccessControl",
+              "shortDescription": {
+                "text": "Missing Function Level Access Control (OWASP A7)"
+              },
+              "fullDescription": {
+                "text": "The POST /benefits endpoint only checks isLoggedIn but does not enforce isAdmin middleware. Any authenticated user can update benefit start dates for any user. The commented-out fix confirms this is a known intentional vulnerability (A7). An attacker with a regular user session can invoke POST /benefits to modify benefit records for arbitrary users."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "access-control", "OWASP-A7"]
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference via userId parameter"
+              },
+              "fullDescription": {
+                "text": "The updateBenefits handler reads userId directly from req.body without verifying that the authenticated user is authorized to modify that specific user's benefits. Combined with the missing admin check, any authenticated user can tamper with the userId field to update benefits for any other user."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "access-control", "IDOR"]
+              }
+            },
+            {
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
+              "shortDescription": {
+                "text": "Potential NoSQL Injection via unvalidated userId and benefitStartDate"
+              },
+              "fullDescription": {
+                "text": "The userId and benefitStartDate values from req.body are passed directly to benefitsDAO.updateBenefits without type validation or sanitization. With body-parser parsing JSON content types, an attacker can submit an object (e.g., {\"$gt\": \"\"}) as userId instead of a string, potentially causing MongoDB operator injection in the DAO query layer."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
+              "properties": {
+                "tags": ["security", "injection", "NoSQL"]
+              }
+            },
+            {
+              "id": "MASS-ASSIGNMENT",
+              "name": "MassAssignment",
+              "shortDescription": {
+                "text": "Unfiltered request body destructuring allows parameter pollution"
+              },
+              "fullDescription": {
+                "text": "The handler destructures userId and benefitStartDate from req.body but does not enforce a strict schema. While only two fields are extracted, the lack of input validation (type checking, format validation for dates, whitelist of allowed user IDs) means arbitrary values pass through to the database layer unchecked."
+              },
+              "helpUri": "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/",
+              "properties": {
+                "tags": ["security", "input-validation"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTHZ-MISSING-FUNC-LEVEL",
+          "level": "error",
+          "message": {
+            "text": "POST /benefits route uses only isLoggedIn middleware but not isAdmin. Any authenticated user can access administrative benefit-update functionality. The commented-out code at lines 58-59 of index.js shows the intended fix: adding isAdmin middleware."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 5,
+                  "endLine": 55
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "POST /benefits route registration",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "The updateBenefits handler accepts userId from the request body (line 30 of benefits.js) and passes it directly to benefitsDAO.updateBenefits without verifying the caller's identity or role. An attacker can specify any userId to modify another user's benefit records."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 9,
+                  "endLine": 33
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQLI",
+          "level": "warning",
+          "message": {
+            "text": "userId and benefitStartDate from req.body are passed to benefitsDAO.updateBenefits (line 35 of benefits.js) without type checking or sanitization. If body-parser parses a JSON content-type request, an attacker can send {\"userId\": {\"$gt\": \"\"}} to inject MongoDB operators into the downstream query."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 9,
+                  "endLine": 35
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "MASS-ASSIGNMENT",
+          "level": "note",
+          "message": {
+            "text": "No input validation is performed on userId or benefitStartDate. The userId is not checked against a whitelist or ObjectId format, and benefitStartDate is not validated as a proper date string. Malformed or malicious values propagate directly to the database layer."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 9,
+                  "endLine": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        }
+      ]
+    }
+  ]
+}

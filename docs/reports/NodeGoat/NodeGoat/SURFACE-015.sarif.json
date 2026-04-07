@@ -1,0 +1,252 @@
+Source code is provided inline. Proceeding with analysis.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
+              "shortDescription": {
+                "text": "NoSQL Injection via unsanitized user input in MongoDB query"
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "BROKEN-AUTH",
+              "name": "BrokenAuthentication",
+              "shortDescription": {
+                "text": "Plaintext password storage or weak comparison"
+              },
+              "helpUri": "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+            },
+            {
+              "id": "INFO-EXPOSURE",
+              "name": "InformationExposure",
+              "shortDescription": {
+                "text": "Sensitive configuration data logged to console"
+              },
+              "helpUri": "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/"
+            },
+            {
+              "id": "LFI",
+              "name": "LocalFileInclusion",
+              "shortDescription": {
+                "text": "Dynamic require() with environment-controlled path"
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "NOSQLI",
+          "level": "error",
+          "message": {
+            "text": "NoSQL Injection in validateLogin: The 'userName' parameter is passed directly into MongoDB's findOne() query without type validation or sanitization. An attacker can submit a JSON object (e.g., {\"$gt\": \"\"}) as the userName field, which MongoDB interprets as a query operator, bypassing authentication entirely. This is a critical authentication bypass vulnerability. Fix: validate that userName is a string before querying (e.g., typeof userName === 'string'), or use mongo-sanitize to strip $-prefixed keys."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 87,
+                  "endLine": 89,
+                  "snippet": {
+                    "text": "usersCol.findOne({\n            userName: userName\n        }, validateUserDoc);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQLI",
+          "level": "error",
+          "message": {
+            "text": "NoSQL Injection in getUserByUserName: The 'userName' parameter is passed directly into MongoDB's findOne() without type checking. If this function is reachable from user-controlled input (e.g., profile lookup, password reset), an attacker can inject query operators to enumerate or extract user documents. Fix: validate that userName is a string before use."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 98,
+                  "endLine": 100,
+                  "snippet": {
+                    "text": "usersCol.findOne({\n            userName: userName\n        }, callback);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "level": "error",
+          "message": {
+            "text": "Plaintext password storage: The addUser function stores the password field directly from user input without hashing. The bcrypt hashing code is commented out (lines 27-30). Any database compromise exposes all user passwords in cleartext. This also violates data protection regulations (GDPR, etc.). Fix: uncomment the bcrypt.hashSync line to hash passwords before storage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 25,
+                  "endLine": 25,
+                  "snippet": {
+                    "text": "            password //received from request param"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "level": "error",
+          "message": {
+            "text": "Plaintext password comparison: The comparePassword helper uses strict equality (===) to compare passwords instead of bcrypt.compareSync. Combined with plaintext storage, this means the entire password lifecycle is unprotected. Even if passwords were hashed at rest, timing-safe comparison should be used. Fix: uncomment the bcrypt.compareSync call and ensure passwords are hashed on storage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 62,
+                  "snippet": {
+                    "text": "        const comparePassword = (fromDB, fromUser) => {\n            return fromDB === fromUser;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "level": "warning",
+          "message": {
+            "text": "User enumeration via error differentiation: The validateLogin function returns distinct error objects for 'invalid password' (invalidPassword flag) vs 'no such user' (noSuchUser flag). This allows attackers to enumerate valid usernames by observing different error responses. Fix: return a generic 'invalid credentials' error for both cases."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 73,
+                  "endLine": 82,
+                  "snippet": {
+                    "text": "                    const invalidPasswordError = new Error(\"Invalid password\");\n                    invalidPasswordError.invalidPassword = true;\n                    ...\n                    const noSuchUserError = new Error(\"User: \" + user + \" does not exist\");\n                    noSuchUserError.noSuchUser = true;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "INFO-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Configuration data exposure: The entire merged configuration object (including potential database credentials, session secrets, and API keys) is logged to the console via util.inspect() on every application startup. In production environments this can leak secrets to log aggregation systems, container stdout, or monitoring tools. Fix: remove or gate the console.log behind a debug flag, or redact sensitive fields before logging."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "console.log(`Current Config:`);\nconsole.log(util.inspect(config, false, null));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "LFI",
+          "level": "warning",
+          "message": {
+            "text": "Dynamic require() with environment-derived path: NODE_ENV is used to construct a require() path without validation against an allowlist. If an attacker can control NODE_ENV (e.g., via container orchestration misconfiguration or .env injection), they could load arbitrary JS modules from the filesystem via path traversal (e.g., NODE_ENV='../../../tmp/evil'). Fix: validate NODE_ENV against an explicit allowlist of known environments (development, test, production)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "const envConf = require(path.resolve(__dirname + \"/../config/env/\" + finalEnv.toLowerCase() + \".js\")) || {};"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.60
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 分析サマリ
+
+**SURFACE-015: MongoDB users collection** に対し、**7件の脆弱性**を検出しました。
+
+| 重大度 | ルール | 場所 | 概要 |
+|--------|--------|------|------|
+| **error** | NOSQLI | user-dao.js:87 | `validateLogin`でuserNameを型検証なしにMongoDBクエリへ直接渡しており、`{"$gt":""}`等でログイン認証をバイパス可能 |
+| **error** | NOSQLI | user-dao.js:98 | `getUserByUserName`も同様にNoSQLインジェクションに脆弱 |
+| **error** | BROKEN-AUTH | user-dao.js:25 | パスワードを平文で保存（bcryptハッシュ化がコメントアウト） |
+| **error** | BROKEN-AUTH | user-dao.js:61 | パスワード比較が`===`による平文比較（bcrypt.compareSyncがコメントアウト） |
+| **warning** | BROKEN-AUTH | user-dao.js:73-82 | 「パスワード不正」と「ユーザー不在」で異なるエラーを返すため、ユーザー名列挙が可能 |
+| **warning** | INFO-EXPOSURE | config.js:10-11 | 起動時にDB認証情報等を含む全設定をconsole.logで出力 |
+| **warning** | LFI | config.js:7 | `NODE_ENV`を検証なしに`require()`パスへ結合しており、パストラバーサルの可能性 |
+
+最も深刻なのは **NoSQLインジェクションによる認証バイパス** と **平文パスワード保存** の組み合わせです。認証を迂回してDBにアクセスされた場合、全ユーザーのパスワードが即座に漏洩します。

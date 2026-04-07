@@ -1,0 +1,211 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "XSS-CONTEXT-MISMATCH",
+              "name": "CrossSiteScriptingContextMismatch",
+              "shortDescription": {
+                "text": "Output encoding applied with wrong context (HTML encoding used where URL encoding is needed)"
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "CWE-79", "OWASP-A7:2017"]
+              }
+            },
+            {
+              "id": "XSS-STORED",
+              "name": "StoredCrossSiteScripting",
+              "shortDescription": {
+                "text": "User-controlled data rendered without output encoding, enabling stored XSS"
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "CWE-79", "OWASP-A7:2017"]
+              }
+            },
+            {
+              "id": "REDOS",
+              "name": "RegularExpressionDenialOfService",
+              "shortDescription": {
+                "text": "Regex with nested quantifiers vulnerable to catastrophic backtracking"
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS",
+              "properties": {
+                "tags": ["security", "CWE-1333", "OWASP-A6:2017"]
+              }
+            },
+            {
+              "id": "PLAINTEXT-PASSWORD",
+              "name": "PlaintextPasswordStorage",
+              "shortDescription": {
+                "text": "Passwords stored in plaintext without hashing"
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "CWE-256", "OWASP-A2:2017"]
+              }
+            },
+            {
+              "id": "BROKEN-AUTH",
+              "name": "BrokenAuthentication",
+              "shortDescription": {
+                "text": "Plaintext password comparison without secure hashing"
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "CWE-287", "OWASP-A2:2017"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS-CONTEXT-MISMATCH",
+          "level": "error",
+          "message": {
+            "text": "The 'website' field is encoded with ESAPI.encoder().encodeForHTML() but is also used as a URL in an anchor tag's href attribute. HTML-context encoding does not prevent javascript: URI injection in href attributes. An attacker can store a payload like 'javascript:alert(document.cookie)' which will pass HTML encoding intact and execute when the link is clicked. Should use encodeForURL() for the href context."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 13
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-STORED",
+          "level": "error",
+          "message": {
+            "text": "In displayProfile(), fields from the database document (firstName, lastName, ssn, dob, address, bankAcc, bankRouting) are passed directly to res.render('profile', {...doc}) without any output encoding. Only 'website' is encoded. If the template engine (Swig) does not auto-escape these variables, user-controlled data stored in MongoDB will be rendered as raw HTML, enabling stored XSS. The handleProfileUpdate() method similarly renders user input (firstName, lastName, etc.) from req.body directly on validation failure without encoding."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 13
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "XSS-STORED",
+          "level": "warning",
+          "message": {
+            "text": "On profile update validation failure (invalid bankRouting), the raw req.body values (firstName, lastName, ssn, dob, address, bankAcc, bankRouting) are passed directly to res.render() without sanitization. An attacker can submit malicious HTML/JS in these fields; even if the update is rejected, the reflected values will render unsanitized in the error response."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 13
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "REDOS",
+          "level": "error",
+          "message": {
+            "text": "The regex /([0-9]+)+\\#/ used to validate bankRouting contains a nested quantifier pattern ([0-9]+)+ which is vulnerable to catastrophic backtracking (ReDoS). An attacker can submit a crafted bankRouting value like '1111111111111111111111!' that causes exponential CPU consumption, leading to denial of service. The fix is to remove the outer '+' quantifier: /([0-9]+)\\#/."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "PLAINTEXT-PASSWORD",
+          "level": "error",
+          "message": {
+            "text": "In addUser(), the password from the request is stored directly in the user document without hashing. The bcrypt.hashSync() call is commented out. This means all user passwords are stored in plaintext in MongoDB, violating secure password storage requirements. Anyone with database access (or via NoSQL injection) can read all user passwords."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 13
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "BROKEN-AUTH",
+          "level": "error",
+          "message": {
+            "text": "In validateLogin(), the comparePassword function uses direct string equality (fromDB === fromUser) instead of bcrypt.compareSync(). Combined with plaintext password storage, this means authentication is entirely based on plaintext comparison, making the system vulnerable to credential theft via any data exposure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 56,
+                  "startColumn": 13
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

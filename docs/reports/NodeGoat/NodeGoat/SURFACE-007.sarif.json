@@ -1,0 +1,135 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference via URL parameter"
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+            },
+            {
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
+              "shortDescription": {
+                "text": "NoSQL Injection via unsanitized input in $where clause"
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "Insecure Direct Object Reference: The allocations endpoint reads userId from `req.params` (URL path parameter) instead of `req.session`. Any authenticated user can access another user's allocation data by changing the `:userId` segment in `GET /allocations/:userId`. The commented-out fix confirms this is intentional vulnerable code. An attacker only needs a valid session to enumerate all users' financial allocation data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/allocations.js"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 19,
+                  "snippet": {
+                    "text": "        const {\n            userId\n        } = req.params;"
+                  }
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Route definition accepting arbitrary userId in URL path"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 63,
+                  "snippet": {
+                    "text": "    app.get(\"/allocations/:userId\", isLoggedIn, allocationsHandler.displayAllocations);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99,
+            "source": "req.params.userId",
+            "sink": "allocationsDAO.getByUserIdAndThreshold(userId, ...)",
+            "cwe": "CWE-639",
+            "impact": "Any authenticated user can read any other user's financial allocation data by manipulating the userId URL parameter. No authorization check verifies the requested userId matches the session user.",
+            "remediation": "Replace `req.params.userId` with `req.session.userId` to ensure users can only access their own allocations."
+          }
+        },
+        {
+          "ruleId": "NOSQLI",
+          "level": "error",
+          "message": {
+            "text": "NoSQL Injection via the `threshold` query parameter. The value is interpolated directly into a MongoDB `$where` JavaScript expression without sanitization. An attacker can inject arbitrary JavaScript that executes server-side in the MongoDB engine. Example payloads: `0';while(true){}' ` (DoS) or `1'; return 1 == '1` (auth bypass to dump all records). The `$where` operator evaluates the string as JavaScript, making string interpolation equivalent to eval injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 62,
+                  "endLine": 64,
+                  "snippet": {
+                    "text": "                return {\n                    $where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`\n                };"
+                  }
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "Unsanitized threshold parameter read from query string"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/allocations.js"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 22,
+                  "snippet": {
+                    "text": "        const {\n            threshold\n        } = req.query;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99,
+            "source": "req.query.threshold",
+            "sink": "MongoDB $where clause in allocationsDAO.getByUserIdAndThreshold",
+            "cwe": "CWE-943",
+            "impact": "Remote code execution within the MongoDB JavaScript engine. Attacker can exfiltrate all database records, cause denial of service via infinite loops, or bypass query logic to access unauthorized data.",
+            "remediation": "Parse threshold as an integer with parseInt() and validate the range. Replace the $where clause with standard MongoDB query operators (e.g., {userId: parsedUserId, stocks: {$gt: parsedThreshold}}) to avoid JavaScript evaluation entirely."
+          }
+        }
+      ]
+    }
+  ]
+}

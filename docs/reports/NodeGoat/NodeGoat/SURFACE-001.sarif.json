@@ -1,0 +1,427 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "NOSQL-INJECTION",
+              "name": "NoSQLInjection",
+              "shortDescription": {
+                "text": "NoSQL Injection via unsanitized user input passed directly to MongoDB query"
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "AUTH-PLAINTEXT-PASSWORD",
+              "name": "PlaintextPasswordStorage",
+              "shortDescription": {
+                "text": "Passwords stored and compared in plaintext without hashing"
+              },
+              "helpUri": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+            },
+            {
+              "id": "AUTH-USER-ENUMERATION",
+              "name": "UserEnumeration",
+              "shortDescription": {
+                "text": "Different error messages for invalid username vs invalid password allow user enumeration"
+              },
+              "helpUri": "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+            },
+            {
+              "id": "AUTH-SESSION-FIXATION",
+              "name": "SessionFixation",
+              "shortDescription": {
+                "text": "Session ID not regenerated after successful authentication"
+              },
+              "helpUri": "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+            },
+            {
+              "id": "AUTH-WEAK-PASSWORD-POLICY",
+              "name": "WeakPasswordPolicy",
+              "shortDescription": {
+                "text": "Password validation allows any 1-20 character string without complexity requirements"
+              },
+              "helpUri": "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+            },
+            {
+              "id": "LOG-INJECTION",
+              "name": "LogInjection",
+              "shortDescription": {
+                "text": "Unsanitized user input written to log output enabling CRLF log forging"
+              },
+              "helpUri": "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/"
+            },
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Open redirect via unvalidated user-supplied URL in query parameter"
+              },
+              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery/"
+            },
+            {
+              "id": "BROKEN-ACCESS-CONTROL",
+              "name": "BrokenAccessControl",
+              "shortDescription": {
+                "text": "Missing function-level access control on admin-only endpoints"
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+            },
+            {
+              "id": "VULN-DEPENDENCY",
+              "name": "VulnerableDependency",
+              "shortDescription": {
+                "text": "Use of deprecated bcrypt-nodejs package with known vulnerabilities"
+              },
+              "helpUri": "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "NOSQL-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "The `userName` parameter from `req.body` is passed directly to `usersCol.findOne({userName: userName})` without type validation or sanitization. An attacker can submit a JSON object (e.g. `{\"userName\": {\"$gt\": \"\"}, \"password\": {\"$gt\": \"\"}}`) via the POST body when Content-Type is application/json, causing the MongoDB query to match unintended documents and bypass authentication entirely. The `body-parser` middleware (listed in dependencies) parses JSON bodies by default, making this exploitable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 9,
+                  "endLine": 81,
+                  "endColumn": 10
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "UserDAO.validateLogin",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "source": "req.body.userName",
+            "sink": "usersCol.findOne()",
+            "cwe": "CWE-943"
+          }
+        },
+        {
+          "ruleId": "NOSQL-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "The `password` parameter from `req.body` is used in a direct equality comparison (`fromDB === fromUser`) against the database value. When combined with the NoSQL injection on the `userName` field, or independently if the password field itself is an operator object (e.g. `{\"$gt\": \"\"}`), the comparison may succeed or the query structure may be manipulated. The lack of type-checking on `password` (ensuring it is a string) means operator injection is possible."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 13,
+                  "endLine": 57,
+                  "endColumn": 42
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "UserDAO.validateLogin.comparePassword",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.85,
+            "source": "req.body.password",
+            "sink": "comparePassword()",
+            "cwe": "CWE-943"
+          }
+        },
+        {
+          "ruleId": "AUTH-PLAINTEXT-PASSWORD",
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored in plaintext in MongoDB (`password` field in user document at line 28 of user-dao.js) and compared using direct string equality (`fromDB === fromUser` at line 57). The bcrypt hashing code is commented out. This means a database compromise exposes all user credentials in cleartext. OWASP requires passwords be stored using a strong adaptive hashing algorithm (bcrypt, scrypt, Argon2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 13,
+                  "endLine": 28,
+                  "endColumn": 14
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "UserDAO.addUser",
+                  "kind": "function"
+                }
+              ]
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 9,
+                  "endLine": 58,
+                  "endColumn": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 1.0,
+            "cwe": "CWE-256"
+          }
+        },
+        {
+          "ruleId": "AUTH-USER-ENUMERATION",
+          "level": "warning",
+          "message": {
+            "text": "The login handler returns distinct error messages: \"Invalid username\" when the user does not exist (`err.noSuchUser` branch at session.js line 72) vs \"Invalid password\" when the password is wrong (`err.invalidPassword` branch at session.js line 82). This allows an attacker to enumerate valid usernames by observing the error message difference. Additionally, timing differences between the two code paths (no-user returns immediately vs valid-user performs password comparison) enable timing-based enumeration."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 17,
+                  "endLine": 88,
+                  "endColumn": 18
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "SessionHandler.handleLoginRequest",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": "CWE-204"
+          }
+        },
+        {
+          "ruleId": "AUTH-SESSION-FIXATION",
+          "level": "warning",
+          "message": {
+            "text": "After successful login in `handleLoginRequest` (session.js line 105), the session ID is not regenerated — `req.session.userId` is set directly on the existing session. The code comments acknowledge this issue and show the fix (`req.session.regenerate()`), but it is not applied. This allows session fixation attacks where an attacker sets a known session ID before the victim authenticates, then hijacks the session after login. Note: the signup handler correctly calls `req.session.regenerate()`, making this inconsistency more likely an oversight."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 105,
+                  "startColumn": 13,
+                  "endLine": 106,
+                  "endColumn": 81
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "SessionHandler.handleLoginRequest",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": "CWE-384"
+          }
+        },
+        {
+          "ruleId": "AUTH-WEAK-PASSWORD-POLICY",
+          "level": "warning",
+          "message": {
+            "text": "The signup password validation regex `PASS_RE = /^.{1,20}$/` accepts any string of 1-20 characters with no complexity requirements. This allows trivially guessable passwords (e.g. '1', 'a', 'password'). Combined with no rate limiting or account lockout on the login endpoint, this makes brute-force attacks highly feasible."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 123,
+                  "startColumn": 15,
+                  "endLine": 123,
+                  "endColumn": 40
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "SessionHandler.validateSignup",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": "CWE-521"
+          }
+        },
+        {
+          "ruleId": "LOG-INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "The `userName` value from user input is logged directly via `console.log('Error: attempt to login with invalid user: ', userName)` without sanitization. An attacker can inject CRLF characters (\\r\\n) into the username to forge log entries, potentially masking malicious activity or injecting misleading log lines. The code contains commented-out fixes using ESAPI encoding but they are not active."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 70,
+                  "startColumn": 21,
+                  "endLine": 70,
+                  "endColumn": 84
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "SessionHandler.handleLoginRequest",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.90,
+            "source": "req.body.userName",
+            "sink": "console.log()",
+            "cwe": "CWE-117"
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "The `/learn` route performs `res.redirect(req.query.url)` with no validation on the URL parameter. An attacker can craft a link like `/learn?url=https://evil.com` to redirect authenticated users to a phishing site (open redirect). This can also be abused for SSRF-adjacent attacks depending on how downstream clients handle the redirect, and facilitates OAuth token theft or credential phishing."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 56,
+                  "startColumn": 9,
+                  "endLine": 58,
+                  "endColumn": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "GET /learn",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "source": "req.query.url",
+            "sink": "res.redirect()",
+            "cwe": "CWE-601"
+          }
+        },
+        {
+          "ruleId": "BROKEN-ACCESS-CONTROL",
+          "level": "warning",
+          "message": {
+            "text": "The `/benefits` GET and POST routes use only `isLoggedIn` middleware but lack `isAdmin` authorization checks. The commented-out code shows the intended fix with `isAdmin` middleware, confirming this is a known missing access control. Any authenticated user can access and modify benefits data intended only for administrators, violating the principle of least privilege."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 5,
+                  "endLine": 43,
+                  "endColumn": 69
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "GET /benefits, POST /benefits",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "cwe": "CWE-862"
+          }
+        },
+        {
+          "ruleId": "VULN-DEPENDENCY",
+          "level": "warning",
+          "message": {
+            "text": "The application depends on `bcrypt-nodejs@0.0.3`, a deprecated package that is unmaintained and has known security issues. Even though the bcrypt functionality is currently commented out, the dependency itself poses a supply chain risk, and if the hashing fix is applied using this library, it would use a vulnerable implementation. Should be replaced with `bcrypt` (native) or `bcryptjs`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 5,
+                  "endLine": 9,
+                  "endColumn": 30
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90,
+            "cwe": "CWE-1104"
+          }
+        }
+      ]
+    }
+  ]
+}
+```

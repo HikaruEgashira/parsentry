@@ -1,0 +1,134 @@
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via user-controlled URL"
+              },
+              "helpUri": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/"
+            },
+            {
+              "id": "XSS",
+              "name": "CrossSiteScripting",
+              "shortDescription": {
+                "text": "Reflected Cross-Site Scripting via unsanitized response body"
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/"
+            },
+            {
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": {
+                "text": "Unvalidated redirect using user-supplied URL"
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "The URL for the outbound HTTP request is constructed entirely from user-controlled query parameters `req.query.url` and `req.query.symbol`. An attacker can set `url` to an arbitrary destination (e.g. `http://169.254.169.254/latest/meta-data/`) to reach internal services, cloud metadata endpoints, or other network-internal resources. There is no allowlist, URL parsing, scheme restriction, or DNS rebinding protection applied before the request is made via `needle.get()`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "            const url = req.query.url + req.query.symbol;\n            return needle.get(url, (error, newResponse, body) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.98,
+            "source": "req.query.url, req.query.symbol",
+            "sink": "needle.get(url, ...)",
+            "impact": "An attacker can proxy requests through the server to scan internal networks, access cloud instance metadata (AWS/GCP/Azure), read internal services behind firewalls, and exfiltrate data. The full response body is reflected back to the attacker, making this a full-read SSRF.",
+            "remediation": "Validate the URL against a strict allowlist of permitted hostnames and schemes (e.g. only https to a known stock API). Parse the URL, resolve DNS, and verify the resolved IP is not in private/reserved ranges (10.x, 172.16-31.x, 192.168.x, 169.254.x, 127.x, ::1). Consider using a dedicated proxy or gateway for outbound requests."
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "error",
+          "message": {
+            "text": "The response body from the external HTTP request (`needle.get`) is written directly into the HTML response via `res.write(body)` without any sanitization or encoding. Since the SSRF vulnerability allows an attacker to control which server is contacted, they can point the URL to an attacker-controlled server that returns malicious HTML/JavaScript. This payload is then reflected to the victim's browser with `Content-Type: text/html`, achieving reflected XSS. Even without SSRF exploitation, if the legitimate upstream API returns user-influenced content, it could contain executable scripts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 25,
+                  "snippet": {
+                    "text": "                if (body) {\n                    res.write(body);\n                }"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95,
+            "source": "body (from external HTTP response via needle.get)",
+            "sink": "res.write(body)",
+            "impact": "An attacker can execute arbitrary JavaScript in the context of the victim's authenticated session, stealing session cookies, performing actions on behalf of the user, or redirecting to phishing pages. Combined with the SSRF, the attacker fully controls the reflected content.",
+            "remediation": "Never write raw external response bodies into HTML responses. Either parse the expected data format (e.g. JSON) and render only specific fields through a template engine with auto-escaping, or at minimum apply HTML entity encoding to the entire body before writing it to the response. Set Content-Type to a safe value like application/json if returning API data."
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "warning",
+          "message": {
+            "text": "The `/learn` route redirects to a URL taken directly from `req.query.url` with no validation. An attacker can craft a link like `/learn?url=https://evil.com/phishing` that, when clicked by an authenticated user, redirects them to a malicious site. The application's trusted domain lends credibility to the phishing link."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 69,
+                  "endLine": 72,
+                  "snippet": {
+                    "text": "    app.get(\"/learn\", isLoggedIn, (req, res) => {\n        // Insecure way to handle redirects by taking redirect url from query string\n        return res.redirect(req.query.url);\n    });"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.97,
+            "source": "req.query.url",
+            "sink": "res.redirect(req.query.url)",
+            "impact": "Enables phishing attacks by abusing the application's trusted domain as a redirect intermediary. Authenticated users may be tricked into visiting malicious sites that mimic the application's login page to steal credentials.",
+            "remediation": "Validate that the redirect URL is a relative path or matches an allowlist of trusted domains. Use a whitelist approach: parse the URL and check the hostname against known-good values before redirecting."
+          }
+        }
+      ]
+    }
+  ]
+}
+```

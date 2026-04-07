@@ -1,0 +1,232 @@
+Now I have enough context. Let me produce the SARIF analysis.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "REDOS",
+              "name": "RegularExpressionDenialOfService",
+              "shortDescription": {
+                "text": "Regex pattern vulnerable to catastrophic backtracking"
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS"
+            },
+            {
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
+              "shortDescription": {
+                "text": "User input passed to MongoDB query without sanitization"
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection"
+            },
+            {
+              "id": "XSS",
+              "name": "CrossSiteScripting",
+              "shortDescription": {
+                "text": "Incorrect output encoding context allows cross-site scripting"
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/xss/"
+            },
+            {
+              "id": "SENSITIVE-DATA",
+              "name": "SensitiveDataExposure",
+              "shortDescription": {
+                "text": "Sensitive data (SSN, bank account) handled without encryption or masking"
+              },
+              "helpUri": "https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure"
+            },
+            {
+              "id": "AUTH-BYPASS",
+              "name": "BrokenAuthentication",
+              "shortDescription": {
+                "text": "Passwords stored and compared in plaintext"
+              },
+              "helpUri": "https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "REDOS",
+          "level": "error",
+          "message": {
+            "text": "The regex pattern /([0-9]+)+\\#/ uses nested quantifiers ('+' inside '+'), making it vulnerable to catastrophic backtracking. An attacker can submit a bankRouting value like '000000000000000000000000000' (long string of digits without trailing '#') to cause exponential CPU consumption, resulting in denial of service. Fix: remove the nested quantifier, e.g. /([0-9]+)\\#/."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 50,
+                  "startColumn": 31,
+                  "snippet": {
+                    "text": "const regexPattern = /([0-9]+)+\\#/;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQLI",
+          "level": "error",
+          "message": {
+            "text": "User-supplied fields (firstName, lastName, ssn, dob, address, bankAcc, bankRouting) from req.body are passed directly to profile.updateUser() without type checking or sanitization. If the ProfileDAO constructs a MongoDB $set operation with these values, an attacker can submit JSON objects (e.g. {\"$gt\": \"\"}) via HTTP parameter pollution or Content-Type: application/json to inject NoSQL operators. The parseInt(userId) call on the session userId provides partial protection for that field only, but all profile fields remain unsanitized."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 65,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "profile.updateUser(\n            parseInt(userId),\n            firstName,\n            lastName,\n            ssn,\n            dob,\n            address,\n            bankAcc,\n            bankRouting,"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "warning",
+          "message": {
+            "text": "In displayProfile, the 'website' field is encoded using ESAPI.encoder().encodeForHTML() but is also used in a URL context (href attribute in the template). HTML-entity encoding does not prevent javascript: URI injection or other URL-context attacks. The correct fix is to use encodeForURL() for the URL context, as noted in the code comments. This allows an attacker to store a malicious website value that executes JavaScript when the profile is viewed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 26,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "doc.website = ESAPI.encoder().encodeForHTML(doc.website);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "level": "warning",
+          "message": {
+            "text": "When bankRouting validation fails, user-supplied values (firstName, lastName, ssn, dob, address, bankAcc, bankRouting) are rendered directly into the profile template without any output encoding. If the Swig template does not auto-escape these variables, this constitutes a reflected XSS vulnerability. An attacker could craft a POST request with malicious HTML/JavaScript in any of these fields."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "return res.render(\"profile\", {\n                updateError: \"Bank Routing number does not comply with requirements for format specified\",\n                firstNameSafeString,\n                lastName,\n                ssn,"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA",
+          "level": "warning",
+          "message": {
+            "text": "Sensitive financial and personal data (SSN, bank account number, bank routing number) are accepted and stored without encryption, masking, or access controls beyond basic authentication. The SSN and bank details are stored in plaintext in MongoDB and rendered back to the user in the profile view. This violates data protection requirements (PCI-DSS, GDPR). These fields should be encrypted at rest and masked in display."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "const {\n            firstName,\n            lastName,\n            ssn,\n            dob,\n            address,\n            bankAcc,\n            bankRouting\n        } = req.body;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored in plaintext (user-dao.js:24) and compared using direct string equality (user-dao.js:66). The bcrypt hashing and comparison code exists but is commented out. Any database compromise (e.g., via the NoSQL injection in the profile handler) would expose all user passwords in cleartext. This also enables credential stuffing attacks since passwords are not hashed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "password //received from request param"
+                  }
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "return fromDB === fromUser;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}
+```

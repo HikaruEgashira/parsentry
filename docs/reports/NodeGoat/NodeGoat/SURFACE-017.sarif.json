@@ -1,0 +1,221 @@
+Now I have the full picture. Let me generate the SARIF output.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "SSJI",
+              "name": "ServerSideJavaScriptInjection",
+              "shortDescription": {
+                "text": "Server-Side JavaScript Injection via eval()"
+              },
+              "fullDescription": {
+                "text": "User-controlled input from req.body is passed directly to eval() without sanitization. An attacker can execute arbitrary server-side JavaScript by submitting malicious payloads in the preTax, afterTax, or roth form fields. For example, submitting `process.exit()` or `require('child_process').exec('...')` achieves Remote Code Execution. The isNaN() validation occurs AFTER eval(), so the code is already executed before any check."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Server-Side_JavaScript_Injection",
+              "properties": {
+                "tags": ["security", "CWE-95", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "NOSQLI",
+              "name": "NoSQLInjection",
+              "shortDescription": {
+                "text": "NoSQL Injection via unvalidated query parameter"
+              },
+              "fullDescription": {
+                "text": "The userId parameter passed to MongoDB findOne() and update() is not type-validated in getByUserId. If an attacker can manipulate the userId value (e.g., via session tampering or parameter pollution), they could inject a MongoDB query operator object such as {$gt: ''} to bypass intended query logic and access or modify other users' contribution records."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
+              "properties": {
+                "tags": ["security", "CWE-943", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "NOSQLI-UPDATE",
+              "name": "NoSQLInjectionInUpdate",
+              "shortDescription": {
+                "text": "MongoDB update with upsert uses unsanitized filter key"
+              },
+              "fullDescription": {
+                "text": "The update() method uses a shorthand filter {userId} which references the raw unparsed userId parameter (not parsedUserId). While parsedUserId is used in the document body, the filter criteria uses the original string userId. If userId is a MongoDB operator object rather than a scalar, the filter could match unintended documents. Combined with upsert:true, this could create or overwrite arbitrary contribution records."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection",
+              "properties": {
+                "tags": ["security", "CWE-943", "OWASP-A03:2021"]
+              }
+            },
+            {
+              "id": "CONFIG-LEAK",
+              "name": "ConfigurationInformationDisclosure",
+              "shortDescription": {
+                "text": "Full configuration object logged to console at startup"
+              },
+              "fullDescription": {
+                "text": "config/config.js logs the entire merged configuration object to stdout via console.log and util.inspect. If the configuration contains database credentials, session secrets, or API keys, these are exposed in process logs, container logs, and any log aggregation service."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "properties": {
+                "tags": ["security", "CWE-532", "OWASP-A09:2021"]
+              }
+            },
+            {
+              "id": "PATH-TRAVERSAL",
+              "name": "PathTraversalInConfigLoad",
+              "shortDescription": {
+                "text": "Dynamic require() with environment variable input"
+              },
+              "fullDescription": {
+                "text": "config.js constructs a require() path using process.env.NODE_ENV without sanitization. If an attacker can control the NODE_ENV environment variable, they could potentially traverse the filesystem and load an arbitrary JavaScript module via a crafted path like '../../attacker-module'. While NODE_ENV is typically set at deployment time, insufficient validation of this input violates defense-in-depth principles."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "properties": {
+                "tags": ["security", "CWE-22", "OWASP-A05:2021"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSJI",
+          "level": "error",
+          "message": {
+            "text": "Server-Side JavaScript Injection: eval() is called on user-supplied req.body.preTax, req.body.afterTax, and req.body.roth. An attacker can submit arbitrary JavaScript (e.g., `require('child_process').execSync('id')`) as form values to achieve Remote Code Execution. The isNaN() check runs AFTER eval(), so the injected code executes regardless of validation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 265,
+                  "endLine": 267
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "NOSQLI",
+          "level": "warning",
+          "message": {
+            "text": "NoSQL Injection: getByUserId() passes the userId parameter directly to MongoDB findOne() without type validation. If userId is a MongoDB operator object (e.g., {$gt: ''}) rather than a scalar, the query could return records for other users. The GET /contributions route passes req.session.userId, which limits direct exploitation, but any code path that passes user-controlled data to getByUserId is vulnerable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/contributions-dao.js"
+                },
+                "region": {
+                  "startLine": 59,
+                  "endLine": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "NOSQLI-UPDATE",
+          "level": "warning",
+          "message": {
+            "text": "NoSQL Injection in update filter: The update() method uses shorthand {userId} as the MongoDB filter, which references the original unparsed userId string parameter rather than parsedUserId (the parseInt result). If userId is a non-scalar value, the MongoDB filter could match unintended documents. With upsert:true, this could create or overwrite arbitrary contribution records."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/contributions-dao.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "endLine": 34
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "CONFIG-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "Information Disclosure: The entire configuration object is logged to console at startup using util.inspect with unlimited depth (null). This exposes any secrets (database URIs with credentials, session secrets, API keys) present in the config to stdout, container logs, and log aggregation services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL",
+          "level": "note",
+          "message": {
+            "text": "Path Traversal in config loader: process.env.NODE_ENV is concatenated into a require() path without sanitization or allowlist validation. An attacker who controls the environment variable could load arbitrary .js files. Exploitation requires environment variable control, which limits severity but violates defense-in-depth."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.45
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 分析サマリ
+
+**SURFACE-017: MongoDB contributions collection** に対して5件の脆弱性を検出しました。
+
+| 重要度 | ルール | 場所 | 概要 |
+|--------|--------|------|------|
+| **error** | SSJI | `app/routes/contributions.js:265-267` | `eval(req.body.preTax)` 等でユーザー入力を直接評価 → **RCE** |
+| warning | NOSQLI | `app/data/contributions-dao.js:59-61` | `getByUserId`でuserIdの型検証なしにMongoDBクエリへ渡す |
+| warning | NOSQLI-UPDATE | `app/data/contributions-dao.js:28-34` | `update`のフィルタが未パースの`userId`を使用、upsert:trueで他ユーザーのデータ書き換え可能 |
+| warning | CONFIG-LEAK | `config/config.js:10-11` | 設定オブジェクト全体をconsole.logに出力、認証情報がログに漏洩 |
+| note | PATH-TRAVERSAL | `config/config.js:7` | `NODE_ENV`を未検証のまま`require()`パスに結合 |
+
+最も深刻なのは **`eval()`によるRCE** です。`isNaN()`バリデーションは`eval()`の**後**に実行されるため、攻撃者は `require('child_process').execSync('cat /etc/passwd')` のようなペイロードで任意コマンドを実行できます。
