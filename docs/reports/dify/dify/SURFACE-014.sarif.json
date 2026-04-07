@@ -1,0 +1,421 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "DESERIAL-001",
+              "name": "CeleryDeserializationRisk",
+              "shortDescription": {
+                "text": "Celery task payload deserialization from Redis broker without explicit serializer hardening"
+              },
+              "fullDescription": {
+                "text": "Celery workers consume task payloads deserialized from a Redis queue. If the Celery serializer is configured to use pickle (the historical default) or if accept_content includes pickle, an attacker who gains write access to the Redis broker can inject malicious serialized payloads that execute arbitrary code upon deserialization. The celery_entrypoint.py initializes the Celery app but the serializer configuration must be verified to use JSON-only serialization with accept_content=['json']."
+              },
+              "helpUri": "https://docs.celeryq.dev/en/stable/userguide/security.html#serializers",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "deserialization", "rce"]
+              }
+            },
+            {
+              "id": "AUTHZ-001",
+              "name": "MissingTaskAuthorizationCheck",
+              "shortDescription": {
+                "text": "Celery tasks accept tenant_id without verifying caller authorization"
+              },
+              "fullDescription": {
+                "text": "Celery tasks such as annotation operations (add, update, delete, enable, disable) and RAG pipeline tasks accept tenant_id, app_id, or dataset_id as parameters. Since Celery tasks are invoked asynchronously via message queue, the authorization context from the original HTTP request is lost. If a task can be enqueued with an arbitrary tenant_id, it may operate on data belonging to a different tenant. Tasks should re-verify authorization or use cryptographically signed task parameters."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "authorization", "tenant-isolation"]
+              }
+            },
+            {
+              "id": "TENANT-001",
+              "name": "CrossTenantTaskExecution",
+              "shortDescription": {
+                "text": "RAG pipeline tasks use tenant-isolated queues but data not encrypted in transit"
+              },
+              "fullDescription": {
+                "text": "The RAG pipeline task queue is described as tenant-isolated, but task payloads containing document content and embeddings are transmitted through Redis without encryption. An attacker with network access between the application and Redis can intercept sensitive document data. Redis should be configured with TLS, and sensitive payload fields should be encrypted at the application layer."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "tenant-isolation", "encryption"]
+              }
+            },
+            {
+              "id": "INFO-001",
+              "name": "SensitiveDataInTaskLogs",
+              "shortDescription": {
+                "text": "Task parameters including tenant identifiers and document content may be logged"
+              },
+              "fullDescription": {
+                "text": "Multiple Celery task files use logger.info and logger.debug to log task execution details. The batch_import_annotations_task.py uses logger.debug which may log annotation content containing user data. If log aggregation systems are not properly access-controlled, this constitutes an information disclosure risk. Task logging should sanitize or redact sensitive fields such as annotation content, API keys, and user data."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tags": ["security", "information-disclosure", "logging"]
+              }
+            },
+            {
+              "id": "RACE-001",
+              "name": "AnnotationIndexRaceCondition",
+              "shortDescription": {
+                "text": "Concurrent annotation index operations may cause inconsistent state"
+              },
+              "fullDescription": {
+                "text": "The annotation tasks include enable_annotation_reply_task, disable_annotation_reply_task, add_annotation_to_index_task, update_annotation_to_index_task, and delete_annotation_index_task. These tasks modify shared annotation index state asynchronously. If multiple tasks for the same annotation or app execute concurrently (e.g., rapid enable/disable toggling, or add followed by immediate delete), the final index state may be inconsistent. Tasks should use distributed locking or idempotency keys to prevent race conditions."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "race-condition", "data-integrity"]
+              }
+            },
+            {
+              "id": "RCE-001",
+              "name": "TaskInjectionViaBroker",
+              "shortDescription": {
+                "text": "Redis broker without authentication enables malicious task injection"
+              },
+              "fullDescription": {
+                "text": "Celery tasks are dispatched via Redis as the message broker. If Redis is exposed without authentication (requirepass) or network-level access control, an attacker can directly publish crafted task messages to the Celery queue. This allows invoking any registered Celery task with arbitrary arguments, potentially leading to data manipulation, privilege escalation, or remote code execution if combined with deserialization vulnerabilities. The docker-compose configuration should be verified to ensure Redis is not exposed on public interfaces and requires authentication."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "rce", "task-injection"]
+              }
+            },
+            {
+              "id": "AUTHZ-002",
+              "name": "WorkflowSchedulerUnboundedExecution",
+              "shortDescription": {
+                "text": "Workflow CFS scheduler may execute tasks without rate limiting or resource bounds"
+              },
+              "fullDescription": {
+                "text": "The workflow_cfs_scheduler tasks handle workflow scheduling. If the scheduler does not enforce per-tenant rate limits or maximum concurrent execution bounds, a malicious or misconfigured tenant could monopolize worker resources, causing denial of service for other tenants. The scheduler should implement fair-share scheduling with configurable per-tenant quotas."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "denial-of-service", "resource-exhaustion"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "DESERIAL-001",
+          "level": "error",
+          "message": {
+            "text": "Celery app initialized in celery_entrypoint.py consumes task payloads from Redis broker. If the serializer is not explicitly restricted to JSON (task_serializer='json', accept_content=['json']), the default or misconfigured pickle serializer allows remote code execution via crafted task payloads. An attacker with Redis write access can inject malicious pickled objects."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/celery_entrypoint.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "RCE-001",
+          "level": "error",
+          "message": {
+            "text": "Celery workers consume tasks from Redis broker. If Redis is deployed without authentication (no requirepass directive) or is exposed beyond localhost, an attacker can inject arbitrary task messages into the queue. Combined with pickle deserialization, this enables full remote code execution. Even with JSON serializer, arbitrary task invocation with controlled arguments can manipulate application data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/celery_entrypoint.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "AUTHZ-001",
+          "level": "warning",
+          "message": {
+            "text": "Annotation tasks (add, update, delete, enable, disable) accept tenant_id and app_id as task parameters without re-verifying authorization. The HTTP request authorization context is lost when tasks are enqueued. If an attacker can enqueue tasks (via broker access or application-level IDOR), they can manipulate annotations belonging to other tenants."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/add_annotation_to_index_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/update_annotation_to_index_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/delete_annotation_index_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/enable_annotation_reply_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/disable_annotation_reply_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "AUTHZ-001",
+          "level": "warning",
+          "message": {
+            "text": "RAG pipeline tasks accept dataset_id and tenant_id as parameters. Without re-verification of authorization within the task, an attacker who can enqueue tasks may trigger document indexing or processing for datasets they do not own, potentially accessing or modifying another tenant's knowledge base."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/priority_rag_pipeline_run_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "TENANT-001",
+          "level": "warning",
+          "message": {
+            "text": "RAG pipeline task payloads containing document content and embeddings are transmitted through Redis without TLS encryption. An attacker with network access between the application servers and Redis can intercept sensitive document data belonging to any tenant. Configure Redis with TLS and consider application-layer encryption for sensitive payload fields."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/priority_rag_pipeline_run_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "INFO-001",
+          "level": "note",
+          "message": {
+            "text": "batch_import_annotations_task.py uses logger.debug which may log annotation content containing user-provided data. If debug logging is enabled in production or logs are forwarded to centralized logging without access controls, sensitive annotation data (which may include PII or proprietary content) could be exposed to unauthorized parties."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/batch_import_annotations_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "RACE-001",
+          "level": "warning",
+          "message": {
+            "text": "Annotation index tasks (enable, disable, add, update, delete) modify shared index state asynchronously without distributed locking. Rapid concurrent operations on the same annotation (e.g., enable immediately followed by disable, or add followed by delete) can result in inconsistent index state where the annotation index does not reflect the intended final state."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/enable_annotation_reply_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/annotation/disable_annotation_reply_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "AUTHZ-002",
+          "level": "warning",
+          "message": {
+            "text": "Workflow CFS scheduler and app_generate workflow_execute_task execute potentially long-running workflows. Without per-tenant rate limiting or concurrency bounds, a single tenant can monopolize Celery worker resources by enqueuing many workflow tasks, causing denial of service for other tenants' background tasks including RAG indexing and annotation operations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/workflow_cfs_scheduler/",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/app_generate/workflow_execute_task.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        }
+      ],
+      "automationDetails": {
+        "id": "parsentry/SURFACE-014",
+        "guid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": [
+            {
+              "level": "note",
+              "message": {
+                "text": "Analysis performed on repository metadata and detected patterns. Source code was not directly available for deep inspection; findings are based on architectural analysis of the Celery task structure, directory layout, and surface description."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

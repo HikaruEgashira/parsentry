@@ -1,0 +1,411 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "AUTH-BYPASS",
+              "name": "AuthenticationBypassViaCaseNormalization",
+              "shortDescription": {
+                "text": "Email case normalization fallback may allow authentication bypass"
+              },
+              "fullDescription": {
+                "text": "The _authenticate_account_with_case_fallback function attempts authentication with the original email, then falls back to a normalized (lowercased) email on password failure. This dual-attempt pattern is problematic: (1) It leaks information about whether an account exists with a case-variant email by producing different error timings. (2) If email normalization is inconsistent between registration and login, an attacker could register 'Admin@example.com' and authenticate as 'admin@example.com' if that account exists with a different password, or vice versa. (3) The fallback swallows AccountPasswordError for the original email and retries, which masks the root cause and could allow credential stuffing against both case variants in a single request."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "authentication", "CWE-287"]
+              }
+            },
+            {
+              "id": "SQLI",
+              "name": "PotentialSQLInjection",
+              "shortDescription": {
+                "text": "Direct SQL execution via session.execute may be vulnerable to SQL injection"
+              },
+              "fullDescription": {
+                "text": "Multiple console endpoint controllers use db.session.execute(), session.execute(), or conn.execute() for database operations. If any user-controlled input (query parameters, request body fields) is interpolated into SQL strings via f-strings or string concatenation rather than parameterized queries, this creates SQL injection vulnerabilities. Admin console endpoints are particularly high-risk because they handle tenant-wide data and configurations."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "sql-injection", "CWE-89"]
+              }
+            },
+            {
+              "id": "OPEN-REDIRECT",
+              "name": "OAuthOpenRedirectViaURLParsing",
+              "shortDescription": {
+                "text": "OAuth endpoint URL handling may allow open redirect attacks"
+              },
+              "fullDescription": {
+                "text": "The OAuth controller uses urllib.parse for URL handling. If the redirect_uri or callback URL parameter is not strictly validated against a whitelist of allowed domains, attackers can craft malicious OAuth flows that redirect users to phishing sites after authentication. The urllib.parse module does not perform security validation—it only parses URLs structurally. Bypass techniques include using backslashes (https://evil.com\\@legitimate.com), userinfo components, or unicode normalization to fool naive validation."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "open-redirect", "oauth", "CWE-601"]
+              }
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReferenceInAdminEndpoints",
+              "shortDescription": {
+                "text": "Admin console endpoints may lack proper tenant-scoped authorization checks"
+              },
+              "fullDescription": {
+                "text": "Console endpoints for workspace management, app configuration, dataset management, and billing handle tenant-wide settings with elevated privileges. If resource access relies solely on the object ID from the request path or body without verifying the authenticated user's membership in the owning workspace/tenant, attackers can access or modify other tenants' data by enumerating or guessing resource IDs. This is especially critical for endpoints using db.session.execute() with user-supplied IDs for workspace, app, and dataset operations."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "authorization", "IDOR", "CWE-639"]
+              }
+            },
+            {
+              "id": "SQLI-STATS",
+              "name": "SQLInjectionInStatisticsEndpoint",
+              "shortDescription": {
+                "text": "Statistics endpoint uses conn.execute which may interpolate date range or filter parameters"
+              },
+              "fullDescription": {
+                "text": "The statistic.py controller uses conn.execute() for analytics queries. Statistics endpoints commonly accept date ranges, grouping parameters, and filter criteria from query strings. If these are interpolated into SQL via string formatting rather than bound parameters, this creates SQL injection risk. Statistics queries often have elevated database permissions since they perform aggregations across large datasets."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "sql-injection", "CWE-89"]
+              }
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "SensitiveInformationInLogMessages",
+              "shortDescription": {
+                "text": "Logger.warning calls in admin endpoints may log sensitive tenant or credential data"
+              },
+              "fullDescription": {
+                "text": "Multiple admin console controllers (workspace.py, tool_providers.py, trigger_providers.py) use logger.warning to log operational events. If these log messages include user credentials, API keys, OAuth tokens, workspace secrets, or tenant configuration details, this constitutes an information disclosure vulnerability. Log aggregation systems are often less strictly access-controlled than application databases, expanding the attack surface for credential theft."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-532"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTH-BYPASS",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Authentication function _authenticate_account_with_case_fallback implements a dual-attempt login pattern that catches AccountPasswordError for the original email and retries with the normalized email. This fallback creates a timing side-channel (two authentication attempts vs one), can mask credential stuffing against case-variant accounts, and may allow authentication as a different user if email normalization was inconsistent at registration time. The function should normalize email once at input and authenticate only against the canonical form."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/login.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "OAuth controller imports urllib.parse for URL handling. If the OAuth callback or redirect_uri parameter is validated only by parsing the URL (e.g., checking the hostname after urllib.parse.urlparse) without a strict allowlist and bypass-resistant comparison, attackers can exploit parser differentials to redirect authenticated users to malicious sites. Common bypasses include backslash confusion (https://evil.com\\\\@good.com), fragment injection, and unicode normalization attacks. Additionally, the logger.warning call suggests error paths that may leak OAuth state or token fragments."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/oauth.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Console app controller uses db.session.execute() for database operations. If any query parameters or request body values (app_id, workspace_id, filter terms) are incorporated into SQL strings via f-string or .format() interpolation rather than SQLAlchemy's text() with bound parameters, this creates SQL injection risk. Admin app management endpoints have access to all apps in a workspace."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/app/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Conversation controller uses db.session.execute() for direct SQL operations. Conversation listing endpoints commonly accept pagination, sorting, and search filter parameters from query strings. If these parameters are interpolated into raw SQL, attackers can extract conversation data across all apps in the workspace via SQL injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/app/conversation.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "SQLI-STATS",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Statistics endpoint uses conn.execute() for analytics queries. Statistics endpoints accept date ranges, aggregation parameters, and filters from request query strings. If any of these values are interpolated into SQL via string formatting, this enables SQL injection with potentially broad read access since analytics queries often scan large dataset ranges. Verify all parameters are passed as bound parameters to SQLAlchemy's text() construct."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/app/statistic.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Workflow trigger controller uses session.execute() for direct SQL operations. If workflow trigger configurations or filter parameters from the request are interpolated into SQL strings, attackers could inject SQL to read or modify workflow trigger configurations across the workspace."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/app/workflow_trigger.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.45
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Datasets controller uses db.session.execute() for direct SQL operations. Dataset management endpoints handle dataset IDs, names, search queries, and permission settings. If user-supplied values are string-interpolated into SQL rather than using parameterized queries, this creates SQL injection risk with access to all datasets in the tenant."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/datasets/datasets.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Data source controller uses session.execute() for direct SQL operations. Data source configuration typically involves URLs, credentials, and connection parameters that could be attacker-controlled. SQL injection here could expose data source credentials stored in the database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/datasets/data_source.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "Workspace management endpoints handle tenant-wide settings including member management, role assignments, and workspace configuration. If workspace_id from the URL path is used to query resources without verifying the authenticated user's membership and role in that workspace, attackers can access or modify other workspaces' configurations by substituting workspace IDs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/workspace.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "Tool provider management endpoints configure external tool integrations that may include API keys and credentials. If provider_id or tool_id parameters are not scoped to the authenticated user's workspace, attackers could read or modify tool configurations (including stored API keys) belonging to other tenants."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "ruleIndex": 5,
+          "level": "note",
+          "message": {
+            "text": "Multiple admin console controllers use logger.warning for error handling. Verify that log messages in workspace.py, tool_providers.py, and trigger_providers.py do not include sensitive data such as API keys, OAuth tokens, user credentials, or workspace secrets. Log aggregation systems often have broader access controls than application databases."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/workspace.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/trigger_providers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.4
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-008",
+            "surface_kind": "endpoint",
+            "surface_identifier": "Console API authentication and admin endpoints"
+          }
+        }
+      ]
+    }
+  ]
+}

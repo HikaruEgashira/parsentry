@@ -1,0 +1,337 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "BAC-001",
+              "name": "BrokenAccessControl/EndUserImpersonation",
+              "shortDescription": {
+                "text": "End-user identity accepted from untrusted client input without server-side verification"
+              },
+              "fullDescription": {
+                "text": "The validate_app_token decorator accepts a 'user' parameter directly from query string, JSON body, or form data (controlled by FetchUserArg) and passes it to EndUserService.get_or_create_end_user(). Any holder of a valid API token can set an arbitrary user identifier to impersonate any end-user within the same application. This breaks tenant/user boundary isolation because the end-user identity is never cross-referenced against an authentication source — it is purely caller-asserted."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "access-control", "OWASP-A01"]
+              }
+            },
+            {
+              "id": "PRIVESC-001",
+              "name": "PrivilegeEscalation/TenantOwnerContextElevation",
+              "shortDescription": {
+                "text": "Service API requests without end-user context execute as tenant owner account"
+              },
+              "fullDescription": {
+                "text": "When fetch_user_arg is not provided to validate_app_token, the decorator queries for the tenant owner account and sets it as the current logged-in user via Flask-Login. This means endpoints like /parameters, /meta, /info, /workflows/run/<id> (GET), and /workflows/logs operate with full tenant-owner privileges. Any service that checks current_user permissions will see owner-level access, potentially allowing API token holders to perform actions beyond what the Service API scope should permit."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "privilege-escalation", "OWASP-A01"]
+              }
+            },
+            {
+              "id": "BAC-002",
+              "name": "BrokenAccessControl/TaskStopWithoutUserCheck",
+              "shortDescription": {
+                "text": "Workflow task stop bypasses user authorization check"
+              },
+              "fullDescription": {
+                "text": "WorkflowTaskStopApi.post() calls AppQueueManager.set_stop_flag_no_user_check(task_id), which explicitly skips user ownership verification. Any authenticated API token holder can stop any workflow task by providing its task_id. Task IDs may be predictable or enumerable, allowing cross-user denial of service. Unlike ChatStopApi and CompletionStopApi which pass user_id for authorization, this endpoint deliberately bypasses that check."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "access-control", "denial-of-service", "OWASP-A01"]
+              }
+            },
+            {
+              "id": "UPLOAD-001",
+              "name": "UnrestrictedFileUpload/ClientControlledMimeType",
+              "shortDescription": {
+                "text": "File upload relies on client-supplied MIME type without server-side content validation"
+              },
+              "fullDescription": {
+                "text": "FileApi.post() checks file.mimetype (which is the Content-Type header sent by the client) and file.filename, but both values are entirely client-controlled. There is no server-side content sniffing or magic-byte validation visible at this layer. An attacker could upload a malicious file (e.g., an executable or HTML file) with a benign MIME type to bypass type restrictions. The actual file content validation depends entirely on the downstream FileService implementation."
+              },
+              "helpUri": "https://owasp.org/Top10/A04_2021-Insecure_Design/",
+              "properties": {
+                "tags": ["security", "file-upload", "OWASP-A04"]
+              }
+            },
+            {
+              "id": "INPUT-001",
+              "name": "InputValidation/UnboundedEndUserIdentifier",
+              "shortDescription": {
+                "text": "End-user identifier from request has no format or length validation"
+              },
+              "fullDescription": {
+                "text": "The 'user' parameter extracted from request query/JSON/form is cast to str() and passed directly to EndUserService.get_or_create_end_user() without any format validation, length limit, or character restriction. An attacker could supply extremely long strings (causing storage/performance issues), special characters, or crafted payloads. Since this value is used to create database records and may appear in logs, it could enable log injection, storage exhaustion, or downstream injection attacks depending on how EndUserService handles it."
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/",
+              "properties": {
+                "tags": ["security", "input-validation", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "BAC-003",
+              "name": "BrokenAccessControl/FeedbackEndpointMissingUserScope",
+              "shortDescription": {
+                "text": "Application feedback endpoint returns all users' feedback without access scoping"
+              },
+              "fullDescription": {
+                "text": "AppGetFeedbacksApi (/app/feedbacks) uses @validate_app_token without fetch_user_arg, meaning no end-user context is established. The endpoint returns feedbacks from all users across the application. Any holder of the API token can view all feedback data including user ratings and text content, potentially exposing sensitive user opinions and PII across tenant boundaries."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "access-control", "information-disclosure", "OWASP-A01"]
+              }
+            },
+            {
+              "id": "SQLI-001",
+              "name": "Injection/ApplicationLayerSQLInjectionDefense",
+              "shortDescription": {
+                "text": "Application-layer SQL injection filtering suggests unsafe downstream query construction"
+              },
+              "fullDescription": {
+                "text": "ConversationVariablesQuery.validate_variable_name() includes explicit SQL injection pattern blocking (checking for --, /*, */, xp_, sp_, quotes, semicolons). This defense-in-depth pattern at the controller layer is unusual when using an ORM with parameterized queries. Its presence strongly suggests that the downstream ConversationService.get_conversational_variable() may construct queries using the variable_name in an unsafe manner (e.g., string interpolation in a LIKE clause or dynamic column selection). The current validation is bypassable (e.g., using Unicode homoglyphs or double encoding) and the root cause should be investigated."
+              },
+              "helpUri": "https://owasp.org/Top10/A03_2021-Injection/",
+              "properties": {
+                "tags": ["security", "sql-injection", "code-smell", "OWASP-A03"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "BAC-001",
+          "level": "error",
+          "message": {
+            "text": "The 'user' parameter is accepted from untrusted client input (query string, JSON body, or form data) and used as the end-user identity without any server-side authentication. An API token holder can impersonate any end-user by supplying an arbitrary 'user' value, breaking user-level access boundaries. The end-user is then set as the Flask-Login current_user, granting full session context for the impersonated identity."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/wraps.py"
+                },
+                "region": {
+                  "startLine": 82,
+                  "endLine": 103,
+                  "startColumn": 13,
+                  "snippet": {
+                    "text": "if fetch_user_arg:\n    user_id = None\n    match fetch_user_arg.fetch_from:\n        case WhereisUserArg.QUERY:\n            user_id = request.args.get(\"user\")\n        case WhereisUserArg.JSON:\n            user_id = request.get_json().get(\"user\")\n        case WhereisUserArg.FORM:\n            user_id = request.form.get(\"user\")\n\n    if not user_id and fetch_user_arg.required:\n        raise ValueError(\"Arg user must be provided.\")\n\n    if user_id:\n        user_id = str(user_id)\n\n    end_user = EndUserService.get_or_create_end_user(app_model, user_id)\n    kwargs[\"end_user\"] = end_user\n\n    current_app.login_manager._update_request_context_with_user(end_user)\n    user_logged_in.send(current_app._get_current_object(), user=end_user)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "wraps-validate_app_token-fetch_user_arg-82"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "PRIVESC-001",
+          "level": "warning",
+          "message": {
+            "text": "When validate_app_token is used without fetch_user_arg, the decorator automatically logs in as the tenant owner account via Flask-Login. This grants service API requests full owner-level privileges in any downstream service that checks current_user or current_account_with_tenant(). Endpoints affected: /parameters, /meta, /info, /workflows/run/<id> (GET), /workflows/logs, /app/feedbacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/wraps.py"
+                },
+                "region": {
+                  "startLine": 107,
+                  "endLine": 124,
+                  "startColumn": 17,
+                  "snippet": {
+                    "text": "tenant_owner_info = db.session.execute(\n    select(Tenant, Account)\n    .join(TenantAccountJoin, Tenant.id == TenantAccountJoin.tenant_id)\n    .join(Account, TenantAccountJoin.account_id == Account.id)\n    .where(\n        Tenant.id == app_model.tenant_id,\n        TenantAccountJoin.role == \"owner\",\n        Tenant.status == TenantStatus.NORMAL,\n    )\n).one_or_none()\n\nif tenant_owner_info:\n    tenant_model, account = tenant_owner_info\n    account.current_tenant = tenant_model\n    current_app.login_manager._update_request_context_with_user(account)\n    user_logged_in.send(current_app._get_current_object(), user=current_user)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "wraps-validate_app_token-owner-login-107"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "BAC-002",
+          "level": "error",
+          "message": {
+            "text": "WorkflowTaskStopApi calls AppQueueManager.set_stop_flag_no_user_check(task_id) which deliberately bypasses user ownership verification. Any authenticated API token holder can stop any workflow task by its task_id, enabling cross-user denial-of-service. This is inconsistent with ChatStopApi and CompletionStopApi which properly pass user_id for authorization. The GraphEngineManager.send_stop_command(task_id) also lacks user scoping."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 281,
+                  "endLine": 287,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "# Stop using both mechanisms for backward compatibility\n# Legacy stop flag mechanism (without user check)\nAppQueueManager.set_stop_flag_no_user_check(task_id)\n\n# New graph engine command channel mechanism\nGraphEngineManager(redis_client).send_stop_command(task_id)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "workflow-task-stop-no-user-check-283"
+          },
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "UPLOAD-001",
+          "level": "warning",
+          "message": {
+            "text": "File upload endpoint validates file.mimetype and file.filename which are both client-controlled HTTP headers. No server-side content-type sniffing or magic-byte validation is performed at the controller layer. An attacker can upload arbitrary file content with a spoofed MIME type to bypass type restrictions."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file.py"
+                },
+                "region": {
+                  "startLine": 45,
+                  "endLine": 64,
+                  "startColumn": 9,
+                  "snippet": {
+                    "text": "if \"file\" not in request.files:\n    raise NoFileUploadedError()\n\nif len(request.files) > 1:\n    raise TooManyFilesError()\n\nfile = request.files[\"file\"]\nif not file.mimetype:\n    raise UnsupportedFileTypeError()\n\nif not file.filename:\n    raise FilenameNotExistsError\n\ntry:\n    upload_file = FileService(db.engine).upload_file(\n        filename=file.filename,\n        content=file.read(),\n        mimetype=file.mimetype,\n        user=end_user,\n    )"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "file-upload-mimetype-client-controlled-51"
+          },
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INPUT-001",
+          "level": "warning",
+          "message": {
+            "text": "The 'user' identifier extracted from request parameters is converted to str() without any length limit, format validation, or character restriction before being passed to EndUserService.get_or_create_end_user(). This creates the end-user record in the database with an attacker-controlled identifier. Potential impacts include: storage exhaustion via extremely long user IDs, log injection via special characters, and confusion in audit trails."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/wraps.py"
+                },
+                "region": {
+                  "startLine": 95,
+                  "endLine": 98,
+                  "startColumn": 21,
+                  "snippet": {
+                    "text": "if user_id:\n    user_id = str(user_id)\n\nend_user = EndUserService.get_or_create_end_user(app_model, user_id)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "wraps-user-id-no-validation-95"
+          },
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "BAC-003",
+          "level": "warning",
+          "message": {
+            "text": "The /app/feedbacks endpoint uses @validate_app_token without fetch_user_arg, so no end-user context is established. The endpoint returns paginated feedback from ALL users of the application. Any API token holder can enumerate all user feedback including ratings and free-text content, which may contain sensitive user opinions or PII."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/message.py"
+                },
+                "region": {
+                  "startLine": 129,
+                  "endLine": 148,
+                  "startColumn": 1,
+                  "snippet": {
+                    "text": "@service_api_ns.route(\"/app/feedbacks\")\nclass AppGetFeedbacksApi(Resource):\n    @validate_app_token\n    def get(self, app_model: App):\n        query_args = FeedbackListQuery.model_validate(request.args.to_dict())\n        feedbacks = MessageService.get_all_messages_feedbacks(app_model, page=query_args.page, limit=query_args.limit)\n        return {\"data\": feedbacks}"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "message-feedbacks-no-user-scope-140"
+          },
+          "properties": {
+            "confidence": 0.72
+          }
+        },
+        {
+          "ruleId": "SQLI-001",
+          "level": "note",
+          "message": {
+            "text": "ConversationVariablesQuery includes explicit SQL injection pattern blocking for the variable_name field (checking for --, /*, xp_, sp_, quotes, semicolons). This application-layer defense is a code smell: if the ORM uses parameterized queries exclusively, this validation is unnecessary. Its presence suggests the downstream ConversationService.get_conversational_variable() may use variable_name in unsafe query construction (e.g., string interpolation). The validation is also bypassable via Unicode homoglyphs or encoding tricks. Investigate the downstream query construction."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/conversation.py"
+                },
+                "region": {
+                  "startLine": 56,
+                  "endLine": 77,
+                  "startColumn": 5,
+                  "snippet": {
+                    "text": "@field_validator(\"variable_name\", mode=\"before\")\n@classmethod\ndef validate_variable_name(cls, v: str | None) -> str | None:\n    if v is None:\n        return v\n\n    if not v.replace(\"-\", \"\").replace(\"_\", \"\").replace(\".\", \"\").isalnum():\n        raise ValueError(\n            \"Variable name can only contain letters, numbers, hyphens (-), underscores (_), and periods (.)\"\n        )\n\n    dangerous_patterns = [\"'\", '\"', \";\", \"--\", \"/*\", \"*/\", \"xp_\", \"sp_\"]\n    for pattern in dangerous_patterns:\n        if pattern in v.lower():\n            raise ValueError(f\"Variable name contains invalid characters: {pattern}\")"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "primaryLocationLineHash": "conversation-variable-name-sqli-defense-56"
+          },
+          "properties": {
+            "confidence": 0.55
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-001",
+            "surface_kind": "endpoint",
+            "surface_identifier": "Service API token authentication and endpoint routing"
+          }
+        }
+      ]
+    }
+  ]
+}

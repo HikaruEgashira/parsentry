@@ -1,0 +1,397 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SSRF-001",
+              "name": "CustomToolSSRFViaUserControlledEndpoint",
+              "shortDescription": {
+                "text": "Custom tool sends HTTP requests to fully user-controlled API endpoints"
+              },
+              "fullDescription": {
+                "text": "ApiTool.do_http_request() sends HTTP requests to self.api_bundle.server_url, which is entirely user-configured through the custom tool OpenAPI schema. While requests route through ssrf_proxy, the SSRF detection relies solely on Squid proxy identification in response headers (Server/Via containing 'squid'). If the SSRF proxy environment variables (SSRF_PROXY_HTTP_URL, SSRF_PROXY_HTTPS_URL) are not configured, no proxy is used at all, allowing direct requests to internal network addresses. Even with the proxy, an attacker-controlled server won't return Squid headers, bypassing detection."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "CWE-918"]
+              }
+            },
+            {
+              "id": "SSRF-002",
+              "name": "WebscraperSSRFViaUserControlledURL",
+              "shortDescription": {
+                "text": "Webscraper tool fetches arbitrary user-supplied URLs without validation"
+              },
+              "fullDescription": {
+                "text": "WebscraperTool._invoke() passes the user-supplied 'url' parameter directly to get_url() without any URL scheme validation, domain allowlisting, or blocklisting. The get_url() function also delegates to ExtractProcessor.load_from_url() for non-HTML content types, which may bypass the SSRF proxy entirely. Additionally, on HTTP 403 responses, the code falls back to cloudscraper which may handle redirects differently from the SSRF proxy, potentially enabling SSRF bypass via redirect chains."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "CWE-918"]
+              }
+            },
+            {
+              "id": "CREDENTIAL-EXFIL-001",
+              "name": "CredentialExfiltrationViaCustomToolSchema",
+              "shortDescription": {
+                "text": "User-controlled OpenAPI schema can exfiltrate credentials to attacker endpoints"
+              },
+              "fullDescription": {
+                "text": "ApiTool.assembling_request() injects API key credentials (api_key_value) into request headers or query parameters, then sends the request to the user-configured server_url. A malicious user can craft a custom tool with an OpenAPI schema pointing to an attacker-controlled endpoint while configuring the tool to use API key authentication. The credentials (potentially belonging to shared workspace resources) will be sent to the attacker's server. The header name for the API key is also user-controlled via api_key_header, enabling injection into any header field."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "credential-exfiltration", "CWE-200", "CWE-522"]
+              }
+            },
+            {
+              "id": "HEADER-INJECTION-001",
+              "name": "ArbitraryHeaderInjectionViaOpenAPIParameters",
+              "shortDescription": {
+                "text": "OpenAPI parameter definitions allow injection of arbitrary HTTP headers"
+              },
+              "fullDescription": {
+                "text": "In ApiTool.do_http_request(), OpenAPI parameters with 'in: header' are directly set as HTTP headers (line 209: headers[parameter['name']] = str(value)). The parameter names and values come from the user-configured OpenAPI schema and LLM-generated tool parameters respectively. This allows crafting schemas that inject security-sensitive headers (e.g., Authorization, Host, X-Forwarded-For) or override SSRF proxy headers, potentially bypassing security controls or enabling request smuggling."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "header-injection", "CWE-113"]
+              }
+            },
+            {
+              "id": "PATH-TRAVERSAL-001",
+              "name": "PathParameterInjectionInURL",
+              "shortDescription": {
+                "text": "Path parameters substituted into URL without encoding or validation"
+              },
+              "fullDescription": {
+                "text": "ApiTool.do_http_request() substitutes path parameters directly into the URL using string replacement (url.replace(f'{{{name}}}', f'{value}')). The substituted values are not URL-encoded and not validated, allowing an attacker to inject path traversal sequences (e.g., '../'), query string delimiters ('?'), or fragment identifiers ('#') to alter the request destination. This could redirect requests to unintended endpoints on the target server."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "path-traversal", "CWE-22"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE-001",
+              "name": "InternalErrorDetailsExposedToUser",
+              "shortDescription": {
+                "text": "Raw exception messages including internal details returned to users"
+              },
+              "fullDescription": {
+                "text": "ToolEngine.agent_invoke() catches all exceptions with a broad 'except Exception' handler and formats the raw exception message into the error response (f'unknown error: {e}'). This can leak internal file paths, database connection strings, stack trace fragments, or other sensitive system information to end users. Similarly, tool_parameters content is leaked in ValueError messages when parameter parsing fails."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-209"]
+              }
+            },
+            {
+              "id": "SSRF-003",
+              "name": "SSRFProxyBypassWhenUnconfigured",
+              "shortDescription": {
+                "text": "SSRF proxy silently degrades to direct requests when proxy URLs are not configured"
+              },
+              "fullDescription": {
+                "text": "In ssrf_proxy.py, _build_ssrf_client() falls back to creating an httpx.Client with no proxy when SSRF_PROXY_ALL_URL, SSRF_PROXY_HTTP_URL, and SSRF_PROXY_HTTPS_URL are all unconfigured. This means the entire SSRF protection layer is silently disabled, allowing custom tools and webscraper to make direct requests to internal network addresses (169.254.169.254, localhost, private RFC1918 ranges) without any filtering."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "CWE-918", "CWE-636"]
+              }
+            },
+            {
+              "id": "SSRF-004",
+              "name": "CloudscraperSSRFProxyBypass",
+              "shortDescription": {
+                "text": "Cloudscraper fallback may bypass SSRF proxy via redirect handling differences"
+              },
+              "fullDescription": {
+                "text": "In web_reader_tool.py, when the initial HEAD request returns HTTP 403, the code falls back to cloudscraper with ssrf_proxy.make_request patched as perform_request. However, cloudscraper's internal redirect handling, JavaScript challenge solving, and cookie management operate independently from the SSRF proxy's protections. A malicious server could return a 403 to trigger the cloudscraper path, then use JavaScript-based redirects or meta-refresh to redirect to internal network addresses, bypassing SSRF controls."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "CWE-918"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF-001",
+          "level": "error",
+          "message": {
+            "text": "ApiTool.do_http_request() sends requests to user-controlled self.api_bundle.server_url via ssrf_proxy. The SSRF proxy relies on Squid header detection which is trivially bypassed by attacker-controlled servers. When proxy env vars are unconfigured, no SSRF protection exists."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 289,
+                  "endLine": 301,
+                  "snippet": {
+                    "text": "        response: httpx.Response = _METHOD_MAP[\n            method_lc\n        ](\n            url,\n            max_retries=0,\n            params=params,\n            headers=headers,\n            cookies=cookies,\n            data=body,\n            files=files,\n            timeout=API_TOOL_DEFAULT_TIMEOUT,\n            follow_redirects=True,\n        )"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF-002",
+          "level": "error",
+          "message": {
+            "text": "WebscraperTool passes user-supplied 'url' parameter directly to get_url() without scheme validation, domain allowlisting, or IP blocklisting. ExtractProcessor.load_from_url() for non-HTML content may bypass SSRF proxy entirely."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/builtin_tool/providers/webscraper/tools/webscraper.py"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "            url = tool_parameters.get(\"url\", \"\")\n            user_agent = tool_parameters.get(\"user_agent\", \"\")\n            if not url:\n                yield self.create_text_message(\"Please input url\")\n                return\n\n            # get webpage\n            result = get_url(url, user_agent=user_agent)"
+                  }
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/utils/web_reader_tool.py"
+                },
+                "region": {
+                  "startLine": 60,
+                  "endLine": 61,
+                  "snippet": {
+                    "text": "        if main_content_type in extract_processor.SUPPORT_URL_CONTENT_TYPES:\n            return cast(str, ExtractProcessor.load_from_url(url, return_text=True))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-EXFIL-001",
+          "level": "error",
+          "message": {
+            "text": "API key credentials are injected into requests sent to user-controlled endpoints. A malicious custom tool schema can point server_url to an attacker server while the platform injects workspace API keys into the request headers/query, enabling credential theft."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 92,
+                  "endLine": 112,
+                  "snippet": {
+                    "text": "        if credentials[\"auth_type\"] in (\"api_key_header\", \"api_key\"):\n            api_key_header = \"Authorization\"\n            if \"api_key_header\" in credentials:\n                api_key_header = credentials[\"api_key_header\"]\n            ...\n            headers[api_key_header] = credentials[\"api_key_value\"]"
+                  }
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 186,
+                  "endLine": 193,
+                  "snippet": {
+                    "text": "            if credentials.get(\"auth_type\") == \"api_key_query\":\n                api_key_query_param = credentials.get(\"api_key_query_param\", \"key\")\n                api_key_value = credentials.get(\"api_key_value\")\n                if api_key_value:\n                    params[api_key_query_param] = api_key_value"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "HEADER-INJECTION-001",
+          "level": "warning",
+          "message": {
+            "text": "OpenAPI parameter definitions with 'in: header' allow setting arbitrary HTTP headers. User-controlled schema can inject or override security-sensitive headers (Host, Authorization, X-Forwarded-For) to bypass proxy controls or enable request smuggling."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 196,
+                  "endLine": 209,
+                  "snippet": {
+                    "text": "        for parameter in self.api_bundle.openapi.get(\"parameters\", []):\n            value = self.get_parameter_value(parameter, parameters)\n            if parameter[\"in\"] == \"path\":\n                path_params[parameter[\"name\"]] = value\n            elif parameter[\"in\"] == \"query\":\n                if value != \"\":\n                    params[parameter[\"name\"]] = value\n            elif parameter[\"in\"] == \"cookie\":\n                cookies[parameter[\"name\"]] = value\n            elif parameter[\"in\"] == \"header\":\n                headers[parameter[\"name\"]] = str(value)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL-001",
+          "level": "warning",
+          "message": {
+            "text": "Path parameters are substituted into the URL via string replacement without URL encoding. Attacker-controlled values can inject path traversal sequences, query delimiters, or fragment identifiers to redirect requests to unintended endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 259,
+                  "endLine": 260,
+                  "snippet": {
+                    "text": "        for name, value in path_params.items():\n            url = url.replace(f\"{{{name}}}\", f\"{value}\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE-001",
+          "level": "warning",
+          "message": {
+            "text": "Broad except Exception handler exposes raw internal error messages to users via f'unknown error: {e}'. This can leak file paths, database details, credential fragments, or other sensitive system internals."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/tool_engine.py"
+                },
+                "region": {
+                  "startLine": 149,
+                  "endLine": 152,
+                  "snippet": {
+                    "text": "        except Exception as e:\n            error_response = f\"unknown error: {e}\"\n            agent_tool_callback.on_tool_error(e)\n            logger.error(e, exc_info=True)"
+                  }
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/tool_engine.py"
+                },
+                "region": {
+                  "startLine": 78,
+                  "endLine": 78,
+                  "snippet": {
+                    "text": "                    raise ValueError(f\"tool_parameters should be a dict, but got a string: {tool_parameters}\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF-003",
+          "level": "error",
+          "message": {
+            "text": "SSRF proxy silently creates an unproxied httpx.Client when SSRF_PROXY_ALL_URL, SSRF_PROXY_HTTP_URL, and SSRF_PROXY_HTTPS_URL are all unconfigured. All SSRF protection is disabled without any warning, allowing direct requests to internal network addresses."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/helper/ssrf_proxy.py"
+                },
+                "region": {
+                  "startLine": 56,
+                  "endLine": 71,
+                  "snippet": {
+                    "text": "def _build_ssrf_client(verify: bool) -> httpx.Client:\n    if dify_config.SSRF_PROXY_ALL_URL:\n        return httpx.Client(\n            proxy=dify_config.SSRF_PROXY_ALL_URL,\n            verify=verify,\n            limits=_SSRF_CLIENT_LIMITS,\n        )\n    if dify_config.SSRF_PROXY_HTTP_URL and dify_config.SSRF_PROXY_HTTPS_URL:\n        return httpx.Client(\n            mounts=_create_proxy_mounts(),\n            verify=verify,\n            limits=_SSRF_CLIENT_LIMITS,\n        )\n    return httpx.Client(verify=verify, limits=_SSRF_CLIENT_LIMITS)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSRF-004",
+          "level": "warning",
+          "message": {
+            "text": "On HTTP 403, web_reader_tool falls back to cloudscraper with patched perform_request. Cloudscraper's JavaScript challenge solving and internal redirect handling may bypass SSRF proxy controls via redirect chains or meta-refresh to internal addresses."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/utils/web_reader_tool.py"
+                },
+                "region": {
+                  "startLine": 64,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "    elif response.status_code == 403:\n        scraper = cloudscraper.create_scraper()\n        scraper.perform_request = ssrf_proxy.make_request\n        response = scraper.get(url, headers=headers, timeout=(120, 300))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        }
+      ]
+    }
+  ]
+}
