@@ -3,721 +3,939 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 ## Surface Under Analysis
 
 - **ID**: SURFACE-013
-- **Kind**: external_call
-- **Identifier**: RAG Pipeline (Embedding, Retrieval, Rerank, Vector DB)
-- **Description**: Retrieval-Augmented Generation pipeline processing user documents through embedding, chunking, and vector storage. Risk of data poisoning via malicious document content, injection through retrieved context, and information disclosure across tenant boundaries.
-- **Locations**: api/core/rag/, api/core/rag/embedding/, api/core/rag/retrieval/, api/core/rag/rerank/, api/core/rag/datasource/
-
-## Repository Context
-
-## Directory Structure
-```
-AGENTS.md
-AUTHORS
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-Makefile
-README.md
-api/ 
-  AGENTS.md
-  Dockerfile
-  README.md
-  app.py
-  app_factory.py
-  celery_entrypoint.py
-  celery_healthcheck.py
-  cnt_base.sh
-  commands/ 
-  configs/ 
-    deploy/ 
-    enterprise/ 
-    extra/ 
-    feature/ 
-      hosted_service/ 
-    middleware/ 
-      cache/ 
-      storage/ 
-      vdb/ 
-    observability/ 
-      otel/ 
-    packaging/ 
-    remote_settings_sources/ 
-      apollo/ 
-      nacos/ 
-  constants/ 
-  context/ 
-  contexts/ 
-  controllers/ 
-    common/ 
-    console/ 
-      app/ 
-      auth/ 
-      billing/ 
-      datasets/ 
-      explore/ 
-      tag/ 
-      workspace/ 
-    files/ 
-    inner_api/ 
-      app/ 
-      plugin/ 
-      workspace/ 
-    mcp/ 
-    service_api/ 
-      app/ 
-      dataset/ 
-      end_user/ 
-      workspace/ 
-    trigger/ 
-    web/ 
-  core/ 
-    agent/ 
-      output_parser/ 
-      prompt/ 
-      strategy/ 
-    app/ 
-      app_config/ 
-      apps/ 
-      entities/ 
-      features/ 
-      file_access/ 
-      layers/ 
-      llm/ 
-      task_pipeline/ 
-      workflow/ 
-    base/ 
-      tts/ 
-    callback_handler/ 
-    datasource/ 
-      __base/ 
-      entities/ 
-      local_file/ 
-      online_document/ 
-      online_drive/ 
-      utils/ 
-      website_crawl/ 
-    db/ 
-    entities/ 
-    errors/ 
-    extension/ 
-    external_data_tool/ 
-      api/ 
-    helper/ 
-      code_executor/ 
-    llm_generator/ 
-      output_parser/ 
-    logging/ 
-    mcp/ 
-      auth/ 
-      client/ 
-      server/ 
-      session/ 
-    memory/ 
-    moderation/ 
-      api/ 
-      keywords/ 
-      openai_moderation/ 
-    ops/ 
-      aliyun_trace/ 
-      arize_phoenix_trace/ 
-      entities/ 
-      langfuse_trace/ 
-      langsmith_trace/ 
-      mlflow_trace/ 
-      opik_trace/ 
-      tencent_trace/ 
-      weave_trace/ 
-    plugin/ 
-      backwards_invocation/ 
-      endpoint/ 
-      entities/ 
-      impl/ 
-      utils/ 
-    prompt/ 
-      entities/ 
-      prompt_templates/ 
-      utils/ 
-    rag/ 
-      cleaner/ 
-      data_post_processor/ 
-      datasource/ 
-      docstore/ 
-      embedding/ 
-      entities/ 
-      extractor/ 
-      index_processor/ 
-      models/ 
-      pipeline/ 
-      rerank/ 
-      retrieval/ 
-      splitter/ 
-      summary_index/ 
-    repositories/ 
-    schemas/ 
-      builtin/ 
-    telemetry/ 
-    tools/ 
-      __base/ 
-      builtin_tool/ 
-      custom_tool/ 
-      entities/ 
-      mcp_tool/ 
-      plugin_tool/ 
-      utils/ 
-      workflow_as_tool/ 
-    trigger/ 
-      debug/ 
-      entities/ 
-      utils/ 
-    workflow/ 
-      nodes/ 
-  dify_app.py
-  docker/ 
-  enterprise/ 
-    telemetry/ 
-      entities/ 
-  enums/ 
-  events/ 
-    event_handlers/ 
-  extensions/ 
-    logstore/ 
-      repositories/ 
-    otel/ 
-      decorators/ 
-      parser/ 
-      semconv/ 
-    storage/ 
-      clickzetta_volume/ 
-  factories/ 
-    file_factory/ 
-  fields/ 
-  gunicorn.conf.py
-  libs/ 
-    broadcast_channel/ 
-      redis/ 
-  migrations/ 
-    versions/ 
-  models/ 
-    utils/ 
-  pyproject.toml
-  pyrefly-local-excludes.txt
-  pyrightconfig.json
-  pytest.ini
-  repositories/ 
-    entities/ 
-  schedule/ 
-  services/ 
-    auth/ 
-      firecrawl/ 
-      jina/ 
-      watercrawl/ 
-    document_indexing_proxy/ 
-    enterprise/ 
-    entities/ 
-      external_knowledge_entities/ 
-      knowledge_entities/ 
-    errors/ 
-    plugin/ 
-    rag_pipeline/ 
-      entity/ 
-      pipeline_template/ 
-      transform/ 
-    recommend_app/ 
-      buildin/ 
-      database/ 
-      remote/ 
-    retention/ 
-      conversation/ 
-      workflow_run/ 
-    tools/ 
-    trigger/ 
-    workflow/ 
-  tasks/ 
-    annotation/ 
-    app_generate/ 
-    rag_pipeline/ 
-    workflow_cfs_scheduler/ 
-  templates/ 
-    without-brand/ 
-  tests/ 
-    fixtures/ 
-      workflow/ 
-    integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      libs/ 
-      model_runtime/ 
-      plugin/ 
-      services/ 
-      storage/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-      vdb/ 
-      workflow/ 
-    test_containers_integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      helpers/ 
-      libs/ 
-      models/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      trigger/ 
-      workflow/ 
-    unit_tests/ 
-      commands/ 
-      configs/ 
-      controllers/ 
-      core/ 
-      enterprise/ 
-      events/ 
-      extensions/ 
-      factories/ 
-      fields/ 
-      libs/ 
-      models/ 
-      oss/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-  uv.lock
-codecov.yml
-dev/ 
-  basedpyright-check
-  pyrefly-check-local
-  pytest/ 
-  reformat
-  setup
-  start-api
-  start-beat
-  start-docker-compose
-  start-web
-  start-worker
-  sync-uv
-  ty-check
-  update-uv
-docker/ 
-  README.md
-  certbot/ 
-  couchbase-server/ 
-  dify-env-sync.py
-  dify-env-sync.sh
-  docker-compose-template.yaml
-  docker-compose.middleware.yaml
-  docker-compose.png
-  docker-compose.yaml
-  elasticsearch/ 
-  generate_docker_compose
-  iris/ 
-  middleware.env.example
-  nginx/ 
-    conf.d/ 
-    ssl/ 
-  pgvector/ 
-  ssrf_proxy/ 
-  startupscripts/ 
-  tidb/ 
-    config/ 
-  volumes/ 
-    myscale/ 
-      config/ 
-    oceanbase/ 
-      init.d/ 
-    opensearch/ 
-    sandbox/ 
-      conf/ 
-docs/ 
-  ar-SA/ 
-  bn-BD/ 
-  de-DE/ 
-  es-ES/ 
-  eu-ai-act-compliance.md
-  fr-FR/ 
-  hi-IN/ 
-  it-IT/ 
-  ja-JP/ 
-  ko-KR/ 
-  pt-BR/ 
-  sl-SI/ 
-  suggested-questions-configuration.md
-  tlh/ 
-  tr-TR/ 
-  vi-VN/ 
-  weaviate/ 
-    WEAVIATE_MIGRATION_GUIDE/ 
-  zh-CN/ 
-  zh-TW/ 
-e2e/ 
-  AGENTS.md
-  README.md
-  cucumber.config.ts
-  features/ 
-    apps/ 
-    smoke/ 
-    step-definitions/ 
-      apps/ 
-      common/ 
-      smoke/ 
-    support/ 
-  fixtures/ 
-  package.json
-  scripts/ 
-  support/ 
-  test-env.ts
-  tsconfig.json
-  vite.config.ts
-images/ 
-  GitHub_README_if.png
-  describe.png
-  models.png
-package.json
-packages/ 
-  iconify-collections/ 
-    assets/ 
-      public/ 
-      vender/ 
-    custom-public/ 
-    custom-vender/ 
-    scripts/ 
-pnpm-lock.yaml
-pnpm-workspace.yaml
-scripts/ 
-  stress-test/ 
-    common/ 
-    setup/ 
-      dsl/ 
-sdks/ 
-  README.md
-  nodejs-client/ 
-    scripts/ 
-    src/ 
-      client/ 
-      errors/ 
-      http/ 
-      internal/ 
-      types/ 
-    tests/ 
-  php-client/ 
-vite.config.ts
-web/ 
-  AGENTS.md
-  CLAUDE.md
-  Dockerfile
-  Dockerfile.dockerignore
-  README.md
-  __mocks__/ 
-    @tanstack/ 
-  __tests__/ 
-    apps/ 
-    billing/ 
-    datasets/ 
-    develop/ 
-    explore/ 
-    goto-anything/ 
-    plugins/ 
-    rag-pipeline/ 
-    share/ 
-    tools/ 
-  app/ 
-    (commonLayout)/ 
-      app/ 
-      apps/ 
-      datasets/ 
-      education-apply/ 
-      explore/ 
-      plugins/ 
-      tools/ 
-    (humanInputLayout)/ 
-      form/ 
-    (shareLayout)/ 
-      chat/ 
-      chatbot/ 
-      completion/ 
-      components/ 
-      webapp-reset-password/ 
-      webapp-signin/ 
-      workflow/ 
-    account/ 
-      (commonLayout)/ 
-      oauth/ 
-    activate/ 
-    components/ 
-      app/ 
-      app-sidebar/ 
-      apps/ 
-      base/ 
-      billing/ 
-      custom/ 
-      datasets/ 
-      develop/ 
-      devtools/ 
-      explore/ 
-      goto-anything/ 
-      header/ 
-      plugins/ 
-      provider/ 
-      rag-pipeline/ 
-      share/ 
-      signin/ 
-      tools/ 
-      workflow/ 
-      workflow-app/ 
-    education-apply/ 
-    forgot-password/ 
-    init/ 
-    install/ 
-    oauth-callback/ 
-    reset-password/ 
-      check-code/ 
-      set-password/ 
-    signin/ 
-      assets/ 
-      check-code/ 
-      components/ 
-      invite-settings/ 
-      utils/ 
-    signup/ 
-      check-code/ 
-      components/ 
-      set-password/ 
-    styles/ 
-  assets/ 
-  bin/ 
-  config/ 
-  constants/ 
-  context/ 
-    hooks/ 
-  contract/ 
-    console/ 
-  docker/ 
-  docs/ 
-  env.ts
-  eslint-suppressions.json
-  eslint.config.mjs
-  eslint.constants.mjs
-  global.d.ts
-  hooks/ 
-  i18n/ 
-    ar-TN/ 
-    de-DE/ 
-    en-US/ 
-    es-ES/ 
-    fa-IR/ 
-    fr-FR/ 
-    hi-IN/ 
-    id-ID/ 
-    it-IT/ 
-    ja-JP/ 
-    ko-KR/ 
-    nl-NL/ 
-    pl-PL/ 
-    pt-BR/ 
-    ro-RO/ 
-    ru-RU/ 
-    sl-SI/ 
-    th-TH/ 
-    tr-TR/ 
-    uk-UA/ 
-    vi-VN/ 
-    zh-Hans/ 
-    zh-Hant/ 
-  i18n-config/ 
-  instrumentation-client.ts
-  knip.config.ts
-  models/ 
-  next/ 
-  next.config.ts
-  package.json
-  plugins/ 
-    dev-proxy/ 
-    eslint/ 
-      rules/ 
-    vite/ 
-  postcss.config.js
-  proxy.ts
-  public/ 
-    education/ 
-    in-site-message/ 
-    logo/ 
-    screenshots/ 
-      dark/ 
-      light/ 
-    vs/ 
-      base/ 
-      basic-languages/ 
-      editor/ 
-      language/ 
-  scripts/ 
-  service/ 
-    knowledge/ 
-  tailwind-common-config.ts
-  tailwind.config.ts
-  test/ 
-  themes/ 
-  tsconfig.json
-  tsslint.config.ts
-  types/ 
-  typography.js
-  utils/ 
-  vite.config.ts
-  vitest.setup.ts
-
-```
-
-## Languages
-- TypeScript: 5508 files
-- Python: 2785 files
-- JavaScript: 122 files
-- Yaml: 95 files
-- Bash: 20 files
-- Php: 1 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "dify",
-  "private": true,
-  "scripts": {
-    "prepare": "vp config"
-  },
-  "devDependencies": {
-    "vite-plus": "catalog:"
-  },
-  "engines": {
-    "node": "^22.22.1"
-  },
-  "packageManager": "pnpm@10.33.0"
-}
-
-```
-
-## Entry Points
-- sdks/nodejs-client/src/index.ts
-- web/next/index.ts
-- web/types/app.ts
-- web/app/components/tools/utils/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/hooks/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/hooks/index.ts
-- web/app/components/goto-anything/components/index.ts
-- web/app/components/goto-anything/hooks/index.ts
-- web/app/components/goto-anything/actions/commands/index.ts
-- web/app/components/goto-anything/actions/index.ts
-- web/app/components/workflow-app/hooks/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/data-source/store/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/steps/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/hooks/index.ts
-- web/app/components/datasets/documents/components/document-list/components/index.ts
-- web/app/components/datasets/documents/components/document-list/hooks/index.ts
-- web/app/components/datasets/documents/detail/completed/components/index.ts
-- web/app/components/datasets/documents/detail/completed/hooks/index.ts
-- web/app/components/datasets/documents/detail/embedding/components/index.ts
-- web/app/components/datasets/documents/detail/embedding/hooks/index.ts
-- web/app/components/datasets/create/step-one/components/index.ts
-- web/app/components/datasets/create/step-one/hooks/index.ts
-- web/app/components/datasets/create/step-two/components/index.ts
-- web/app/components/datasets/create/step-two/hooks/index.ts
-- web/app/components/rag-pipeline/utils/index.ts
-- web/app/components/rag-pipeline/hooks/index.ts
-- web/app/components/rag-pipeline/store/index.ts
-- web/app/components/workflow/hooks-store/index.ts
-- web/app/components/workflow/note-node/note-editor/theme/index.ts
-- web/app/components/workflow/utils/index.ts
-- web/app/components/workflow/hooks/use-workflow-run-event/index.ts
-- web/app/components/workflow/hooks/index.ts
-- web/app/components/workflow/run/utils/format-log/parallel/index.ts
-- web/app/components/workflow/run/utils/format-log/retry/index.ts
-- web/app/components/workflow/run/utils/format-log/human-input/index.ts
-- web/app/components/workflow/run/utils/format-log/agent/index.ts
-- web/app/components/workflow/run/utils/format-log/index.ts
-- web/app/components/workflow/run/utils/format-log/iteration/index.ts
-- web/app/components/workflow/run/utils/format-log/loop/index.ts
-- web/app/components/workflow/store/workflow/index.ts
-- web/app/components/workflow/store/index.ts
-- web/app/components/header/account-setting/model-provider-page/model-auth/hooks/index.ts
-- web/app/components/header/account-setting/data-source-page-new/hooks/index.ts
-- web/app/components/base/form/utils/secret-input/index.ts
-- web/app/components/base/form/hooks/index.ts
-- web/app/components/base/radio/context/index.ts
-- web/app/components/base/amplitude/index.ts
-- web/app/components/base/markdown-blocks/index.ts
-- web/app/components/base/icons/src/public/tracing/index.ts
-- web/app/components/base/icons/src/public/llm/index.ts
-- web/app/components/base/icons/src/public/education/index.ts
-- web/app/components/base/icons/src/public/other/index.ts
-- web/app/components/base/icons/src/public/common/index.ts
-- web/app/components/base/icons/src/public/knowledge/dataset-card/index.ts
-- web/app/components/base/icons/src/public/knowledge/index.ts
-- web/app/components/base/icons/src/public/knowledge/online-drive/index.ts
-- web/app/components/base/icons/src/public/avatar/index.ts
-- web/app/components/base/icons/src/public/files/index.ts
-- web/app/components/base/icons/src/public/thought/index.ts
-- web/app/components/base/icons/src/public/billing/index.ts
-- web/app/components/base/icons/src/vender/pipeline/index.ts
-- web/app/components/base/icons/src/vender/features/index.ts
-- web/app/components/base/icons/src/vender/other/index.ts
-- web/app/components/base/icons/src/vender/plugin/index.ts
-- web/app/components/base/icons/src/vender/solid/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/solid/security/index.ts
-- web/app/components/base/icons/src/vender/solid/general/index.ts
-- web/app/components/base/icons/src/vender/solid/development/index.ts
-- web/app/components/base/icons/src/vender/solid/education/index.ts
-- web/app/components/base/icons/src/vender/solid/shapes/index.ts
-- web/app/components/base/icons/src/vender/solid/users/index.ts
-- web/app/components/base/icons/src/vender/solid/files/index.ts
-- web/app/components/base/icons/src/vender/solid/arrows/index.ts
-- web/app/components/base/icons/src/vender/solid/communication/index.ts
-- web/app/components/base/icons/src/vender/solid/editor/index.ts
-- web/app/components/base/icons/src/vender/solid/FinanceAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/solid/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/system/index.ts
-- web/app/components/base/icons/src/vender/knowledge/index.ts
-- web/app/components/base/icons/src/vender/line/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/line/images/index.ts
-- web/app/components/base/icons/src/vender/line/general/index.ts
-- web/app/components/base/icons/src/vender/line/development/index.ts
-- web/app/components/base/icons/src/vender/line/layout/index.ts
-- web/app/components/base/icons/src/vender/line/education/index.ts
-- web/app/components/base/icons/src/vender/line/others/index.ts
-- web/app/components/base/icons/src/vender/line/time/index.ts
-- web/app/components/base/icons/src/vender/line/files/index.ts
-- web/app/components/base/icons/src/vender/line/arrows/index.ts
-- web/app/components/base/icons/src/vender/line/communication/index.ts
-- web/app/components/base/icons/src/vender/line/editor/index.ts
-- web/app/components/base/icons/src/vender/line/financeAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/line/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/workflow/index.ts
-- web/app/components/base/file-uploader/index.ts
-- web/app/components/billing/utils/index.ts
-- web/config/index.ts
-- web/plugins/eslint/index.js
-- web/plugins/dev-proxy/server.ts
-- web/utils/index.ts
-- web/models/app.ts
-- web/i18n-config/index.ts
-- web/i18n-config/server.ts
-- packages/iconify-collections/custom-vender/index.js
-- packages/iconify-collections/custom-public/index.js
-- api/core/plugin/backwards_invocation/app.py
-- api/app.py
-- api/controllers/web/app.py
-- api/controllers/service_api/app/app.py
-- api/controllers/console/app/app.py
-- api/services/errors/app.py
-
-Total source files: 8531
-
+- **Kind**: public_api
+- **Identifier**: RAG Pipeline (embedding, retrieval, document indexing)
+- **Description**: RAG pipeline processing user-uploaded documents through extraction, embedding, and retrieval. Document extraction can trigger SSRF, XXE, or code execution via malicious file formats (PDF, DOCX, etc.)
+- **Locations**: api/core/rag/pipeline/, api/core/rag/retrieval/, api/core/rag/embedding/, api/core/rag/datasource/, api/core/rag/extractor/
 
 ## Source Code
+
+### api/core/rag/pipeline/queue.py
+```py
+from __future__ import annotations
+
+import json
+from collections.abc import Sequence
+from typing import Any
+
+from pydantic import BaseModel, ValidationError
+
+from extensions.ext_redis import redis_client
+
+_DEFAULT_TASK_TTL = 60 * 60  # 1 hour
+
+
+class TaskWrapper(BaseModel):
+    data: Any
+
+    def serialize(self) -> str:
+        return self.model_dump_json()
+
+    @classmethod
+    def deserialize(cls, serialized_data: str) -> TaskWrapper:
+        return cls.model_validate_json(serialized_data)
+
+
+class TenantIsolatedTaskQueue:
+    """
+    Simple queue for tenant isolated tasks, used for rag related tenant tasks isolation.
+    It uses Redis list to store tasks, and Redis key to store task waiting flag.
+    Support tasks that can be serialized by json.
+    """
+
+    def __init__(self, tenant_id: str, unique_key: str):
+        self._tenant_id = tenant_id
+        self._unique_key = unique_key
+        self._queue = f"tenant_self_{unique_key}_task_queue:{tenant_id}"
+        self._task_key = f"tenant_{unique_key}_task:{tenant_id}"
+
+    def get_task_key(self):
+        return redis_client.get(self._task_key)
+
+    def set_task_waiting_time(self, ttl: int = _DEFAULT_TASK_TTL):
+        redis_client.setex(self._task_key, ttl, 1)
+
+    def delete_task_key(self):
+        redis_client.delete(self._task_key)
+
+    def push_tasks(self, tasks: Sequence[Any]):
+        serialized_tasks = []
+        for task in tasks:
+            # Store str list directly, maintaining full compatibility for pipeline scenarios
+            if isinstance(task, str):
+                serialized_tasks.append(task)
+            else:
+                # Use TaskWrapper to do JSON serialization for non-string tasks
+                wrapper = TaskWrapper(data=task)
+                serialized_data = wrapper.serialize()
+                serialized_tasks.append(serialized_data)
+
+        if not serialized_tasks:
+            return
+
+        redis_client.lpush(self._queue, *serialized_tasks)
+
+    def pull_tasks(self, count: int = 1) -> Sequence[Any]:
+        if count <= 0:
+            return []
+
+        tasks = []
+        for _ in range(count):
+            serialized_task = redis_client.rpop(self._queue)
+            if not serialized_task:
+                break
+
+            if isinstance(serialized_task, bytes):
+                serialized_task = serialized_task.decode("utf-8")
+
+            try:
+                wrapper = TaskWrapper.deserialize(serialized_task)
+                tasks.append(wrapper.data)
+            except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+                # Fall back to raw string for legacy format or invalid JSON
+                tasks.append(serialized_task)
+
+        return tasks
+
+```
+
+### api/core/rag/pipeline/__init__.py
+```py
+
+```
+
+### api/core/rag/retrieval/output_parser/react_output.py
+```py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import NamedTuple, Union
+
+
+@dataclass
+class ReactAction:
+    """A full description of an action for an ReactAction to execute."""
+
+    tool: str
+    """The name of the Tool to execute."""
+    tool_input: Union[str, dict]
+    """The input to pass in to the Tool."""
+    log: str
+    """Additional information to log about the action."""
+
+
+class ReactFinish(NamedTuple):
+    """The final return value of an ReactFinish."""
+
+    return_values: dict
+    """Dictionary of return values."""
+    log: str
+    """Additional information to log about the return value"""
+
+```
+
+### api/core/rag/retrieval/output_parser/__init__.py
+```py
+
+```
+
+### api/core/rag/retrieval/output_parser/structured_chat.py
+```py
+import json
+import re
+from typing import Union
+
+from core.rag.retrieval.output_parser.react_output import ReactAction, ReactFinish
+
+
+class StructuredChatOutputParser:
+    def parse(self, text: str) -> Union[ReactAction, ReactFinish]:
+        try:
+            action_match = re.search(r"```(\w*)\n?({.*?)```", text, re.DOTALL)
+            if action_match is not None:
+                response = json.loads(action_match.group(2).strip(), strict=False)
+                if isinstance(response, list):
+                    response = response[0]
+                if response["action"] == "Final Answer":
+                    return ReactFinish({"output": response["action_input"]}, text)
+                else:
+                    return ReactAction(response["action"], response.get("action_input", {}), text)
+            else:
+                return ReactFinish({"output": text}, text)
+        except Exception:
+            raise ValueError(f"Could not parse LLM output: {text}")
+
+```
+
+### api/core/rag/retrieval/__init__.py
+```py
+
+```
+
+### api/core/rag/retrieval/retrieval_methods.py
+```py
+from enum import StrEnum
+
+
+class RetrievalMethod(StrEnum):
+    SEMANTIC_SEARCH = "semantic_search"
+    FULL_TEXT_SEARCH = "full_text_search"
+    HYBRID_SEARCH = "hybrid_search"
+    KEYWORD_SEARCH = "keyword_search"
+
+    @staticmethod
+    def is_support_semantic_search(retrieval_method: str) -> bool:
+        return retrieval_method in {RetrievalMethod.SEMANTIC_SEARCH, RetrievalMethod.HYBRID_SEARCH}
+
+    @staticmethod
+    def is_support_fulltext_search(retrieval_method: str) -> bool:
+        return retrieval_method in {RetrievalMethod.FULL_TEXT_SEARCH, RetrievalMethod.HYBRID_SEARCH}
+
+```
+
+### api/core/rag/retrieval/template_prompts.py
+```py
+METADATA_FILTER_SYSTEM_PROMPT = """
+    ### Job Description',
+    You are a text metadata extract engine that extract text's metadata based on user input and set the metadata value
+    ### Task
+    Your task is to ONLY extract the metadatas that exist in the input text from the provided metadata list and Use the following operators ["contains", "not contains", "start with", "end with", "is", "is not", "empty", "not empty", "=", "≠", ">", "<", "≥", "≤", "before", "after"] to express logical relationships, then return result in JSON format with the key "metadata_fields" and value "metadata_field_value" and comparison operator "comparison_operator".
+    ### Format
+    The input text is in the variable input_text. Metadata are specified as a list in the variable metadata_fields.
+    ### Constraint
+    DO NOT include anything other than the JSON array in your response.
+"""  # noqa: E501
+
+METADATA_FILTER_USER_PROMPT_1 = """
+    { "input_text": "I want to know which company’s email address test@example.com is?",
+    "metadata_fields": ["filename", "email", "phone", "address"]
+    }
+"""
+
+METADATA_FILTER_ASSISTANT_PROMPT_1 = """
+```json
+    {"metadata_map": [
+        {"metadata_field_name": "email", "metadata_field_value": "test@example.com", "comparison_operator": "="}
+    ]
+    }
+```
+"""
+
+METADATA_FILTER_USER_PROMPT_2 = """
+    {"input_text": "What are the movies with a score of more than 9 in 2024?",
+    "metadata_fields": ["name", "year", "rating", "country"]}
+"""
+
+METADATA_FILTER_ASSISTANT_PROMPT_2 = """
+```json
+    {"metadata_map": [
+        {"metadata_field_name": "year", "metadata_field_value": "2024", "comparison_operator": "="},
+        {"metadata_field_name": "rating", "metadata_field_value": "9", "comparison_operator": ">"},
+    ]}
+```
+"""
+
+METADATA_FILTER_USER_PROMPT_3 = """
+    '{{"input_text": "{input_text}",',
+    '"metadata_fields": {metadata_fields}}}'
+"""
+
+METADATA_FILTER_COMPLETION_PROMPT = """
+### Job Description
+You are a text metadata extract engine that extract text's metadata based on user input and set the metadata value
+### Task
+# Your task is to ONLY extract the metadatas that exist in the input text from the provided metadata list and Use the following operators ["=", "!=", ">", "<", ">=", "<="] to express logical relationships, then return result in JSON format with the key "metadata_fields" and value "metadata_field_value" and comparison operator "comparison_operator".
+### Format
+The input text is in the variable input_text. Metadata are specified as a list in the variable metadata_fields.
+### Constraint
+DO NOT include anything other than the JSON array in your response.
+### Example
+Here is the chat example between human and assistant, inside <example></example> XML tags.
+<example>
+User:{{"input_text": ["I want to know which company’s email address test@example.com is?"], "metadata_fields": ["filename", "email", "phone", "address"]}}
+Assistant:{{"metadata_map": [{{"metadata_field_name": "email", "metadata_field_value": "test@example.com", "comparison_operator": "="}}]}}
+User:{{"input_text": "What are the movies with a score of more than 9 in 2024?", "metadata_fields": ["name", "year", "rating", "country"]}}
+Assistant:{{"metadata_map": [{{"metadata_field_name": "year", "metadata_field_value": "2024", "comparison_operator": "="}, {{"metadata_field_name": "rating", "metadata_field_value": "9", "comparison_operator": ">"}}]}}
+</example>
+### User Input
+{{"input_text" : "{input_text}", "metadata_fields" : {metadata_fields}}}
+### Assistant Output
+"""  # noqa: E501
+
+```
+
+### api/core/rag/retrieval/router/multi_dataset_function_call_router.py
+```py
+from typing import Union
+
+from graphon.model_runtime.entities.llm_entities import LLMResult, LLMUsage
+from graphon.model_runtime.entities.message_entities import PromptMessageTool, SystemPromptMessage, UserPromptMessage
+
+from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
+from core.model_manager import ModelInstance
+
+
+class FunctionCallMultiDatasetRouter:
+    def invoke(
+        self,
+        query: str,
+        dataset_tools: list[PromptMessageTool],
+        model_config: ModelConfigWithCredentialsEntity,
+        model_instance: ModelInstance,
+    ) -> tuple[Union[str, None], LLMUsage]:
+        """Given input, decided what to do.
+        Returns:
+            Action specifying what tool to use.
+        """
+        if len(dataset_tools) == 0:
+            return None, LLMUsage.empty_usage()
+        elif len(dataset_tools) == 1:
+            return dataset_tools[0].name, LLMUsage.empty_usage()
+
+        try:
+            prompt_messages = [
+                SystemPromptMessage(content="You are a helpful AI assistant."),
+                UserPromptMessage(content=query),
+            ]
+            result: LLMResult = model_instance.invoke_llm(
+                prompt_messages=prompt_messages,
+                tools=dataset_tools,
+                stream=False,
+                model_parameters={"temperature": 0.2, "top_p": 0.3, "max_tokens": 1500},
+            )
+            usage = result.usage or LLMUsage.empty_usage()
+            if result.message.tool_calls:
+                # get retrieval model config
+                return result.message.tool_calls[0].function.name, usage
+            return None, usage
+        except Exception:
+            return None, LLMUsage.empty_usage()
+
+```
+
+### api/core/rag/retrieval/router/multi_dataset_react_route.py
+```py
+from collections.abc import Generator, Sequence
+from typing import Union
+
+from graphon.model_runtime.entities.llm_entities import LLMResult, LLMUsage
+from graphon.model_runtime.entities.message_entities import PromptMessage, PromptMessageRole, PromptMessageTool
+from graphon.model_runtime.entities.model_entities import ModelType
+
+from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
+from core.app.llm import deduct_llm_quota
+from core.model_manager import ModelInstance, ModelManager
+from core.prompt.advanced_prompt_transform import AdvancedPromptTransform
+from core.prompt.entities.advanced_prompt_entities import ChatModelMessage, CompletionModelPromptTemplate
+from core.rag.retrieval.output_parser.react_output import ReactAction
+from core.rag.retrieval.output_parser.structured_chat import StructuredChatOutputParser
+
+PREFIX = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:"""
+
+SUFFIX = """Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation:.
+Thought:"""  # noqa: E501
+
+FORMAT_INSTRUCTIONS = """Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
+The nouns in the format of "Thought", "Action", "Action Input", "Final Answer" must be expressed in English.
+Valid "action" values: "Final Answer" or {tool_names}
+
+Provide only ONE action per $JSON_BLOB, as shown:
+
+```
+{{
+  "action": $TOOL_NAME,
+  "action_input": $INPUT
+}}
+```
+
+Follow this format:
+
+Question: input question to answer
+Thought: consider previous and subsequent steps
+Action:
+```
+$JSON_BLOB
+```
+Observation: action result
+... (repeat Thought/Action/Observation N times)
+Thought: I know what to respond
+Action:
+```
+{{
+  "action": "Final Answer",
+  "action_input": "Final response to human"
+}}
+```"""  # noqa: E501
+
+
+class ReactMultiDatasetRouter:
+    def invoke(
+        self,
+        query: str,
+        dataset_tools: list[PromptMessageTool],
+        model_config: ModelConfigWithCredentialsEntity,
+        model_instance: ModelInstance,
+        user_id: str,
+        tenant_id: str,
+    ) -> tuple[Union[str, None], LLMUsage]:
+        """Given input, decided what to do.
+        Returns:
+            Action specifying what tool to use.
+        """
+        if len(dataset_tools) == 0:
+            return None, LLMUsage.empty_usage()
+        elif len(dataset_tools) == 1:
+            return dataset_tools[0].name, LLMUsage.empty_usage()
+
+        try:
+            return self._react_invoke(
+                query=query,
+                model_config=model_config,
+                model_instance=model_instance,
+                tools=dataset_tools,
+                user_id=user_id,
+                tenant_id=tenant_id,
+            )
+        except Exception:
+            return None, LLMUsage.empty_usage()
+
+    def _react_invoke(
+        self,
+        query: str,
+        model_config: ModelConfigWithCredentialsEntity,
+        model_instance: ModelInstance,
+        tools: Sequence[PromptMessageTool],
+        user_id: str,
+        tenant_id: str,
+        prefix: str = PREFIX,
+        suffix: str = SUFFIX,
+        format_instructions: str = FORMAT_INSTRUCTIONS,
+    ) -> tuple[Union[str, None], LLMUsage]:
+        prompt: Union[list[ChatModelMessage], CompletionModelPromptTemplate]
+        if model_config.mode == "chat":
+            prompt = self.create_chat_prompt(
+                query=query,
+                tools=tools,
+                prefix=prefix,
+                suffix=suffix,
+                format_instructions=format_instructions,
+            )
+        else:
+            prompt = self.create_completion_prompt(
+                tools=tools,
+                prefix=prefix,
+                format_instructions=format_instructions,
+            )
+        stop = ["Observation:"]
+        # handle invoke result
+        prompt_transform = AdvancedPromptTransform()
+        prompt_messages = prompt_transform.get_prompt(
+            prompt_template=prompt,
+            inputs={},
+            query="",
+            files=[],
+            context="",
+            memory_config=None,
+            memory=None,
+            model_config=model_config,
+            model_instance=model_instance,
+        )
+        result_text, usage = self._invoke_llm(
+            completion_param=model_config.parameters,
+            model_instance=model_instance,
+            prompt_messages=prompt_messages,
+            stop=stop,
+            user_id=user_id,
+            tenant_id=tenant_id,
+        )
+        output_parser = StructuredChatOutputParser()
+        react_decision = output_parser.parse(result_text)
+        if isinstance(react_decision, ReactAction):
+            return react_decision.tool, usage
+        return None, usage
+
+    def _invoke_llm(
+        self,
+        completion_param: dict,
+        model_instance: ModelInstance,
+        prompt_messages: list[PromptMessage],
+        stop: list[str],
+        user_id: str,
+        tenant_id: str,
+    ) -> tuple[str, LLMUsage]:
+        """
+        Invoke large language model
+        :param model_instance: model instance
+        :param prompt_messages: prompt messages
+        :param stop: stop
+        :return:
+        """
+        bound_model_instance = ModelManager.for_tenant(tenant_id=tenant_id, user_id=user_id).get_model_instance(
+            tenant_id=tenant_id,
+            provider=model_instance.provider,
+            model_type=ModelType.LLM,
+            model=model_instance.model_name,
+        )
+        invoke_result: Generator[LLMResult, None, None] = bound_model_instance.invoke_llm(
+            prompt_messages=prompt_messages,
+            model_parameters=completion_param,
+            stop=stop,
+            stream=True,
+        )
+
+        # handle invoke result
+        text, usage = self._handle_invoke_result(invoke_result=invoke_result)
+
+        # deduct quota
+        deduct_llm_quota(tenant_id=tenant_id, model_instance=bound_model_instance, usage=usage)
+
+        return text, usage
+
+    def _handle_invoke_result(self, invoke_result: Generator) -> tuple[str, LLMUsage]:
+        """
+        Handle invoke result
+        :param invoke_result: invoke result
+        :return:
+        """
+        model = None
+        prompt_messages: list[PromptMessage] = []
+        full_text = ""
+        usage = None
+        for result in invoke_result:
+            text = result.delta.message.content
+            full_text += text
+
+            if not model:
+                model = result.model
+
+            if not prompt_messages:
+                prompt_messages = result.prompt_messages
+
+            if not usage and result.delta.usage:
+                usage = result.delta.usage
+
+        if not usage:
+            usage = LLMUsage.empty_usage()
+
+        return full_text, usage
+
+    def create_chat_prompt(
+        self,
+        query: str,
+        tools: Sequence[PromptMessageTool],
+        prefix: str = PREFIX,
+        suffix: str = SUFFIX,
+        format_instructions: str = FORMAT_INSTRUCTIONS,
+    ) -> list[ChatModelMessage]:
+        tool_strings = []
+        for tool in tools:
+            tool_strings.append(
+                f"{tool.name}: {tool.description}, args: {{'query': {{'title': 'Query',"
+                f" 'description': 'Query for the dataset to be used to retrieve the dataset.', 'type': 'string'}}}}"
+            )
+        formatted_tools = "\n".join(tool_strings)
+        unique_tool_names = {tool.name for tool in tools}
+        tool_names = ", ".join('"' + name + '"' for name in unique_tool_names)
+        format_instructions = format_instructions.format(tool_names=tool_names)
+        template = "\n\n".join([prefix, formatted_tools, format_instructions, suffix])
+        prompt_messages = []
+        system_prompt_messages = ChatModelMessage(role=PromptMessageRole.SYSTEM, text=template)
+        prompt_messages.append(system_prompt_messages)
+        user_prompt_message = ChatModelMessage(role=PromptMessageRole.USER, text=query)
+        prompt_messages.append(user_prompt_message)
+        return prompt_messages
+
+    def create_completion_prompt(
+        self,
+        tools: Sequence[PromptMessageTool],
+        prefix: str = PREFIX,
+        format_instructions: str = FORMAT_INSTRUCTIONS,
+    ) -> CompletionModelPromptTemplate:
+        """Create prompt in the style of the zero shot agent.
+
+        Args:
+            tools: List of tools the agent will have access to, used to format the
+                prompt.
+            prefix: String to put before the list of tools.
+            format_instructions: The format instruction prompt.
+        Returns:
+            A PromptTemplate with the template assembled from the pieces here.
+        """
+        suffix = """Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation:.
+Question: {input}
+Thought: {agent_scratchpad}
+"""  # noqa: E501
+
+        tool_strings = "\n".join([f"{tool.name}: {tool.description}" for tool in tools])
+        tool_names = ", ".join([tool.name for tool in tools])
+        format_instructions = format_instructions.format(tool_names=tool_names)
+        template = "\n\n".join([prefix, tool_strings, format_instructions, suffix])
+        return CompletionModelPromptTemplate(text=template)
+
+```
+
+### api/core/rag/embedding/__init__.py
+```py
+
+```
+
+### api/core/rag/embedding/cached_embedding.py
+```py
+import base64
+import logging
+import pickle
+from typing import Any, cast
+
+import numpy as np
+from graphon.model_runtime.entities.model_entities import ModelPropertyKey
+from graphon.model_runtime.model_providers.__base.text_embedding_model import TextEmbeddingModel
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from configs import dify_config
+from core.entities.embedding_type import EmbeddingInputType
+from core.model_manager import ModelInstance
+from core.rag.embedding.embedding_base import Embeddings
+from extensions.ext_database import db
+from extensions.ext_redis import redis_client
+from libs import helper
+from models.dataset import Embedding
+
+logger = logging.getLogger(__name__)
+
+
+class CacheEmbedding(Embeddings):
+    def __init__(self, model_instance: ModelInstance):
+        self._model_instance = model_instance
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed search docs in batches of 10."""
+        # use doc embedding cache or store if not exists
+        text_embeddings: list[Any] = [None for _ in range(len(texts))]
+        embedding_queue_indices = []
+        for i, text in enumerate(texts):
+            hash = helper.generate_text_hash(text)
+            embedding = db.session.scalar(
+                select(Embedding)
+                .where(
+                    Embedding.model_name == self._model_instance.model_name,
+                    Embedding.hash == hash,
+                    Embedding.provider_name == self._model_instance.provider,
+                )
+                .limit(1)
+            )
+            if embedding:
+                text_embeddings[i] = embedding.get_embedding()
+            else:
+                embedding_queue_indices.append(i)
+
+        # NOTE: avoid closing the shared scoped session here; downstream code may still have pending work
+
+        if embedding_queue_indices:
+            embedding_queue_texts = [texts[i] for i in embedding_queue_indices]
+            embedding_queue_embeddings = []
+            try:
+                model_type_instance = cast(TextEmbeddingModel, self._model_instance.model_type_instance)
+                model_schema = model_type_instance.get_model_schema(
+                    self._model_instance.model_name, self._model_instance.credentials
+                )
+                max_chunks = (
+                    model_schema.model_properties[ModelPropertyKey.MAX_CHUNKS]
+                    if model_schema and ModelPropertyKey.MAX_CHUNKS in model_schema.model_properties
+                    else 1
+                )
+                for i in range(0, len(embedding_queue_texts), max_chunks):
+                    batch_texts = embedding_queue_texts[i : i + max_chunks]
+
+                    embedding_result = self._model_instance.invoke_text_embedding(
+                        texts=batch_texts, input_type=EmbeddingInputType.DOCUMENT
+                    )
+
+                    for vector in embedding_result.embeddings:
+                        try:
+                            # FIXME: type ignore for numpy here
+                            normalized_embedding = (vector / np.linalg.norm(vector)).tolist()  # type: ignore
+                            # stackoverflow best way: https://stackoverflow.com/questions/20319813/how-to-check-list-containing-nan
+                            if np.isnan(normalized_embedding).any():
+                                # for issue #11827  float values are not json compliant
+                                logger.warning("Normalized embedding is nan: %s", normalized_embedding)
+                                continue
+                            embedding_queue_embeddings.append(normalized_embedding)
+                        except IntegrityError:
+                            db.session.rollback()
+                        except Exception:
+                            logger.exception("Failed transform embedding")
+                cache_embeddings = []
+                try:
+                    for i, n_embedding in zip(embedding_queue_indices, embedding_queue_embeddings):
+                        text_embeddings[i] = n_embedding
+                        hash = helper.generate_text_hash(texts[i])
+                        if hash not in cache_embeddings:
+                            embedding_cache = Embedding(
+                                model_name=self._model_instance.model_name,
+                                hash=hash,
+                                provider_name=self._model_instance.provider,
+                                embedding=pickle.dumps(n_embedding, protocol=pickle.HIGHEST_PROTOCOL),
+                            )
+                            db.session.add(embedding_cache)
+                            cache_embeddings.append(hash)
+                    db.session.commit()
+                except IntegrityError:
+                    db.session.rollback()
+            except Exception as ex:
+                db.session.rollback()
+                logger.exception("Failed to embed documents")
+                raise ex
+
+        return text_embeddings
+
+    def embed_multimodal_documents(self, multimodel_documents: list[dict]) -> list[list[float]]:
+        """Embed file documents."""
+        # use doc embedding cache or store if not exists
+        multimodel_embeddings: list[Any] = [None for _ in range(len(multimodel_documents))]
+        embedding_queue_indices = []
+        for i, multimodel_document in enumerate(multimodel_documents):
+            file_id = multimodel_document["file_id"]
+            embedding = db.session.scalar(
+                select(Embedding)
+                .where(
+                    Embedding.model_name == self._model_instance.model_name,
+                    Embedding.hash == file_id,
+                    Embedding.provider_name == self._model_instance.provider,
+                )
+                .limit(1)
+            )
+            if embedding:
+                multimodel_embeddings[i] = embedding.get_embedding()
+            else:
+                embedding_queue_indices.append(i)
+
+        # NOTE: avoid closing the shared scoped session here; downstream code may still have pending work
+
+        if embedding_queue_indices:
+            embedding_queue_multimodel_documents = [multimodel_documents[i] for i in embedding_queue_indices]
+            embedding_queue_embeddings = []
+            try:
+                model_type_instance = cast(TextEmbeddingModel, self._model_instance.model_type_instance)
+                model_schema = model_type_instance.get_model_schema(
+                    self._model_instance.model_name, self._model_instance.credentials
+                )
+                max_chunks = (
+                    model_schema.model_properties[ModelPropertyKey.MAX_CHUNKS]
+                    if model_schema and ModelPropertyKey.MAX_CHUNKS in model_schema.model_properties
+                    else 1
+                )
+                for i in range(0, len(embedding_queue_multimodel_documents), max_chunks):
+                    batch_multimodel_documents = embedding_queue_multimodel_documents[i : i + max_chunks]
+
+                    embedding_result = self._model_instance.invoke_multimodal_embedding(
+                        multimodel_documents=batch_multimodel_documents,
+                        input_type=EmbeddingInputType.DOCUMENT,
+                    )
+
+                    for vector in embedding_result.embeddings:
+                        try:
+                            # FIXME: type ignore for numpy here
+                            normalized_embedding = (vector / np.linalg.norm(vector)).tolist()  # type: ignore
+                            # stackoverflow best way: https://stackoverflow.com/questions/20319813/how-to-check-list-containing-nan
+                            if np.isnan(normalized_embedding).any():
+                                # for issue #11827  float values are not json compliant
+                                logger.warning("Normalized embedding is nan: %s", normalized_embedding)
+                                continue
+                            embedding_queue_embeddings.append(normalized_embedding)
+                        except IntegrityError:
+                            db.session.rollback()
+                        except Exception:
+                            logger.exception("Failed transform embedding")
+                cache_embeddings = []
+                try:
+                    for i, n_embedding in zip(embedding_queue_indices, embedding_queue_embeddings):
+                        multimodel_embeddings[i] = n_embedding
+                        file_id = multimodel_documents[i]["file_id"]
+                        if file_id not in cache_embeddings:
+                            embedding_cache = Embedding(
+                                model_name=self._model_instance.model_name,
+                                hash=file_id,
+                                provider_name=self._model_instance.provider,
+                                embedding=pickle.dumps(n_embedding, protocol=pickle.HIGHEST_PROTOCOL),
+                            )
+                            embedding_cache.set_embedding(n_embedding)
+                            db.session.add(embedding_cache)
+                            cache_embeddings.append(file_id)
+                    db.session.commit()
+                except IntegrityError:
+                    db.session.rollback()
+            except Exception as ex:
+                db.session.rollback()
+                logger.exception("Failed to embed documents")
+                raise ex
+
+        return multimodel_embeddings
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed query text."""
+        # use doc embedding cache or store if not exists
+        hash = helper.generate_text_hash(text)
+        embedding_cache_key = f"{self._model_instance.provider}_{self._model_instance.model_name}_{hash}"
+        embedding = redis_client.get(embedding_cache_key)
+        if embedding:
+            redis_client.expire(embedding_cache_key, 600)
+            decoded_embedding = np.frombuffer(base64.b64decode(embedding), dtype="float")
+            return [float(x) for x in decoded_embedding]
+        try:
+            embedding_result = self._model_instance.invoke_text_embedding(
+                texts=[text], input_type=EmbeddingInputType.QUERY
+            )
+
+            embedding_results = embedding_result.embeddings[0]
+            # FIXME: type ignore for numpy here
+            embedding_results = (embedding_results / np.linalg.norm(embedding_results)).tolist()  # type: ignore
+            if np.isnan(embedding_results).any():
+                raise ValueError("Normalized embedding is nan please try again")
+        except Exception as ex:
+            if dify_config.DEBUG:
+                logger.exception("Failed to embed query text '%s...(%s chars)'", text[:10], len(text))
+            raise ex
+
+        try:
+            # encode embedding to base64
+            embedding_vector = np.array(embedding_results)
+            vector_bytes = embedding_vector.tobytes()
+            # Transform to Base64
+            encoded_vector = base64.b64encode(vector_bytes)
+            # Transform to string
+            encoded_str = encoded_vector.decode("utf-8")
+            redis_client.setex(embedding_cache_key, 600, encoded_str)
+        except Exception as ex:
+            if dify_config.DEBUG:
+                logger.exception(
+                    "Failed to add embedding to redis for the text '%s...(%s chars)'", text[:10], len(text)
+                )
+            raise ex
+
+        return embedding_results  # type: ignore
+
+    def embed_multimodal_query(self, multimodel_document: dict) -> list[float]:
+        """Embed multimodal documents."""
+        # use doc embedding cache or store if not exists
+        file_id = multimodel_document["file_id"]
+        embedding_cache_key = f"{self._model_instance.provider}_{self._model_instance.model_name}_{file_id}"
+        embedding = redis_client.get(embedding_cache_key)
+        if embedding:
+            redis_client.expire(embedding_cache_key, 600)
+            decoded_embedding = np.frombuffer(base64.b64decode(embedding), dtype="float")
+            return [float(x) for x in decoded_embedding]
+        try:
+            embedding_result = self._model_instance.invoke_multimodal_embedding(
+                multimodel_documents=[multimodel_document], input_type=EmbeddingInputType.QUERY
+            )
+
+            embedding_results = embedding_result.embeddings[0]
+            # FIXME: type ignore for numpy here
+            embedding_results = (embedding_results / np.linalg.norm(embedding_results)).tolist()  # type: ignore
+            if np.isnan(embedding_results).any():
+                raise ValueError("Normalized embedding is nan please try again")
+        except Exception as ex:
+            if dify_config.DEBUG:
+                logger.exception("Failed to embed multimodal document '%s'", multimodel_document["file_id"])
+            raise ex
+
+        try:
+            # encode embedding to base64
+            embedding_vector = np.array(embedding_results)
+            vector_bytes = embedding_vector.tobytes()
+            # Transform to Base64
+            encoded_vector = base64.b64encode(vector_bytes)
+            # Transform to string
+            encoded_str = encoded_vector.decode("utf-8")
+            redis_client.setex(embedding_cache_key, 600, encoded_str)
+        except Exception as ex:
+            if dify_config.DEBUG:
+                logger.exception(
+                    "Failed to add embedding to redis for the multimodal document '%s'", multimodel_document["file_id"]
+                )
+            raise ex
+
+        return embedding_results  # type: ignore
+
+```
+
+### api/core/rag/embedding/retrieval.py
+```py
+from typing import TypedDict
+
+from pydantic import BaseModel
+
+from models.dataset import DocumentSegment
+
+
+class AttachmentInfoDict(TypedDict):
+    id: str
+    name: str
+    extension: str
+    mime_type: str
+    source_url: str
+    size: int
+
+
+class RetrievalChildChunk(BaseModel):
+    """Retrieval segments."""
+
+    id: str
+    content: str
+    score: float
+    position: int
+
+
+class RetrievalSegments(BaseModel):
+    """Retrieval segments."""
+
+    model_config = {"arbitrary_types_allowed": True}
+    segment: DocumentSegment
+    child_chunks: list[RetrievalChildChunk] | None = None
+    score: float | None = None
+    files: list[AttachmentInfoDict] | None = None
+    summary: str | None = None  # Summary content if retrieved via summary index
+
+```
+
+### api/core/rag/embedding/embedding_base.py
+```py
+from abc import ABC, abstractmethod
+
+
+class Embeddings(ABC):
+    """Interface for embedding models."""
+
+    @abstractmethod
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed search docs."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def embed_multimodal_documents(self, multimodel_documents: list[dict]) -> list[list[float]]:
+        """Embed file documents."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def embed_query(self, text: str) -> list[float]:
+        """Embed query text."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def embed_multimodal_query(self, multimodel_document: dict) -> list[float]:
+        """Embed multimodal query."""
+        raise NotImplementedError
+
+    async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Asynchronous Embed search docs."""
+        raise NotImplementedError
+
+    async def aembed_query(self, text: str) -> list[float]:
+        """Asynchronous Embed query text."""
+        raise NotImplementedError
+
+```
 
 ### api/core/rag/datasource/__init__.py
 ```py
@@ -16091,3276 +16309,6 @@ class RetrievalService:
 
 ```
 
-### api/core/rag/pipeline/queue.py
-```py
-from __future__ import annotations
-
-import json
-from collections.abc import Sequence
-from typing import Any
-
-from pydantic import BaseModel, ValidationError
-
-from extensions.ext_redis import redis_client
-
-_DEFAULT_TASK_TTL = 60 * 60  # 1 hour
-
-
-class TaskWrapper(BaseModel):
-    data: Any
-
-    def serialize(self) -> str:
-        return self.model_dump_json()
-
-    @classmethod
-    def deserialize(cls, serialized_data: str) -> TaskWrapper:
-        return cls.model_validate_json(serialized_data)
-
-
-class TenantIsolatedTaskQueue:
-    """
-    Simple queue for tenant isolated tasks, used for rag related tenant tasks isolation.
-    It uses Redis list to store tasks, and Redis key to store task waiting flag.
-    Support tasks that can be serialized by json.
-    """
-
-    def __init__(self, tenant_id: str, unique_key: str):
-        self._tenant_id = tenant_id
-        self._unique_key = unique_key
-        self._queue = f"tenant_self_{unique_key}_task_queue:{tenant_id}"
-        self._task_key = f"tenant_{unique_key}_task:{tenant_id}"
-
-    def get_task_key(self):
-        return redis_client.get(self._task_key)
-
-    def set_task_waiting_time(self, ttl: int = _DEFAULT_TASK_TTL):
-        redis_client.setex(self._task_key, ttl, 1)
-
-    def delete_task_key(self):
-        redis_client.delete(self._task_key)
-
-    def push_tasks(self, tasks: Sequence[Any]):
-        serialized_tasks = []
-        for task in tasks:
-            # Store str list directly, maintaining full compatibility for pipeline scenarios
-            if isinstance(task, str):
-                serialized_tasks.append(task)
-            else:
-                # Use TaskWrapper to do JSON serialization for non-string tasks
-                wrapper = TaskWrapper(data=task)
-                serialized_data = wrapper.serialize()
-                serialized_tasks.append(serialized_data)
-
-        if not serialized_tasks:
-            return
-
-        redis_client.lpush(self._queue, *serialized_tasks)
-
-    def pull_tasks(self, count: int = 1) -> Sequence[Any]:
-        if count <= 0:
-            return []
-
-        tasks = []
-        for _ in range(count):
-            serialized_task = redis_client.rpop(self._queue)
-            if not serialized_task:
-                break
-
-            if isinstance(serialized_task, bytes):
-                serialized_task = serialized_task.decode("utf-8")
-
-            try:
-                wrapper = TaskWrapper.deserialize(serialized_task)
-                tasks.append(wrapper.data)
-            except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
-                # Fall back to raw string for legacy format or invalid JSON
-                tasks.append(serialized_task)
-
-        return tasks
-
-```
-
-### api/core/rag/pipeline/__init__.py
-```py
-
-```
-
-### api/core/rag/index_processor/index_processor_factory.py
-```py
-"""Abstract interface for document loader implementations."""
-
-from core.rag.index_processor.constant.index_type import IndexStructureType
-from core.rag.index_processor.index_processor_base import BaseIndexProcessor
-from core.rag.index_processor.processor.paragraph_index_processor import ParagraphIndexProcessor
-from core.rag.index_processor.processor.parent_child_index_processor import ParentChildIndexProcessor
-from core.rag.index_processor.processor.qa_index_processor import QAIndexProcessor
-
-
-class IndexProcessorFactory:
-    """IndexProcessorInit."""
-
-    def __init__(self, index_type: str | None):
-        self._index_type = index_type
-
-    def init_index_processor(self) -> BaseIndexProcessor:
-        """Init index processor."""
-
-        if not self._index_type:
-            raise ValueError("Index type must be specified.")
-
-        if self._index_type == IndexStructureType.PARAGRAPH_INDEX:
-            return ParagraphIndexProcessor()
-        elif self._index_type == IndexStructureType.QA_INDEX:
-            return QAIndexProcessor()
-        elif self._index_type == IndexStructureType.PARENT_CHILD_INDEX:
-            return ParentChildIndexProcessor()
-        else:
-            raise ValueError(f"Index type {self._index_type} is not supported.")
-
-```
-
-### api/core/rag/index_processor/processor/paragraph_index_processor.py
-```py
-"""Paragraph index processor."""
-
-import logging
-import re
-import uuid
-from collections.abc import Mapping
-from typing import Any, cast
-
-logger = logging.getLogger(__name__)
-
-from graphon.file import File, FileTransferMethod, FileType, file_manager
-from graphon.model_runtime.entities.llm_entities import LLMResult, LLMUsage
-from graphon.model_runtime.entities.message_entities import (
-    ImagePromptMessageContent,
-    PromptMessage,
-    PromptMessageContentUnionTypes,
-    TextPromptMessageContent,
-    UserPromptMessage,
-)
-from graphon.model_runtime.entities.model_entities import ModelFeature, ModelType
-from sqlalchemy import select
-
-from core.app.file_access import DatabaseFileAccessController
-from core.app.llm import deduct_llm_quota
-from core.entities.knowledge_entities import PreviewDetail
-from core.llm_generator.prompts import DEFAULT_GENERATOR_SUMMARY_PROMPT
-from core.model_manager import ModelInstance
-from core.plugin.impl.model_runtime_factory import create_plugin_provider_manager
-from core.rag.cleaner.clean_processor import CleanProcessor
-from core.rag.data_post_processor.data_post_processor import RerankingModelDict
-from core.rag.datasource.keyword.keyword_factory import Keyword
-from core.rag.datasource.retrieval_service import RetrievalService
-from core.rag.datasource.vdb.vector_factory import Vector
-from core.rag.docstore.dataset_docstore import DatasetDocumentStore
-from core.rag.extractor.entity.extract_setting import ExtractSetting
-from core.rag.extractor.extract_processor import ExtractProcessor
-from core.rag.index_processor.constant.doc_type import DocType
-from core.rag.index_processor.constant.index_type import IndexStructureType, IndexTechniqueType
-from core.rag.index_processor.index_processor_base import BaseIndexProcessor, SummaryIndexSettingDict
-from core.rag.models.document import AttachmentDocument, Document, MultimodalGeneralStructureChunk
-from core.rag.retrieval.retrieval_methods import RetrievalMethod
-from core.tools.utils.text_processing_utils import remove_leading_symbols
-from core.workflow.file_reference import build_file_reference
-from extensions.ext_database import db
-from factories.file_factory import build_from_mapping
-from libs import helper
-from models import UploadFile
-from models.account import Account
-from models.dataset import Dataset, DatasetProcessRule, DocumentSegment, SegmentAttachmentBinding
-from models.dataset import Document as DatasetDocument
-from services.account_service import AccountService
-from services.entities.knowledge_entities.knowledge_entities import Rule
-from services.summary_index_service import SummaryIndexService
-
-_file_access_controller = DatabaseFileAccessController()
-
-
-class ParagraphIndexProcessor(BaseIndexProcessor):
-    def extract(self, extract_setting: ExtractSetting, **kwargs) -> list[Document]:
-        text_docs = ExtractProcessor.extract(
-            extract_setting=extract_setting,
-            is_automatic=(
-                kwargs.get("process_rule_mode") == "automatic" or kwargs.get("process_rule_mode") == "hierarchical"
-            ),
-        )
-
-        return text_docs
-
-    def transform(self, documents: list[Document], current_user: Account | None = None, **kwargs) -> list[Document]:
-        process_rule = kwargs.get("process_rule")
-        if not process_rule:
-            raise ValueError("No process rule found.")
-        if process_rule.get("mode") == "automatic":
-            automatic_rule = DatasetProcessRule.AUTOMATIC_RULES
-            rules = Rule.model_validate(automatic_rule)
-        else:
-            if not process_rule.get("rules"):
-                raise ValueError("No rules found in process rule.")
-            rules = Rule.model_validate(process_rule.get("rules"))
-        # Split the text documents into nodes.
-        if not rules.segmentation:
-            raise ValueError("No segmentation found in rules.")
-        splitter = self._get_splitter(
-            processing_rule_mode=process_rule.get("mode"),
-            max_tokens=rules.segmentation.max_tokens,
-            chunk_overlap=rules.segmentation.chunk_overlap,
-            separator=rules.segmentation.separator,
-            embedding_model_instance=kwargs.get("embedding_model_instance"),
-        )
-        all_documents = []
-        for document in documents:
-            # document clean
-            document_text = CleanProcessor.clean(document.page_content, kwargs.get("process_rule", {}))
-            document.page_content = document_text
-            # parse document to nodes
-            document_nodes = splitter.split_documents([document])
-            split_documents = []
-            for document_node in document_nodes:
-                if document_node.page_content.strip():
-                    doc_id = str(uuid.uuid4())
-                    hash = helper.generate_text_hash(document_node.page_content)
-                    if document_node.metadata is not None:
-                        document_node.metadata["doc_id"] = doc_id
-                        document_node.metadata["doc_hash"] = hash
-                    multimodal_documents = (
-                        self._get_content_files(document_node, current_user) if document_node.metadata else None
-                    )
-                    if multimodal_documents:
-                        document_node.attachments = multimodal_documents
-                    # delete Splitter character
-                    page_content = remove_leading_symbols(document_node.page_content).strip()
-                    if len(page_content) > 0:
-                        document_node.page_content = page_content
-                        split_documents.append(document_node)
-            all_documents.extend(split_documents)
-        return all_documents
-
-    def load(
-        self,
-        dataset: Dataset,
-        documents: list[Document],
-        multimodal_documents: list[AttachmentDocument] | None = None,
-        with_keywords: bool = True,
-        **kwargs,
-    ) -> None:
-        if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-            vector = Vector(dataset)
-            vector.create(documents)
-            if multimodal_documents and dataset.is_multimodal:
-                vector.create_multimodal(multimodal_documents)
-            with_keywords = False
-        if with_keywords:
-            keywords_list = kwargs.get("keywords_list")
-            keyword = Keyword(dataset)
-            if keywords_list and len(keywords_list) > 0:
-                keyword.add_texts(documents, keywords_list=keywords_list)
-            else:
-                keyword.add_texts(documents)
-
-    def clean(self, dataset: Dataset, node_ids: list[str] | None, with_keywords: bool = True, **kwargs) -> None:
-        # Note: Summary indexes are now disabled (not deleted) when segments are disabled.
-        # This method is called for actual deletion scenarios (e.g., when segment is deleted).
-        # For disable operations, disable_summaries_for_segments is called directly in the task.
-        # Only delete summaries if explicitly requested (e.g., when segment is actually deleted)
-        delete_summaries = kwargs.get("delete_summaries", False)
-        if delete_summaries:
-            if node_ids:
-                # Find segments by index_node_id
-                segments = db.session.scalars(
-                    select(DocumentSegment).where(
-                        DocumentSegment.dataset_id == dataset.id,
-                        DocumentSegment.index_node_id.in_(node_ids),
-                    )
-                ).all()
-                segment_ids = [segment.id for segment in segments]
-                if segment_ids:
-                    SummaryIndexService.delete_summaries_for_segments(dataset, segment_ids)
-            else:
-                # Delete all summaries for the dataset
-                SummaryIndexService.delete_summaries_for_segments(dataset, None)
-
-        if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-            vector = Vector(dataset)
-            if node_ids:
-                vector.delete_by_ids(node_ids)
-            else:
-                vector.delete()
-            with_keywords = False
-        if with_keywords:
-            keyword = Keyword(dataset)
-            if node_ids:
-                keyword.delete_by_ids(node_ids)
-            else:
-                keyword.delete()
-
-    def retrieve(
-        self,
-        retrieval_method: RetrievalMethod,
-        query: str,
-        dataset: Dataset,
-        top_k: int,
-        score_threshold: float,
-        reranking_model: RerankingModelDict,
-    ) -> list[Document]:
-        # Set search parameters.
-        results = RetrievalService.retrieve(
-            retrieval_method=retrieval_method,
-            dataset_id=dataset.id,
-            query=query,
-            top_k=top_k,
-            score_threshold=score_threshold,
-            reranking_model=reranking_model,
-        )
-        # Organize results.
-        docs = []
-        for result in results:
-            metadata = result.metadata
-            metadata["score"] = result.score
-            if result.score >= score_threshold:
-                doc = Document(page_content=result.page_content, metadata=metadata)
-                docs.append(doc)
-        return docs
-
-    def index(self, dataset: Dataset, document: DatasetDocument, chunks: Any) -> None:
-        documents: list[Any] = []
-        all_multimodal_documents: list[Any] = []
-        if isinstance(chunks, list):
-            for content in chunks:
-                metadata = {
-                    "dataset_id": dataset.id,
-                    "document_id": document.id,
-                    "doc_id": str(uuid.uuid4()),
-                    "doc_hash": helper.generate_text_hash(content),
-                }
-                doc = Document(page_content=content, metadata=metadata)
-                attachments = self._get_content_files(doc)
-                if attachments:
-                    doc.attachments = attachments
-                    all_multimodal_documents.extend(attachments)
-                documents.append(doc)
-        else:
-            multimodal_general_structure = MultimodalGeneralStructureChunk.model_validate(chunks)
-            for general_chunk in multimodal_general_structure.general_chunks:
-                metadata = {
-                    "dataset_id": dataset.id,
-                    "document_id": document.id,
-                    "doc_id": str(uuid.uuid4()),
-                    "doc_hash": helper.generate_text_hash(general_chunk.content),
-                }
-                doc = Document(page_content=general_chunk.content, metadata=metadata)
-                if general_chunk.files:
-                    attachments = []
-                    for file in general_chunk.files:
-                        file_metadata = {
-                            "doc_id": file.id,
-                            "doc_hash": "",
-                            "document_id": document.id,
-                            "dataset_id": dataset.id,
-                            "doc_type": DocType.IMAGE,
-                        }
-                        file_document = AttachmentDocument(
-                            page_content=file.filename or "image_file", metadata=file_metadata
-                        )
-                        attachments.append(file_document)
-                        all_multimodal_documents.append(file_document)
-                    doc.attachments = attachments
-                else:
-                    account = AccountService.load_user(document.created_by)
-                    if not account:
-                        raise ValueError("Invalid account")
-                    doc.attachments = self._get_content_files(doc, current_user=account)
-                    if doc.attachments:
-                        all_multimodal_documents.extend(doc.attachments)
-                documents.append(doc)
-        if documents:
-            # save node to document segment
-            doc_store = DatasetDocumentStore(dataset=dataset, user_id=document.created_by, document_id=document.id)
-            # add document segments
-            doc_store.add_documents(docs=documents, save_child=False)
-            if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-                vector = Vector(dataset)
-                vector.create(documents)
-                if all_multimodal_documents and dataset.is_multimodal:
-                    vector.create_multimodal(all_multimodal_documents)
-            elif dataset.indexing_technique == IndexTechniqueType.ECONOMY:
-                keyword = Keyword(dataset)
-                keyword.add_texts(documents)
-
-    def format_preview(self, chunks: Any) -> Mapping[str, Any]:
-        if isinstance(chunks, list):
-            preview = []
-            for content in chunks:
-                preview.append({"content": content})
-            return {
-                "chunk_structure": IndexStructureType.PARAGRAPH_INDEX,
-                "preview": preview,
-                "total_segments": len(chunks),
-            }
-        else:
-            raise ValueError("Chunks is not a list")
-
-    def generate_summary_preview(
-        self,
-        tenant_id: str,
-        preview_texts: list[PreviewDetail],
-        summary_index_setting: SummaryIndexSettingDict,
-        doc_language: str | None = None,
-    ) -> list[PreviewDetail]:
-        """
-        For each segment, concurrently call generate_summary to generate a summary
-        and write it to the summary attribute of PreviewDetail.
-        In preview mode (indexing-estimate), if any summary generation fails, the method will raise an exception.
-        """
-        import concurrent.futures
-
-        from flask import current_app
-
-        # Capture Flask app context for worker threads
-        flask_app = None
-        try:
-            flask_app = current_app._get_current_object()  # type: ignore
-        except RuntimeError:
-            logger.warning("No Flask application context available, summary generation may fail")
-
-        def process(preview: PreviewDetail) -> None:
-            """Generate summary for a single preview item."""
-            if flask_app:
-                # Ensure Flask app context in worker thread
-                with flask_app.app_context():
-                    summary, _ = self.generate_summary(
-                        tenant_id, preview.content, summary_index_setting, document_language=doc_language
-                    )
-                    preview.summary = summary
-            else:
-                # Fallback: try without app context (may fail)
-                summary, _ = self.generate_summary(
-                    tenant_id, preview.content, summary_index_setting, document_language=doc_language
-                )
-                preview.summary = summary
-
-        # Generate summaries concurrently using ThreadPoolExecutor
-        # Set a reasonable timeout to prevent hanging (60 seconds per chunk, max 5 minutes total)
-        timeout_seconds = min(300, 60 * len(preview_texts))
-        errors: list[Exception] = []
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(preview_texts))) as executor:
-            futures = [executor.submit(process, preview) for preview in preview_texts]
-            # Wait for all tasks to complete with timeout
-            done, not_done = concurrent.futures.wait(futures, timeout=timeout_seconds)
-
-            # Cancel tasks that didn't complete in time
-            if not_done:
-                timeout_error_msg = (
-                    f"Summary generation timeout: {len(not_done)} chunks did not complete within {timeout_seconds}s"
-                )
-                logger.warning("%s. Cancelling remaining tasks...", timeout_error_msg)
-                # In preview mode, timeout is also an error
-                errors.append(TimeoutError(timeout_error_msg))
-                for future in not_done:
-                    future.cancel()
-                # Wait a bit for cancellation to take effect
-                concurrent.futures.wait(not_done, timeout=5)
-
-            # Collect exceptions from completed futures
-            for future in done:
-                try:
-                    future.result()  # This will raise any exception that occurred
-                except Exception as e:
-                    logger.exception("Error in summary generation future")
-                    errors.append(e)
-
-        # In preview mode (indexing-estimate), if there are any errors, fail the request
-        if errors:
-            error_messages = [str(e) for e in errors]
-            error_summary = (
-                f"Failed to generate summaries for {len(errors)} chunk(s). "
-                f"Errors: {'; '.join(error_messages[:3])}"  # Show first 3 errors
-            )
-            if len(errors) > 3:
-                error_summary += f" (and {len(errors) - 3} more)"
-            logger.error("Summary generation failed in preview mode: %s", error_summary)
-            raise ValueError(error_summary)
-
-        return preview_texts
-
-    @staticmethod
-    def generate_summary(
-        tenant_id: str,
-        text: str,
-        summary_index_setting: SummaryIndexSettingDict | None = None,
-        segment_id: str | None = None,
-        document_language: str | None = None,
-    ) -> tuple[str, LLMUsage]:
-        """
-        Generate summary for the given text using ModelInstance.invoke_llm and the default or custom summary prompt,
-        and supports vision models by including images from the segment attachments or text content.
-
-        Args:
-            tenant_id: Tenant ID
-            text: Text content to summarize
-            summary_index_setting: Summary index configuration
-            segment_id: Optional segment ID to fetch attachments from SegmentAttachmentBinding table
-            document_language: Optional document language (e.g., "Chinese", "English")
-                to ensure summary is generated in the correct language
-
-        Returns:
-            Tuple of (summary_content, llm_usage) where llm_usage is LLMUsage object
-        """
-        if not summary_index_setting or not summary_index_setting.get("enable"):
-            raise ValueError("summary_index_setting is required and must be enabled to generate summary.")
-
-        model_name = summary_index_setting.get("model_name")
-        model_provider_name = summary_index_setting.get("model_provider_name")
-        summary_prompt = summary_index_setting.get("summary_prompt")
-
-        if not model_name or not model_provider_name:
-            raise ValueError("model_name and model_provider_name are required in summary_index_setting")
-
-        # Import default summary prompt
-        is_default_prompt = False
-        if not summary_prompt:
-            summary_prompt = DEFAULT_GENERATOR_SUMMARY_PROMPT
-            is_default_prompt = True
-
-        # Format prompt with document language only for default prompt
-        # Custom prompts are used as-is to avoid interfering with user-defined templates
-        # If document_language is provided, use it; otherwise, use "the same language as the input content"
-        # This is especially important for image-only chunks where text is empty or minimal
-        if is_default_prompt:
-            language_for_prompt = document_language or "the same language as the input content"
-            try:
-                summary_prompt = summary_prompt.format(language=language_for_prompt)
-            except KeyError:
-                # If default prompt doesn't have {language} placeholder, use it as-is
-                pass
-
-        provider_manager = create_plugin_provider_manager(tenant_id=tenant_id)
-        provider_model_bundle = provider_manager.get_provider_model_bundle(
-            tenant_id, model_provider_name, ModelType.LLM
-        )
-        model_instance = ModelInstance(provider_model_bundle, model_name)
-
-        # Get model schema to check if vision is supported
-        model_schema = model_instance.model_type_instance.get_model_schema(model_name, model_instance.credentials)
-        supports_vision = model_schema and model_schema.features and ModelFeature.VISION in model_schema.features
-
-        # Extract images if model supports vision
-        image_files = []
-        if supports_vision:
-            # First, try to get images from SegmentAttachmentBinding (preferred method)
-            if segment_id:
-                image_files = ParagraphIndexProcessor._extract_images_from_segment_attachments(tenant_id, segment_id)
-
-            # If no images from attachments, fall back to extracting from text
-            if not image_files:
-                image_files = ParagraphIndexProcessor._extract_images_from_text(tenant_id, text)
-
-        # Build prompt messages
-        prompt_messages = []
-
-        if image_files:
-            # If we have images, create a UserPromptMessage with both text and images
-            prompt_message_contents: list[PromptMessageContentUnionTypes] = []
-
-            # Add images first
-            for file in image_files:
-                try:
-                    file_content = file_manager.to_prompt_message_content(
-                        file, image_detail_config=ImagePromptMessageContent.DETAIL.LOW
-                    )
-                    prompt_message_contents.append(file_content)
-                except Exception as e:
-                    logger.warning("Failed to convert image file to prompt message content: %s", str(e))
-                    continue
-
-            # Add text content
-            if prompt_message_contents:  # Only add text if we successfully added images
-                prompt_message_contents.append(TextPromptMessageContent(data=f"{summary_prompt}\n{text}"))
-                prompt_messages.append(UserPromptMessage(content=prompt_message_contents))
-            else:
-                # If image conversion failed, fall back to text-only
-                prompt = f"{summary_prompt}\n{text}"
-                prompt_messages.append(UserPromptMessage(content=prompt))
-        else:
-            # No images, use simple text prompt
-            prompt = f"{summary_prompt}\n{text}"
-            prompt_messages.append(UserPromptMessage(content=prompt))
-
-        result = model_instance.invoke_llm(
-            prompt_messages=cast(list[PromptMessage], prompt_messages), model_parameters={}, stream=False
-        )
-
-        # Type assertion: when stream=False, invoke_llm returns LLMResult, not Generator
-        if not isinstance(result, LLMResult):
-            raise ValueError("Expected LLMResult when stream=False")
-
-        summary_content = result.message.get_text_content()
-        usage = result.usage
-
-        # Deduct quota for summary generation (same as workflow nodes)
-        try:
-            deduct_llm_quota(tenant_id=tenant_id, model_instance=model_instance, usage=usage)
-        except Exception as e:
-            # Log but don't fail summary generation if quota deduction fails
-            logger.warning("Failed to deduct quota for summary generation: %s", str(e))
-
-        return summary_content, usage
-
-    @staticmethod
-    def _extract_images_from_text(tenant_id: str, text: str) -> list[File]:
-        """
-        Extract images from markdown text and convert them to File objects.
-
-        Args:
-            tenant_id: Tenant ID
-            text: Text content that may contain markdown image links
-
-        Returns:
-            List of File objects representing images found in the text
-        """
-        # Extract markdown images using regex pattern
-        pattern = r"!\[.*?\]\((.*?)\)"
-        images = re.findall(pattern, text)
-
-        if not images:
-            return []
-
-        upload_file_id_list = []
-
-        for image in images:
-            # For data before v0.10.0
-            pattern = r"/files/([a-f0-9\-]+)/image-preview(?:\?.*?)?"
-            match = re.search(pattern, image)
-            if match:
-                upload_file_id = match.group(1)
-                upload_file_id_list.append(upload_file_id)
-                continue
-
-            # For data after v0.10.0
-            pattern = r"/files/([a-f0-9\-]+)/file-preview(?:\?.*?)?"
-            match = re.search(pattern, image)
-            if match:
-                upload_file_id = match.group(1)
-                upload_file_id_list.append(upload_file_id)
-                continue
-
-            # For tools directory - direct file formats (e.g., .png, .jpg, etc.)
-            pattern = r"/files/tools/([a-f0-9\-]+)\.([a-zA-Z0-9]+)(?:\?[^\s\)\"\']*)?"
-            match = re.search(pattern, image)
-            if match:
-                # Tool files are handled differently, skip for now
-                continue
-
-        if not upload_file_id_list:
-            return []
-
-        # Get unique IDs for database query
-        unique_upload_file_ids = list(set(upload_file_id_list))
-        upload_files = db.session.scalars(
-            select(UploadFile).where(UploadFile.id.in_(unique_upload_file_ids), UploadFile.tenant_id == tenant_id)
-        ).all()
-
-        # Create File objects from UploadFile records
-        file_objects = []
-        for upload_file in upload_files:
-            # Only process image files
-            if not upload_file.mime_type or "image" not in upload_file.mime_type:
-                continue
-
-            mapping = {
-                "upload_file_id": upload_file.id,
-                "transfer_method": FileTransferMethod.LOCAL_FILE.value,
-                "type": FileType.IMAGE.value,
-            }
-
-            try:
-                file_obj = build_from_mapping(
-                    mapping=mapping,
-                    tenant_id=tenant_id,
-                    access_controller=_file_access_controller,
-                )
-                file_objects.append(file_obj)
-            except Exception as e:
-                logger.warning("Failed to create File object from UploadFile %s: %s", upload_file.id, str(e))
-                continue
-
-        return file_objects
-
-    @staticmethod
-    def _extract_images_from_segment_attachments(tenant_id: str, segment_id: str) -> list[File]:
-        """
-        Extract images from SegmentAttachmentBinding table (preferred method).
-        This matches how DatasetRetrieval gets segment attachments.
-
-        Args:
-            tenant_id: Tenant ID
-            segment_id: Segment ID to fetch attachments for
-
-        Returns:
-            List of File objects representing images found in segment attachments
-        """
-        from sqlalchemy import select
-
-        # Query attachments from SegmentAttachmentBinding table
-        attachments_with_bindings = db.session.execute(
-            select(SegmentAttachmentBinding, UploadFile)
-            .join(UploadFile, UploadFile.id == SegmentAttachmentBinding.attachment_id)
-            .where(
-                SegmentAttachmentBinding.segment_id == segment_id,
-                SegmentAttachmentBinding.tenant_id == tenant_id,
-            )
-        ).all()
-
-        if not attachments_with_bindings:
-            return []
-
-        file_objects = []
-        for _, upload_file in attachments_with_bindings:
-            # Only process image files
-            if not upload_file.mime_type or "image" not in upload_file.mime_type:
-                continue
-
-            try:
-                # Create File object directly (similar to DatasetRetrieval)
-                file_obj = File(
-                    id=upload_file.id,
-                    filename=upload_file.name,
-                    extension="." + upload_file.extension,
-                    mime_type=upload_file.mime_type,
-                    type=FileType.IMAGE,
-                    transfer_method=FileTransferMethod.LOCAL_FILE,
-                    remote_url=upload_file.source_url,
-                    reference=build_file_reference(
-                        record_id=str(upload_file.id),
-                    ),
-                    size=upload_file.size,
-                    storage_key=upload_file.key,
-                )
-                file_objects.append(file_obj)
-            except Exception as e:
-                logger.warning("Failed to create File object from UploadFile %s: %s", upload_file.id, str(e))
-                continue
-
-        return file_objects
-
-```
-
-### api/core/rag/index_processor/processor/parent_child_index_processor.py
-```py
-"""Paragraph index processor."""
-
-import json
-import logging
-import uuid
-from collections.abc import Mapping
-from typing import Any
-
-from sqlalchemy import delete, select
-
-from configs import dify_config
-from core.db.session_factory import session_factory
-from core.entities.knowledge_entities import PreviewDetail
-from core.model_manager import ModelInstance
-from core.rag.cleaner.clean_processor import CleanProcessor
-from core.rag.data_post_processor.data_post_processor import RerankingModelDict
-from core.rag.datasource.retrieval_service import RetrievalService
-from core.rag.datasource.vdb.vector_factory import Vector
-from core.rag.docstore.dataset_docstore import DatasetDocumentStore
-from core.rag.extractor.entity.extract_setting import ExtractSetting
-from core.rag.extractor.extract_processor import ExtractProcessor
-from core.rag.index_processor.constant.doc_type import DocType
-from core.rag.index_processor.constant.index_type import IndexStructureType, IndexTechniqueType
-from core.rag.index_processor.index_processor_base import BaseIndexProcessor, SummaryIndexSettingDict
-from core.rag.models.document import AttachmentDocument, ChildDocument, Document, ParentChildStructureChunk
-from core.rag.retrieval.retrieval_methods import RetrievalMethod
-from extensions.ext_database import db
-from libs import helper
-from models import Account
-from models.dataset import ChildChunk, Dataset, DatasetProcessRule, DocumentSegment
-from models.dataset import Document as DatasetDocument
-from services.account_service import AccountService
-from services.entities.knowledge_entities.knowledge_entities import ParentMode, Rule
-from services.summary_index_service import SummaryIndexService
-
-logger = logging.getLogger(__name__)
-
-
-class ParentChildIndexProcessor(BaseIndexProcessor):
-    def extract(self, extract_setting: ExtractSetting, **kwargs) -> list[Document]:
-        text_docs = ExtractProcessor.extract(
-            extract_setting=extract_setting,
-            is_automatic=(
-                kwargs.get("process_rule_mode") == "automatic" or kwargs.get("process_rule_mode") == "hierarchical"
-            ),
-        )
-
-        return text_docs
-
-    def transform(self, documents: list[Document], current_user: Account | None = None, **kwargs) -> list[Document]:
-        process_rule = kwargs.get("process_rule")
-        if not process_rule:
-            raise ValueError("No process rule found.")
-        if not process_rule.get("rules"):
-            raise ValueError("No rules found in process rule.")
-        rules = Rule.model_validate(process_rule.get("rules"))
-        all_documents: list[Document] = []
-        if rules.parent_mode == ParentMode.PARAGRAPH:
-            # Split the text documents into nodes.
-            if not rules.segmentation:
-                raise ValueError("No segmentation found in rules.")
-            splitter = self._get_splitter(
-                processing_rule_mode=process_rule.get("mode"),
-                max_tokens=rules.segmentation.max_tokens,
-                chunk_overlap=rules.segmentation.chunk_overlap,
-                separator=rules.segmentation.separator,
-                embedding_model_instance=kwargs.get("embedding_model_instance"),
-            )
-            for document in documents:
-                if kwargs.get("preview") and len(all_documents) >= 10:
-                    return all_documents
-                # document clean
-                document_text = CleanProcessor.clean(document.page_content, process_rule)
-                document.page_content = document_text
-                # parse document to nodes
-                document_nodes = splitter.split_documents([document])
-                split_documents = []
-                for document_node in document_nodes:
-                    if document_node.page_content.strip():
-                        doc_id = str(uuid.uuid4())
-                        hash = helper.generate_text_hash(document_node.page_content)
-                        document_node.metadata["doc_id"] = doc_id
-                        document_node.metadata["doc_hash"] = hash
-                        # delete Splitter character
-                        page_content = document_node.page_content
-                        if page_content.startswith(".") or page_content.startswith("。"):
-                            page_content = page_content[1:].strip()
-                        else:
-                            page_content = page_content
-                        if len(page_content) > 0:
-                            document_node.page_content = page_content
-                            multimodel_documents = self._get_content_files(document_node, current_user)
-                            if multimodel_documents:
-                                document_node.attachments = multimodel_documents
-                            # parse document to child nodes
-                            child_nodes = self._split_child_nodes(
-                                document_node, rules, process_rule.get("mode"), kwargs.get("embedding_model_instance")
-                            )
-                            document_node.children = child_nodes
-                            split_documents.append(document_node)
-                all_documents.extend(split_documents)
-        elif rules.parent_mode == ParentMode.FULL_DOC:
-            page_content = "\n".join([document.page_content for document in documents])
-            document = Document(page_content=page_content, metadata=documents[0].metadata)
-            multimodel_documents = self._get_content_files(document)
-            if multimodel_documents:
-                document.attachments = multimodel_documents
-            # parse document to child nodes
-            child_nodes = self._split_child_nodes(
-                document, rules, process_rule.get("mode"), kwargs.get("embedding_model_instance")
-            )
-            if kwargs.get("preview"):
-                if len(child_nodes) > dify_config.CHILD_CHUNKS_PREVIEW_NUMBER:
-                    child_nodes = child_nodes[: dify_config.CHILD_CHUNKS_PREVIEW_NUMBER]
-
-            document.children = child_nodes
-            doc_id = str(uuid.uuid4())
-            hash = helper.generate_text_hash(document.page_content)
-            document.metadata["doc_id"] = doc_id
-            document.metadata["doc_hash"] = hash
-            all_documents.append(document)
-
-        return all_documents
-
-    def load(
-        self,
-        dataset: Dataset,
-        documents: list[Document],
-        multimodal_documents: list[AttachmentDocument] | None = None,
-        with_keywords: bool = True,
-        **kwargs,
-    ) -> None:
-        if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-            vector = Vector(dataset)
-            for document in documents:
-                child_documents = document.children
-                if child_documents:
-                    formatted_child_documents = [
-                        Document.model_validate(child_document.model_dump()) for child_document in child_documents
-                    ]
-                    vector.create(formatted_child_documents)
-            if multimodal_documents and dataset.is_multimodal:
-                vector.create_multimodal(multimodal_documents)
-
-    def clean(self, dataset: Dataset, node_ids: list[str] | None, with_keywords: bool = True, **kwargs) -> None:
-        # node_ids is segment's node_ids
-        # Note: Summary indexes are now disabled (not deleted) when segments are disabled.
-        # This method is called for actual deletion scenarios (e.g., when segment is deleted).
-        # For disable operations, disable_summaries_for_segments is called directly in the task.
-        # Only delete summaries if explicitly requested (e.g., when segment is actually deleted)
-        delete_summaries = kwargs.get("delete_summaries", False)
-        if delete_summaries:
-            if node_ids:
-                # Find segments by index_node_id
-                with session_factory.create_session() as session:
-                    segments = (
-                        session.query(DocumentSegment)
-                        .filter(
-                            DocumentSegment.dataset_id == dataset.id,
-                            DocumentSegment.index_node_id.in_(node_ids),
-                        )
-                        .all()
-                    )
-                    segment_ids = [segment.id for segment in segments]
-                    if segment_ids:
-                        SummaryIndexService.delete_summaries_for_segments(dataset, segment_ids)
-            else:
-                # Delete all summaries for the dataset
-                SummaryIndexService.delete_summaries_for_segments(dataset, None)
-
-        if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-            delete_child_chunks = kwargs.get("delete_child_chunks") or False
-            precomputed_child_node_ids = kwargs.get("precomputed_child_node_ids")
-            vector = Vector(dataset)
-
-            if node_ids:
-                # Use precomputed child_node_ids if available (to avoid race conditions)
-                if precomputed_child_node_ids is not None:
-                    child_node_ids = precomputed_child_node_ids
-                else:
-                    # Fallback to original query (may fail if segments are already deleted)
-                    rows = db.session.execute(
-                        select(ChildChunk.index_node_id)
-                        .join(DocumentSegment, ChildChunk.segment_id == DocumentSegment.id)
-                        .where(
-                            DocumentSegment.dataset_id == dataset.id,
-                            DocumentSegment.index_node_id.in_(node_ids),
-                            ChildChunk.dataset_id == dataset.id,
-                        )
-                    ).all()
-                    child_node_ids = [row[0] for row in rows if row[0]]
-
-                # Delete from vector index
-                if child_node_ids:
-                    vector.delete_by_ids(child_node_ids)
-
-                # Delete from database
-                if delete_child_chunks and child_node_ids:
-                    db.session.execute(
-                        delete(ChildChunk).where(
-                            ChildChunk.dataset_id == dataset.id, ChildChunk.index_node_id.in_(child_node_ids)
-                        )
-                    )
-                    db.session.commit()
-            else:
-                vector.delete()
-
-                if delete_child_chunks:
-                    # Use existing compound index: (tenant_id, dataset_id, ...)
-                    db.session.execute(
-                        delete(ChildChunk).where(
-                            ChildChunk.tenant_id == dataset.tenant_id, ChildChunk.dataset_id == dataset.id
-                        )
-                    )
-                    db.session.commit()
-
-    def retrieve(
-        self,
-        retrieval_method: RetrievalMethod,
-        query: str,
-        dataset: Dataset,
-        top_k: int,
-        score_threshold: float,
-        reranking_model: RerankingModelDict,
-    ) -> list[Document]:
-        # Set search parameters.
-        results = RetrievalService.retrieve(
-            retrieval_method=retrieval_method,
-            dataset_id=dataset.id,
-            query=query,
-            top_k=top_k,
-            score_threshold=score_threshold,
-            reranking_model=reranking_model,
-        )
-        # Organize results.
-        docs = []
-        for result in results:
-            metadata = result.metadata
-            metadata["score"] = result.score
-            if result.score >= score_threshold:
-                doc = Document(page_content=result.page_content, metadata=metadata)
-                docs.append(doc)
-        return docs
-
-    def _split_child_nodes(
-        self,
-        document_node: Document,
-        rules: Rule,
-        process_rule_mode: str,
-        embedding_model_instance: ModelInstance | None,
-    ) -> list[ChildDocument]:
-        if not rules.subchunk_segmentation:
-            raise ValueError("No subchunk segmentation found in rules.")
-        child_splitter = self._get_splitter(
-            processing_rule_mode=process_rule_mode,
-            max_tokens=rules.subchunk_segmentation.max_tokens,
-            chunk_overlap=rules.subchunk_segmentation.chunk_overlap,
-            separator=rules.subchunk_segmentation.separator,
-            embedding_model_instance=embedding_model_instance,
-        )
-        # parse document to child nodes
-        child_nodes = []
-        child_documents = child_splitter.split_documents([document_node])
-        for child_document_node in child_documents:
-            if child_document_node.page_content.strip():
-                doc_id = str(uuid.uuid4())
-                hash = helper.generate_text_hash(child_document_node.page_content)
-                child_document = ChildDocument(
-                    page_content=child_document_node.page_content, metadata=document_node.metadata
-                )
-                child_document.metadata["doc_id"] = doc_id
-                child_document.metadata["doc_hash"] = hash
-                child_page_content = child_document.page_content
-                if child_page_content.startswith(".") or child_page_content.startswith("。"):
-                    child_page_content = child_page_content[1:].strip()
-                if len(child_page_content) > 0:
-                    child_document.page_content = child_page_content
-                    child_nodes.append(child_document)
-        return child_nodes
-
-    def index(self, dataset: Dataset, document: DatasetDocument, chunks: Any) -> None:
-        parent_childs = ParentChildStructureChunk.model_validate(chunks)
-        documents = []
-        for parent_child in parent_childs.parent_child_chunks:
-            metadata = {
-                "dataset_id": dataset.id,
-                "document_id": document.id,
-                "doc_id": str(uuid.uuid4()),
-                "doc_hash": helper.generate_text_hash(parent_child.parent_content),
-            }
-            child_documents = []
-            for child in parent_child.child_contents:
-                child_metadata = {
-                    "dataset_id": dataset.id,
-                    "document_id": document.id,
-                    "doc_id": str(uuid.uuid4()),
-                    "doc_hash": helper.generate_text_hash(child),
-                }
-                child_documents.append(ChildDocument(page_content=child, metadata=child_metadata))
-            doc = Document(page_content=parent_child.parent_content, metadata=metadata, children=child_documents)
-            if parent_child.files and len(parent_child.files) > 0:
-                attachments = []
-                for file in parent_child.files:
-                    file_metadata = {
-                        "doc_id": file.id,
-                        "doc_hash": "",
-                        "document_id": document.id,
-                        "dataset_id": dataset.id,
-                        "doc_type": DocType.IMAGE,
-                    }
-                    file_document = AttachmentDocument(page_content=file.filename or "", metadata=file_metadata)
-                    attachments.append(file_document)
-                doc.attachments = attachments
-            else:
-                account = AccountService.load_user(document.created_by)
-                if not account:
-                    raise ValueError("Invalid account")
-                doc.attachments = self._get_content_files(doc, current_user=account)
-            documents.append(doc)
-        if documents:
-            # update document parent mode
-            dataset_process_rule = DatasetProcessRule(
-                dataset_id=dataset.id,
-                mode="hierarchical",
-                rules=json.dumps(
-                    {
-                        "parent_mode": parent_childs.parent_mode,
-                    }
-                ),
-                created_by=document.created_by,
-            )
-            db.session.add(dataset_process_rule)
-            db.session.flush()
-            document.dataset_process_rule_id = dataset_process_rule.id
-            db.session.commit()
-            # save node to document segment
-            doc_store = DatasetDocumentStore(dataset=dataset, user_id=document.created_by, document_id=document.id)
-            # add document segments
-            doc_store.add_documents(docs=documents, save_child=True)
-            if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-                all_child_documents = []
-                all_multimodal_documents = []
-                for doc in documents:
-                    if doc.children:
-                        all_child_documents.extend(doc.children)
-                    if doc.attachments:
-                        all_multimodal_documents.extend(doc.attachments)
-                vector = Vector(dataset)
-                if all_child_documents:
-                    vector.create(all_child_documents)
-                if all_multimodal_documents and dataset.is_multimodal:
-                    vector.create_multimodal(all_multimodal_documents)
-
-    def format_preview(self, chunks: Any) -> Mapping[str, Any]:
-        parent_childs = ParentChildStructureChunk.model_validate(chunks)
-        preview = []
-        for parent_child in parent_childs.parent_child_chunks:
-            preview.append({"content": parent_child.parent_content, "child_chunks": parent_child.child_contents})
-        return {
-            "chunk_structure": IndexStructureType.PARENT_CHILD_INDEX,
-            "parent_mode": parent_childs.parent_mode,
-            "preview": preview,
-            "total_segments": len(parent_childs.parent_child_chunks),
-        }
-
-    def generate_summary_preview(
-        self,
-        tenant_id: str,
-        preview_texts: list[PreviewDetail],
-        summary_index_setting: SummaryIndexSettingDict,
-        doc_language: str | None = None,
-    ) -> list[PreviewDetail]:
-        """
-        For each parent chunk in preview_texts, concurrently call generate_summary to generate a summary
-        and write it to the summary attribute of PreviewDetail.
-        In preview mode (indexing-estimate), if any summary generation fails, the method will raise an exception.
-
-        Note: For parent-child structure, we only generate summaries for parent chunks.
-        """
-        import concurrent.futures
-
-        from flask import current_app
-
-        # Capture Flask app context for worker threads
-        flask_app = None
-        try:
-            flask_app = current_app._get_current_object()  # type: ignore
-        except RuntimeError:
-            logger.warning("No Flask application context available, summary generation may fail")
-
-        def process(preview: PreviewDetail) -> None:
-            """Generate summary for a single preview item (parent chunk)."""
-            from core.rag.index_processor.processor.paragraph_index_processor import ParagraphIndexProcessor
-
-            if flask_app:
-                # Ensure Flask app context in worker thread
-                with flask_app.app_context():
-                    summary, _ = ParagraphIndexProcessor.generate_summary(
-                        tenant_id=tenant_id,
-                        text=preview.content,
-                        summary_index_setting=summary_index_setting,
-                        document_language=doc_language,
-                    )
-                    preview.summary = summary
-            else:
-                # Fallback: try without app context (may fail)
-                summary, _ = ParagraphIndexProcessor.generate_summary(
-                    tenant_id=tenant_id,
-                    text=preview.content,
-                    summary_index_setting=summary_index_setting,
-                    document_language=doc_language,
-                )
-                preview.summary = summary
-
-        # Generate summaries concurrently using ThreadPoolExecutor
-        # Set a reasonable timeout to prevent hanging (60 seconds per chunk, max 5 minutes total)
-        timeout_seconds = min(300, 60 * len(preview_texts))
-        errors: list[Exception] = []
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(preview_texts))) as executor:
-            futures = [executor.submit(process, preview) for preview in preview_texts]
-            # Wait for all tasks to complete with timeout
-            done, not_done = concurrent.futures.wait(futures, timeout=timeout_seconds)
-
-            # Cancel tasks that didn't complete in time
-            if not_done:
-                timeout_error_msg = (
-                    f"Summary generation timeout: {len(not_done)} chunks did not complete within {timeout_seconds}s"
-                )
-                logger.warning("%s. Cancelling remaining tasks...", timeout_error_msg)
-                # In preview mode, timeout is also an error
-                errors.append(TimeoutError(timeout_error_msg))
-                for future in not_done:
-                    future.cancel()
-                # Wait a bit for cancellation to take effect
-                concurrent.futures.wait(not_done, timeout=5)
-
-            # Collect exceptions from completed futures
-            for future in done:
-                try:
-                    future.result()  # This will raise any exception that occurred
-                except Exception as e:
-                    logger.exception("Error in summary generation future")
-                    errors.append(e)
-
-        # In preview mode (indexing-estimate), if there are any errors, fail the request
-        if errors:
-            error_messages = [str(e) for e in errors]
-            error_summary = (
-                f"Failed to generate summaries for {len(errors)} chunk(s). "
-                f"Errors: {'; '.join(error_messages[:3])}"  # Show first 3 errors
-            )
-            if len(errors) > 3:
-                error_summary += f" (and {len(errors) - 3} more)"
-            logger.error("Summary generation failed in preview mode: %s", error_summary)
-            raise ValueError(error_summary)
-
-        return preview_texts
-
-```
-
-### api/core/rag/index_processor/processor/__init__.py
-```py
-
-```
-
-### api/core/rag/index_processor/processor/qa_index_processor.py
-```py
-"""Paragraph index processor."""
-
-import logging
-import re
-import threading
-import uuid
-from collections.abc import Mapping
-from typing import Any
-
-import pandas as pd
-from flask import Flask, current_app
-from werkzeug.datastructures import FileStorage
-
-from core.db.session_factory import session_factory
-from core.entities.knowledge_entities import PreviewDetail
-from core.llm_generator.llm_generator import LLMGenerator
-from core.rag.cleaner.clean_processor import CleanProcessor
-from core.rag.data_post_processor.data_post_processor import RerankingModelDict
-from core.rag.datasource.retrieval_service import RetrievalService
-from core.rag.datasource.vdb.vector_factory import Vector
-from core.rag.docstore.dataset_docstore import DatasetDocumentStore
-from core.rag.extractor.entity.extract_setting import ExtractSetting
-from core.rag.extractor.extract_processor import ExtractProcessor
-from core.rag.index_processor.constant.index_type import IndexStructureType, IndexTechniqueType
-from core.rag.index_processor.index_processor_base import BaseIndexProcessor, SummaryIndexSettingDict
-from core.rag.models.document import AttachmentDocument, Document, QAStructureChunk
-from core.rag.retrieval.retrieval_methods import RetrievalMethod
-from core.tools.utils.text_processing_utils import remove_leading_symbols
-from libs import helper
-from models.account import Account
-from models.dataset import Dataset, DocumentSegment
-from models.dataset import Document as DatasetDocument
-from services.entities.knowledge_entities.knowledge_entities import Rule
-from services.summary_index_service import SummaryIndexService
-
-logger = logging.getLogger(__name__)
-
-
-class QAIndexProcessor(BaseIndexProcessor):
-    def extract(self, extract_setting: ExtractSetting, **kwargs) -> list[Document]:
-        text_docs = ExtractProcessor.extract(
-            extract_setting=extract_setting,
-            is_automatic=(
-                kwargs.get("process_rule_mode") == "automatic" or kwargs.get("process_rule_mode") == "hierarchical"
-            ),
-        )
-        return text_docs
-
-    def transform(self, documents: list[Document], current_user: Account | None = None, **kwargs) -> list[Document]:
-        preview = kwargs.get("preview")
-        process_rule = kwargs.get("process_rule")
-        if not process_rule:
-            raise ValueError("No process rule found.")
-        if not process_rule.get("rules"):
-            raise ValueError("No rules found in process rule.")
-        rules = Rule.model_validate(process_rule.get("rules"))
-        splitter = self._get_splitter(
-            processing_rule_mode=process_rule.get("mode"),
-            max_tokens=rules.segmentation.max_tokens if rules.segmentation else 0,
-            chunk_overlap=rules.segmentation.chunk_overlap if rules.segmentation else 0,
-            separator=rules.segmentation.separator if rules.segmentation else "",
-            embedding_model_instance=kwargs.get("embedding_model_instance"),
-        )
-
-        # Split the text documents into nodes.
-        all_documents: list[Document] = []
-        all_qa_documents: list[Document] = []
-        for document in documents:
-            # document clean
-            document_text = CleanProcessor.clean(document.page_content, kwargs.get("process_rule") or {})
-            document.page_content = document_text
-
-            # parse document to nodes
-            document_nodes = splitter.split_documents([document])
-            split_documents = []
-            for document_node in document_nodes:
-                if document_node.page_content.strip():
-                    doc_id = str(uuid.uuid4())
-                    hash = helper.generate_text_hash(document_node.page_content)
-                    if document_node.metadata is not None:
-                        document_node.metadata["doc_id"] = doc_id
-                        document_node.metadata["doc_hash"] = hash
-                    # delete Splitter character
-                    page_content = document_node.page_content
-                    document_node.page_content = remove_leading_symbols(page_content)
-                    split_documents.append(document_node)
-            all_documents.extend(split_documents)
-        if preview:
-            self._format_qa_document(
-                current_app._get_current_object(),  # type: ignore
-                kwargs.get("tenant_id"),  # type: ignore
-                all_documents[0],
-                all_qa_documents,
-                kwargs.get("doc_language", "English"),
-            )
-        else:
-            for i in range(0, len(all_documents), 10):
-                threads = []
-                sub_documents = all_documents[i : i + 10]
-                for doc in sub_documents:
-                    document_format_thread = threading.Thread(
-                        target=self._format_qa_document,
-                        kwargs={
-                            "flask_app": current_app._get_current_object(),  # type: ignore
-                            "tenant_id": kwargs.get("tenant_id"),  # type: ignore
-                            "document_node": doc,
-                            "all_qa_documents": all_qa_documents,
-                            "document_language": kwargs.get("doc_language", "English"),
-                        },
-                    )
-                    threads.append(document_format_thread)
-                    document_format_thread.start()
-                for thread in threads:
-                    thread.join()
-        return all_qa_documents
-
-    def format_by_template(self, file: FileStorage, **kwargs) -> list[Document]:
-        # check file type
-        if not file.filename or not file.filename.lower().endswith(".csv"):
-            raise ValueError("Invalid file type. Only CSV files are allowed")
-
-        try:
-            # Skip the first row
-            df = pd.read_csv(file)  # type: ignore
-            text_docs = []
-            for _, row in df.iterrows():
-                data = Document(page_content=row.iloc[0], metadata={"answer": row.iloc[1]})
-                text_docs.append(data)
-            if len(text_docs) == 0:
-                raise ValueError("The CSV file is empty.")
-
-        except Exception as e:
-            raise ValueError(str(e))
-        return text_docs
-
-    def load(
-        self,
-        dataset: Dataset,
-        documents: list[Document],
-        multimodal_documents: list[AttachmentDocument] | None = None,
-        with_keywords: bool = True,
-        **kwargs,
-    ) -> None:
-        if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-            vector = Vector(dataset)
-            vector.create(documents)
-            if multimodal_documents and dataset.is_multimodal:
-                vector.create_multimodal(multimodal_documents)
-
-    def clean(self, dataset: Dataset, node_ids: list[str] | None, with_keywords: bool = True, **kwargs) -> None:
-        # Note: Summary indexes are now disabled (not deleted) when segments are disabled.
-        # This method is called for actual deletion scenarios (e.g., when segment is deleted).
-        # For disable operations, disable_summaries_for_segments is called directly in the task.
-        # Note: qa_model doesn't generate summaries, but we clean them for completeness
-        # Only delete summaries if explicitly requested (e.g., when segment is actually deleted)
-        delete_summaries = kwargs.get("delete_summaries", False)
-        if delete_summaries:
-            if node_ids:
-                # Find segments by index_node_id
-                with session_factory.create_session() as session:
-                    segments = (
-                        session.query(DocumentSegment)
-                        .filter(
-                            DocumentSegment.dataset_id == dataset.id,
-                            DocumentSegment.index_node_id.in_(node_ids),
-                        )
-                        .all()
-                    )
-                    segment_ids = [segment.id for segment in segments]
-                    if segment_ids:
-                        SummaryIndexService.delete_summaries_for_segments(dataset, segment_ids)
-            else:
-                # Delete all summaries for the dataset
-                SummaryIndexService.delete_summaries_for_segments(dataset, None)
-
-        vector = Vector(dataset)
-        if node_ids:
-            vector.delete_by_ids(node_ids)
-        else:
-            vector.delete()
-
-    def retrieve(
-        self,
-        retrieval_method: RetrievalMethod,
-        query: str,
-        dataset: Dataset,
-        top_k: int,
-        score_threshold: float,
-        reranking_model: RerankingModelDict,
-    ):
-        # Set search parameters.
-        results = RetrievalService.retrieve(
-            retrieval_method=retrieval_method,
-            dataset_id=dataset.id,
-            query=query,
-            top_k=top_k,
-            score_threshold=score_threshold,
-            reranking_model=reranking_model,
-        )
-        # Organize results.
-        docs = []
-        for result in results:
-            metadata = result.metadata
-            metadata["score"] = result.score
-            if result.score >= score_threshold:
-                doc = Document(page_content=result.page_content, metadata=metadata)
-                docs.append(doc)
-        return docs
-
-    def index(self, dataset: Dataset, document: DatasetDocument, chunks: Any) -> None:
-        qa_chunks = QAStructureChunk.model_validate(chunks)
-        documents = []
-        for qa_chunk in qa_chunks.qa_chunks:
-            metadata = {
-                "dataset_id": dataset.id,
-                "document_id": document.id,
-                "doc_id": str(uuid.uuid4()),
-                "doc_hash": helper.generate_text_hash(qa_chunk.question),
-                "answer": qa_chunk.answer,
-            }
-            doc = Document(page_content=qa_chunk.question, metadata=metadata)
-            documents.append(doc)
-        if documents:
-            # save node to document segment
-            doc_store = DatasetDocumentStore(dataset=dataset, user_id=document.created_by, document_id=document.id)
-            doc_store.add_documents(docs=documents, save_child=False)
-            if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-                vector = Vector(dataset)
-                vector.create(documents)
-            else:
-                raise ValueError("Indexing technique must be high quality.")
-
-    def format_preview(self, chunks: Any) -> Mapping[str, Any]:
-        qa_chunks = QAStructureChunk.model_validate(chunks)
-        preview = []
-        for qa_chunk in qa_chunks.qa_chunks:
-            preview.append({"question": qa_chunk.question, "answer": qa_chunk.answer})
-        return {
-            "chunk_structure": IndexStructureType.QA_INDEX,
-            "qa_preview": preview,
-            "total_segments": len(qa_chunks.qa_chunks),
-        }
-
-    def generate_summary_preview(
-        self,
-        tenant_id: str,
-        preview_texts: list[PreviewDetail],
-        summary_index_setting: SummaryIndexSettingDict,
-        doc_language: str | None = None,
-    ) -> list[PreviewDetail]:
-        """
-        QA model doesn't generate summaries, so this method returns preview_texts unchanged.
-
-        Note: QA model uses question-answer pairs, which don't require summary generation.
-        """
-        # QA model doesn't generate summaries, return as-is
-        return preview_texts
-
-    def _format_qa_document(self, flask_app: Flask, tenant_id: str, document_node, all_qa_documents, document_language):
-        format_documents = []
-        if document_node.page_content is None or not document_node.page_content.strip():
-            return
-        with flask_app.app_context():
-            try:
-                # qa model document
-                response = LLMGenerator.generate_qa_document(tenant_id, document_node.page_content, document_language)
-                document_qa_list = self._format_split_text(response)
-                qa_documents = []
-                for result in document_qa_list:
-                    qa_document = Document(page_content=result["question"], metadata=document_node.metadata.copy())
-                    if qa_document.metadata is not None:
-                        doc_id = str(uuid.uuid4())
-                        hash = helper.generate_text_hash(result["question"])
-                        qa_document.metadata["answer"] = result["answer"]
-                        qa_document.metadata["doc_id"] = doc_id
-                        qa_document.metadata["doc_hash"] = hash
-                    qa_documents.append(qa_document)
-                format_documents.extend(qa_documents)
-            except Exception:
-                logger.exception("Failed to format qa document")
-
-            all_qa_documents.extend(format_documents)
-
-    def _format_split_text(self, text):
-        regex = r"Q\d+:\s*(.*?)\s*A\d+:\s*([\s\S]*?)(?=Q\d+:|$)"
-        matches = re.findall(regex, text, re.UNICODE)
-
-        return [{"question": q, "answer": re.sub(r"\n\s*", "\n", a.strip())} for q, a in matches if q and a]
-
-```
-
-### api/core/rag/index_processor/__init__.py
-```py
-
-```
-
-### api/core/rag/index_processor/constant/index_type.py
-```py
-from enum import StrEnum
-
-
-class IndexStructureType(StrEnum):
-    PARAGRAPH_INDEX = "text_model"
-    QA_INDEX = "qa_model"
-    PARENT_CHILD_INDEX = "hierarchical_model"
-
-
-class IndexTechniqueType(StrEnum):
-    ECONOMY = "economy"
-    HIGH_QUALITY = "high_quality"
-
-```
-
-### api/core/rag/index_processor/constant/query_type.py
-```py
-from enum import StrEnum
-
-
-class QueryType(StrEnum):
-    TEXT_QUERY = "text_query"
-    IMAGE_QUERY = "image_query"
-
-```
-
-### api/core/rag/index_processor/constant/built_in_field.py
-```py
-from enum import StrEnum, auto
-
-
-class BuiltInField(StrEnum):
-    document_name = auto()
-    uploader = auto()
-    upload_date = auto()
-    last_update_date = auto()
-    source = auto()
-
-
-class MetadataDataSource(StrEnum):
-    upload_file = "file_upload"
-    website_crawl = "website"
-    notion_import = "notion"
-    local_file = "file_upload"
-    online_document = "online_document"
-    online_drive = "online_drive"
-
-```
-
-### api/core/rag/index_processor/constant/doc_type.py
-```py
-from enum import StrEnum
-
-
-class DocType(StrEnum):
-    TEXT = "text"
-    IMAGE = "image"
-
-```
-
-### api/core/rag/index_processor/constant/__init__.py
-```py
-
-```
-
-### api/core/rag/index_processor/index_processor.py
-```py
-import concurrent.futures
-import datetime
-import logging
-import time
-from collections.abc import Mapping
-from typing import Any
-
-from flask import current_app
-from sqlalchemy import delete, func, select
-
-from core.db.session_factory import session_factory
-from core.rag.index_processor.constant.index_type import IndexTechniqueType
-from core.rag.index_processor.index_processor_base import SummaryIndexSettingDict
-from core.workflow.nodes.knowledge_index.exc import KnowledgeIndexNodeError
-from core.workflow.nodes.knowledge_index.protocols import Preview, PreviewItem, QaPreview
-from models.dataset import Dataset, Document, DocumentSegment
-
-from .index_processor_factory import IndexProcessorFactory
-from .processor.paragraph_index_processor import ParagraphIndexProcessor
-
-logger = logging.getLogger(__name__)
-
-
-class IndexProcessor:
-    def format_preview(self, chunk_structure: str, chunks: Any) -> Preview:
-        index_processor = IndexProcessorFactory(chunk_structure).init_index_processor()
-        preview = index_processor.format_preview(chunks)
-        data = Preview(
-            chunk_structure=preview["chunk_structure"],
-            total_segments=preview["total_segments"],
-            preview=[],
-            parent_mode=None,
-            qa_preview=[],
-        )
-        if "parent_mode" in preview:
-            data.parent_mode = preview["parent_mode"]
-
-        # Different index processors return different preview shapes:
-        # - paragraph/parent-child processors: {"preview": [...]}
-        # - QA processor: {"qa_preview": [...]} (no "preview" key)
-        for item in preview.get("preview", []):
-            if "content" in item and "child_chunks" in item:
-                data.preview.append(
-                    PreviewItem(content=item["content"], child_chunks=item["child_chunks"], summary=None)
-                )
-            elif "question" in item and "answer" in item:
-                data.qa_preview.append(QaPreview(question=item["question"], answer=item["answer"]))
-            elif "content" in item:
-                data.preview.append(PreviewItem(content=item["content"], child_chunks=None, summary=None))
-
-        for item in preview.get("qa_preview", []):
-            if "question" in item and "answer" in item:
-                data.qa_preview.append(QaPreview(question=item["question"], answer=item["answer"]))
-        return data
-
-    def index_and_clean(
-        self,
-        dataset_id: str,
-        document_id: str,
-        original_document_id: str,
-        chunks: Mapping[str, Any],
-        batch: Any,
-        summary_index_setting: SummaryIndexSettingDict | None = None,
-    ):
-        with session_factory.create_session() as session:
-            document = session.query(Document).filter_by(id=document_id).first()
-            if not document:
-                raise KnowledgeIndexNodeError(f"Document {document_id} not found.")
-
-            dataset = session.query(Dataset).filter_by(id=dataset_id).first()
-            if not dataset:
-                raise KnowledgeIndexNodeError(f"Dataset {dataset_id} not found.")
-
-            dataset_name_value = dataset.name
-            document_name_value = document.name
-            created_at_value = document.created_at
-            if summary_index_setting is None:
-                summary_index_setting = dataset.summary_index_setting
-            index_node_ids = []
-
-            index_processor = IndexProcessorFactory(dataset.chunk_structure).init_index_processor()
-            if original_document_id:
-                segments = session.scalars(
-                    select(DocumentSegment).where(DocumentSegment.document_id == original_document_id)
-                ).all()
-                if segments:
-                    index_node_ids = [segment.index_node_id for segment in segments]
-
-        indexing_start_at = time.perf_counter()
-        # delete from vector index
-        if index_node_ids:
-            index_processor.clean(dataset, index_node_ids, with_keywords=True, delete_child_chunks=True)
-
-        with session_factory.create_session() as session, session.begin():
-            if index_node_ids:
-                segment_delete_stmt = delete(DocumentSegment).where(DocumentSegment.document_id == original_document_id)
-                session.execute(segment_delete_stmt)
-
-        index_processor.index(dataset, document, chunks)
-        indexing_end_at = time.perf_counter()
-
-        with session_factory.create_session() as session, session.begin():
-            document.indexing_latency = indexing_end_at - indexing_start_at
-            document.indexing_status = "completed"
-            document.completed_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
-            document.word_count = (
-                session.query(func.sum(DocumentSegment.word_count))
-                .where(
-                    DocumentSegment.document_id == document_id,
-                    DocumentSegment.dataset_id == dataset_id,
-                )
-                .scalar()
-            ) or 0
-            # Update need_summary based on dataset's summary_index_setting
-            if summary_index_setting and summary_index_setting.get("enable") is True:
-                document.need_summary = True
-            else:
-                document.need_summary = False
-            session.add(document)
-            # update document segment status
-            session.query(DocumentSegment).where(
-                DocumentSegment.document_id == document_id,
-                DocumentSegment.dataset_id == dataset_id,
-            ).update(
-                {
-                    DocumentSegment.status: "completed",
-                    DocumentSegment.enabled: True,
-                    DocumentSegment.completed_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
-                }
-            )
-
-        return {
-            "dataset_id": dataset_id,
-            "dataset_name": dataset_name_value,
-            "batch": batch,
-            "document_id": document_id,
-            "document_name": document_name_value,
-            "created_at": created_at_value.timestamp(),
-            "display_status": "completed",
-        }
-
-    def get_preview_output(
-        self,
-        chunks: Any,
-        dataset_id: str,
-        document_id: str,
-        chunk_structure: str,
-        summary_index_setting: SummaryIndexSettingDict | None,
-    ) -> Preview:
-        doc_language = None
-        with session_factory.create_session() as session:
-            if document_id:
-                document = session.query(Document).filter_by(id=document_id).first()
-            else:
-                document = None
-
-            dataset = session.query(Dataset).filter_by(id=dataset_id).first()
-            if not dataset:
-                raise KnowledgeIndexNodeError(f"Dataset {dataset_id} not found.")
-
-            if summary_index_setting is None:
-                summary_index_setting = dataset.summary_index_setting
-
-            if document:
-                doc_language = document.doc_language
-            indexing_technique = dataset.indexing_technique
-            tenant_id = dataset.tenant_id
-
-        preview_output = self.format_preview(chunk_structure, chunks)
-        if indexing_technique != IndexTechniqueType.HIGH_QUALITY:
-            return preview_output
-
-        if not summary_index_setting or not summary_index_setting.get("enable"):
-            return preview_output
-
-        if preview_output.preview is not None:
-            chunk_count = len(preview_output.preview)
-            logger.info(
-                "Generating summaries for %s chunks in preview mode (dataset: %s)",
-                chunk_count,
-                dataset_id,
-            )
-
-            flask_app = None
-            try:
-                flask_app = current_app._get_current_object()  # type: ignore
-            except RuntimeError:
-                logger.warning("No Flask application context available, summary generation may fail")
-
-            def generate_summary_for_chunk(preview_item: PreviewItem) -> None:
-                """Generate summary for a single chunk."""
-                if flask_app:
-                    with flask_app.app_context():
-                        if preview_item.content is not None:
-                            # Set Flask application context in worker thread
-                            summary, _ = ParagraphIndexProcessor.generate_summary(
-                                tenant_id=tenant_id,
-                                text=preview_item.content,
-                                summary_index_setting=summary_index_setting,
-                                document_language=doc_language,
-                            )
-                            if summary:
-                                preview_item.summary = summary
-
-                        else:
-                            summary, _ = ParagraphIndexProcessor.generate_summary(
-                                tenant_id=tenant_id,
-                                text=preview_item.content if preview_item.content is not None else "",
-                                summary_index_setting=summary_index_setting,
-                                document_language=doc_language,
-                            )
-                            if summary:
-                                preview_item.summary = summary
-
-            # Generate summaries concurrently using ThreadPoolExecutor
-            # Set a reasonable timeout to prevent hanging (60 seconds per chunk, max 5 minutes total)
-            timeout_seconds = min(300, 60 * len(preview_output.preview))
-            errors: list[Exception] = []
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(preview_output.preview))) as executor:
-                futures = [
-                    executor.submit(generate_summary_for_chunk, preview_item) for preview_item in preview_output.preview
-                ]
-                # Wait for all tasks to complete with timeout
-                done, not_done = concurrent.futures.wait(futures, timeout=timeout_seconds)
-
-                # Cancel tasks that didn't complete in time
-                if not_done:
-                    timeout_error_msg = (
-                        f"Summary generation timeout: {len(not_done)} chunks did not complete within {timeout_seconds}s"
-                    )
-                    logger.warning("%s. Cancelling remaining tasks...", timeout_error_msg)
-                    # In preview mode, timeout is also an error
-                    errors.append(TimeoutError(timeout_error_msg))
-                    for future in not_done:
-                        future.cancel()
-                    # Wait a bit for cancellation to take effect
-                    concurrent.futures.wait(not_done, timeout=5)
-
-                # Collect exceptions from completed futures
-                for future in done:
-                    try:
-                        future.result()  # This will raise any exception that occurred
-                    except Exception as e:
-                        logger.exception("Error in summary generation future")
-                        errors.append(e)
-
-            # In preview mode, if there are any errors, fail the request
-            if errors:
-                error_messages = [str(e) for e in errors]
-                error_summary = (
-                    f"Failed to generate summaries for {len(errors)} chunk(s). "
-                    f"Errors: {'; '.join(error_messages[:3])}"  # Show first 3 errors
-                )
-                if len(errors) > 3:
-                    error_summary += f" (and {len(errors) - 3} more)"
-                logger.error("Summary generation failed in preview mode: %s", error_summary)
-                raise KnowledgeIndexNodeError(error_summary)
-
-            completed_count = sum(1 for item in preview_output.preview if item.summary is not None)
-            logger.info(
-                "Completed summary generation for preview chunks: %s/%s succeeded",
-                completed_count,
-                len(preview_output.preview),
-            )
-        return preview_output
-
-```
-
-### api/core/rag/index_processor/index_processor_base.py
-```py
-"""Abstract interface for document loader implementations."""
-
-import cgi
-import logging
-import mimetypes
-import os
-import re
-from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
-from urllib.parse import unquote, urlparse
-
-import httpx
-from sqlalchemy import select
-
-from configs import dify_config
-from core.entities.knowledge_entities import PreviewDetail
-from core.helper import ssrf_proxy
-from core.rag.data_post_processor.data_post_processor import RerankingModelDict
-from core.rag.extractor.entity.extract_setting import ExtractSetting
-from core.rag.index_processor.constant.doc_type import DocType
-from core.rag.models.document import AttachmentDocument, Document
-from core.rag.retrieval.retrieval_methods import RetrievalMethod
-from core.rag.splitter.fixed_text_splitter import (
-    EnhanceRecursiveCharacterTextSplitter,
-    FixedRecursiveCharacterTextSplitter,
-)
-from core.rag.splitter.text_splitter import TextSplitter
-from extensions.ext_database import db
-from extensions.ext_storage import storage
-from models import Account, ToolFile
-from models.dataset import Dataset, DatasetProcessRule
-from models.dataset import Document as DatasetDocument
-from models.model import UploadFile
-
-if TYPE_CHECKING:
-    from core.model_manager import ModelInstance
-
-
-class SummaryIndexSettingDict(TypedDict):
-    enable: bool
-    model_name: NotRequired[str]
-    model_provider_name: NotRequired[str]
-    summary_prompt: NotRequired[str]
-
-
-class BaseIndexProcessor(ABC):
-    """Interface for extract files."""
-
-    @abstractmethod
-    def extract(self, extract_setting: ExtractSetting, **kwargs) -> list[Document]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def transform(self, documents: list[Document], current_user: Account | None = None, **kwargs) -> list[Document]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def generate_summary_preview(
-        self,
-        tenant_id: str,
-        preview_texts: list[PreviewDetail],
-        summary_index_setting: SummaryIndexSettingDict,
-        doc_language: str | None = None,
-    ) -> list[PreviewDetail]:
-        """
-        For each segment in preview_texts, generate a summary using LLM and attach it to the segment.
-        The summary can be stored in a new attribute, e.g., summary.
-        This method should be implemented by subclasses.
-
-        Args:
-            tenant_id: Tenant ID
-            preview_texts: List of preview details to generate summaries for
-            summary_index_setting: Summary index configuration
-            doc_language: Optional document language to ensure summary is generated in the correct language
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def load(
-        self,
-        dataset: Dataset,
-        documents: list[Document],
-        multimodal_documents: list[AttachmentDocument] | None = None,
-        with_keywords: bool = True,
-        **kwargs,
-    ) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def clean(self, dataset: Dataset, node_ids: list[str] | None, with_keywords: bool = True, **kwargs) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def index(self, dataset: Dataset, document: DatasetDocument, chunks: Any) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def format_preview(self, chunks: Any) -> Mapping[str, Any]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def retrieve(
-        self,
-        retrieval_method: RetrievalMethod,
-        query: str,
-        dataset: Dataset,
-        top_k: int,
-        score_threshold: float,
-        reranking_model: RerankingModelDict,
-    ) -> list[Document]:
-        raise NotImplementedError
-
-    def _get_splitter(
-        self,
-        processing_rule_mode: str,
-        max_tokens: int,
-        chunk_overlap: int,
-        separator: str,
-        embedding_model_instance: "ModelInstance | None",
-    ) -> TextSplitter:
-        """
-        Get the NodeParser object according to the processing rule.
-        """
-        character_splitter: TextSplitter
-        if processing_rule_mode in ["custom", "hierarchical"]:
-            # The user-defined segmentation rule
-            max_segmentation_tokens_length = dify_config.INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
-            if max_tokens < 50 or max_tokens > max_segmentation_tokens_length:
-                raise ValueError(f"Custom segment length should be between 50 and {max_segmentation_tokens_length}.")
-
-            if separator:
-                separator = separator.replace("\\n", "\n")
-
-            character_splitter = FixedRecursiveCharacterTextSplitter.from_encoder(
-                chunk_size=max_tokens,
-                chunk_overlap=chunk_overlap,
-                fixed_separator=separator,
-                separators=["\n\n", "。", ". ", " ", ""],
-                embedding_model_instance=embedding_model_instance,
-            )
-        else:
-            # Automatic segmentation
-            character_splitter = EnhanceRecursiveCharacterTextSplitter.from_encoder(
-                chunk_size=DatasetProcessRule.AUTOMATIC_RULES["segmentation"]["max_tokens"],
-                chunk_overlap=DatasetProcessRule.AUTOMATIC_RULES["segmentation"]["chunk_overlap"],
-                separators=["\n\n", "。", ". ", " ", ""],
-                embedding_model_instance=embedding_model_instance,
-            )
-
-        return character_splitter
-
-    def _get_content_files(self, document: Document, current_user: Account | None = None) -> list[AttachmentDocument]:
-        """
-        Get the content files from the document.
-        """
-        multi_model_documents: list[AttachmentDocument] = []
-        text = document.page_content
-        images = self._extract_markdown_images(text)
-        if not images:
-            return multi_model_documents
-        upload_file_id_list = []
-
-        for image in images:
-            # Collect all upload_file_ids including duplicates to preserve occurrence count
-
-            # For data before v0.10.0
-            pattern = r"/files/([a-f0-9\-]+)/image-preview(?:\?.*?)?"
-            match = re.search(pattern, image)
-            if match:
-                upload_file_id = match.group(1)
-                upload_file_id_list.append(upload_file_id)
-                continue
-
-            # For data after v0.10.0
-            pattern = r"/files/([a-f0-9\-]+)/file-preview(?:\?.*?)?"
-            match = re.search(pattern, image)
-            if match:
-                upload_file_id = match.group(1)
-                upload_file_id_list.append(upload_file_id)
-                continue
-
-            # For tools directory - direct file formats (e.g., .png, .jpg, etc.)
-            # Match URL including any query parameters up to common URL boundaries (space, parenthesis, quotes)
-            pattern = r"/files/tools/([a-f0-9\-]+)\.([a-zA-Z0-9]+)(?:\?[^\s\)\"\']*)?"
-            match = re.search(pattern, image)
-            if match:
-                if current_user:
-                    tool_file_id = match.group(1)
-                    upload_file_id = self._download_tool_file(tool_file_id, current_user)
-                    if upload_file_id:
-                        upload_file_id_list.append(upload_file_id)
-                continue
-            if current_user:
-                upload_file_id = self._download_image(image.split(" ")[0], current_user)
-                if upload_file_id:
-                    upload_file_id_list.append(upload_file_id)
-
-        if not upload_file_id_list:
-            return multi_model_documents
-
-        # Get unique IDs for database query
-        unique_upload_file_ids = list(set(upload_file_id_list))
-        upload_files = db.session.scalars(select(UploadFile).where(UploadFile.id.in_(unique_upload_file_ids))).all()
-
-        # Create a mapping from ID to UploadFile for quick lookup
-        upload_file_map = {upload_file.id: upload_file for upload_file in upload_files}
-
-        # Create a Document for each occurrence (including duplicates)
-        for upload_file_id in upload_file_id_list:
-            upload_file = upload_file_map.get(upload_file_id)
-            if upload_file:
-                multi_model_documents.append(
-                    AttachmentDocument(
-                        page_content=upload_file.name,
-                        metadata={
-                            "doc_id": upload_file.id,
-                            "doc_hash": "",
-                            "document_id": document.metadata.get("document_id"),
-                            "dataset_id": document.metadata.get("dataset_id"),
-                            "doc_type": DocType.IMAGE,
-                        },
-                    )
-                )
-        return multi_model_documents
-
-    def _extract_markdown_images(self, text: str) -> list[str]:
-        """
-        Extract the markdown images from the text.
-        """
-        pattern = r"!\[.*?\]\((.*?)\)"
-        return re.findall(pattern, text)
-
-    def _download_image(self, image_url: str, current_user: Account) -> str | None:
-        """
-        Download the image from the URL.
-        Image size must not exceed 2MB.
-        """
-        from services.file_service import FileService
-
-        MAX_IMAGE_SIZE = dify_config.ATTACHMENT_IMAGE_FILE_SIZE_LIMIT * 1024 * 1024
-        DOWNLOAD_TIMEOUT = dify_config.ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT
-
-        try:
-            # Download with timeout
-            response = ssrf_proxy.get(image_url, timeout=DOWNLOAD_TIMEOUT)
-            response.raise_for_status()
-
-            # Check Content-Length header if available
-            content_length = response.headers.get("Content-Length")
-            if content_length and int(content_length) > MAX_IMAGE_SIZE:
-                logging.warning("Image from %s exceeds 2MB limit (size: %s bytes)", image_url, content_length)
-                return None
-
-            filename = None
-
-            content_disposition = response.headers.get("content-disposition")
-            if content_disposition:
-                _, params = cgi.parse_header(content_disposition)
-                if "filename" in params:
-                    filename = params["filename"]
-                    filename = unquote(filename)
-
-            if not filename:
-                parsed_url = urlparse(image_url)
-                # Decode percent-encoded characters in the URL path.
-                path = unquote(parsed_url.path)
-                filename = os.path.basename(path)
-
-            if not filename:
-                filename = "downloaded_image_file"
-
-            name, current_ext = os.path.splitext(filename)
-
-            content_type = response.headers.get("content-type", "").split(";")[0].strip()
-
-            real_ext = mimetypes.guess_extension(content_type)
-
-            if not current_ext and real_ext or current_ext in [".php", ".jsp", ".asp", ".html"] and real_ext:
-                filename = f"{name}{real_ext}"
-            # Download content with size limit
-            blob = b""
-            for chunk in response.iter_bytes(chunk_size=8192):
-                blob += chunk
-                if len(blob) > MAX_IMAGE_SIZE:
-                    logging.warning("Image from %s exceeds 2MB limit during download", image_url)
-                    return None
-
-            if not blob:
-                logging.warning("Image from %s is empty", image_url)
-                return None
-
-            upload_file = FileService(db.engine).upload_file(
-                filename=filename,
-                content=blob,
-                mimetype=content_type,
-                user=current_user,
-            )
-            return upload_file.id
-        except httpx.TimeoutException:
-            logging.warning("Timeout downloading image from %s after %s seconds", image_url, DOWNLOAD_TIMEOUT)
-            return None
-        except httpx.RequestError as e:
-            logging.warning("Error downloading image from %s: %s", image_url, str(e))
-            return None
-        except Exception:
-            logging.warning("Unexpected error downloading image from %s", image_url, exc_info=True)
-            return None
-
-    def _download_tool_file(self, tool_file_id: str, current_user: Account) -> str | None:
-        """
-        Download the tool file from the ID.
-        """
-        from services.file_service import FileService
-
-        tool_file = db.session.get(ToolFile, tool_file_id)
-        if not tool_file:
-            return None
-        blob = storage.load_once(tool_file.file_key)
-        upload_file = FileService(db.engine).upload_file(
-            filename=tool_file.name,
-            content=blob,
-            mimetype=tool_file.mimetype,
-            user=current_user,
-        )
-        return upload_file.id
-
-```
-
-### api/core/rag/summary_index/__init__.py
-```py
-
-```
-
-### api/core/rag/summary_index/summary_index.py
-```py
-import concurrent.futures
-import logging
-
-from core.db.session_factory import session_factory
-from core.rag.index_processor.constant.index_type import IndexTechniqueType
-from core.rag.index_processor.index_processor_base import SummaryIndexSettingDict
-from models.dataset import Dataset, Document, DocumentSegment, DocumentSegmentSummary
-from services.summary_index_service import SummaryIndexService
-from tasks.generate_summary_index_task import generate_summary_index_task
-
-logger = logging.getLogger(__name__)
-
-
-class SummaryIndex:
-    def generate_and_vectorize_summary(
-        self,
-        dataset_id: str,
-        document_id: str,
-        is_preview: bool,
-        summary_index_setting: SummaryIndexSettingDict | None = None,
-    ) -> None:
-        if is_preview:
-            with session_factory.create_session() as session:
-                dataset = session.query(Dataset).filter_by(id=dataset_id).first()
-                if not dataset or dataset.indexing_technique != IndexTechniqueType.HIGH_QUALITY:
-                    return
-
-                if summary_index_setting is None:
-                    summary_index_setting = dataset.summary_index_setting
-
-                if not summary_index_setting or not summary_index_setting.get("enable"):
-                    return
-
-                if not document_id:
-                    return
-
-                document = session.query(Document).filter_by(id=document_id).first()
-                # Skip qa_model documents
-                if document is None or document.doc_form == "qa_model":
-                    return
-
-                query = session.query(DocumentSegment).filter_by(
-                    dataset_id=dataset_id,
-                    document_id=document_id,
-                    status="completed",
-                    enabled=True,
-                )
-                segments = query.all()
-                segment_ids = [segment.id for segment in segments]
-
-                if not segment_ids:
-                    return
-
-                existing_summaries = (
-                    session.query(DocumentSegmentSummary)
-                    .filter(
-                        DocumentSegmentSummary.chunk_id.in_(segment_ids),
-                        DocumentSegmentSummary.dataset_id == dataset_id,
-                        DocumentSegmentSummary.status == "completed",
-                    )
-                    .all()
-                )
-                completed_summary_segment_ids = {i.chunk_id for i in existing_summaries}
-                # Preview mode should process segments that are MISSING completed summaries
-                pending_segment_ids = [sid for sid in segment_ids if sid not in completed_summary_segment_ids]
-
-            # If all segments already have completed summaries, nothing to do in preview mode
-            if not pending_segment_ids:
-                return
-
-            max_workers = min(10, len(pending_segment_ids))
-
-            def process_segment(segment_id: str) -> None:
-                """Process a single segment in a thread with a fresh DB session."""
-                with session_factory.create_session() as session:
-                    segment = session.query(DocumentSegment).filter_by(id=segment_id).first()
-                    if segment is None:
-                        return
-                    try:
-                        SummaryIndexService.generate_and_vectorize_summary(segment, dataset, summary_index_setting)
-                    except Exception:
-                        logger.exception(
-                            "Failed to generate summary for segment %s",
-                            segment_id,
-                        )
-                        # Continue processing other segments
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [executor.submit(process_segment, segment_id) for segment_id in pending_segment_ids]
-                concurrent.futures.wait(futures)
-        else:
-            generate_summary_index_task.delay(dataset_id, document_id, None)
-
-```
-
-### api/core/rag/data_post_processor/__init__.py
-```py
-
-```
-
-### api/core/rag/data_post_processor/data_post_processor.py
-```py
-from typing import TypedDict
-
-from graphon.model_runtime.entities.model_entities import ModelType
-from graphon.model_runtime.errors.invoke import InvokeAuthorizationError
-
-from core.model_manager import ModelInstance, ModelManager
-from core.rag.data_post_processor.reorder import ReorderRunner
-from core.rag.index_processor.constant.query_type import QueryType
-from core.rag.models.document import Document
-from core.rag.rerank.entity.weight import KeywordSetting, VectorSetting, Weights
-from core.rag.rerank.rerank_base import BaseRerankRunner
-from core.rag.rerank.rerank_factory import RerankRunnerFactory
-from core.rag.rerank.rerank_type import RerankMode
-
-
-class RerankingModelDict(TypedDict):
-    reranking_provider_name: str
-    reranking_model_name: str
-
-
-class VectorSettingDict(TypedDict):
-    vector_weight: float
-    embedding_provider_name: str
-    embedding_model_name: str
-
-
-class KeywordSettingDict(TypedDict):
-    keyword_weight: float
-
-
-class WeightsDict(TypedDict):
-    vector_setting: VectorSettingDict
-    keyword_setting: KeywordSettingDict
-
-
-class DataPostProcessor:
-    """Interface for data post-processing document."""
-
-    def __init__(
-        self,
-        tenant_id: str,
-        reranking_mode: str,
-        reranking_model: RerankingModelDict | None = None,
-        weights: WeightsDict | None = None,
-        reorder_enabled: bool = False,
-    ):
-        self.rerank_runner = self._get_rerank_runner(reranking_mode, tenant_id, reranking_model, weights)
-        self.reorder_runner = self._get_reorder_runner(reorder_enabled)
-
-    def invoke(
-        self,
-        query: str,
-        documents: list[Document],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        query_type: QueryType = QueryType.TEXT_QUERY,
-    ) -> list[Document]:
-        if self.rerank_runner:
-            documents = self.rerank_runner.run(query, documents, score_threshold, top_n, query_type)
-
-        if self.reorder_runner:
-            documents = self.reorder_runner.run(documents)
-
-        return documents
-
-    def _get_rerank_runner(
-        self,
-        reranking_mode: str,
-        tenant_id: str,
-        reranking_model: RerankingModelDict | None = None,
-        weights: WeightsDict | None = None,
-    ) -> BaseRerankRunner | None:
-        if reranking_mode == RerankMode.WEIGHTED_SCORE and weights:
-            runner = RerankRunnerFactory.create_rerank_runner(
-                runner_type=reranking_mode,
-                tenant_id=tenant_id,
-                weights=Weights(
-                    vector_setting=VectorSetting(
-                        vector_weight=weights["vector_setting"]["vector_weight"],
-                        embedding_provider_name=weights["vector_setting"]["embedding_provider_name"],
-                        embedding_model_name=weights["vector_setting"]["embedding_model_name"],
-                    ),
-                    keyword_setting=KeywordSetting(
-                        keyword_weight=weights["keyword_setting"]["keyword_weight"],
-                    ),
-                ),
-            )
-            return runner
-        elif reranking_mode == RerankMode.RERANKING_MODEL:
-            rerank_model_instance = self._get_rerank_model_instance(tenant_id, reranking_model)
-            if rerank_model_instance is None:
-                return None
-            runner = RerankRunnerFactory.create_rerank_runner(
-                runner_type=reranking_mode, rerank_model_instance=rerank_model_instance
-            )
-            return runner
-        return None
-
-    def _get_reorder_runner(self, reorder_enabled) -> ReorderRunner | None:
-        if reorder_enabled:
-            return ReorderRunner()
-        return None
-
-    def _get_rerank_model_instance(
-        self, tenant_id: str, reranking_model: RerankingModelDict | None
-    ) -> ModelInstance | None:
-        if reranking_model:
-            try:
-                model_manager = ModelManager.for_tenant(tenant_id=tenant_id)
-                reranking_provider_name = reranking_model.get("reranking_provider_name")
-                reranking_model_name = reranking_model.get("reranking_model_name")
-                if not reranking_provider_name or not reranking_model_name:
-                    return None
-                rerank_model_instance = model_manager.get_model_instance(
-                    tenant_id=tenant_id,
-                    provider=reranking_provider_name,
-                    model_type=ModelType.RERANK,
-                    model=reranking_model_name,
-                )
-                return rerank_model_instance
-            except InvokeAuthorizationError:
-                return None
-        return None
-
-```
-
-### api/core/rag/data_post_processor/reorder.py
-```py
-from core.rag.models.document import Document
-
-
-class ReorderRunner:
-    def run(self, documents: list[Document]) -> list[Document]:
-        # Retrieve elements from odd indices (0, 2, 4, etc.) of the documents list
-        odd_elements = documents[::2]
-
-        # Retrieve elements from even indices (1, 3, 5, etc.) of the documents list
-        even_elements = documents[1::2]
-
-        # Reverse the list of elements from even indices
-        even_elements_reversed = even_elements[::-1]
-
-        new_documents = odd_elements + even_elements_reversed
-
-        return new_documents
-
-```
-
-### api/core/rag/embedding/__init__.py
-```py
-
-```
-
-### api/core/rag/embedding/cached_embedding.py
-```py
-import base64
-import logging
-import pickle
-from typing import Any, cast
-
-import numpy as np
-from graphon.model_runtime.entities.model_entities import ModelPropertyKey
-from graphon.model_runtime.model_providers.__base.text_embedding_model import TextEmbeddingModel
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-
-from configs import dify_config
-from core.entities.embedding_type import EmbeddingInputType
-from core.model_manager import ModelInstance
-from core.rag.embedding.embedding_base import Embeddings
-from extensions.ext_database import db
-from extensions.ext_redis import redis_client
-from libs import helper
-from models.dataset import Embedding
-
-logger = logging.getLogger(__name__)
-
-
-class CacheEmbedding(Embeddings):
-    def __init__(self, model_instance: ModelInstance):
-        self._model_instance = model_instance
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed search docs in batches of 10."""
-        # use doc embedding cache or store if not exists
-        text_embeddings: list[Any] = [None for _ in range(len(texts))]
-        embedding_queue_indices = []
-        for i, text in enumerate(texts):
-            hash = helper.generate_text_hash(text)
-            embedding = db.session.scalar(
-                select(Embedding)
-                .where(
-                    Embedding.model_name == self._model_instance.model_name,
-                    Embedding.hash == hash,
-                    Embedding.provider_name == self._model_instance.provider,
-                )
-                .limit(1)
-            )
-            if embedding:
-                text_embeddings[i] = embedding.get_embedding()
-            else:
-                embedding_queue_indices.append(i)
-
-        # NOTE: avoid closing the shared scoped session here; downstream code may still have pending work
-
-        if embedding_queue_indices:
-            embedding_queue_texts = [texts[i] for i in embedding_queue_indices]
-            embedding_queue_embeddings = []
-            try:
-                model_type_instance = cast(TextEmbeddingModel, self._model_instance.model_type_instance)
-                model_schema = model_type_instance.get_model_schema(
-                    self._model_instance.model_name, self._model_instance.credentials
-                )
-                max_chunks = (
-                    model_schema.model_properties[ModelPropertyKey.MAX_CHUNKS]
-                    if model_schema and ModelPropertyKey.MAX_CHUNKS in model_schema.model_properties
-                    else 1
-                )
-                for i in range(0, len(embedding_queue_texts), max_chunks):
-                    batch_texts = embedding_queue_texts[i : i + max_chunks]
-
-                    embedding_result = self._model_instance.invoke_text_embedding(
-                        texts=batch_texts, input_type=EmbeddingInputType.DOCUMENT
-                    )
-
-                    for vector in embedding_result.embeddings:
-                        try:
-                            # FIXME: type ignore for numpy here
-                            normalized_embedding = (vector / np.linalg.norm(vector)).tolist()  # type: ignore
-                            # stackoverflow best way: https://stackoverflow.com/questions/20319813/how-to-check-list-containing-nan
-                            if np.isnan(normalized_embedding).any():
-                                # for issue #11827  float values are not json compliant
-                                logger.warning("Normalized embedding is nan: %s", normalized_embedding)
-                                continue
-                            embedding_queue_embeddings.append(normalized_embedding)
-                        except IntegrityError:
-                            db.session.rollback()
-                        except Exception:
-                            logger.exception("Failed transform embedding")
-                cache_embeddings = []
-                try:
-                    for i, n_embedding in zip(embedding_queue_indices, embedding_queue_embeddings):
-                        text_embeddings[i] = n_embedding
-                        hash = helper.generate_text_hash(texts[i])
-                        if hash not in cache_embeddings:
-                            embedding_cache = Embedding(
-                                model_name=self._model_instance.model_name,
-                                hash=hash,
-                                provider_name=self._model_instance.provider,
-                                embedding=pickle.dumps(n_embedding, protocol=pickle.HIGHEST_PROTOCOL),
-                            )
-                            db.session.add(embedding_cache)
-                            cache_embeddings.append(hash)
-                    db.session.commit()
-                except IntegrityError:
-                    db.session.rollback()
-            except Exception as ex:
-                db.session.rollback()
-                logger.exception("Failed to embed documents")
-                raise ex
-
-        return text_embeddings
-
-    def embed_multimodal_documents(self, multimodel_documents: list[dict]) -> list[list[float]]:
-        """Embed file documents."""
-        # use doc embedding cache or store if not exists
-        multimodel_embeddings: list[Any] = [None for _ in range(len(multimodel_documents))]
-        embedding_queue_indices = []
-        for i, multimodel_document in enumerate(multimodel_documents):
-            file_id = multimodel_document["file_id"]
-            embedding = db.session.scalar(
-                select(Embedding)
-                .where(
-                    Embedding.model_name == self._model_instance.model_name,
-                    Embedding.hash == file_id,
-                    Embedding.provider_name == self._model_instance.provider,
-                )
-                .limit(1)
-            )
-            if embedding:
-                multimodel_embeddings[i] = embedding.get_embedding()
-            else:
-                embedding_queue_indices.append(i)
-
-        # NOTE: avoid closing the shared scoped session here; downstream code may still have pending work
-
-        if embedding_queue_indices:
-            embedding_queue_multimodel_documents = [multimodel_documents[i] for i in embedding_queue_indices]
-            embedding_queue_embeddings = []
-            try:
-                model_type_instance = cast(TextEmbeddingModel, self._model_instance.model_type_instance)
-                model_schema = model_type_instance.get_model_schema(
-                    self._model_instance.model_name, self._model_instance.credentials
-                )
-                max_chunks = (
-                    model_schema.model_properties[ModelPropertyKey.MAX_CHUNKS]
-                    if model_schema and ModelPropertyKey.MAX_CHUNKS in model_schema.model_properties
-                    else 1
-                )
-                for i in range(0, len(embedding_queue_multimodel_documents), max_chunks):
-                    batch_multimodel_documents = embedding_queue_multimodel_documents[i : i + max_chunks]
-
-                    embedding_result = self._model_instance.invoke_multimodal_embedding(
-                        multimodel_documents=batch_multimodel_documents,
-                        input_type=EmbeddingInputType.DOCUMENT,
-                    )
-
-                    for vector in embedding_result.embeddings:
-                        try:
-                            # FIXME: type ignore for numpy here
-                            normalized_embedding = (vector / np.linalg.norm(vector)).tolist()  # type: ignore
-                            # stackoverflow best way: https://stackoverflow.com/questions/20319813/how-to-check-list-containing-nan
-                            if np.isnan(normalized_embedding).any():
-                                # for issue #11827  float values are not json compliant
-                                logger.warning("Normalized embedding is nan: %s", normalized_embedding)
-                                continue
-                            embedding_queue_embeddings.append(normalized_embedding)
-                        except IntegrityError:
-                            db.session.rollback()
-                        except Exception:
-                            logger.exception("Failed transform embedding")
-                cache_embeddings = []
-                try:
-                    for i, n_embedding in zip(embedding_queue_indices, embedding_queue_embeddings):
-                        multimodel_embeddings[i] = n_embedding
-                        file_id = multimodel_documents[i]["file_id"]
-                        if file_id not in cache_embeddings:
-                            embedding_cache = Embedding(
-                                model_name=self._model_instance.model_name,
-                                hash=file_id,
-                                provider_name=self._model_instance.provider,
-                                embedding=pickle.dumps(n_embedding, protocol=pickle.HIGHEST_PROTOCOL),
-                            )
-                            embedding_cache.set_embedding(n_embedding)
-                            db.session.add(embedding_cache)
-                            cache_embeddings.append(file_id)
-                    db.session.commit()
-                except IntegrityError:
-                    db.session.rollback()
-            except Exception as ex:
-                db.session.rollback()
-                logger.exception("Failed to embed documents")
-                raise ex
-
-        return multimodel_embeddings
-
-    def embed_query(self, text: str) -> list[float]:
-        """Embed query text."""
-        # use doc embedding cache or store if not exists
-        hash = helper.generate_text_hash(text)
-        embedding_cache_key = f"{self._model_instance.provider}_{self._model_instance.model_name}_{hash}"
-        embedding = redis_client.get(embedding_cache_key)
-        if embedding:
-            redis_client.expire(embedding_cache_key, 600)
-            decoded_embedding = np.frombuffer(base64.b64decode(embedding), dtype="float")
-            return [float(x) for x in decoded_embedding]
-        try:
-            embedding_result = self._model_instance.invoke_text_embedding(
-                texts=[text], input_type=EmbeddingInputType.QUERY
-            )
-
-            embedding_results = embedding_result.embeddings[0]
-            # FIXME: type ignore for numpy here
-            embedding_results = (embedding_results / np.linalg.norm(embedding_results)).tolist()  # type: ignore
-            if np.isnan(embedding_results).any():
-                raise ValueError("Normalized embedding is nan please try again")
-        except Exception as ex:
-            if dify_config.DEBUG:
-                logger.exception("Failed to embed query text '%s...(%s chars)'", text[:10], len(text))
-            raise ex
-
-        try:
-            # encode embedding to base64
-            embedding_vector = np.array(embedding_results)
-            vector_bytes = embedding_vector.tobytes()
-            # Transform to Base64
-            encoded_vector = base64.b64encode(vector_bytes)
-            # Transform to string
-            encoded_str = encoded_vector.decode("utf-8")
-            redis_client.setex(embedding_cache_key, 600, encoded_str)
-        except Exception as ex:
-            if dify_config.DEBUG:
-                logger.exception(
-                    "Failed to add embedding to redis for the text '%s...(%s chars)'", text[:10], len(text)
-                )
-            raise ex
-
-        return embedding_results  # type: ignore
-
-    def embed_multimodal_query(self, multimodel_document: dict) -> list[float]:
-        """Embed multimodal documents."""
-        # use doc embedding cache or store if not exists
-        file_id = multimodel_document["file_id"]
-        embedding_cache_key = f"{self._model_instance.provider}_{self._model_instance.model_name}_{file_id}"
-        embedding = redis_client.get(embedding_cache_key)
-        if embedding:
-            redis_client.expire(embedding_cache_key, 600)
-            decoded_embedding = np.frombuffer(base64.b64decode(embedding), dtype="float")
-            return [float(x) for x in decoded_embedding]
-        try:
-            embedding_result = self._model_instance.invoke_multimodal_embedding(
-                multimodel_documents=[multimodel_document], input_type=EmbeddingInputType.QUERY
-            )
-
-            embedding_results = embedding_result.embeddings[0]
-            # FIXME: type ignore for numpy here
-            embedding_results = (embedding_results / np.linalg.norm(embedding_results)).tolist()  # type: ignore
-            if np.isnan(embedding_results).any():
-                raise ValueError("Normalized embedding is nan please try again")
-        except Exception as ex:
-            if dify_config.DEBUG:
-                logger.exception("Failed to embed multimodal document '%s'", multimodel_document["file_id"])
-            raise ex
-
-        try:
-            # encode embedding to base64
-            embedding_vector = np.array(embedding_results)
-            vector_bytes = embedding_vector.tobytes()
-            # Transform to Base64
-            encoded_vector = base64.b64encode(vector_bytes)
-            # Transform to string
-            encoded_str = encoded_vector.decode("utf-8")
-            redis_client.setex(embedding_cache_key, 600, encoded_str)
-        except Exception as ex:
-            if dify_config.DEBUG:
-                logger.exception(
-                    "Failed to add embedding to redis for the multimodal document '%s'", multimodel_document["file_id"]
-                )
-            raise ex
-
-        return embedding_results  # type: ignore
-
-```
-
-### api/core/rag/embedding/retrieval.py
-```py
-from typing import TypedDict
-
-from pydantic import BaseModel
-
-from models.dataset import DocumentSegment
-
-
-class AttachmentInfoDict(TypedDict):
-    id: str
-    name: str
-    extension: str
-    mime_type: str
-    source_url: str
-    size: int
-
-
-class RetrievalChildChunk(BaseModel):
-    """Retrieval segments."""
-
-    id: str
-    content: str
-    score: float
-    position: int
-
-
-class RetrievalSegments(BaseModel):
-    """Retrieval segments."""
-
-    model_config = {"arbitrary_types_allowed": True}
-    segment: DocumentSegment
-    child_chunks: list[RetrievalChildChunk] | None = None
-    score: float | None = None
-    files: list[AttachmentInfoDict] | None = None
-    summary: str | None = None  # Summary content if retrieved via summary index
-
-```
-
-### api/core/rag/embedding/embedding_base.py
-```py
-from abc import ABC, abstractmethod
-
-
-class Embeddings(ABC):
-    """Interface for embedding models."""
-
-    @abstractmethod
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed search docs."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def embed_multimodal_documents(self, multimodel_documents: list[dict]) -> list[list[float]]:
-        """Embed file documents."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def embed_query(self, text: str) -> list[float]:
-        """Embed query text."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def embed_multimodal_query(self, multimodel_document: dict) -> list[float]:
-        """Embed multimodal query."""
-        raise NotImplementedError
-
-    async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Asynchronous Embed search docs."""
-        raise NotImplementedError
-
-    async def aembed_query(self, text: str) -> list[float]:
-        """Asynchronous Embed query text."""
-        raise NotImplementedError
-
-```
-
-### api/core/rag/splitter/text_splitter.py
-```py
-from __future__ import annotations
-
-import copy
-import logging
-import re
-from abc import ABC, abstractmethod
-from collections.abc import Callable, Collection, Iterable, Sequence, Set
-from dataclasses import dataclass
-from typing import Any, Literal
-
-from core.rag.models.document import BaseDocumentTransformer, Document
-
-logger = logging.getLogger(__name__)
-
-
-def _split_text_with_regex(text: str, separator: str, keep_separator: bool) -> list[str]:
-    # Now that we have the separator, split the text
-    if separator:
-        if keep_separator:
-            # The parentheses in the pattern keep the delimiters in the result.
-            _splits = re.split(f"({re.escape(separator)})", text)
-            splits = [_splits[i - 1] + _splits[i] for i in range(1, len(_splits), 2)]
-            if len(_splits) % 2 != 0:
-                splits += _splits[-1:]
-        else:
-            splits = re.split(separator, text)
-    else:
-        splits = list(text)
-    return [s for s in splits if (s not in {"", "\n"})]
-
-
-class TextSplitter(BaseDocumentTransformer, ABC):
-    """Interface for splitting text into chunks."""
-
-    def __init__(
-        self,
-        chunk_size: int = 4000,
-        chunk_overlap: int = 200,
-        length_function: Callable[[list[str]], list[int]] = lambda x: [len(x) for x in x],
-        keep_separator: bool = False,
-        add_start_index: bool = False,
-    ):
-        """Create a new TextSplitter.
-
-        Args:
-            chunk_size: Maximum size of chunks to return
-            chunk_overlap: Overlap in characters between chunks
-            length_function: Function that measures the length of given chunks
-            keep_separator: Whether to keep the separator in the chunks
-            add_start_index: If `True`, includes chunk's start index in metadata
-        """
-        if chunk_overlap > chunk_size:
-            raise ValueError(
-                f"Got a larger chunk overlap ({chunk_overlap}) than chunk size ({chunk_size}), should be smaller."
-            )
-        self._chunk_size = chunk_size
-        self._chunk_overlap = chunk_overlap
-        self._length_function = length_function
-        self._keep_separator = keep_separator
-        self._add_start_index = add_start_index
-
-    @abstractmethod
-    def split_text(self, text: str) -> list[str]:
-        """Split text into multiple components."""
-
-    def create_documents(self, texts: list[str], metadatas: list[dict] | None = None) -> list[Document]:
-        """Create documents from a list of texts."""
-        _metadatas = metadatas or [{}] * len(texts)
-        documents = []
-        for i, text in enumerate(texts):
-            index = -1
-            for chunk in self.split_text(text):
-                metadata = copy.deepcopy(_metadatas[i])
-                if self._add_start_index:
-                    index = text.find(chunk, index + 1)
-                    metadata["start_index"] = index
-                new_doc = Document(page_content=chunk, metadata=metadata)
-                documents.append(new_doc)
-        return documents
-
-    def split_documents(self, documents: Iterable[Document]) -> list[Document]:
-        """Split documents."""
-        texts, metadatas = [], []
-        for doc in documents:
-            texts.append(doc.page_content)
-            metadatas.append(doc.metadata or {})
-        return self.create_documents(texts, metadatas=metadatas)
-
-    def _join_docs(self, docs: list[str], separator: str) -> str | None:
-        text = separator.join(docs)
-        text = text.strip()
-        if text == "":
-            return None
-        else:
-            return text
-
-    def _merge_splits(self, splits: Iterable[str], separator: str, lengths: list[int]) -> list[str]:
-        # We now want to combine these smaller pieces into medium size
-        # chunks to send to the LLM.
-        separator_len = self._length_function([separator])[0]
-
-        docs = []
-        current_doc: list[str] = []
-        total = 0
-        for d, _len in zip(splits, lengths):
-            if total + _len + (separator_len if len(current_doc) > 0 else 0) > self._chunk_size:
-                if total > self._chunk_size:
-                    logger.warning(
-                        "Created a chunk of size %s, which is longer than the specified %s", total, self._chunk_size
-                    )
-                if len(current_doc) > 0:
-                    doc = self._join_docs(current_doc, separator)
-                    if doc is not None:
-                        docs.append(doc)
-                    # Keep on popping if:
-                    # - we have a larger chunk than in the chunk overlap
-                    # - or if we still have any chunks and the length is long
-                    while total > self._chunk_overlap or (
-                        total + _len + (separator_len if len(current_doc) > 0 else 0) > self._chunk_size and total > 0
-                    ):
-                        total -= self._length_function([current_doc[0]])[0] + (
-                            separator_len if len(current_doc) > 1 else 0
-                        )
-                        current_doc = current_doc[1:]
-            current_doc.append(d)
-            total += _len + (separator_len if len(current_doc) > 1 else 0)
-        doc = self._join_docs(current_doc, separator)
-        if doc is not None:
-            docs.append(doc)
-        return docs
-
-    @classmethod
-    def from_huggingface_tokenizer(cls, tokenizer: Any, **kwargs: Any) -> TextSplitter:
-        """Text splitter that uses HuggingFace tokenizer to count length."""
-        try:
-            from transformers import PreTrainedTokenizerBase
-
-            if not isinstance(tokenizer, PreTrainedTokenizerBase):
-                raise ValueError("Tokenizer received was not an instance of PreTrainedTokenizerBase")
-
-            def _huggingface_tokenizer_length(text: str) -> int:
-                return len(tokenizer.encode(text))
-
-        except ImportError:
-            raise ValueError(
-                "Could not import transformers python package. Please install it with `pip install transformers`."
-            )
-        return cls(length_function=lambda x: [_huggingface_tokenizer_length(text) for text in x], **kwargs)
-
-    def transform_documents(self, documents: Sequence[Document], **kwargs: Any) -> Sequence[Document]:
-        """Transform sequence of documents by splitting them."""
-        return self.split_documents(list(documents))
-
-    async def atransform_documents(self, documents: Sequence[Document], **kwargs: Any) -> Sequence[Document]:
-        """Asynchronously transform a sequence of documents by splitting them."""
-        raise NotImplementedError
-
-
-# @dataclass(frozen=True, kw_only=True, slots=True)
-@dataclass(frozen=True)
-class Tokenizer:
-    chunk_overlap: int
-    tokens_per_chunk: int
-    decode: Callable[[list[int]], str]
-    encode: Callable[[str], list[int]]
-
-
-def split_text_on_tokens(*, text: str, tokenizer: Tokenizer) -> list[str]:
-    """Split incoming text and return chunks using tokenizer."""
-    splits: list[str] = []
-    input_ids = tokenizer.encode(text)
-    start_idx = 0
-    cur_idx = min(start_idx + tokenizer.tokens_per_chunk, len(input_ids))
-    chunk_ids = input_ids[start_idx:cur_idx]
-    while start_idx < len(input_ids):
-        splits.append(tokenizer.decode(chunk_ids))
-        start_idx += tokenizer.tokens_per_chunk - tokenizer.chunk_overlap
-        cur_idx = min(start_idx + tokenizer.tokens_per_chunk, len(input_ids))
-        chunk_ids = input_ids[start_idx:cur_idx]
-    return splits
-
-
-class TokenTextSplitter(TextSplitter):
-    """Splitting text to tokens using model tokenizer."""
-
-    def __init__(
-        self,
-        encoding_name: str = "gpt2",
-        model_name: str | None = None,
-        allowed_special: Literal["all"] | Set[str] = set(),
-        disallowed_special: Literal["all"] | Collection[str] = "all",
-        **kwargs: Any,
-    ):
-        """Create a new TextSplitter."""
-        super().__init__(**kwargs)
-        try:
-            import tiktoken
-        except ImportError:
-            raise ImportError(
-                "Could not import tiktoken python package. "
-                "This is needed in order to for TokenTextSplitter. "
-                "Please install it with `pip install tiktoken`."
-            )
-
-        if model_name is not None:
-            enc = tiktoken.encoding_for_model(model_name)
-        else:
-            enc = tiktoken.get_encoding(encoding_name)
-        self._tokenizer = enc
-        self._allowed_special = allowed_special
-        self._disallowed_special = disallowed_special
-
-    def split_text(self, text: str) -> list[str]:
-        def _encode(_text: str) -> list[int]:
-            return self._tokenizer.encode(
-                _text,
-                allowed_special=self._allowed_special,
-                disallowed_special=self._disallowed_special,
-            )
-
-        tokenizer = Tokenizer(
-            chunk_overlap=self._chunk_overlap,
-            tokens_per_chunk=self._chunk_size,
-            decode=self._tokenizer.decode,
-            encode=_encode,
-        )
-
-        return split_text_on_tokens(text=text, tokenizer=tokenizer)
-
-
-class RecursiveCharacterTextSplitter(TextSplitter):
-    """Splitting text by recursively look at characters.
-
-    Recursively tries to split by different characters to find one
-    that works.
-    """
-
-    def __init__(
-        self,
-        separators: list[str] | None = None,
-        keep_separator: bool = True,
-        **kwargs: Any,
-    ):
-        """Create a new TextSplitter."""
-        super().__init__(keep_separator=keep_separator, **kwargs)
-        self._separators = separators or ["\n\n", "\n", " ", ""]
-
-    def _split_text(self, text: str, separators: list[str]) -> list[str]:
-        final_chunks = []
-        separator = separators[-1]
-        new_separators = []
-
-        for i, _s in enumerate(separators):
-            if _s == "":
-                separator = _s
-                break
-            if re.search(_s, text):
-                separator = _s
-                new_separators = separators[i + 1 :]
-                break
-
-        splits = _split_text_with_regex(text, separator, self._keep_separator)
-        _good_splits = []
-        _good_splits_lengths = []  # cache the lengths of the splits
-        _separator = "" if self._keep_separator else separator
-        s_lens = self._length_function(splits)
-        for s, s_len in zip(splits, s_lens):
-            if s_len < self._chunk_size:
-                _good_splits.append(s)
-                _good_splits_lengths.append(s_len)
-            else:
-                if _good_splits:
-                    merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-                    final_chunks.extend(merged_text)
-                    _good_splits = []
-                    _good_splits_lengths = []
-                if not new_separators:
-                    final_chunks.append(s)
-                else:
-                    other_info = self._split_text(s, new_separators)
-                    final_chunks.extend(other_info)
-
-        if _good_splits:
-            merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-            final_chunks.extend(merged_text)
-
-        return final_chunks
-
-    def split_text(self, text: str) -> list[str]:
-        return self._split_text(text, self._separators)
-
-```
-
-### api/core/rag/splitter/__init__.py
-```py
-
-```
-
-### api/core/rag/splitter/fixed_text_splitter.py
-```py
-"""Functionality for splitting text."""
-
-from __future__ import annotations
-
-import codecs
-import re
-from collections.abc import Collection
-from typing import Any, Literal
-
-from graphon.model_runtime.model_providers.__base.tokenizers.gpt2_tokenizer import GPT2Tokenizer
-
-from core.model_manager import ModelInstance
-from core.rag.splitter.text_splitter import RecursiveCharacterTextSplitter
-
-
-class EnhanceRecursiveCharacterTextSplitter(RecursiveCharacterTextSplitter):
-    """
-    This class is used to implement from_gpt2_encoder, to prevent using of tiktoken
-    """
-
-    @classmethod
-    def from_encoder[T: EnhanceRecursiveCharacterTextSplitter](
-        cls: type[T],
-        embedding_model_instance: ModelInstance | None,
-        allowed_special: Literal["all"] | set[str] = set(),
-        disallowed_special: Literal["all"] | Collection[str] = "all",
-        **kwargs: Any,
-    ) -> T:
-        def _token_encoder(texts: list[str]) -> list[int]:
-            if not texts:
-                return []
-
-            if embedding_model_instance:
-                return embedding_model_instance.get_text_embedding_num_tokens(texts=texts)
-            else:
-                return [GPT2Tokenizer.get_num_tokens(text) for text in texts]
-
-        def _character_encoder(texts: list[str]) -> list[int]:
-            if not texts:
-                return []
-
-            return [len(text) for text in texts]
-
-        return cls(length_function=_character_encoder, **kwargs)
-
-
-class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter):
-    def __init__(self, fixed_separator: str = "\n\n", separators: list[str] | None = None, **kwargs: Any):
-        """Create a new TextSplitter."""
-        super().__init__(**kwargs)
-        self._fixed_separator = codecs.decode(fixed_separator, "unicode_escape")
-        self._separators = separators or ["\n\n", "\n", "。", ". ", " ", ""]
-
-    def split_text(self, text: str) -> list[str]:
-        """Split incoming text and return chunks."""
-        if self._fixed_separator:
-            chunks = text.split(self._fixed_separator)
-        else:
-            chunks = [text]
-
-        final_chunks = []
-        chunks_lengths = self._length_function(chunks)
-        for chunk, chunk_length in zip(chunks, chunks_lengths):
-            if chunk_length > self._chunk_size:
-                final_chunks.extend(self.recursive_split_text(chunk))
-            else:
-                final_chunks.append(chunk)
-
-        return final_chunks
-
-    def recursive_split_text(self, text: str) -> list[str]:
-        """Split incoming text and return chunks."""
-
-        final_chunks = []
-        separator = self._separators[-1]
-        new_separators = []
-
-        for i, _s in enumerate(self._separators):
-            if _s == "":
-                separator = _s
-                break
-            if _s in text:
-                separator = _s
-                new_separators = self._separators[i + 1 :]
-                break
-
-        # Now that we have the separator, split the text
-        if separator:
-            if separator == " ":
-                splits = re.split(r" +", text)
-            else:
-                splits = text.split(separator)
-                if self._keep_separator:
-                    splits = [s + separator for s in splits[:-1]] + splits[-1:]
-        else:
-            splits = list(text)
-        if separator == "\n":
-            splits = [s for s in splits if s != ""]
-        else:
-            splits = [s for s in splits if (s not in {"", "\n"})]
-        _good_splits = []
-        _good_splits_lengths = []  # cache the lengths of the splits
-        _separator = "" if self._keep_separator else separator
-        s_lens = self._length_function(splits)
-        if separator != "":
-            for s, s_len in zip(splits, s_lens):
-                if s_len < self._chunk_size:
-                    _good_splits.append(s)
-                    _good_splits_lengths.append(s_len)
-                else:
-                    if _good_splits:
-                        merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-                        final_chunks.extend(merged_text)
-                        _good_splits = []
-                        _good_splits_lengths = []
-                    if not new_separators:
-                        final_chunks.append(s)
-                    else:
-                        other_info = self._split_text(s, new_separators)
-                        final_chunks.extend(other_info)
-
-            if _good_splits:
-                merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-                final_chunks.extend(merged_text)
-        else:
-            current_part = ""
-            current_length = 0
-            overlap_part = ""
-            overlap_part_length = 0
-            for s, s_len in zip(splits, s_lens):
-                if current_length + s_len <= self._chunk_size - self._chunk_overlap:
-                    current_part += s
-                    current_length += s_len
-                elif current_length + s_len <= self._chunk_size:
-                    current_part += s
-                    current_length += s_len
-                    overlap_part += s
-                    overlap_part_length += s_len
-                else:
-                    final_chunks.append(current_part)
-                    current_part = overlap_part + s
-                    current_length = s_len + overlap_part_length
-                    overlap_part = ""
-                    overlap_part_length = 0
-            if current_part:
-                final_chunks.append(current_part)
-
-        return final_chunks
-
-```
-
-### api/core/rag/__init__.py
-```py
-
-```
-
 ### api/core/rag/extractor/watercrawl/provider.py
 ```py
 from collections.abc import Generator
@@ -22585,1637 +19533,6 @@ class ExcelExtractor(BaseExtractor):
         max_col_idx = max(best_candidate["map"].keys()) + 1
 
         return best_candidate["idx"], best_candidate["map"], max_col_idx
-
-```
-
-### api/core/rag/models/__init__.py
-```py
-
-```
-
-### api/core/rag/models/document.py
-```py
-from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from typing import Any
-
-from graphon.file import File
-from pydantic import BaseModel, Field
-
-
-class ChildDocument(BaseModel):
-    """Class for storing a piece of text and associated metadata."""
-
-    page_content: str
-
-    vector: list[float] | None = None
-
-    """Arbitrary metadata about the page content (e.g., source, relationships to other
-        documents, etc.).
-    """
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class AttachmentDocument(BaseModel):
-    """Class for storing a piece of text and associated metadata."""
-
-    page_content: str
-
-    provider: str | None = "dify"
-
-    vector: list[float] | None = None
-
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class Document(BaseModel):
-    """Class for storing a piece of text and associated metadata."""
-
-    page_content: str
-
-    vector: list[float] | None = None
-
-    """Arbitrary metadata about the page content (e.g., source, relationships to other
-        documents, etc.).
-    """
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    provider: str | None = "dify"
-
-    children: list[ChildDocument] | None = None
-
-    attachments: list[AttachmentDocument] | None = None
-
-
-class GeneralChunk(BaseModel):
-    """
-    General Chunk.
-    """
-
-    content: str
-    files: list[File] | None = None
-
-
-class MultimodalGeneralStructureChunk(BaseModel):
-    """
-    Multimodal General Structure Chunk.
-    """
-
-    general_chunks: list[GeneralChunk]
-
-
-class GeneralStructureChunk(BaseModel):
-    """
-    General Structure Chunk.
-    """
-
-    general_chunks: list[str]
-
-
-class ParentChildChunk(BaseModel):
-    """
-    Parent Child Chunk.
-    """
-
-    parent_content: str
-    child_contents: list[str]
-    files: list[File] | None = None
-
-
-class ParentChildStructureChunk(BaseModel):
-    """
-    Parent Child Structure Chunk.
-    """
-
-    parent_child_chunks: list[ParentChildChunk]
-    parent_mode: str = "paragraph"
-
-
-class QAChunk(BaseModel):
-    """
-    QA Chunk.
-    """
-
-    question: str
-    answer: str
-
-
-class QAStructureChunk(BaseModel):
-    """
-    QAStructureChunk.
-    """
-
-    qa_chunks: list[QAChunk]
-
-
-class BaseDocumentTransformer(ABC):
-    """Abstract base class for document transformation systems.
-
-    A document transformation system takes a sequence of Documents and returns a
-    sequence of transformed Documents.
-
-    Example:
-        .. code-block:: python
-
-            class EmbeddingsRedundantFilter(BaseDocumentTransformer, BaseModel):
-                model_config = ConfigDict(arbitrary_types_allowed=True)
-
-                embeddings: Embeddings
-                similarity_fn: Callable = cosine_similarity
-                similarity_threshold: float = 0.95
-
-                def transform_documents(
-                    self, documents: Sequence[Document], **kwargs: Any
-                ) -> Sequence[Document]:
-                    stateful_documents = get_stateful_documents(documents)
-                    embedded_documents = _get_embeddings_from_stateful_docs(
-                        self.embeddings, stateful_documents
-                    )
-                    included_idxs = _filter_similar_embeddings(
-                        embedded_documents, self.similarity_fn, self.similarity_threshold
-                    )
-                    return [stateful_documents[i] for i in sorted(included_idxs)]
-
-                async def atransform_documents(
-                    self, documents: Sequence[Document], **kwargs: Any
-                ) -> Sequence[Document]:
-                    raise NotImplementedError
-
-    """
-
-    @abstractmethod
-    def transform_documents(self, documents: Sequence[Document], **kwargs: Any) -> Sequence[Document]:
-        """Transform a list of documents.
-
-        Args:
-            documents: A sequence of Documents to be transformed.
-
-        Returns:
-            A list of transformed Documents.
-        """
-
-    @abstractmethod
-    async def atransform_documents(self, documents: Sequence[Document], **kwargs: Any) -> Sequence[Document]:
-        """Asynchronously transform a list of documents.
-
-        Args:
-            documents: A sequence of Documents to be transformed.
-
-        Returns:
-            A list of transformed Documents.
-        """
-
-```
-
-### api/core/rag/retrieval/output_parser/react_output.py
-```py
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import NamedTuple, Union
-
-
-@dataclass
-class ReactAction:
-    """A full description of an action for an ReactAction to execute."""
-
-    tool: str
-    """The name of the Tool to execute."""
-    tool_input: Union[str, dict]
-    """The input to pass in to the Tool."""
-    log: str
-    """Additional information to log about the action."""
-
-
-class ReactFinish(NamedTuple):
-    """The final return value of an ReactFinish."""
-
-    return_values: dict
-    """Dictionary of return values."""
-    log: str
-    """Additional information to log about the return value"""
-
-```
-
-### api/core/rag/retrieval/output_parser/__init__.py
-```py
-
-```
-
-### api/core/rag/retrieval/output_parser/structured_chat.py
-```py
-import json
-import re
-from typing import Union
-
-from core.rag.retrieval.output_parser.react_output import ReactAction, ReactFinish
-
-
-class StructuredChatOutputParser:
-    def parse(self, text: str) -> Union[ReactAction, ReactFinish]:
-        try:
-            action_match = re.search(r"```(\w*)\n?({.*?)```", text, re.DOTALL)
-            if action_match is not None:
-                response = json.loads(action_match.group(2).strip(), strict=False)
-                if isinstance(response, list):
-                    response = response[0]
-                if response["action"] == "Final Answer":
-                    return ReactFinish({"output": response["action_input"]}, text)
-                else:
-                    return ReactAction(response["action"], response.get("action_input", {}), text)
-            else:
-                return ReactFinish({"output": text}, text)
-        except Exception:
-            raise ValueError(f"Could not parse LLM output: {text}")
-
-```
-
-### api/core/rag/retrieval/__init__.py
-```py
-
-```
-
-### api/core/rag/retrieval/retrieval_methods.py
-```py
-from enum import StrEnum
-
-
-class RetrievalMethod(StrEnum):
-    SEMANTIC_SEARCH = "semantic_search"
-    FULL_TEXT_SEARCH = "full_text_search"
-    HYBRID_SEARCH = "hybrid_search"
-    KEYWORD_SEARCH = "keyword_search"
-
-    @staticmethod
-    def is_support_semantic_search(retrieval_method: str) -> bool:
-        return retrieval_method in {RetrievalMethod.SEMANTIC_SEARCH, RetrievalMethod.HYBRID_SEARCH}
-
-    @staticmethod
-    def is_support_fulltext_search(retrieval_method: str) -> bool:
-        return retrieval_method in {RetrievalMethod.FULL_TEXT_SEARCH, RetrievalMethod.HYBRID_SEARCH}
-
-```
-
-### api/core/rag/retrieval/template_prompts.py
-```py
-METADATA_FILTER_SYSTEM_PROMPT = """
-    ### Job Description',
-    You are a text metadata extract engine that extract text's metadata based on user input and set the metadata value
-    ### Task
-    Your task is to ONLY extract the metadatas that exist in the input text from the provided metadata list and Use the following operators ["contains", "not contains", "start with", "end with", "is", "is not", "empty", "not empty", "=", "≠", ">", "<", "≥", "≤", "before", "after"] to express logical relationships, then return result in JSON format with the key "metadata_fields" and value "metadata_field_value" and comparison operator "comparison_operator".
-    ### Format
-    The input text is in the variable input_text. Metadata are specified as a list in the variable metadata_fields.
-    ### Constraint
-    DO NOT include anything other than the JSON array in your response.
-"""  # noqa: E501
-
-METADATA_FILTER_USER_PROMPT_1 = """
-    { "input_text": "I want to know which company’s email address test@example.com is?",
-    "metadata_fields": ["filename", "email", "phone", "address"]
-    }
-"""
-
-METADATA_FILTER_ASSISTANT_PROMPT_1 = """
-```json
-    {"metadata_map": [
-        {"metadata_field_name": "email", "metadata_field_value": "test@example.com", "comparison_operator": "="}
-    ]
-    }
-```
-"""
-
-METADATA_FILTER_USER_PROMPT_2 = """
-    {"input_text": "What are the movies with a score of more than 9 in 2024?",
-    "metadata_fields": ["name", "year", "rating", "country"]}
-"""
-
-METADATA_FILTER_ASSISTANT_PROMPT_2 = """
-```json
-    {"metadata_map": [
-        {"metadata_field_name": "year", "metadata_field_value": "2024", "comparison_operator": "="},
-        {"metadata_field_name": "rating", "metadata_field_value": "9", "comparison_operator": ">"},
-    ]}
-```
-"""
-
-METADATA_FILTER_USER_PROMPT_3 = """
-    '{{"input_text": "{input_text}",',
-    '"metadata_fields": {metadata_fields}}}'
-"""
-
-METADATA_FILTER_COMPLETION_PROMPT = """
-### Job Description
-You are a text metadata extract engine that extract text's metadata based on user input and set the metadata value
-### Task
-# Your task is to ONLY extract the metadatas that exist in the input text from the provided metadata list and Use the following operators ["=", "!=", ">", "<", ">=", "<="] to express logical relationships, then return result in JSON format with the key "metadata_fields" and value "metadata_field_value" and comparison operator "comparison_operator".
-### Format
-The input text is in the variable input_text. Metadata are specified as a list in the variable metadata_fields.
-### Constraint
-DO NOT include anything other than the JSON array in your response.
-### Example
-Here is the chat example between human and assistant, inside <example></example> XML tags.
-<example>
-User:{{"input_text": ["I want to know which company’s email address test@example.com is?"], "metadata_fields": ["filename", "email", "phone", "address"]}}
-Assistant:{{"metadata_map": [{{"metadata_field_name": "email", "metadata_field_value": "test@example.com", "comparison_operator": "="}}]}}
-User:{{"input_text": "What are the movies with a score of more than 9 in 2024?", "metadata_fields": ["name", "year", "rating", "country"]}}
-Assistant:{{"metadata_map": [{{"metadata_field_name": "year", "metadata_field_value": "2024", "comparison_operator": "="}, {{"metadata_field_name": "rating", "metadata_field_value": "9", "comparison_operator": ">"}}]}}
-</example>
-### User Input
-{{"input_text" : "{input_text}", "metadata_fields" : {metadata_fields}}}
-### Assistant Output
-"""  # noqa: E501
-
-```
-
-### api/core/rag/retrieval/router/multi_dataset_function_call_router.py
-```py
-from typing import Union
-
-from graphon.model_runtime.entities.llm_entities import LLMResult, LLMUsage
-from graphon.model_runtime.entities.message_entities import PromptMessageTool, SystemPromptMessage, UserPromptMessage
-
-from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
-from core.model_manager import ModelInstance
-
-
-class FunctionCallMultiDatasetRouter:
-    def invoke(
-        self,
-        query: str,
-        dataset_tools: list[PromptMessageTool],
-        model_config: ModelConfigWithCredentialsEntity,
-        model_instance: ModelInstance,
-    ) -> tuple[Union[str, None], LLMUsage]:
-        """Given input, decided what to do.
-        Returns:
-            Action specifying what tool to use.
-        """
-        if len(dataset_tools) == 0:
-            return None, LLMUsage.empty_usage()
-        elif len(dataset_tools) == 1:
-            return dataset_tools[0].name, LLMUsage.empty_usage()
-
-        try:
-            prompt_messages = [
-                SystemPromptMessage(content="You are a helpful AI assistant."),
-                UserPromptMessage(content=query),
-            ]
-            result: LLMResult = model_instance.invoke_llm(
-                prompt_messages=prompt_messages,
-                tools=dataset_tools,
-                stream=False,
-                model_parameters={"temperature": 0.2, "top_p": 0.3, "max_tokens": 1500},
-            )
-            usage = result.usage or LLMUsage.empty_usage()
-            if result.message.tool_calls:
-                # get retrieval model config
-                return result.message.tool_calls[0].function.name, usage
-            return None, usage
-        except Exception:
-            return None, LLMUsage.empty_usage()
-
-```
-
-### api/core/rag/retrieval/router/multi_dataset_react_route.py
-```py
-from collections.abc import Generator, Sequence
-from typing import Union
-
-from graphon.model_runtime.entities.llm_entities import LLMResult, LLMUsage
-from graphon.model_runtime.entities.message_entities import PromptMessage, PromptMessageRole, PromptMessageTool
-from graphon.model_runtime.entities.model_entities import ModelType
-
-from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
-from core.app.llm import deduct_llm_quota
-from core.model_manager import ModelInstance, ModelManager
-from core.prompt.advanced_prompt_transform import AdvancedPromptTransform
-from core.prompt.entities.advanced_prompt_entities import ChatModelMessage, CompletionModelPromptTemplate
-from core.rag.retrieval.output_parser.react_output import ReactAction
-from core.rag.retrieval.output_parser.structured_chat import StructuredChatOutputParser
-
-PREFIX = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:"""
-
-SUFFIX = """Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation:.
-Thought:"""  # noqa: E501
-
-FORMAT_INSTRUCTIONS = """Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
-The nouns in the format of "Thought", "Action", "Action Input", "Final Answer" must be expressed in English.
-Valid "action" values: "Final Answer" or {tool_names}
-
-Provide only ONE action per $JSON_BLOB, as shown:
-
-```
-{{
-  "action": $TOOL_NAME,
-  "action_input": $INPUT
-}}
-```
-
-Follow this format:
-
-Question: input question to answer
-Thought: consider previous and subsequent steps
-Action:
-```
-$JSON_BLOB
-```
-Observation: action result
-... (repeat Thought/Action/Observation N times)
-Thought: I know what to respond
-Action:
-```
-{{
-  "action": "Final Answer",
-  "action_input": "Final response to human"
-}}
-```"""  # noqa: E501
-
-
-class ReactMultiDatasetRouter:
-    def invoke(
-        self,
-        query: str,
-        dataset_tools: list[PromptMessageTool],
-        model_config: ModelConfigWithCredentialsEntity,
-        model_instance: ModelInstance,
-        user_id: str,
-        tenant_id: str,
-    ) -> tuple[Union[str, None], LLMUsage]:
-        """Given input, decided what to do.
-        Returns:
-            Action specifying what tool to use.
-        """
-        if len(dataset_tools) == 0:
-            return None, LLMUsage.empty_usage()
-        elif len(dataset_tools) == 1:
-            return dataset_tools[0].name, LLMUsage.empty_usage()
-
-        try:
-            return self._react_invoke(
-                query=query,
-                model_config=model_config,
-                model_instance=model_instance,
-                tools=dataset_tools,
-                user_id=user_id,
-                tenant_id=tenant_id,
-            )
-        except Exception:
-            return None, LLMUsage.empty_usage()
-
-    def _react_invoke(
-        self,
-        query: str,
-        model_config: ModelConfigWithCredentialsEntity,
-        model_instance: ModelInstance,
-        tools: Sequence[PromptMessageTool],
-        user_id: str,
-        tenant_id: str,
-        prefix: str = PREFIX,
-        suffix: str = SUFFIX,
-        format_instructions: str = FORMAT_INSTRUCTIONS,
-    ) -> tuple[Union[str, None], LLMUsage]:
-        prompt: Union[list[ChatModelMessage], CompletionModelPromptTemplate]
-        if model_config.mode == "chat":
-            prompt = self.create_chat_prompt(
-                query=query,
-                tools=tools,
-                prefix=prefix,
-                suffix=suffix,
-                format_instructions=format_instructions,
-            )
-        else:
-            prompt = self.create_completion_prompt(
-                tools=tools,
-                prefix=prefix,
-                format_instructions=format_instructions,
-            )
-        stop = ["Observation:"]
-        # handle invoke result
-        prompt_transform = AdvancedPromptTransform()
-        prompt_messages = prompt_transform.get_prompt(
-            prompt_template=prompt,
-            inputs={},
-            query="",
-            files=[],
-            context="",
-            memory_config=None,
-            memory=None,
-            model_config=model_config,
-            model_instance=model_instance,
-        )
-        result_text, usage = self._invoke_llm(
-            completion_param=model_config.parameters,
-            model_instance=model_instance,
-            prompt_messages=prompt_messages,
-            stop=stop,
-            user_id=user_id,
-            tenant_id=tenant_id,
-        )
-        output_parser = StructuredChatOutputParser()
-        react_decision = output_parser.parse(result_text)
-        if isinstance(react_decision, ReactAction):
-            return react_decision.tool, usage
-        return None, usage
-
-    def _invoke_llm(
-        self,
-        completion_param: dict,
-        model_instance: ModelInstance,
-        prompt_messages: list[PromptMessage],
-        stop: list[str],
-        user_id: str,
-        tenant_id: str,
-    ) -> tuple[str, LLMUsage]:
-        """
-        Invoke large language model
-        :param model_instance: model instance
-        :param prompt_messages: prompt messages
-        :param stop: stop
-        :return:
-        """
-        bound_model_instance = ModelManager.for_tenant(tenant_id=tenant_id, user_id=user_id).get_model_instance(
-            tenant_id=tenant_id,
-            provider=model_instance.provider,
-            model_type=ModelType.LLM,
-            model=model_instance.model_name,
-        )
-        invoke_result: Generator[LLMResult, None, None] = bound_model_instance.invoke_llm(
-            prompt_messages=prompt_messages,
-            model_parameters=completion_param,
-            stop=stop,
-            stream=True,
-        )
-
-        # handle invoke result
-        text, usage = self._handle_invoke_result(invoke_result=invoke_result)
-
-        # deduct quota
-        deduct_llm_quota(tenant_id=tenant_id, model_instance=bound_model_instance, usage=usage)
-
-        return text, usage
-
-    def _handle_invoke_result(self, invoke_result: Generator) -> tuple[str, LLMUsage]:
-        """
-        Handle invoke result
-        :param invoke_result: invoke result
-        :return:
-        """
-        model = None
-        prompt_messages: list[PromptMessage] = []
-        full_text = ""
-        usage = None
-        for result in invoke_result:
-            text = result.delta.message.content
-            full_text += text
-
-            if not model:
-                model = result.model
-
-            if not prompt_messages:
-                prompt_messages = result.prompt_messages
-
-            if not usage and result.delta.usage:
-                usage = result.delta.usage
-
-        if not usage:
-            usage = LLMUsage.empty_usage()
-
-        return full_text, usage
-
-    def create_chat_prompt(
-        self,
-        query: str,
-        tools: Sequence[PromptMessageTool],
-        prefix: str = PREFIX,
-        suffix: str = SUFFIX,
-        format_instructions: str = FORMAT_INSTRUCTIONS,
-    ) -> list[ChatModelMessage]:
-        tool_strings = []
-        for tool in tools:
-            tool_strings.append(
-                f"{tool.name}: {tool.description}, args: {{'query': {{'title': 'Query',"
-                f" 'description': 'Query for the dataset to be used to retrieve the dataset.', 'type': 'string'}}}}"
-            )
-        formatted_tools = "\n".join(tool_strings)
-        unique_tool_names = {tool.name for tool in tools}
-        tool_names = ", ".join('"' + name + '"' for name in unique_tool_names)
-        format_instructions = format_instructions.format(tool_names=tool_names)
-        template = "\n\n".join([prefix, formatted_tools, format_instructions, suffix])
-        prompt_messages = []
-        system_prompt_messages = ChatModelMessage(role=PromptMessageRole.SYSTEM, text=template)
-        prompt_messages.append(system_prompt_messages)
-        user_prompt_message = ChatModelMessage(role=PromptMessageRole.USER, text=query)
-        prompt_messages.append(user_prompt_message)
-        return prompt_messages
-
-    def create_completion_prompt(
-        self,
-        tools: Sequence[PromptMessageTool],
-        prefix: str = PREFIX,
-        format_instructions: str = FORMAT_INSTRUCTIONS,
-    ) -> CompletionModelPromptTemplate:
-        """Create prompt in the style of the zero shot agent.
-
-        Args:
-            tools: List of tools the agent will have access to, used to format the
-                prompt.
-            prefix: String to put before the list of tools.
-            format_instructions: The format instruction prompt.
-        Returns:
-            A PromptTemplate with the template assembled from the pieces here.
-        """
-        suffix = """Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation:.
-Question: {input}
-Thought: {agent_scratchpad}
-"""  # noqa: E501
-
-        tool_strings = "\n".join([f"{tool.name}: {tool.description}" for tool in tools])
-        tool_names = ", ".join([tool.name for tool in tools])
-        format_instructions = format_instructions.format(tool_names=tool_names)
-        template = "\n\n".join([prefix, tool_strings, format_instructions, suffix])
-        return CompletionModelPromptTemplate(text=template)
-
-```
-
-### api/core/rag/docstore/__init__.py
-```py
-
-```
-
-### api/core/rag/docstore/dataset_docstore.py
-```py
-from __future__ import annotations
-
-from collections.abc import Sequence
-from typing import Any
-
-from graphon.model_runtime.entities.model_entities import ModelType
-from sqlalchemy import delete, func, select
-
-from core.model_manager import ModelManager
-from core.rag.index_processor.constant.index_type import IndexTechniqueType
-from core.rag.models.document import AttachmentDocument, Document
-from extensions.ext_database import db
-from models.dataset import ChildChunk, Dataset, DocumentSegment, SegmentAttachmentBinding
-
-
-class DatasetDocumentStore:
-    def __init__(
-        self,
-        dataset: Dataset,
-        user_id: str,
-        document_id: str | None = None,
-    ):
-        self._dataset = dataset
-        self._user_id = user_id
-        self._document_id = document_id
-
-    @classmethod
-    def from_dict(cls, config_dict: dict[str, Any]) -> DatasetDocumentStore:
-        return cls(**config_dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize to dict."""
-        return {
-            "dataset_id": self._dataset.id,
-        }
-
-    @property
-    def dataset_id(self):
-        return self._dataset.id
-
-    @property
-    def user_id(self):
-        return self._user_id
-
-    @property
-    def docs(self) -> dict[str, Document]:
-        stmt = select(DocumentSegment).where(DocumentSegment.dataset_id == self._dataset.id)
-        document_segments = db.session.scalars(stmt).all()
-
-        output = {}
-        for document_segment in document_segments:
-            doc_id = document_segment.index_node_id
-            output[doc_id] = Document(
-                page_content=document_segment.content,
-                metadata={
-                    "doc_id": document_segment.index_node_id,
-                    "doc_hash": document_segment.index_node_hash,
-                    "document_id": document_segment.document_id,
-                    "dataset_id": document_segment.dataset_id,
-                },
-            )
-
-        return output
-
-    def add_documents(self, docs: Sequence[Document], allow_update: bool = True, save_child: bool = False):
-        max_position = db.session.scalar(
-            select(func.max(DocumentSegment.position)).where(DocumentSegment.document_id == self._document_id)
-        )
-
-        if max_position is None:
-            max_position = 0
-        embedding_model = None
-        if self._dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
-            model_manager = ModelManager.for_tenant(tenant_id=self._dataset.tenant_id)
-            embedding_model = model_manager.get_model_instance(
-                tenant_id=self._dataset.tenant_id,
-                provider=self._dataset.embedding_model_provider,
-                model_type=ModelType.TEXT_EMBEDDING,
-                model=self._dataset.embedding_model,
-            )
-
-        if embedding_model:
-            page_content_list = [doc.page_content for doc in docs]
-            tokens_list = embedding_model.get_text_embedding_num_tokens(page_content_list)
-        else:
-            tokens_list = [0] * len(docs)
-
-        for doc, tokens in zip(docs, tokens_list):
-            if not isinstance(doc, Document):
-                raise ValueError("doc must be a Document")
-
-            if doc.metadata is None:
-                raise ValueError("doc.metadata must be a dict")
-
-            segment_document = self.get_document_segment(doc_id=doc.metadata["doc_id"])
-
-            # NOTE: doc could already exist in the store, but we overwrite it
-            if not allow_update and segment_document:
-                raise ValueError(
-                    f"doc_id {doc.metadata['doc_id']} already exists. Set allow_update to True to overwrite."
-                )
-
-            if not segment_document:
-                max_position += 1
-
-                segment_document = DocumentSegment(
-                    tenant_id=self._dataset.tenant_id,
-                    dataset_id=self._dataset.id,
-                    document_id=self._document_id,
-                    index_node_id=doc.metadata["doc_id"],
-                    index_node_hash=doc.metadata["doc_hash"],
-                    position=max_position,
-                    content=doc.page_content,
-                    word_count=len(doc.page_content),
-                    tokens=tokens,
-                    enabled=False,
-                    created_by=self._user_id,
-                )
-                if doc.metadata.get("answer"):
-                    segment_document.answer = doc.metadata.pop("answer", "")
-
-                db.session.add(segment_document)
-                db.session.flush()
-                self.add_multimodel_documents_binding(
-                    segment_id=segment_document.id, multimodel_documents=doc.attachments
-                )
-                if save_child:
-                    if doc.children:
-                        for position, child in enumerate(doc.children, start=1):
-                            child_segment = ChildChunk(
-                                tenant_id=self._dataset.tenant_id,
-                                dataset_id=self._dataset.id,
-                                document_id=self._document_id,
-                                segment_id=segment_document.id,
-                                position=position,
-                                index_node_id=child.metadata.get("doc_id"),
-                                index_node_hash=child.metadata.get("doc_hash"),
-                                content=child.page_content,
-                                word_count=len(child.page_content),
-                                type="automatic",
-                                created_by=self._user_id,
-                            )
-                            db.session.add(child_segment)
-            else:
-                segment_document.content = doc.page_content
-                if doc.metadata.get("answer"):
-                    segment_document.answer = doc.metadata.pop("answer", "")
-                segment_document.index_node_hash = doc.metadata.get("doc_hash")
-                segment_document.word_count = len(doc.page_content)
-                segment_document.tokens = tokens
-                self.add_multimodel_documents_binding(
-                    segment_id=segment_document.id, multimodel_documents=doc.attachments
-                )
-                if save_child and doc.children:
-                    # delete the existing child chunks
-                    db.session.execute(
-                        delete(ChildChunk).where(
-                            ChildChunk.tenant_id == self._dataset.tenant_id,
-                            ChildChunk.dataset_id == self._dataset.id,
-                            ChildChunk.document_id == self._document_id,
-                            ChildChunk.segment_id == segment_document.id,
-                        )
-                    )
-                    # add new child chunks
-                    for position, child in enumerate(doc.children, start=1):
-                        child_segment = ChildChunk(
-                            tenant_id=self._dataset.tenant_id,
-                            dataset_id=self._dataset.id,
-                            document_id=self._document_id,
-                            segment_id=segment_document.id,
-                            position=position,
-                            index_node_id=child.metadata.get("doc_id"),
-                            index_node_hash=child.metadata.get("doc_hash"),
-                            content=child.page_content,
-                            word_count=len(child.page_content),
-                            type="automatic",
-                            created_by=self._user_id,
-                        )
-                        db.session.add(child_segment)
-
-            db.session.commit()
-
-    def document_exists(self, doc_id: str) -> bool:
-        """Check if document exists."""
-        result = self.get_document_segment(doc_id)
-        return result is not None
-
-    def get_document(self, doc_id: str, raise_error: bool = True) -> Document | None:
-        document_segment = self.get_document_segment(doc_id)
-
-        if document_segment is None:
-            if raise_error:
-                raise ValueError(f"doc_id {doc_id} not found.")
-            else:
-                return None
-
-        return Document(
-            page_content=document_segment.content,
-            metadata={
-                "doc_id": document_segment.index_node_id,
-                "doc_hash": document_segment.index_node_hash,
-                "document_id": document_segment.document_id,
-                "dataset_id": document_segment.dataset_id,
-            },
-        )
-
-    def delete_document(self, doc_id: str, raise_error: bool = True):
-        document_segment = self.get_document_segment(doc_id)
-
-        if document_segment is None:
-            if raise_error:
-                raise ValueError(f"doc_id {doc_id} not found.")
-            else:
-                return None
-
-        db.session.delete(document_segment)
-        db.session.commit()
-
-    def set_document_hash(self, doc_id: str, doc_hash: str):
-        """Set the hash for a given doc_id."""
-        document_segment = self.get_document_segment(doc_id)
-
-        if document_segment is None:
-            return None
-
-        document_segment.index_node_hash = doc_hash
-        db.session.commit()
-
-    def get_document_hash(self, doc_id: str) -> str | None:
-        """Get the stored hash for a document, if it exists."""
-        document_segment = self.get_document_segment(doc_id)
-
-        if document_segment is None:
-            return None
-        data: str | None = document_segment.index_node_hash
-        return data
-
-    def get_document_segment(self, doc_id: str) -> DocumentSegment | None:
-        stmt = select(DocumentSegment).where(
-            DocumentSegment.dataset_id == self._dataset.id, DocumentSegment.index_node_id == doc_id
-        )
-        document_segment = db.session.scalar(stmt)
-
-        return document_segment
-
-    def add_multimodel_documents_binding(self, segment_id: str, multimodel_documents: list[AttachmentDocument] | None):
-        if multimodel_documents:
-            for multimodel_document in multimodel_documents:
-                binding = SegmentAttachmentBinding(
-                    tenant_id=self._dataset.tenant_id,
-                    dataset_id=self._dataset.id,
-                    document_id=self._document_id,
-                    segment_id=segment_id,
-                    attachment_id=multimodel_document.metadata["doc_id"],
-                )
-                db.session.add(binding)
-
-```
-
-### api/core/rag/rerank/weight_rerank.py
-```py
-import math
-from collections import Counter
-
-import numpy as np
-from graphon.model_runtime.entities.model_entities import ModelType
-
-from core.model_manager import ModelManager
-from core.rag.datasource.keyword.jieba.jieba_keyword_table_handler import JiebaKeywordTableHandler
-from core.rag.embedding.cached_embedding import CacheEmbedding
-from core.rag.index_processor.constant.doc_type import DocType
-from core.rag.index_processor.constant.query_type import QueryType
-from core.rag.models.document import Document
-from core.rag.rerank.entity.weight import VectorSetting, Weights
-from core.rag.rerank.rerank_base import BaseRerankRunner
-
-
-class WeightRerankRunner(BaseRerankRunner):
-    def __init__(self, tenant_id: str, weights: Weights):
-        self.tenant_id = tenant_id
-        self.weights = weights
-
-    def run(
-        self,
-        query: str,
-        documents: list[Document],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        query_type: QueryType = QueryType.TEXT_QUERY,
-    ) -> list[Document]:
-        """
-        Run rerank model
-        :param query: search query
-        :param documents: documents for reranking
-        :param score_threshold: score threshold
-        :param top_n: top n
-
-        :return:
-        """
-        unique_documents = []
-        doc_ids = set()
-        for document in documents:
-            if (
-                document.provider == "dify"
-                and document.metadata is not None
-                and document.metadata["doc_id"] not in doc_ids
-            ):
-                # weight rerank only support text documents
-                if not document.metadata.get("doc_type") or document.metadata.get("doc_type") == DocType.TEXT:
-                    doc_ids.add(document.metadata["doc_id"])
-                    unique_documents.append(document)
-            else:
-                if document not in unique_documents:
-                    unique_documents.append(document)
-
-        documents = unique_documents
-
-        query_scores = self._calculate_keyword_score(query, documents)
-        query_vector_scores = self._calculate_cosine(self.tenant_id, query, documents, self.weights.vector_setting)
-
-        rerank_documents = []
-        for document, query_score, query_vector_score in zip(documents, query_scores, query_vector_scores):
-            score = (
-                self.weights.vector_setting.vector_weight * query_vector_score
-                + self.weights.keyword_setting.keyword_weight * query_score
-            )
-            if score_threshold and score < score_threshold:
-                continue
-            if document.metadata is not None:
-                document.metadata["score"] = score
-                rerank_documents.append(document)
-
-        rerank_documents.sort(key=lambda x: x.metadata["score"] if x.metadata else 0, reverse=True)
-        return rerank_documents[:top_n] if top_n else rerank_documents
-
-    def _calculate_keyword_score(self, query: str, documents: list[Document]) -> list[float]:
-        """
-        Calculate BM25 scores
-        :param query: search query
-        :param documents: documents for reranking
-
-        :return:
-        """
-        keyword_table_handler = JiebaKeywordTableHandler()
-        query_keywords = keyword_table_handler.extract_keywords(query, None)
-        documents_keywords = []
-        for document in documents:
-            # get the document keywords
-            document_keywords = keyword_table_handler.extract_keywords(document.page_content, None)
-            if document.metadata is not None:
-                document.metadata["keywords"] = document_keywords
-                documents_keywords.append(document_keywords)
-
-        # Counter query keywords(TF)
-        query_keyword_counts = Counter(query_keywords)
-
-        # total documents
-        total_documents = len(documents)
-
-        # calculate all documents' keywords IDF
-        all_keywords = set()
-        for document_keywords in documents_keywords:
-            all_keywords.update(document_keywords)
-
-        keyword_idf = {}
-        for keyword in all_keywords:
-            # calculate include query keywords' documents
-            doc_count_containing_keyword = sum(1 for doc_keywords in documents_keywords if keyword in doc_keywords)
-            # IDF
-            keyword_idf[keyword] = math.log((1 + total_documents) / (1 + doc_count_containing_keyword)) + 1
-
-        query_tfidf = {}
-
-        for keyword, count in query_keyword_counts.items():
-            tf = count
-            idf = keyword_idf.get(keyword, 0)
-            query_tfidf[keyword] = tf * idf
-
-        # calculate all documents' TF-IDF
-        documents_tfidf = []
-        for document_keywords in documents_keywords:
-            document_keyword_counts = Counter(document_keywords)
-            document_tfidf = {}
-            for keyword, count in document_keyword_counts.items():
-                tf = count
-                idf = keyword_idf.get(keyword, 0)
-                document_tfidf[keyword] = tf * idf
-            documents_tfidf.append(document_tfidf)
-
-        def cosine_similarity(vec1, vec2):
-            intersection = set(vec1.keys()) & set(vec2.keys())
-            numerator = sum(vec1[x] * vec2[x] for x in intersection)
-
-            sum1 = sum(vec1[x] ** 2 for x in vec1)
-            sum2 = sum(vec2[x] ** 2 for x in vec2)
-            denominator = math.sqrt(sum1) * math.sqrt(sum2)
-
-            if not denominator:
-                return 0.0
-            else:
-                return float(numerator) / denominator
-
-        similarities = []
-        for document_tfidf in documents_tfidf:
-            similarity = cosine_similarity(query_tfidf, document_tfidf)
-            similarities.append(similarity)
-
-        # for idx, similarity in enumerate(similarities):
-        #     print(f"Document {idx + 1} similarity: {similarity}")
-
-        return similarities
-
-    def _calculate_cosine(
-        self, tenant_id: str, query: str, documents: list[Document], vector_setting: VectorSetting
-    ) -> list[float]:
-        """
-        Calculate Cosine scores
-        :param query: search query
-        :param documents: documents for reranking
-
-        :return:
-        """
-        query_vector_scores = []
-
-        model_manager = ModelManager.for_tenant(tenant_id=tenant_id)
-
-        embedding_model = model_manager.get_model_instance(
-            tenant_id=tenant_id,
-            provider=vector_setting.embedding_provider_name,
-            model_type=ModelType.TEXT_EMBEDDING,
-            model=vector_setting.embedding_model_name,
-        )
-        cache_embedding = CacheEmbedding(embedding_model)
-        query_vector = cache_embedding.embed_query(query)
-        for document in documents:
-            # calculate cosine similarity
-            if document.metadata and "score" in document.metadata:
-                query_vector_scores.append(document.metadata["score"])
-            else:
-                # transform to NumPy
-                vec1 = np.array(query_vector)
-                vec2 = np.array(document.vector)
-
-                # calculate dot product
-                dot_product = np.dot(vec1, vec2)
-
-                # calculate norm
-                norm_vec1 = np.linalg.norm(vec1)
-                norm_vec2 = np.linalg.norm(vec2)
-
-                # calculate cosine similarity
-                cosine_sim = dot_product / (norm_vec1 * norm_vec2)
-                query_vector_scores.append(cosine_sim)
-
-        return query_vector_scores
-
-```
-
-### api/core/rag/rerank/rerank_base.py
-```py
-from abc import ABC, abstractmethod
-
-from core.rag.index_processor.constant.query_type import QueryType
-from core.rag.models.document import Document
-
-
-class BaseRerankRunner(ABC):
-    @abstractmethod
-    def run(
-        self,
-        query: str,
-        documents: list[Document],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        query_type: QueryType = QueryType.TEXT_QUERY,
-    ) -> list[Document]:
-        """
-        Run rerank model
-        :param query: search query
-        :param documents: documents for reranking
-        :param score_threshold: score threshold
-        :param top_n: top n
-        :return:
-        """
-        raise NotImplementedError
-
-```
-
-### api/core/rag/rerank/entity/weight.py
-```py
-from pydantic import BaseModel
-
-
-class VectorSetting(BaseModel):
-    vector_weight: float
-
-    embedding_provider_name: str
-
-    embedding_model_name: str
-
-
-class KeywordSetting(BaseModel):
-    keyword_weight: float
-
-
-class Weights(BaseModel):
-    """Model for weighted rerank."""
-
-    vector_setting: VectorSetting
-
-    keyword_setting: KeywordSetting
-
-```
-
-### api/core/rag/rerank/rerank_factory.py
-```py
-from core.rag.rerank.rerank_base import BaseRerankRunner
-from core.rag.rerank.rerank_model import RerankModelRunner
-from core.rag.rerank.rerank_type import RerankMode
-from core.rag.rerank.weight_rerank import WeightRerankRunner
-
-
-class RerankRunnerFactory:
-    @staticmethod
-    def create_rerank_runner(runner_type: str, *args, **kwargs) -> BaseRerankRunner:
-        match runner_type:
-            case RerankMode.RERANKING_MODEL:
-                return RerankModelRunner(*args, **kwargs)
-            case RerankMode.WEIGHTED_SCORE:
-                return WeightRerankRunner(*args, **kwargs)
-            case _:
-                raise ValueError(f"Unknown runner type: {runner_type}")
-
-```
-
-### api/core/rag/rerank/__init__.py
-```py
-
-```
-
-### api/core/rag/rerank/rerank_type.py
-```py
-from enum import StrEnum
-
-
-class RerankMode(StrEnum):
-    RERANKING_MODEL = "reranking_model"
-    WEIGHTED_SCORE = "weighted_score"
-
-```
-
-### api/core/rag/rerank/rerank_model.py
-```py
-import base64
-
-from graphon.model_runtime.entities.model_entities import ModelType
-from graphon.model_runtime.entities.rerank_entities import RerankResult
-
-from core.model_manager import ModelInstance, ModelManager
-from core.rag.index_processor.constant.doc_type import DocType
-from core.rag.index_processor.constant.query_type import QueryType
-from core.rag.models.document import Document
-from core.rag.rerank.rerank_base import BaseRerankRunner
-from extensions.ext_database import db
-from extensions.ext_storage import storage
-from models.model import UploadFile
-
-
-class RerankModelRunner(BaseRerankRunner):
-    def __init__(self, rerank_model_instance: ModelInstance):
-        self.rerank_model_instance = rerank_model_instance
-
-    def run(
-        self,
-        query: str,
-        documents: list[Document],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        query_type: QueryType = QueryType.TEXT_QUERY,
-    ) -> list[Document]:
-        """
-        Run rerank model
-        :param query: search query
-        :param documents: documents for reranking
-        :param score_threshold: score threshold
-        :param top_n: top n
-        :return:
-        """
-        model_manager = ModelManager.for_tenant(
-            tenant_id=self.rerank_model_instance.provider_model_bundle.configuration.tenant_id
-        )
-        is_support_vision = model_manager.check_model_support_vision(
-            tenant_id=self.rerank_model_instance.provider_model_bundle.configuration.tenant_id,
-            provider=self.rerank_model_instance.provider,
-            model=self.rerank_model_instance.model_name,
-            model_type=ModelType.RERANK,
-        )
-        if not is_support_vision:
-            if query_type == QueryType.TEXT_QUERY:
-                rerank_result, unique_documents = self.fetch_text_rerank(query, documents, score_threshold, top_n)
-            else:
-                return documents
-        else:
-            rerank_result, unique_documents = self.fetch_multimodal_rerank(
-                query, documents, score_threshold, top_n, query_type
-            )
-
-        rerank_documents = []
-        for result in rerank_result.docs:
-            if score_threshold is None or result.score >= score_threshold:
-                # format document
-                rerank_document = Document(
-                    page_content=result.text,
-                    metadata=unique_documents[result.index].metadata,
-                    provider=unique_documents[result.index].provider,
-                )
-                if rerank_document.metadata is not None:
-                    rerank_document.metadata["score"] = result.score
-                    rerank_documents.append(rerank_document)
-
-        rerank_documents.sort(key=lambda x: x.metadata.get("score", 0.0), reverse=True)
-        return rerank_documents[:top_n] if top_n else rerank_documents
-
-    def fetch_text_rerank(
-        self,
-        query: str,
-        documents: list[Document],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-    ) -> tuple[RerankResult, list[Document]]:
-        """
-        Fetch text rerank
-        :param query: search query
-        :param documents: documents for reranking
-        :param score_threshold: score threshold
-        :param top_n: top n
-        :return:
-        """
-        docs = []
-        doc_ids = set()
-        unique_documents = []
-        for document in documents:
-            if (
-                document.provider == "dify"
-                and document.metadata is not None
-                and document.metadata["doc_id"] not in doc_ids
-            ):
-                if not document.metadata.get("doc_type") or document.metadata.get("doc_type") == DocType.TEXT:
-                    doc_ids.add(document.metadata["doc_id"])
-                    docs.append(document.page_content)
-                    unique_documents.append(document)
-            elif document.provider == "external":
-                if document not in unique_documents:
-                    docs.append(document.page_content)
-                    unique_documents.append(document)
-
-        rerank_result = self.rerank_model_instance.invoke_rerank(
-            query=query, docs=docs, score_threshold=score_threshold, top_n=top_n
-        )
-        return rerank_result, unique_documents
-
-    def fetch_multimodal_rerank(
-        self,
-        query: str,
-        documents: list[Document],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        query_type: QueryType = QueryType.TEXT_QUERY,
-    ) -> tuple[RerankResult, list[Document]]:
-        """
-        Fetch multimodal rerank
-        :param query: search query
-        :param documents: documents for reranking
-        :param score_threshold: score threshold
-        :param top_n: top n
-        :param query_type: query type
-        :return: rerank result
-        """
-        docs = []
-        doc_ids = set()
-        unique_documents = []
-        for document in documents:
-            if (
-                document.provider == "dify"
-                and document.metadata is not None
-                and document.metadata["doc_id"] not in doc_ids
-            ):
-                if document.metadata.get("doc_type") == DocType.IMAGE:
-                    # Query file info within db.session context to ensure thread-safe access
-                    upload_file = db.session.get(UploadFile, document.metadata["doc_id"])
-                    if upload_file:
-                        blob = storage.load_once(upload_file.key)
-                        document_file_base64 = base64.b64encode(blob).decode()
-                        document_file_dict = {
-                            "content": document_file_base64,
-                            "content_type": document.metadata["doc_type"],
-                        }
-                        docs.append(document_file_dict)
-                else:
-                    document_text_dict = {
-                        "content": document.page_content,
-                        "content_type": document.metadata.get("doc_type") or DocType.TEXT,
-                    }
-                    docs.append(document_text_dict)
-                doc_ids.add(document.metadata["doc_id"])
-                unique_documents.append(document)
-            elif document.provider == "external":
-                if document not in unique_documents:
-                    docs.append(
-                        {
-                            "content": document.page_content,
-                            "content_type": document.metadata.get("doc_type") or DocType.TEXT,
-                        }
-                    )
-                    unique_documents.append(document)
-
-        documents = unique_documents
-        if query_type == QueryType.TEXT_QUERY:
-            rerank_result, unique_documents = self.fetch_text_rerank(query, documents, score_threshold, top_n)
-            return rerank_result, unique_documents
-        elif query_type == QueryType.IMAGE_QUERY:
-            # Query file info within db.session context to ensure thread-safe access
-            upload_file = db.session.get(UploadFile, query)
-            if upload_file:
-                blob = storage.load_once(upload_file.key)
-                file_query = base64.b64encode(blob).decode()
-                file_query_dict = {
-                    "content": file_query,
-                    "content_type": DocType.IMAGE,
-                }
-                rerank_result = self.rerank_model_instance.invoke_multimodal_rerank(
-                    query=file_query_dict, docs=docs, score_threshold=score_threshold, top_n=top_n
-                )
-                return rerank_result, unique_documents
-            else:
-                raise ValueError(f"Upload file not found for query: {query}")
-
-        else:
-            raise ValueError(f"Query type {query_type} is not supported")
-
-```
-
-### api/core/rag/cleaner/cleaner_base.py
-```py
-"""Abstract interface for document cleaner implementations."""
-
-from abc import ABC, abstractmethod
-
-
-class BaseCleaner(ABC):
-    """Interface for clean chunk content."""
-
-    @abstractmethod
-    def clean(self, content: str):
-        raise NotImplementedError
-
-```
-
-### api/core/rag/cleaner/clean_processor.py
-```py
-import re
-from typing import Any
-
-
-class CleanProcessor:
-    @classmethod
-    def clean(cls, text: str, process_rule: dict[str, Any] | None) -> str:
-        # default clean
-        # remove invalid symbol
-        text = re.sub(r"<\|", "<", text)
-        text = re.sub(r"\|>", ">", text)
-        text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\xEF\xBF\xBE]", "", text)
-        # Unicode  U+FFFE
-        text = re.sub("\ufffe", "", text)
-
-        rules = process_rule["rules"] if process_rule else {}
-        if "pre_processing_rules" in rules:
-            pre_processing_rules = rules["pre_processing_rules"]
-            for pre_processing_rule in pre_processing_rules:
-                if pre_processing_rule["id"] == "remove_extra_spaces" and pre_processing_rule["enabled"] is True:
-                    # Remove extra spaces
-                    pattern = r"\n{3,}"
-                    text = re.sub(pattern, "\n\n", text)
-                    pattern = r"[\t\f\r\x20\u00a0\u1680\u180e\u2000-\u200a\u202f\u205f\u3000]{2,}"
-                    text = re.sub(pattern, " ", text)
-                elif pre_processing_rule["id"] == "remove_urls_emails" and pre_processing_rule["enabled"] is True:
-                    # Remove email
-                    pattern = r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)"
-                    text = re.sub(pattern, "", text)
-
-                    # Remove URL but keep Markdown image URLs and link URLs
-                    # Replace the ENTIRE markdown link/image with a single placeholder to protect
-                    # the link text (which might also be a URL) from being removed
-                    markdown_link_pattern = r"\[([^\]]*)\]\((https?://[^)]+)\)"
-                    markdown_image_pattern = r"!\[.*?\]\((https?://[^)]+)\)"
-                    placeholders: list[tuple[str, str, str]] = []  # (type, text, url)
-
-                    def replace_markdown_with_placeholder(match, placeholders=placeholders):
-                        link_type = "link"
-                        link_text = match.group(1)
-                        url = match.group(2)
-                        placeholder = f"__MARKDOWN_PLACEHOLDER_{len(placeholders)}__"
-                        placeholders.append((link_type, link_text, url))
-                        return placeholder
-
-                    def replace_image_with_placeholder(match, placeholders=placeholders):
-                        link_type = "image"
-                        url = match.group(1)
-                        placeholder = f"__MARKDOWN_PLACEHOLDER_{len(placeholders)}__"
-                        placeholders.append((link_type, "image", url))
-                        return placeholder
-
-                    # Protect markdown links first
-                    text = re.sub(markdown_link_pattern, replace_markdown_with_placeholder, text)
-                    # Then protect markdown images
-                    text = re.sub(markdown_image_pattern, replace_image_with_placeholder, text)
-
-                    # Now remove all remaining URLs
-                    url_pattern = r"https?://\S+"
-                    text = re.sub(url_pattern, "", text)
-
-                    # Restore the Markdown links and images
-                    for i, (link_type, text_or_alt, url) in enumerate(placeholders):
-                        placeholder = f"__MARKDOWN_PLACEHOLDER_{i}__"
-                        if link_type == "link":
-                            text = text.replace(placeholder, f"[{text_or_alt}]({url})")
-                        else:  # image
-                            text = text.replace(placeholder, f"![{text_or_alt}]({url})")
-        return text
-
-    def filter_string(self, text):
-        return text
-
-```
-
-### api/core/rag/entities/event.py
-```py
-from collections.abc import Mapping
-from enum import StrEnum
-from typing import Any
-
-from pydantic import BaseModel, Field
-
-
-class DatasourceStreamEvent(StrEnum):
-    """
-    Datasource Stream event
-    """
-
-    PROCESSING = "datasource_processing"
-    COMPLETED = "datasource_completed"
-    ERROR = "datasource_error"
-
-
-class BaseDatasourceEvent(BaseModel):
-    pass
-
-
-class DatasourceErrorEvent(BaseDatasourceEvent):
-    event: DatasourceStreamEvent = DatasourceStreamEvent.ERROR
-    error: str = Field(..., description="error message")
-
-
-class DatasourceCompletedEvent(BaseDatasourceEvent):
-    event: DatasourceStreamEvent = DatasourceStreamEvent.COMPLETED
-    data: Mapping[str, Any] | list = Field(..., description="result")
-    total: int | None = Field(default=0, description="total")
-    completed: int | None = Field(default=0, description="completed")
-    time_consuming: float | None = Field(default=0.0, description="time consuming")
-
-
-class DatasourceProcessingEvent(BaseDatasourceEvent):
-    event: DatasourceStreamEvent = DatasourceStreamEvent.PROCESSING
-    total: int | None = Field(..., description="total")
-    completed: int | None = Field(..., description="completed")
-
-```
-
-### api/core/rag/entities/citation_metadata.py
-```py
-from typing import Any
-
-from pydantic import BaseModel
-
-
-class RetrievalSourceMetadata(BaseModel):
-    position: int | None = None
-    dataset_id: str | None = None
-    dataset_name: str | None = None
-    document_id: str | None = None
-    document_name: str | None = None
-    data_source_type: str | None = None
-    segment_id: str | None = None
-    retriever_from: str | None = None
-    score: float | None = None
-    hit_count: int | None = None
-    word_count: int | None = None
-    segment_position: int | None = None
-    index_node_hash: str | None = None
-    content: str | None = None
-    page: int | None = None
-    doc_metadata: dict[str, Any] | None = None
-    title: str | None = None
-    files: list[dict[str, Any]] | None = None
-    summary: str | None = None
-
-```
-
-### api/core/rag/entities/context_entities.py
-```py
-from pydantic import BaseModel
-
-
-class DocumentContext(BaseModel):
-    """
-    Model class for document context.
-    """
-
-    content: str
-    score: float | None = None
-
-```
-
-### api/core/rag/entities/metadata_entities.py
-```py
-from collections.abc import Sequence
-from typing import Literal
-
-from pydantic import BaseModel, Field
-
-SupportedComparisonOperator = Literal[
-    # for string or array
-    "contains",
-    "not contains",
-    "start with",
-    "end with",
-    "is",
-    "is not",
-    "empty",
-    "not empty",
-    "in",
-    "not in",
-    # for number
-    "=",
-    "≠",
-    ">",
-    "<",
-    "≥",
-    "≤",
-    # for time
-    "before",
-    "after",
-]
-
-
-class Condition(BaseModel):
-    """
-    Condition detail
-    """
-
-    name: str
-    comparison_operator: SupportedComparisonOperator
-    value: str | Sequence[str] | None | int | float = None
-
-
-class MetadataCondition(BaseModel):
-    """
-    Metadata Condition.
-    """
-
-    logical_operator: Literal["and", "or"] | None = "and"
-    conditions: list[Condition] | None = Field(default=None, deprecated=True)
 
 ```
 

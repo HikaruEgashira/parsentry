@@ -4,720 +4,252 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 - **ID**: SURFACE-009
 - **Kind**: endpoint
-- **Identifier**: MCP Server and Client (/mcp/)
-- **Description**: Model Context Protocol server exposing tools and resources, with OAuth-based auth. Risk of tool injection, unauthorized tool execution, session hijacking, and OAuth token theft.
-- **Locations**: api/core/mcp/server/, api/core/mcp/client/, api/core/mcp/auth/, api/core/mcp/session/, api/controllers/mcp/
-
-## Repository Context
-
-## Directory Structure
-```
-AGENTS.md
-AUTHORS
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-Makefile
-README.md
-api/ 
-  AGENTS.md
-  Dockerfile
-  README.md
-  app.py
-  app_factory.py
-  celery_entrypoint.py
-  celery_healthcheck.py
-  cnt_base.sh
-  commands/ 
-  configs/ 
-    deploy/ 
-    enterprise/ 
-    extra/ 
-    feature/ 
-      hosted_service/ 
-    middleware/ 
-      cache/ 
-      storage/ 
-      vdb/ 
-    observability/ 
-      otel/ 
-    packaging/ 
-    remote_settings_sources/ 
-      apollo/ 
-      nacos/ 
-  constants/ 
-  context/ 
-  contexts/ 
-  controllers/ 
-    common/ 
-    console/ 
-      app/ 
-      auth/ 
-      billing/ 
-      datasets/ 
-      explore/ 
-      tag/ 
-      workspace/ 
-    files/ 
-    inner_api/ 
-      app/ 
-      plugin/ 
-      workspace/ 
-    mcp/ 
-    service_api/ 
-      app/ 
-      dataset/ 
-      end_user/ 
-      workspace/ 
-    trigger/ 
-    web/ 
-  core/ 
-    agent/ 
-      output_parser/ 
-      prompt/ 
-      strategy/ 
-    app/ 
-      app_config/ 
-      apps/ 
-      entities/ 
-      features/ 
-      file_access/ 
-      layers/ 
-      llm/ 
-      task_pipeline/ 
-      workflow/ 
-    base/ 
-      tts/ 
-    callback_handler/ 
-    datasource/ 
-      __base/ 
-      entities/ 
-      local_file/ 
-      online_document/ 
-      online_drive/ 
-      utils/ 
-      website_crawl/ 
-    db/ 
-    entities/ 
-    errors/ 
-    extension/ 
-    external_data_tool/ 
-      api/ 
-    helper/ 
-      code_executor/ 
-    llm_generator/ 
-      output_parser/ 
-    logging/ 
-    mcp/ 
-      auth/ 
-      client/ 
-      server/ 
-      session/ 
-    memory/ 
-    moderation/ 
-      api/ 
-      keywords/ 
-      openai_moderation/ 
-    ops/ 
-      aliyun_trace/ 
-      arize_phoenix_trace/ 
-      entities/ 
-      langfuse_trace/ 
-      langsmith_trace/ 
-      mlflow_trace/ 
-      opik_trace/ 
-      tencent_trace/ 
-      weave_trace/ 
-    plugin/ 
-      backwards_invocation/ 
-      endpoint/ 
-      entities/ 
-      impl/ 
-      utils/ 
-    prompt/ 
-      entities/ 
-      prompt_templates/ 
-      utils/ 
-    rag/ 
-      cleaner/ 
-      data_post_processor/ 
-      datasource/ 
-      docstore/ 
-      embedding/ 
-      entities/ 
-      extractor/ 
-      index_processor/ 
-      models/ 
-      pipeline/ 
-      rerank/ 
-      retrieval/ 
-      splitter/ 
-      summary_index/ 
-    repositories/ 
-    schemas/ 
-      builtin/ 
-    telemetry/ 
-    tools/ 
-      __base/ 
-      builtin_tool/ 
-      custom_tool/ 
-      entities/ 
-      mcp_tool/ 
-      plugin_tool/ 
-      utils/ 
-      workflow_as_tool/ 
-    trigger/ 
-      debug/ 
-      entities/ 
-      utils/ 
-    workflow/ 
-      nodes/ 
-  dify_app.py
-  docker/ 
-  enterprise/ 
-    telemetry/ 
-      entities/ 
-  enums/ 
-  events/ 
-    event_handlers/ 
-  extensions/ 
-    logstore/ 
-      repositories/ 
-    otel/ 
-      decorators/ 
-      parser/ 
-      semconv/ 
-    storage/ 
-      clickzetta_volume/ 
-  factories/ 
-    file_factory/ 
-  fields/ 
-  gunicorn.conf.py
-  libs/ 
-    broadcast_channel/ 
-      redis/ 
-  migrations/ 
-    versions/ 
-  models/ 
-    utils/ 
-  pyproject.toml
-  pyrefly-local-excludes.txt
-  pyrightconfig.json
-  pytest.ini
-  repositories/ 
-    entities/ 
-  schedule/ 
-  services/ 
-    auth/ 
-      firecrawl/ 
-      jina/ 
-      watercrawl/ 
-    document_indexing_proxy/ 
-    enterprise/ 
-    entities/ 
-      external_knowledge_entities/ 
-      knowledge_entities/ 
-    errors/ 
-    plugin/ 
-    rag_pipeline/ 
-      entity/ 
-      pipeline_template/ 
-      transform/ 
-    recommend_app/ 
-      buildin/ 
-      database/ 
-      remote/ 
-    retention/ 
-      conversation/ 
-      workflow_run/ 
-    tools/ 
-    trigger/ 
-    workflow/ 
-  tasks/ 
-    annotation/ 
-    app_generate/ 
-    rag_pipeline/ 
-    workflow_cfs_scheduler/ 
-  templates/ 
-    without-brand/ 
-  tests/ 
-    fixtures/ 
-      workflow/ 
-    integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      libs/ 
-      model_runtime/ 
-      plugin/ 
-      services/ 
-      storage/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-      vdb/ 
-      workflow/ 
-    test_containers_integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      helpers/ 
-      libs/ 
-      models/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      trigger/ 
-      workflow/ 
-    unit_tests/ 
-      commands/ 
-      configs/ 
-      controllers/ 
-      core/ 
-      enterprise/ 
-      events/ 
-      extensions/ 
-      factories/ 
-      fields/ 
-      libs/ 
-      models/ 
-      oss/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-  uv.lock
-codecov.yml
-dev/ 
-  basedpyright-check
-  pyrefly-check-local
-  pytest/ 
-  reformat
-  setup
-  start-api
-  start-beat
-  start-docker-compose
-  start-web
-  start-worker
-  sync-uv
-  ty-check
-  update-uv
-docker/ 
-  README.md
-  certbot/ 
-  couchbase-server/ 
-  dify-env-sync.py
-  dify-env-sync.sh
-  docker-compose-template.yaml
-  docker-compose.middleware.yaml
-  docker-compose.png
-  docker-compose.yaml
-  elasticsearch/ 
-  generate_docker_compose
-  iris/ 
-  middleware.env.example
-  nginx/ 
-    conf.d/ 
-    ssl/ 
-  pgvector/ 
-  ssrf_proxy/ 
-  startupscripts/ 
-  tidb/ 
-    config/ 
-  volumes/ 
-    myscale/ 
-      config/ 
-    oceanbase/ 
-      init.d/ 
-    opensearch/ 
-    sandbox/ 
-      conf/ 
-docs/ 
-  ar-SA/ 
-  bn-BD/ 
-  de-DE/ 
-  es-ES/ 
-  eu-ai-act-compliance.md
-  fr-FR/ 
-  hi-IN/ 
-  it-IT/ 
-  ja-JP/ 
-  ko-KR/ 
-  pt-BR/ 
-  sl-SI/ 
-  suggested-questions-configuration.md
-  tlh/ 
-  tr-TR/ 
-  vi-VN/ 
-  weaviate/ 
-    WEAVIATE_MIGRATION_GUIDE/ 
-  zh-CN/ 
-  zh-TW/ 
-e2e/ 
-  AGENTS.md
-  README.md
-  cucumber.config.ts
-  features/ 
-    apps/ 
-    smoke/ 
-    step-definitions/ 
-      apps/ 
-      common/ 
-      smoke/ 
-    support/ 
-  fixtures/ 
-  package.json
-  scripts/ 
-  support/ 
-  test-env.ts
-  tsconfig.json
-  vite.config.ts
-images/ 
-  GitHub_README_if.png
-  describe.png
-  models.png
-package.json
-packages/ 
-  iconify-collections/ 
-    assets/ 
-      public/ 
-      vender/ 
-    custom-public/ 
-    custom-vender/ 
-    scripts/ 
-pnpm-lock.yaml
-pnpm-workspace.yaml
-scripts/ 
-  stress-test/ 
-    common/ 
-    setup/ 
-      dsl/ 
-sdks/ 
-  README.md
-  nodejs-client/ 
-    scripts/ 
-    src/ 
-      client/ 
-      errors/ 
-      http/ 
-      internal/ 
-      types/ 
-    tests/ 
-  php-client/ 
-vite.config.ts
-web/ 
-  AGENTS.md
-  CLAUDE.md
-  Dockerfile
-  Dockerfile.dockerignore
-  README.md
-  __mocks__/ 
-    @tanstack/ 
-  __tests__/ 
-    apps/ 
-    billing/ 
-    datasets/ 
-    develop/ 
-    explore/ 
-    goto-anything/ 
-    plugins/ 
-    rag-pipeline/ 
-    share/ 
-    tools/ 
-  app/ 
-    (commonLayout)/ 
-      app/ 
-      apps/ 
-      datasets/ 
-      education-apply/ 
-      explore/ 
-      plugins/ 
-      tools/ 
-    (humanInputLayout)/ 
-      form/ 
-    (shareLayout)/ 
-      chat/ 
-      chatbot/ 
-      completion/ 
-      components/ 
-      webapp-reset-password/ 
-      webapp-signin/ 
-      workflow/ 
-    account/ 
-      (commonLayout)/ 
-      oauth/ 
-    activate/ 
-    components/ 
-      app/ 
-      app-sidebar/ 
-      apps/ 
-      base/ 
-      billing/ 
-      custom/ 
-      datasets/ 
-      develop/ 
-      devtools/ 
-      explore/ 
-      goto-anything/ 
-      header/ 
-      plugins/ 
-      provider/ 
-      rag-pipeline/ 
-      share/ 
-      signin/ 
-      tools/ 
-      workflow/ 
-      workflow-app/ 
-    education-apply/ 
-    forgot-password/ 
-    init/ 
-    install/ 
-    oauth-callback/ 
-    reset-password/ 
-      check-code/ 
-      set-password/ 
-    signin/ 
-      assets/ 
-      check-code/ 
-      components/ 
-      invite-settings/ 
-      utils/ 
-    signup/ 
-      check-code/ 
-      components/ 
-      set-password/ 
-    styles/ 
-  assets/ 
-  bin/ 
-  config/ 
-  constants/ 
-  context/ 
-    hooks/ 
-  contract/ 
-    console/ 
-  docker/ 
-  docs/ 
-  env.ts
-  eslint-suppressions.json
-  eslint.config.mjs
-  eslint.constants.mjs
-  global.d.ts
-  hooks/ 
-  i18n/ 
-    ar-TN/ 
-    de-DE/ 
-    en-US/ 
-    es-ES/ 
-    fa-IR/ 
-    fr-FR/ 
-    hi-IN/ 
-    id-ID/ 
-    it-IT/ 
-    ja-JP/ 
-    ko-KR/ 
-    nl-NL/ 
-    pl-PL/ 
-    pt-BR/ 
-    ro-RO/ 
-    ru-RU/ 
-    sl-SI/ 
-    th-TH/ 
-    tr-TR/ 
-    uk-UA/ 
-    vi-VN/ 
-    zh-Hans/ 
-    zh-Hant/ 
-  i18n-config/ 
-  instrumentation-client.ts
-  knip.config.ts
-  models/ 
-  next/ 
-  next.config.ts
-  package.json
-  plugins/ 
-    dev-proxy/ 
-    eslint/ 
-      rules/ 
-    vite/ 
-  postcss.config.js
-  proxy.ts
-  public/ 
-    education/ 
-    in-site-message/ 
-    logo/ 
-    screenshots/ 
-      dark/ 
-      light/ 
-    vs/ 
-      base/ 
-      basic-languages/ 
-      editor/ 
-      language/ 
-  scripts/ 
-  service/ 
-    knowledge/ 
-  tailwind-common-config.ts
-  tailwind.config.ts
-  test/ 
-  themes/ 
-  tsconfig.json
-  tsslint.config.ts
-  types/ 
-  typography.js
-  utils/ 
-  vite.config.ts
-  vitest.setup.ts
-
-```
-
-## Languages
-- TypeScript: 5508 files
-- Python: 2785 files
-- JavaScript: 122 files
-- Yaml: 95 files
-- Bash: 20 files
-- Php: 1 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "dify",
-  "private": true,
-  "scripts": {
-    "prepare": "vp config"
-  },
-  "devDependencies": {
-    "vite-plus": "catalog:"
-  },
-  "engines": {
-    "node": "^22.22.1"
-  },
-  "packageManager": "pnpm@10.33.0"
-}
-
-```
-
-## Entry Points
-- sdks/nodejs-client/src/index.ts
-- web/next/index.ts
-- web/types/app.ts
-- web/app/components/tools/utils/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/hooks/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/hooks/index.ts
-- web/app/components/goto-anything/components/index.ts
-- web/app/components/goto-anything/hooks/index.ts
-- web/app/components/goto-anything/actions/commands/index.ts
-- web/app/components/goto-anything/actions/index.ts
-- web/app/components/workflow-app/hooks/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/data-source/store/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/steps/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/hooks/index.ts
-- web/app/components/datasets/documents/components/document-list/components/index.ts
-- web/app/components/datasets/documents/components/document-list/hooks/index.ts
-- web/app/components/datasets/documents/detail/completed/components/index.ts
-- web/app/components/datasets/documents/detail/completed/hooks/index.ts
-- web/app/components/datasets/documents/detail/embedding/components/index.ts
-- web/app/components/datasets/documents/detail/embedding/hooks/index.ts
-- web/app/components/datasets/create/step-one/components/index.ts
-- web/app/components/datasets/create/step-one/hooks/index.ts
-- web/app/components/datasets/create/step-two/components/index.ts
-- web/app/components/datasets/create/step-two/hooks/index.ts
-- web/app/components/rag-pipeline/utils/index.ts
-- web/app/components/rag-pipeline/hooks/index.ts
-- web/app/components/rag-pipeline/store/index.ts
-- web/app/components/workflow/hooks-store/index.ts
-- web/app/components/workflow/note-node/note-editor/theme/index.ts
-- web/app/components/workflow/utils/index.ts
-- web/app/components/workflow/hooks/use-workflow-run-event/index.ts
-- web/app/components/workflow/hooks/index.ts
-- web/app/components/workflow/run/utils/format-log/parallel/index.ts
-- web/app/components/workflow/run/utils/format-log/retry/index.ts
-- web/app/components/workflow/run/utils/format-log/human-input/index.ts
-- web/app/components/workflow/run/utils/format-log/agent/index.ts
-- web/app/components/workflow/run/utils/format-log/index.ts
-- web/app/components/workflow/run/utils/format-log/iteration/index.ts
-- web/app/components/workflow/run/utils/format-log/loop/index.ts
-- web/app/components/workflow/store/workflow/index.ts
-- web/app/components/workflow/store/index.ts
-- web/app/components/header/account-setting/model-provider-page/model-auth/hooks/index.ts
-- web/app/components/header/account-setting/data-source-page-new/hooks/index.ts
-- web/app/components/base/form/utils/secret-input/index.ts
-- web/app/components/base/form/hooks/index.ts
-- web/app/components/base/radio/context/index.ts
-- web/app/components/base/amplitude/index.ts
-- web/app/components/base/markdown-blocks/index.ts
-- web/app/components/base/icons/src/public/tracing/index.ts
-- web/app/components/base/icons/src/public/llm/index.ts
-- web/app/components/base/icons/src/public/education/index.ts
-- web/app/components/base/icons/src/public/other/index.ts
-- web/app/components/base/icons/src/public/common/index.ts
-- web/app/components/base/icons/src/public/knowledge/dataset-card/index.ts
-- web/app/components/base/icons/src/public/knowledge/index.ts
-- web/app/components/base/icons/src/public/knowledge/online-drive/index.ts
-- web/app/components/base/icons/src/public/avatar/index.ts
-- web/app/components/base/icons/src/public/files/index.ts
-- web/app/components/base/icons/src/public/thought/index.ts
-- web/app/components/base/icons/src/public/billing/index.ts
-- web/app/components/base/icons/src/vender/pipeline/index.ts
-- web/app/components/base/icons/src/vender/features/index.ts
-- web/app/components/base/icons/src/vender/other/index.ts
-- web/app/components/base/icons/src/vender/plugin/index.ts
-- web/app/components/base/icons/src/vender/solid/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/solid/security/index.ts
-- web/app/components/base/icons/src/vender/solid/general/index.ts
-- web/app/components/base/icons/src/vender/solid/development/index.ts
-- web/app/components/base/icons/src/vender/solid/education/index.ts
-- web/app/components/base/icons/src/vender/solid/shapes/index.ts
-- web/app/components/base/icons/src/vender/solid/users/index.ts
-- web/app/components/base/icons/src/vender/solid/files/index.ts
-- web/app/components/base/icons/src/vender/solid/arrows/index.ts
-- web/app/components/base/icons/src/vender/solid/communication/index.ts
-- web/app/components/base/icons/src/vender/solid/editor/index.ts
-- web/app/components/base/icons/src/vender/solid/FinanceAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/solid/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/system/index.ts
-- web/app/components/base/icons/src/vender/knowledge/index.ts
-- web/app/components/base/icons/src/vender/line/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/line/images/index.ts
-- web/app/components/base/icons/src/vender/line/general/index.ts
-- web/app/components/base/icons/src/vender/line/development/index.ts
-- web/app/components/base/icons/src/vender/line/layout/index.ts
-- web/app/components/base/icons/src/vender/line/education/index.ts
-- web/app/components/base/icons/src/vender/line/others/index.ts
-- web/app/components/base/icons/src/vender/line/time/index.ts
-- web/app/components/base/icons/src/vender/line/files/index.ts
-- web/app/components/base/icons/src/vender/line/arrows/index.ts
-- web/app/components/base/icons/src/vender/line/communication/index.ts
-- web/app/components/base/icons/src/vender/line/editor/index.ts
-- web/app/components/base/icons/src/vender/line/financeAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/line/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/workflow/index.ts
-- web/app/components/base/file-uploader/index.ts
-- web/app/components/billing/utils/index.ts
-- web/config/index.ts
-- web/plugins/eslint/index.js
-- web/plugins/dev-proxy/server.ts
-- web/utils/index.ts
-- web/models/app.ts
-- web/i18n-config/index.ts
-- web/i18n-config/server.ts
-- packages/iconify-collections/custom-vender/index.js
-- packages/iconify-collections/custom-public/index.js
-- api/core/plugin/backwards_invocation/app.py
-- api/app.py
-- api/controllers/web/app.py
-- api/controllers/service_api/app/app.py
-- api/controllers/console/app/app.py
-- api/services/errors/app.py
-
-Total source files: 8531
-
+- **Identifier**: POST /mcp/server/<server_code>/mcp (JSON-RPC 2.0)
+- **Description**: Model Context Protocol server accepting JSON-RPC requests without explicit authentication. MCP tool invocation can trigger arbitrary tool execution and data access
+- **Locations**: api/controllers/mcp/mcp.py, api/core/mcp/server/streamable_http.py, api/core/mcp/client/streamable_client.py, api/core/mcp/auth/auth_flow.py, api/core/mcp/session/base_session.py
 
 ## Source Code
+
+### api/controllers/mcp/mcp.py
+```py
+from typing import Any, Union
+
+from flask import Response
+from flask_restx import Resource
+from graphon.variables.input_entities import VariableEntity
+from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
+
+from controllers.common.schema import register_schema_model
+from controllers.mcp import mcp_ns
+from core.mcp import types as mcp_types
+from core.mcp.server.streamable_http import handle_mcp_request
+from extensions.ext_database import db
+from libs import helper
+from models.enums import AppMCPServerStatus
+from models.model import App, AppMCPServer, AppMode, EndUser
+
+
+class MCPRequestError(Exception):
+    """Custom exception for MCP request processing errors"""
+
+    def __init__(self, error_code: int, message: str):
+        self.error_code = error_code
+        self.message = message
+        super().__init__(message)
+
+
+class MCPRequestPayload(BaseModel):
+    jsonrpc: str = Field(description="JSON-RPC version (should be '2.0')")
+    method: str = Field(description="The method to invoke")
+    params: dict[str, Any] | None = Field(default=None, description="Parameters for the method")
+    id: int | str | None = Field(default=None, description="Request ID for tracking responses")
+
+
+register_schema_model(mcp_ns, MCPRequestPayload)
+
+
+@mcp_ns.route("/server/<string:server_code>/mcp")
+class MCPAppApi(Resource):
+    @mcp_ns.expect(mcp_ns.models[MCPRequestPayload.__name__])
+    @mcp_ns.doc("handle_mcp_request")
+    @mcp_ns.doc(description="Handle Model Context Protocol (MCP) requests for a specific server")
+    @mcp_ns.doc(params={"server_code": "Unique identifier for the MCP server"})
+    @mcp_ns.doc(
+        responses={
+            200: "MCP response successfully processed",
+            400: "Invalid MCP request or parameters",
+            404: "Server or app not found",
+        }
+    )
+    def post(self, server_code: str):
+        """Handle MCP requests for a specific server.
+
+        Processes JSON-RPC formatted requests according to the Model Context Protocol specification.
+        Validates the server status and associated app before processing the request.
+
+        Args:
+            server_code: Unique identifier for the MCP server
+
+        Returns:
+            dict: JSON-RPC response from the MCP handler
+
+        Raises:
+            ValidationError: Invalid request format or parameters
+        """
+        args = MCPRequestPayload.model_validate(mcp_ns.payload or {})
+        request_id: Union[int, str] | None = args.id
+        mcp_request = self._parse_mcp_request(args.model_dump(exclude_none=True))
+
+        with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
+            # Get MCP server and app
+            mcp_server, app = self._get_mcp_server_and_app(server_code, session)
+            self._validate_server_status(mcp_server)
+
+            # Get user input form
+            user_input_form = self._get_user_input_form(app)
+
+            # Handle notification vs request differently
+            return self._process_mcp_message(mcp_request, request_id, app, mcp_server, user_input_form, session)
+
+    def _get_mcp_server_and_app(self, server_code: str, session: Session) -> tuple[AppMCPServer, App]:
+        """Get and validate MCP server and app in one query session"""
+        mcp_server = session.scalar(select(AppMCPServer).where(AppMCPServer.server_code == server_code).limit(1))
+        if not mcp_server:
+            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Server Not Found")
+
+        app = session.scalar(select(App).where(App.id == mcp_server.app_id).limit(1))
+        if not app:
+            raise MCPRequestError(mcp_types.INVALID_REQUEST, "App Not Found")
+
+        return mcp_server, app
+
+    def _validate_server_status(self, mcp_server: AppMCPServer):
+        """Validate MCP server status"""
+        if mcp_server.status != AppMCPServerStatus.ACTIVE:
+            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Server is not active")
+
+    def _process_mcp_message(
+        self,
+        mcp_request: mcp_types.ClientRequest | mcp_types.ClientNotification,
+        request_id: Union[int, str] | None,
+        app: App,
+        mcp_server: AppMCPServer,
+        user_input_form: list[VariableEntity],
+        session: Session,
+    ) -> Response:
+        """Process MCP message (notification or request)"""
+        if isinstance(mcp_request, mcp_types.ClientNotification):
+            return self._handle_notification(mcp_request)
+        else:
+            return self._handle_request(mcp_request, request_id, app, mcp_server, user_input_form, session)
+
+    def _handle_notification(self, mcp_request: mcp_types.ClientNotification) -> Response:
+        """Handle MCP notification"""
+        # For notifications, only support init notification
+        if mcp_request.root.method != "notifications/initialized":
+            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Invalid notification method")
+        # Return HTTP 202 Accepted for notifications (no response body)
+        return Response("", status=202, content_type="application/json")
+
+    def _handle_request(
+        self,
+        mcp_request: mcp_types.ClientRequest,
+        request_id: Union[int, str] | None,
+        app: App,
+        mcp_server: AppMCPServer,
+        user_input_form: list[VariableEntity],
+        session: Session,
+    ) -> Response:
+        """Handle MCP request"""
+        if request_id is None:
+            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Request ID is required")
+
+        result = self._handle_mcp_request(app, mcp_server, mcp_request, user_input_form, session, request_id)
+        if result is None:
+            # This shouldn't happen for requests, but handle gracefully
+            raise MCPRequestError(mcp_types.INTERNAL_ERROR, "No response generated for request")
+
+        return helper.compact_generate_response(result.model_dump(by_alias=True, mode="json", exclude_none=True))
+
+    def _get_user_input_form(self, app: App) -> list[VariableEntity]:
+        """Get and convert user input form"""
+        # Get raw user input form based on app mode
+        if app.mode in {AppMode.ADVANCED_CHAT, AppMode.WORKFLOW}:
+            if not app.workflow:
+                raise MCPRequestError(mcp_types.INVALID_REQUEST, "App is unavailable")
+            raw_user_input_form = app.workflow.user_input_form(to_old_structure=True)
+        else:
+            if not app.app_model_config:
+                raise MCPRequestError(mcp_types.INVALID_REQUEST, "App is unavailable")
+            features_dict = app.app_model_config.to_dict()
+            raw_user_input_form = features_dict.get("user_input_form", [])
+
+        # Convert to VariableEntity objects
+        try:
+            return self._convert_user_input_form(raw_user_input_form)
+        except ValidationError as e:
+            raise MCPRequestError(mcp_types.INVALID_PARAMS, f"Invalid user_input_form: {str(e)}")
+
+    def _convert_user_input_form(self, raw_form: list[dict]) -> list[VariableEntity]:
+        """Convert raw user input form to VariableEntity objects"""
+        return [self._create_variable_entity(item) for item in raw_form]
+
+    def _create_variable_entity(self, item: dict) -> VariableEntity:
+        """Create a single VariableEntity from raw form item"""
+        variable_type = item.get("type", "") or list(item.keys())[0]
+        variable = item[variable_type]
+
+        return VariableEntity(
+            type=variable_type,
+            variable=variable.get("variable"),
+            description=variable.get("description") or "",
+            label=variable.get("label"),
+            required=variable.get("required", False),
+            max_length=variable.get("max_length"),
+            options=variable.get("options") or [],
+            json_schema=variable.get("json_schema"),
+        )
+
+    def _parse_mcp_request(self, args: dict) -> mcp_types.ClientRequest | mcp_types.ClientNotification:
+        """Parse and validate MCP request"""
+        try:
+            return mcp_types.ClientRequest.model_validate(args)
+        except ValidationError:
+            try:
+                return mcp_types.ClientNotification.model_validate(args)
+            except ValidationError as e:
+                raise MCPRequestError(mcp_types.INVALID_PARAMS, f"Invalid MCP request: {str(e)}")
+
+    def _retrieve_end_user(self, tenant_id: str, mcp_server_id: str) -> EndUser | None:
+        """Get end user - manages its own database session"""
+        with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
+            return session.scalar(
+                select(EndUser)
+                .where(EndUser.tenant_id == tenant_id)
+                .where(EndUser.session_id == mcp_server_id)
+                .where(EndUser.type == "mcp")
+                .limit(1)
+            )
+
+    def _create_end_user(
+        self, client_name: str, tenant_id: str, app_id: str, mcp_server_id: str, session: Session
+    ) -> EndUser:
+        """Create end user in existing session"""
+        end_user = EndUser(
+            tenant_id=tenant_id,
+            app_id=app_id,
+            type="mcp",
+            name=client_name,
+            session_id=mcp_server_id,
+        )
+        session.add(end_user)
+        session.flush()  # Use flush instead of commit to keep transaction open
+        session.refresh(end_user)
+        return end_user
+
+    def _handle_mcp_request(
+        self,
+        app: App,
+        mcp_server: AppMCPServer,
+        mcp_request: mcp_types.ClientRequest,
+        user_input_form: list[VariableEntity],
+        session: Session,
+        request_id: Union[int, str],
+    ) -> mcp_types.JSONRPCResponse | mcp_types.JSONRPCError | None:
+        """Handle MCP request and return response"""
+        end_user = self._retrieve_end_user(mcp_server.tenant_id, mcp_server.id)
+
+        if not end_user and isinstance(mcp_request.root, mcp_types.InitializeRequest):
+            client_info = mcp_request.root.params.clientInfo
+            client_name = f"{client_info.name}@{client_info.version}"
+            with sessionmaker(db.engine, expire_on_commit=False).begin() as create_session:
+                end_user = self._create_end_user(client_name, app.tenant_id, app.id, mcp_server.id, create_session)
+
+        return handle_mcp_request(app, mcp_request, user_input_form, mcp_server, end_user, request_id)
+
+```
 
 ### api/core/mcp/server/streamable_http.py
 ```py
@@ -1565,382 +1097,6 @@ def streamablehttp_client(
 
         # Shutdown executor without waiting to prevent hanging
         executor.shutdown(wait=False)
-
-```
-
-### api/core/mcp/client/sse_client.py
-```py
-import logging
-import queue
-from collections.abc import Generator
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
-from typing import Any, final
-from urllib.parse import urljoin, urlparse
-
-import httpx
-from httpx_sse import EventSource, ServerSentEvent
-from sseclient import SSEClient
-
-from core.mcp import types
-from core.mcp.error import MCPAuthError, MCPConnectionError
-from core.mcp.types import SessionMessage
-from core.mcp.utils import create_ssrf_proxy_mcp_http_client, ssrf_proxy_sse_connect
-
-logger = logging.getLogger(__name__)
-
-DEFAULT_QUEUE_READ_TIMEOUT = 3
-
-
-@final
-class _StatusReady:
-    def __init__(self, endpoint_url: str):
-        self.endpoint_url = endpoint_url
-
-
-@final
-class _StatusError:
-    def __init__(self, exc: Exception):
-        self.exc = exc
-
-
-# Type aliases for better readability
-type ReadQueue = queue.Queue[SessionMessage | Exception | None]
-type WriteQueue = queue.Queue[SessionMessage | Exception | None]
-type StatusQueue = queue.Queue[_StatusReady | _StatusError]
-
-
-class SSETransport:
-    """SSE client transport implementation."""
-
-    def __init__(
-        self,
-        url: str,
-        headers: dict[str, Any] | None = None,
-        timeout: float = 5.0,
-        sse_read_timeout: float = 1 * 60,
-    ):
-        """Initialize the SSE transport.
-
-        Args:
-            url: The SSE endpoint URL.
-            headers: Optional headers to include in requests.
-            timeout: HTTP timeout for regular operations.
-            sse_read_timeout: Timeout for SSE read operations.
-        """
-        self.url = url
-        self.headers = headers or {}
-        self.timeout = timeout
-        self.sse_read_timeout = sse_read_timeout
-        self.endpoint_url: str | None = None
-        self.event_source: EventSource | None = None
-
-    def _validate_endpoint_url(self, endpoint_url: str) -> bool:
-        """Validate that the endpoint URL matches the connection origin.
-
-        Args:
-            endpoint_url: The endpoint URL to validate.
-
-        Returns:
-            True if valid, False otherwise.
-        """
-        url_parsed = urlparse(self.url)
-        endpoint_parsed = urlparse(endpoint_url)
-
-        return url_parsed.netloc == endpoint_parsed.netloc and url_parsed.scheme == endpoint_parsed.scheme
-
-    def _handle_endpoint_event(self, sse_data: str, status_queue: StatusQueue):
-        """Handle an 'endpoint' SSE event.
-
-        Args:
-            sse_data: The SSE event data.
-            status_queue: Queue to put status updates.
-        """
-        endpoint_url = urljoin(self.url, sse_data)
-        logger.info("Received endpoint URL: %s", endpoint_url)
-
-        if not self._validate_endpoint_url(endpoint_url):
-            error_msg = f"Endpoint origin does not match connection origin: {endpoint_url}"
-            logger.error(error_msg)
-            status_queue.put(_StatusError(ValueError(error_msg)))
-            return
-
-        status_queue.put(_StatusReady(endpoint_url))
-
-    def _handle_message_event(self, sse_data: str, read_queue: ReadQueue):
-        """Handle a 'message' SSE event.
-
-        Args:
-            sse_data: The SSE event data.
-            read_queue: Queue to put parsed messages.
-        """
-        try:
-            message = types.JSONRPCMessage.model_validate_json(sse_data)
-            logger.debug("Received server message: %s", message)
-            session_message = SessionMessage(message)
-            read_queue.put(session_message)
-        except Exception as exc:
-            logger.exception("Error parsing server message")
-            read_queue.put(exc)
-
-    def _handle_sse_event(self, sse: ServerSentEvent, read_queue: ReadQueue, status_queue: StatusQueue):
-        """Handle a single SSE event.
-
-        Args:
-            sse: The SSE event object.
-            read_queue: Queue for message events.
-            status_queue: Queue for status events.
-        """
-        match sse.event:
-            case "endpoint":
-                self._handle_endpoint_event(sse.data, status_queue)
-            case "message":
-                self._handle_message_event(sse.data, read_queue)
-            case _:
-                logger.warning("Unknown SSE event: %s", sse.event)
-
-    def sse_reader(self, event_source: EventSource, read_queue: ReadQueue, status_queue: StatusQueue):
-        """Read and process SSE events.
-
-        Args:
-            event_source: The SSE event source.
-            read_queue: Queue to put received messages.
-            status_queue: Queue to put status updates.
-        """
-        try:
-            for sse in event_source.iter_sse():
-                self._handle_sse_event(sse, read_queue, status_queue)
-        except httpx.ReadError as exc:
-            logger.debug("SSE reader shutting down normally: %s", exc)
-        except Exception as exc:
-            read_queue.put(exc)
-        finally:
-            read_queue.put(None)
-
-    def _send_message(self, client: httpx.Client, endpoint_url: str, message: SessionMessage):
-        """Send a single message to the server.
-
-        Args:
-            client: HTTP client to use.
-            endpoint_url: The endpoint URL to send to.
-            message: The message to send.
-        """
-        response = client.post(
-            endpoint_url,
-            json=message.message.model_dump(
-                by_alias=True,
-                mode="json",
-                exclude_none=True,
-            ),
-        )
-        response.raise_for_status()
-        logger.debug("Client message sent successfully: %s", response.status_code)
-
-    def post_writer(self, client: httpx.Client, endpoint_url: str, write_queue: WriteQueue):
-        """Handle writing messages to the server.
-
-        Args:
-            client: HTTP client to use.
-            endpoint_url: The endpoint URL to send messages to.
-            write_queue: Queue to read messages from.
-        """
-        try:
-            while True:
-                try:
-                    message = write_queue.get(timeout=DEFAULT_QUEUE_READ_TIMEOUT)
-                    if message is None:
-                        break
-                    if isinstance(message, Exception):
-                        write_queue.put(message)
-                        continue
-
-                    self._send_message(client, endpoint_url, message)
-
-                except queue.Empty:
-                    continue
-        except httpx.ReadError as exc:
-            logger.debug("Post writer shutting down normally: %s", exc)
-        except Exception as exc:
-            logger.exception("Error writing messages")
-            write_queue.put(exc)
-        finally:
-            write_queue.put(None)
-
-    def _wait_for_endpoint(self, status_queue: StatusQueue) -> str:
-        """Wait for the endpoint URL from the status queue.
-
-        Args:
-            status_queue: Queue to read status from.
-
-        Returns:
-            The endpoint URL.
-
-        Raises:
-            ValueError: If endpoint URL is not received or there's an error.
-        """
-        try:
-            status = status_queue.get(timeout=1)
-        except queue.Empty:
-            raise ValueError("failed to get endpoint URL")
-
-        if isinstance(status, _StatusReady):
-            return status.endpoint_url
-        elif isinstance(status, _StatusError):
-            raise status.exc
-        else:
-            raise ValueError("failed to get endpoint URL")
-
-    def connect(
-        self,
-        executor: ThreadPoolExecutor,
-        client: httpx.Client,
-        event_source: EventSource,
-    ) -> tuple[ReadQueue, WriteQueue]:
-        """Establish connection and start worker threads.
-
-        Args:
-            executor: Thread pool executor.
-            client: HTTP client.
-            event_source: SSE event source.
-
-        Returns:
-            Tuple of (read_queue, write_queue).
-        """
-        read_queue: ReadQueue = queue.Queue()
-        write_queue: WriteQueue = queue.Queue()
-        status_queue: StatusQueue = queue.Queue()
-
-        # Store event_source for graceful shutdown
-        self.event_source = event_source
-
-        # Start SSE reader thread
-        executor.submit(self.sse_reader, event_source, read_queue, status_queue)
-
-        # Wait for endpoint URL
-        endpoint_url = self._wait_for_endpoint(status_queue)
-        self.endpoint_url = endpoint_url
-
-        # Start post writer thread
-        executor.submit(self.post_writer, client, endpoint_url, write_queue)
-
-        return read_queue, write_queue
-
-
-@contextmanager
-def sse_client(
-    url: str,
-    headers: dict[str, Any] | None = None,
-    timeout: float = 5.0,
-    sse_read_timeout: float = 1 * 60,
-) -> Generator[tuple[ReadQueue, WriteQueue], None, None]:
-    """
-    Client transport for SSE.
-    `sse_read_timeout` determines how long (in seconds) the client will wait for a new
-    event before disconnecting. All other HTTP operations are controlled by `timeout`.
-
-    Args:
-        url: The SSE endpoint URL.
-        headers: Optional headers to include in requests.
-        timeout: HTTP timeout for regular operations.
-        sse_read_timeout: Timeout for SSE read operations.
-
-    Yields:
-        Tuple of (read_queue, write_queue) for message communication.
-    """
-    transport = SSETransport(url, headers, timeout, sse_read_timeout)
-
-    read_queue: ReadQueue | None = None
-    write_queue: WriteQueue | None = None
-
-    executor = ThreadPoolExecutor()
-    try:
-        with create_ssrf_proxy_mcp_http_client(headers=transport.headers) as client:
-            with ssrf_proxy_sse_connect(
-                url, timeout=httpx.Timeout(timeout, read=sse_read_timeout), client=client
-            ) as event_source:
-                event_source.response.raise_for_status()
-
-                read_queue, write_queue = transport.connect(executor, client, event_source)
-
-                yield read_queue, write_queue
-
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 401:
-            raise MCPAuthError(response=exc.response)
-        raise MCPConnectionError()
-    except Exception:
-        logger.exception("Error connecting to SSE endpoint")
-        raise
-    finally:
-        # Close the SSE connection to unblock the reader thread
-        if transport.event_source is not None:
-            try:
-                transport.event_source.response.close()
-            except RuntimeError:
-                pass
-
-        # Clean up queues
-        if read_queue:
-            read_queue.put(None)
-        if write_queue:
-            write_queue.put(None)
-
-        # Shutdown executor without waiting to prevent hanging
-        executor.shutdown(wait=False)
-
-
-def send_message(http_client: httpx.Client, endpoint_url: str, session_message: SessionMessage):
-    """
-    Send a message to the server using the provided HTTP client.
-
-    Args:
-        http_client: The HTTP client to use for sending
-        endpoint_url: The endpoint URL to send the message to
-        session_message: The message to send
-    """
-    try:
-        response = http_client.post(
-            endpoint_url,
-            json=session_message.message.model_dump(
-                by_alias=True,
-                mode="json",
-                exclude_none=True,
-            ),
-        )
-        response.raise_for_status()
-        logger.debug("Client message sent successfully: %s", response.status_code)
-    except Exception:
-        logger.exception("Error sending message")
-        raise
-
-
-def read_messages(
-    sse_client: SSEClient,
-) -> Generator[SessionMessage | Exception, None, None]:
-    """
-    Read messages from the SSE client.
-
-    Args:
-        sse_client: The SSE client to read from
-
-    Yields:
-        SessionMessage or Exception for each event received
-    """
-    try:
-        for sse in sse_client.events():
-            if sse.event == "message":
-                try:
-                    message = types.JSONRPCMessage.model_validate_json(sse.data)
-                    logger.debug("Received server message: %s", message)
-                    yield SessionMessage(message)
-                except Exception as exc:
-                    logger.exception("Error parsing server message")
-                    yield exc
-            else:
-                logger.warning("Unknown SSE event: %s", sse.event)
-    except Exception as exc:
-        logger.exception("Error reading SSE messages")
-        yield exc
 
 ```
 
@@ -3098,651 +2254,6 @@ class BaseSession[
         req: RequestResponder[ReceiveRequestT, SendResultT] | ReceiveNotificationT | Exception,
     ):
         """A generic handler for incoming messages. Overwritten by subclasses."""
-
-```
-
-### api/core/mcp/session/client_session.py
-```py
-import queue
-from datetime import timedelta
-from typing import Any, Protocol
-
-from pydantic import AnyUrl, TypeAdapter
-
-from configs import dify_config
-from core.mcp import types
-from core.mcp.entities import SUPPORTED_PROTOCOL_VERSIONS, RequestContext
-from core.mcp.session.base_session import BaseSession, RequestResponder
-
-DEFAULT_CLIENT_INFO = types.Implementation(name="Dify", version=dify_config.project.version)
-
-
-class SamplingFnT(Protocol):
-    def __call__(
-        self,
-        context: RequestContext["ClientSession", Any],
-        params: types.CreateMessageRequestParams,
-    ) -> types.CreateMessageResult | types.ErrorData: ...
-
-
-class ListRootsFnT(Protocol):
-    def __call__(self, context: RequestContext["ClientSession", Any]) -> types.ListRootsResult | types.ErrorData: ...
-
-
-class LoggingFnT(Protocol):
-    def __call__(
-        self,
-        params: types.LoggingMessageNotificationParams,
-    ): ...
-
-
-class MessageHandlerFnT(Protocol):
-    def __call__(
-        self,
-        message: RequestResponder[types.ServerRequest, types.ClientResult] | types.ServerNotification | Exception,
-    ): ...
-
-
-def _default_message_handler(
-    message: RequestResponder[types.ServerRequest, types.ClientResult] | types.ServerNotification | Exception,
-):
-    if isinstance(message, Exception):
-        raise ValueError(str(message))
-    elif isinstance(message, (types.ServerNotification | RequestResponder)):
-        pass
-
-
-def _default_sampling_callback(
-    context: RequestContext["ClientSession", Any],
-    params: types.CreateMessageRequestParams,
-) -> types.CreateMessageResult | types.ErrorData:
-    return types.ErrorData(
-        code=types.INVALID_REQUEST,
-        message="Sampling not supported",
-    )
-
-
-def _default_list_roots_callback(
-    context: RequestContext["ClientSession", Any],
-) -> types.ListRootsResult | types.ErrorData:
-    return types.ErrorData(
-        code=types.INVALID_REQUEST,
-        message="List roots not supported",
-    )
-
-
-def _default_logging_callback(
-    params: types.LoggingMessageNotificationParams,
-):
-    pass
-
-
-ClientResponse: TypeAdapter[types.ClientResult | types.ErrorData] = TypeAdapter(types.ClientResult | types.ErrorData)
-
-
-class ClientSession(
-    BaseSession[
-        types.ClientRequest,
-        types.ClientNotification,
-        types.ClientResult,
-        types.ServerRequest,
-        types.ServerNotification,
-    ]
-):
-    def __init__(
-        self,
-        read_stream: queue.Queue,
-        write_stream: queue.Queue,
-        read_timeout_seconds: timedelta | None = None,
-        sampling_callback: SamplingFnT | None = None,
-        list_roots_callback: ListRootsFnT | None = None,
-        logging_callback: LoggingFnT | None = None,
-        message_handler: MessageHandlerFnT | None = None,
-        client_info: types.Implementation | None = None,
-    ):
-        super().__init__(
-            read_stream,
-            write_stream,
-            types.ServerRequest,
-            types.ServerNotification,
-            read_timeout_seconds=read_timeout_seconds,
-        )
-        self._client_info = client_info or DEFAULT_CLIENT_INFO
-        self._sampling_callback = sampling_callback or _default_sampling_callback
-        self._list_roots_callback = list_roots_callback or _default_list_roots_callback
-        self._logging_callback = logging_callback or _default_logging_callback
-        self._message_handler = message_handler or _default_message_handler
-
-    def initialize(self) -> types.InitializeResult:
-        # Only set capabilities if non-default callbacks are provided
-        # This prevents servers from attempting callbacks when we don't actually support them
-        sampling = types.SamplingCapability() if self._sampling_callback is not _default_sampling_callback else None
-        roots = (
-            types.RootsCapability(
-                # Only enable listChanged if we have a custom callback
-                listChanged=True,
-            )
-            if self._list_roots_callback is not _default_list_roots_callback
-            else None
-        )
-
-        result = self.send_request(
-            types.ClientRequest(
-                types.InitializeRequest(
-                    method="initialize",
-                    params=types.InitializeRequestParams(
-                        protocolVersion=types.LATEST_PROTOCOL_VERSION,
-                        capabilities=types.ClientCapabilities(
-                            sampling=sampling,
-                            experimental=None,
-                            roots=roots,
-                        ),
-                        clientInfo=self._client_info,
-                    ),
-                )
-            ),
-            types.InitializeResult,
-        )
-
-        if result.protocolVersion not in SUPPORTED_PROTOCOL_VERSIONS:
-            raise RuntimeError(f"Unsupported protocol version from the server: {result.protocolVersion}")
-
-        self.send_notification(
-            types.ClientNotification(types.InitializedNotification(method="notifications/initialized"))
-        )
-
-        return result
-
-    def send_ping(self) -> types.EmptyResult:
-        """Send a ping request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.PingRequest(
-                    method="ping",
-                )
-            ),
-            types.EmptyResult,
-        )
-
-    def send_progress_notification(self, progress_token: str | int, progress: float, total: float | None = None):
-        """Send a progress notification."""
-        self.send_notification(
-            types.ClientNotification(
-                types.ProgressNotification(
-                    method="notifications/progress",
-                    params=types.ProgressNotificationParams(
-                        progressToken=progress_token,
-                        progress=progress,
-                        total=total,
-                    ),
-                ),
-            )
-        )
-
-    def set_logging_level(self, level: types.LoggingLevel) -> types.EmptyResult:
-        """Send a logging/setLevel request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.SetLevelRequest(
-                    method="logging/setLevel",
-                    params=types.SetLevelRequestParams(level=level),
-                )
-            ),
-            types.EmptyResult,
-        )
-
-    def list_resources(self) -> types.ListResourcesResult:
-        """Send a resources/list request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.ListResourcesRequest(
-                    method="resources/list",
-                )
-            ),
-            types.ListResourcesResult,
-        )
-
-    def list_resource_templates(self) -> types.ListResourceTemplatesResult:
-        """Send a resources/templates/list request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.ListResourceTemplatesRequest(
-                    method="resources/templates/list",
-                )
-            ),
-            types.ListResourceTemplatesResult,
-        )
-
-    def read_resource(self, uri: AnyUrl) -> types.ReadResourceResult:
-        """Send a resources/read request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.ReadResourceRequest(
-                    method="resources/read",
-                    params=types.ReadResourceRequestParams(uri=uri),
-                )
-            ),
-            types.ReadResourceResult,
-        )
-
-    def subscribe_resource(self, uri: AnyUrl) -> types.EmptyResult:
-        """Send a resources/subscribe request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.SubscribeRequest(
-                    method="resources/subscribe",
-                    params=types.SubscribeRequestParams(uri=uri),
-                )
-            ),
-            types.EmptyResult,
-        )
-
-    def unsubscribe_resource(self, uri: AnyUrl) -> types.EmptyResult:
-        """Send a resources/unsubscribe request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.UnsubscribeRequest(
-                    method="resources/unsubscribe",
-                    params=types.UnsubscribeRequestParams(uri=uri),
-                )
-            ),
-            types.EmptyResult,
-        )
-
-    def call_tool(
-        self,
-        name: str,
-        arguments: dict[str, Any] | None = None,
-        read_timeout_seconds: timedelta | None = None,
-    ) -> types.CallToolResult:
-        """Send a tools/call request."""
-
-        return self.send_request(
-            types.ClientRequest(
-                types.CallToolRequest(
-                    method="tools/call",
-                    params=types.CallToolRequestParams(name=name, arguments=arguments),
-                )
-            ),
-            types.CallToolResult,
-            request_read_timeout_seconds=read_timeout_seconds,
-        )
-
-    def list_prompts(self) -> types.ListPromptsResult:
-        """Send a prompts/list request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.ListPromptsRequest(
-                    method="prompts/list",
-                )
-            ),
-            types.ListPromptsResult,
-        )
-
-    def get_prompt(self, name: str, arguments: dict[str, str] | None = None) -> types.GetPromptResult:
-        """Send a prompts/get request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.GetPromptRequest(
-                    method="prompts/get",
-                    params=types.GetPromptRequestParams(name=name, arguments=arguments),
-                )
-            ),
-            types.GetPromptResult,
-        )
-
-    def complete(
-        self,
-        ref: types.ResourceTemplateReference | types.PromptReference,
-        argument: dict[str, str],
-    ) -> types.CompleteResult:
-        """Send a completion/complete request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.CompleteRequest(
-                    method="completion/complete",
-                    params=types.CompleteRequestParams(
-                        ref=ref,
-                        argument=types.CompletionArgument.model_validate(argument),
-                    ),
-                )
-            ),
-            types.CompleteResult,
-        )
-
-    def list_tools(self) -> types.ListToolsResult:
-        """Send a tools/list request."""
-        return self.send_request(
-            types.ClientRequest(
-                types.ListToolsRequest(
-                    method="tools/list",
-                )
-            ),
-            types.ListToolsResult,
-        )
-
-    def send_roots_list_changed(self):
-        """Send a roots/list_changed notification."""
-        self.send_notification(
-            types.ClientNotification(
-                types.RootsListChangedNotification(
-                    method="notifications/roots/list_changed",
-                )
-            )
-        )
-
-    def _received_request(self, responder: RequestResponder[types.ServerRequest, types.ClientResult]):
-        ctx = RequestContext[ClientSession, Any](
-            request_id=responder.request_id,
-            meta=responder.request_meta,
-            session=self,
-            lifespan_context=None,
-        )
-
-        match responder.request.root:
-            case types.CreateMessageRequest(params=params):
-                with responder:
-                    response = self._sampling_callback(ctx, params)
-                    client_response = ClientResponse.validate_python(response)
-                    responder.respond(client_response)
-
-            case types.ListRootsRequest():
-                with responder:
-                    list_roots_response = self._list_roots_callback(ctx)
-                    client_response = ClientResponse.validate_python(list_roots_response)
-                    responder.respond(client_response)
-
-            case types.PingRequest():
-                with responder:
-                    return responder.respond(types.ClientResult(root=types.EmptyResult()))
-
-    def _handle_incoming(
-        self,
-        req: RequestResponder[types.ServerRequest, types.ClientResult] | types.ServerNotification | Exception,
-    ):
-        """Handle incoming messages by forwarding to the message handler."""
-        self._message_handler(req)
-
-    def _received_notification(self, notification: types.ServerNotification):
-        """Handle notifications from the server."""
-        # Process specific notification types
-        match notification.root:
-            case types.LoggingMessageNotification(params=params):
-                self._logging_callback(params)
-            case _:
-                pass
-
-```
-
-### api/controllers/mcp/__init__.py
-```py
-from flask import Blueprint
-from flask_restx import Namespace
-
-from libs.external_api import ExternalApi
-
-bp = Blueprint("mcp", __name__, url_prefix="/mcp")
-
-api = ExternalApi(
-    bp,
-    version="1.0",
-    title="MCP API",
-    description="API for Model Context Protocol operations",
-)
-
-mcp_ns = Namespace("mcp", description="MCP operations", path="/")
-
-from . import mcp
-
-api.add_namespace(mcp_ns)
-
-__all__ = [
-    "api",
-    "bp",
-    "mcp",
-    "mcp_ns",
-]
-
-```
-
-### api/controllers/mcp/mcp.py
-```py
-from typing import Any, Union
-
-from flask import Response
-from flask_restx import Resource
-from graphon.variables.input_entities import VariableEntity
-from pydantic import BaseModel, Field, ValidationError
-from sqlalchemy import select
-from sqlalchemy.orm import Session, sessionmaker
-
-from controllers.common.schema import register_schema_model
-from controllers.mcp import mcp_ns
-from core.mcp import types as mcp_types
-from core.mcp.server.streamable_http import handle_mcp_request
-from extensions.ext_database import db
-from libs import helper
-from models.enums import AppMCPServerStatus
-from models.model import App, AppMCPServer, AppMode, EndUser
-
-
-class MCPRequestError(Exception):
-    """Custom exception for MCP request processing errors"""
-
-    def __init__(self, error_code: int, message: str):
-        self.error_code = error_code
-        self.message = message
-        super().__init__(message)
-
-
-class MCPRequestPayload(BaseModel):
-    jsonrpc: str = Field(description="JSON-RPC version (should be '2.0')")
-    method: str = Field(description="The method to invoke")
-    params: dict[str, Any] | None = Field(default=None, description="Parameters for the method")
-    id: int | str | None = Field(default=None, description="Request ID for tracking responses")
-
-
-register_schema_model(mcp_ns, MCPRequestPayload)
-
-
-@mcp_ns.route("/server/<string:server_code>/mcp")
-class MCPAppApi(Resource):
-    @mcp_ns.expect(mcp_ns.models[MCPRequestPayload.__name__])
-    @mcp_ns.doc("handle_mcp_request")
-    @mcp_ns.doc(description="Handle Model Context Protocol (MCP) requests for a specific server")
-    @mcp_ns.doc(params={"server_code": "Unique identifier for the MCP server"})
-    @mcp_ns.doc(
-        responses={
-            200: "MCP response successfully processed",
-            400: "Invalid MCP request or parameters",
-            404: "Server or app not found",
-        }
-    )
-    def post(self, server_code: str):
-        """Handle MCP requests for a specific server.
-
-        Processes JSON-RPC formatted requests according to the Model Context Protocol specification.
-        Validates the server status and associated app before processing the request.
-
-        Args:
-            server_code: Unique identifier for the MCP server
-
-        Returns:
-            dict: JSON-RPC response from the MCP handler
-
-        Raises:
-            ValidationError: Invalid request format or parameters
-        """
-        args = MCPRequestPayload.model_validate(mcp_ns.payload or {})
-        request_id: Union[int, str] | None = args.id
-        mcp_request = self._parse_mcp_request(args.model_dump(exclude_none=True))
-
-        with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-            # Get MCP server and app
-            mcp_server, app = self._get_mcp_server_and_app(server_code, session)
-            self._validate_server_status(mcp_server)
-
-            # Get user input form
-            user_input_form = self._get_user_input_form(app)
-
-            # Handle notification vs request differently
-            return self._process_mcp_message(mcp_request, request_id, app, mcp_server, user_input_form, session)
-
-    def _get_mcp_server_and_app(self, server_code: str, session: Session) -> tuple[AppMCPServer, App]:
-        """Get and validate MCP server and app in one query session"""
-        mcp_server = session.scalar(select(AppMCPServer).where(AppMCPServer.server_code == server_code).limit(1))
-        if not mcp_server:
-            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Server Not Found")
-
-        app = session.scalar(select(App).where(App.id == mcp_server.app_id).limit(1))
-        if not app:
-            raise MCPRequestError(mcp_types.INVALID_REQUEST, "App Not Found")
-
-        return mcp_server, app
-
-    def _validate_server_status(self, mcp_server: AppMCPServer):
-        """Validate MCP server status"""
-        if mcp_server.status != AppMCPServerStatus.ACTIVE:
-            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Server is not active")
-
-    def _process_mcp_message(
-        self,
-        mcp_request: mcp_types.ClientRequest | mcp_types.ClientNotification,
-        request_id: Union[int, str] | None,
-        app: App,
-        mcp_server: AppMCPServer,
-        user_input_form: list[VariableEntity],
-        session: Session,
-    ) -> Response:
-        """Process MCP message (notification or request)"""
-        if isinstance(mcp_request, mcp_types.ClientNotification):
-            return self._handle_notification(mcp_request)
-        else:
-            return self._handle_request(mcp_request, request_id, app, mcp_server, user_input_form, session)
-
-    def _handle_notification(self, mcp_request: mcp_types.ClientNotification) -> Response:
-        """Handle MCP notification"""
-        # For notifications, only support init notification
-        if mcp_request.root.method != "notifications/initialized":
-            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Invalid notification method")
-        # Return HTTP 202 Accepted for notifications (no response body)
-        return Response("", status=202, content_type="application/json")
-
-    def _handle_request(
-        self,
-        mcp_request: mcp_types.ClientRequest,
-        request_id: Union[int, str] | None,
-        app: App,
-        mcp_server: AppMCPServer,
-        user_input_form: list[VariableEntity],
-        session: Session,
-    ) -> Response:
-        """Handle MCP request"""
-        if request_id is None:
-            raise MCPRequestError(mcp_types.INVALID_REQUEST, "Request ID is required")
-
-        result = self._handle_mcp_request(app, mcp_server, mcp_request, user_input_form, session, request_id)
-        if result is None:
-            # This shouldn't happen for requests, but handle gracefully
-            raise MCPRequestError(mcp_types.INTERNAL_ERROR, "No response generated for request")
-
-        return helper.compact_generate_response(result.model_dump(by_alias=True, mode="json", exclude_none=True))
-
-    def _get_user_input_form(self, app: App) -> list[VariableEntity]:
-        """Get and convert user input form"""
-        # Get raw user input form based on app mode
-        if app.mode in {AppMode.ADVANCED_CHAT, AppMode.WORKFLOW}:
-            if not app.workflow:
-                raise MCPRequestError(mcp_types.INVALID_REQUEST, "App is unavailable")
-            raw_user_input_form = app.workflow.user_input_form(to_old_structure=True)
-        else:
-            if not app.app_model_config:
-                raise MCPRequestError(mcp_types.INVALID_REQUEST, "App is unavailable")
-            features_dict = app.app_model_config.to_dict()
-            raw_user_input_form = features_dict.get("user_input_form", [])
-
-        # Convert to VariableEntity objects
-        try:
-            return self._convert_user_input_form(raw_user_input_form)
-        except ValidationError as e:
-            raise MCPRequestError(mcp_types.INVALID_PARAMS, f"Invalid user_input_form: {str(e)}")
-
-    def _convert_user_input_form(self, raw_form: list[dict]) -> list[VariableEntity]:
-        """Convert raw user input form to VariableEntity objects"""
-        return [self._create_variable_entity(item) for item in raw_form]
-
-    def _create_variable_entity(self, item: dict) -> VariableEntity:
-        """Create a single VariableEntity from raw form item"""
-        variable_type = item.get("type", "") or list(item.keys())[0]
-        variable = item[variable_type]
-
-        return VariableEntity(
-            type=variable_type,
-            variable=variable.get("variable"),
-            description=variable.get("description") or "",
-            label=variable.get("label"),
-            required=variable.get("required", False),
-            max_length=variable.get("max_length"),
-            options=variable.get("options") or [],
-            json_schema=variable.get("json_schema"),
-        )
-
-    def _parse_mcp_request(self, args: dict) -> mcp_types.ClientRequest | mcp_types.ClientNotification:
-        """Parse and validate MCP request"""
-        try:
-            return mcp_types.ClientRequest.model_validate(args)
-        except ValidationError:
-            try:
-                return mcp_types.ClientNotification.model_validate(args)
-            except ValidationError as e:
-                raise MCPRequestError(mcp_types.INVALID_PARAMS, f"Invalid MCP request: {str(e)}")
-
-    def _retrieve_end_user(self, tenant_id: str, mcp_server_id: str) -> EndUser | None:
-        """Get end user - manages its own database session"""
-        with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-            return session.scalar(
-                select(EndUser)
-                .where(EndUser.tenant_id == tenant_id)
-                .where(EndUser.session_id == mcp_server_id)
-                .where(EndUser.type == "mcp")
-                .limit(1)
-            )
-
-    def _create_end_user(
-        self, client_name: str, tenant_id: str, app_id: str, mcp_server_id: str, session: Session
-    ) -> EndUser:
-        """Create end user in existing session"""
-        end_user = EndUser(
-            tenant_id=tenant_id,
-            app_id=app_id,
-            type="mcp",
-            name=client_name,
-            session_id=mcp_server_id,
-        )
-        session.add(end_user)
-        session.flush()  # Use flush instead of commit to keep transaction open
-        session.refresh(end_user)
-        return end_user
-
-    def _handle_mcp_request(
-        self,
-        app: App,
-        mcp_server: AppMCPServer,
-        mcp_request: mcp_types.ClientRequest,
-        user_input_form: list[VariableEntity],
-        session: Session,
-        request_id: Union[int, str],
-    ) -> mcp_types.JSONRPCResponse | mcp_types.JSONRPCError | None:
-        """Handle MCP request and return response"""
-        end_user = self._retrieve_end_user(mcp_server.tenant_id, mcp_server.id)
-
-        if not end_user and isinstance(mcp_request.root, mcp_types.InitializeRequest):
-            client_info = mcp_request.root.params.clientInfo
-            client_name = f"{client_info.name}@{client_info.version}"
-            with sessionmaker(db.engine, expire_on_commit=False).begin() as create_session:
-                end_user = self._create_end_user(client_name, app.tenant_id, app.id, mcp_server.id, create_session)
-
-        return handle_mcp_request(app, mcp_request, user_input_form, mcp_server, end_user, request_id)
 
 ```
 

@@ -4,976 +4,1214 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 - **ID**: SURFACE-019
 - **Kind**: endpoint
-- **Identifier**: Moderation System (API, Keywords, OpenAI)
-- **Description**: Content moderation pipeline with keyword filtering and API-based moderation. Risk of moderation bypass via encoding tricks, regex DoS in keyword matching, and information disclosure through moderation error messages.
-- **Locations**: api/core/moderation/api/, api/core/moderation/keywords/, api/core/moderation/openai_moderation/
-
-## Repository Context
-
-## Directory Structure
-```
-AGENTS.md
-AUTHORS
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-Makefile
-README.md
-api/ 
-  AGENTS.md
-  Dockerfile
-  README.md
-  app.py
-  app_factory.py
-  celery_entrypoint.py
-  celery_healthcheck.py
-  cnt_base.sh
-  commands/ 
-  configs/ 
-    deploy/ 
-    enterprise/ 
-    extra/ 
-    feature/ 
-      hosted_service/ 
-    middleware/ 
-      cache/ 
-      storage/ 
-      vdb/ 
-    observability/ 
-      otel/ 
-    packaging/ 
-    remote_settings_sources/ 
-      apollo/ 
-      nacos/ 
-  constants/ 
-  context/ 
-  contexts/ 
-  controllers/ 
-    common/ 
-    console/ 
-      app/ 
-      auth/ 
-      billing/ 
-      datasets/ 
-      explore/ 
-      tag/ 
-      workspace/ 
-    files/ 
-    inner_api/ 
-      app/ 
-      plugin/ 
-      workspace/ 
-    mcp/ 
-    service_api/ 
-      app/ 
-      dataset/ 
-      end_user/ 
-      workspace/ 
-    trigger/ 
-    web/ 
-  core/ 
-    agent/ 
-      output_parser/ 
-      prompt/ 
-      strategy/ 
-    app/ 
-      app_config/ 
-      apps/ 
-      entities/ 
-      features/ 
-      file_access/ 
-      layers/ 
-      llm/ 
-      task_pipeline/ 
-      workflow/ 
-    base/ 
-      tts/ 
-    callback_handler/ 
-    datasource/ 
-      __base/ 
-      entities/ 
-      local_file/ 
-      online_document/ 
-      online_drive/ 
-      utils/ 
-      website_crawl/ 
-    db/ 
-    entities/ 
-    errors/ 
-    extension/ 
-    external_data_tool/ 
-      api/ 
-    helper/ 
-      code_executor/ 
-    llm_generator/ 
-      output_parser/ 
-    logging/ 
-    mcp/ 
-      auth/ 
-      client/ 
-      server/ 
-      session/ 
-    memory/ 
-    moderation/ 
-      api/ 
-      keywords/ 
-      openai_moderation/ 
-    ops/ 
-      aliyun_trace/ 
-      arize_phoenix_trace/ 
-      entities/ 
-      langfuse_trace/ 
-      langsmith_trace/ 
-      mlflow_trace/ 
-      opik_trace/ 
-      tencent_trace/ 
-      weave_trace/ 
-    plugin/ 
-      backwards_invocation/ 
-      endpoint/ 
-      entities/ 
-      impl/ 
-      utils/ 
-    prompt/ 
-      entities/ 
-      prompt_templates/ 
-      utils/ 
-    rag/ 
-      cleaner/ 
-      data_post_processor/ 
-      datasource/ 
-      docstore/ 
-      embedding/ 
-      entities/ 
-      extractor/ 
-      index_processor/ 
-      models/ 
-      pipeline/ 
-      rerank/ 
-      retrieval/ 
-      splitter/ 
-      summary_index/ 
-    repositories/ 
-    schemas/ 
-      builtin/ 
-    telemetry/ 
-    tools/ 
-      __base/ 
-      builtin_tool/ 
-      custom_tool/ 
-      entities/ 
-      mcp_tool/ 
-      plugin_tool/ 
-      utils/ 
-      workflow_as_tool/ 
-    trigger/ 
-      debug/ 
-      entities/ 
-      utils/ 
-    workflow/ 
-      nodes/ 
-  dify_app.py
-  docker/ 
-  enterprise/ 
-    telemetry/ 
-      entities/ 
-  enums/ 
-  events/ 
-    event_handlers/ 
-  extensions/ 
-    logstore/ 
-      repositories/ 
-    otel/ 
-      decorators/ 
-      parser/ 
-      semconv/ 
-    storage/ 
-      clickzetta_volume/ 
-  factories/ 
-    file_factory/ 
-  fields/ 
-  gunicorn.conf.py
-  libs/ 
-    broadcast_channel/ 
-      redis/ 
-  migrations/ 
-    versions/ 
-  models/ 
-    utils/ 
-  pyproject.toml
-  pyrefly-local-excludes.txt
-  pyrightconfig.json
-  pytest.ini
-  repositories/ 
-    entities/ 
-  schedule/ 
-  services/ 
-    auth/ 
-      firecrawl/ 
-      jina/ 
-      watercrawl/ 
-    document_indexing_proxy/ 
-    enterprise/ 
-    entities/ 
-      external_knowledge_entities/ 
-      knowledge_entities/ 
-    errors/ 
-    plugin/ 
-    rag_pipeline/ 
-      entity/ 
-      pipeline_template/ 
-      transform/ 
-    recommend_app/ 
-      buildin/ 
-      database/ 
-      remote/ 
-    retention/ 
-      conversation/ 
-      workflow_run/ 
-    tools/ 
-    trigger/ 
-    workflow/ 
-  tasks/ 
-    annotation/ 
-    app_generate/ 
-    rag_pipeline/ 
-    workflow_cfs_scheduler/ 
-  templates/ 
-    without-brand/ 
-  tests/ 
-    fixtures/ 
-      workflow/ 
-    integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      libs/ 
-      model_runtime/ 
-      plugin/ 
-      services/ 
-      storage/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-      vdb/ 
-      workflow/ 
-    test_containers_integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      helpers/ 
-      libs/ 
-      models/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      trigger/ 
-      workflow/ 
-    unit_tests/ 
-      commands/ 
-      configs/ 
-      controllers/ 
-      core/ 
-      enterprise/ 
-      events/ 
-      extensions/ 
-      factories/ 
-      fields/ 
-      libs/ 
-      models/ 
-      oss/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-  uv.lock
-codecov.yml
-dev/ 
-  basedpyright-check
-  pyrefly-check-local
-  pytest/ 
-  reformat
-  setup
-  start-api
-  start-beat
-  start-docker-compose
-  start-web
-  start-worker
-  sync-uv
-  ty-check
-  update-uv
-docker/ 
-  README.md
-  certbot/ 
-  couchbase-server/ 
-  dify-env-sync.py
-  dify-env-sync.sh
-  docker-compose-template.yaml
-  docker-compose.middleware.yaml
-  docker-compose.png
-  docker-compose.yaml
-  elasticsearch/ 
-  generate_docker_compose
-  iris/ 
-  middleware.env.example
-  nginx/ 
-    conf.d/ 
-    ssl/ 
-  pgvector/ 
-  ssrf_proxy/ 
-  startupscripts/ 
-  tidb/ 
-    config/ 
-  volumes/ 
-    myscale/ 
-      config/ 
-    oceanbase/ 
-      init.d/ 
-    opensearch/ 
-    sandbox/ 
-      conf/ 
-docs/ 
-  ar-SA/ 
-  bn-BD/ 
-  de-DE/ 
-  es-ES/ 
-  eu-ai-act-compliance.md
-  fr-FR/ 
-  hi-IN/ 
-  it-IT/ 
-  ja-JP/ 
-  ko-KR/ 
-  pt-BR/ 
-  sl-SI/ 
-  suggested-questions-configuration.md
-  tlh/ 
-  tr-TR/ 
-  vi-VN/ 
-  weaviate/ 
-    WEAVIATE_MIGRATION_GUIDE/ 
-  zh-CN/ 
-  zh-TW/ 
-e2e/ 
-  AGENTS.md
-  README.md
-  cucumber.config.ts
-  features/ 
-    apps/ 
-    smoke/ 
-    step-definitions/ 
-      apps/ 
-      common/ 
-      smoke/ 
-    support/ 
-  fixtures/ 
-  package.json
-  scripts/ 
-  support/ 
-  test-env.ts
-  tsconfig.json
-  vite.config.ts
-images/ 
-  GitHub_README_if.png
-  describe.png
-  models.png
-package.json
-packages/ 
-  iconify-collections/ 
-    assets/ 
-      public/ 
-      vender/ 
-    custom-public/ 
-    custom-vender/ 
-    scripts/ 
-pnpm-lock.yaml
-pnpm-workspace.yaml
-scripts/ 
-  stress-test/ 
-    common/ 
-    setup/ 
-      dsl/ 
-sdks/ 
-  README.md
-  nodejs-client/ 
-    scripts/ 
-    src/ 
-      client/ 
-      errors/ 
-      http/ 
-      internal/ 
-      types/ 
-    tests/ 
-  php-client/ 
-vite.config.ts
-web/ 
-  AGENTS.md
-  CLAUDE.md
-  Dockerfile
-  Dockerfile.dockerignore
-  README.md
-  __mocks__/ 
-    @tanstack/ 
-  __tests__/ 
-    apps/ 
-    billing/ 
-    datasets/ 
-    develop/ 
-    explore/ 
-    goto-anything/ 
-    plugins/ 
-    rag-pipeline/ 
-    share/ 
-    tools/ 
-  app/ 
-    (commonLayout)/ 
-      app/ 
-      apps/ 
-      datasets/ 
-      education-apply/ 
-      explore/ 
-      plugins/ 
-      tools/ 
-    (humanInputLayout)/ 
-      form/ 
-    (shareLayout)/ 
-      chat/ 
-      chatbot/ 
-      completion/ 
-      components/ 
-      webapp-reset-password/ 
-      webapp-signin/ 
-      workflow/ 
-    account/ 
-      (commonLayout)/ 
-      oauth/ 
-    activate/ 
-    components/ 
-      app/ 
-      app-sidebar/ 
-      apps/ 
-      base/ 
-      billing/ 
-      custom/ 
-      datasets/ 
-      develop/ 
-      devtools/ 
-      explore/ 
-      goto-anything/ 
-      header/ 
-      plugins/ 
-      provider/ 
-      rag-pipeline/ 
-      share/ 
-      signin/ 
-      tools/ 
-      workflow/ 
-      workflow-app/ 
-    education-apply/ 
-    forgot-password/ 
-    init/ 
-    install/ 
-    oauth-callback/ 
-    reset-password/ 
-      check-code/ 
-      set-password/ 
-    signin/ 
-      assets/ 
-      check-code/ 
-      components/ 
-      invite-settings/ 
-      utils/ 
-    signup/ 
-      check-code/ 
-      components/ 
-      set-password/ 
-    styles/ 
-  assets/ 
-  bin/ 
-  config/ 
-  constants/ 
-  context/ 
-    hooks/ 
-  contract/ 
-    console/ 
-  docker/ 
-  docs/ 
-  env.ts
-  eslint-suppressions.json
-  eslint.config.mjs
-  eslint.constants.mjs
-  global.d.ts
-  hooks/ 
-  i18n/ 
-    ar-TN/ 
-    de-DE/ 
-    en-US/ 
-    es-ES/ 
-    fa-IR/ 
-    fr-FR/ 
-    hi-IN/ 
-    id-ID/ 
-    it-IT/ 
-    ja-JP/ 
-    ko-KR/ 
-    nl-NL/ 
-    pl-PL/ 
-    pt-BR/ 
-    ro-RO/ 
-    ru-RU/ 
-    sl-SI/ 
-    th-TH/ 
-    tr-TR/ 
-    uk-UA/ 
-    vi-VN/ 
-    zh-Hans/ 
-    zh-Hant/ 
-  i18n-config/ 
-  instrumentation-client.ts
-  knip.config.ts
-  models/ 
-  next/ 
-  next.config.ts
-  package.json
-  plugins/ 
-    dev-proxy/ 
-    eslint/ 
-      rules/ 
-    vite/ 
-  postcss.config.js
-  proxy.ts
-  public/ 
-    education/ 
-    in-site-message/ 
-    logo/ 
-    screenshots/ 
-      dark/ 
-      light/ 
-    vs/ 
-      base/ 
-      basic-languages/ 
-      editor/ 
-      language/ 
-  scripts/ 
-  service/ 
-    knowledge/ 
-  tailwind-common-config.ts
-  tailwind.config.ts
-  test/ 
-  themes/ 
-  tsconfig.json
-  tsslint.config.ts
-  types/ 
-  typography.js
-  utils/ 
-  vite.config.ts
-  vitest.setup.ts
-
-```
-
-## Languages
-- TypeScript: 5508 files
-- Python: 2785 files
-- JavaScript: 122 files
-- Yaml: 95 files
-- Bash: 20 files
-- Php: 1 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "dify",
-  "private": true,
-  "scripts": {
-    "prepare": "vp config"
-  },
-  "devDependencies": {
-    "vite-plus": "catalog:"
-  },
-  "engines": {
-    "node": "^22.22.1"
-  },
-  "packageManager": "pnpm@10.33.0"
-}
-
-```
-
-## Entry Points
-- sdks/nodejs-client/src/index.ts
-- web/next/index.ts
-- web/types/app.ts
-- web/app/components/tools/utils/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/hooks/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/hooks/index.ts
-- web/app/components/goto-anything/components/index.ts
-- web/app/components/goto-anything/hooks/index.ts
-- web/app/components/goto-anything/actions/commands/index.ts
-- web/app/components/goto-anything/actions/index.ts
-- web/app/components/workflow-app/hooks/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/data-source/store/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/steps/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/hooks/index.ts
-- web/app/components/datasets/documents/components/document-list/components/index.ts
-- web/app/components/datasets/documents/components/document-list/hooks/index.ts
-- web/app/components/datasets/documents/detail/completed/components/index.ts
-- web/app/components/datasets/documents/detail/completed/hooks/index.ts
-- web/app/components/datasets/documents/detail/embedding/components/index.ts
-- web/app/components/datasets/documents/detail/embedding/hooks/index.ts
-- web/app/components/datasets/create/step-one/components/index.ts
-- web/app/components/datasets/create/step-one/hooks/index.ts
-- web/app/components/datasets/create/step-two/components/index.ts
-- web/app/components/datasets/create/step-two/hooks/index.ts
-- web/app/components/rag-pipeline/utils/index.ts
-- web/app/components/rag-pipeline/hooks/index.ts
-- web/app/components/rag-pipeline/store/index.ts
-- web/app/components/workflow/hooks-store/index.ts
-- web/app/components/workflow/note-node/note-editor/theme/index.ts
-- web/app/components/workflow/utils/index.ts
-- web/app/components/workflow/hooks/use-workflow-run-event/index.ts
-- web/app/components/workflow/hooks/index.ts
-- web/app/components/workflow/run/utils/format-log/parallel/index.ts
-- web/app/components/workflow/run/utils/format-log/retry/index.ts
-- web/app/components/workflow/run/utils/format-log/human-input/index.ts
-- web/app/components/workflow/run/utils/format-log/agent/index.ts
-- web/app/components/workflow/run/utils/format-log/index.ts
-- web/app/components/workflow/run/utils/format-log/iteration/index.ts
-- web/app/components/workflow/run/utils/format-log/loop/index.ts
-- web/app/components/workflow/store/workflow/index.ts
-- web/app/components/workflow/store/index.ts
-- web/app/components/header/account-setting/model-provider-page/model-auth/hooks/index.ts
-- web/app/components/header/account-setting/data-source-page-new/hooks/index.ts
-- web/app/components/base/form/utils/secret-input/index.ts
-- web/app/components/base/form/hooks/index.ts
-- web/app/components/base/radio/context/index.ts
-- web/app/components/base/amplitude/index.ts
-- web/app/components/base/markdown-blocks/index.ts
-- web/app/components/base/icons/src/public/tracing/index.ts
-- web/app/components/base/icons/src/public/llm/index.ts
-- web/app/components/base/icons/src/public/education/index.ts
-- web/app/components/base/icons/src/public/other/index.ts
-- web/app/components/base/icons/src/public/common/index.ts
-- web/app/components/base/icons/src/public/knowledge/dataset-card/index.ts
-- web/app/components/base/icons/src/public/knowledge/index.ts
-- web/app/components/base/icons/src/public/knowledge/online-drive/index.ts
-- web/app/components/base/icons/src/public/avatar/index.ts
-- web/app/components/base/icons/src/public/files/index.ts
-- web/app/components/base/icons/src/public/thought/index.ts
-- web/app/components/base/icons/src/public/billing/index.ts
-- web/app/components/base/icons/src/vender/pipeline/index.ts
-- web/app/components/base/icons/src/vender/features/index.ts
-- web/app/components/base/icons/src/vender/other/index.ts
-- web/app/components/base/icons/src/vender/plugin/index.ts
-- web/app/components/base/icons/src/vender/solid/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/solid/security/index.ts
-- web/app/components/base/icons/src/vender/solid/general/index.ts
-- web/app/components/base/icons/src/vender/solid/development/index.ts
-- web/app/components/base/icons/src/vender/solid/education/index.ts
-- web/app/components/base/icons/src/vender/solid/shapes/index.ts
-- web/app/components/base/icons/src/vender/solid/users/index.ts
-- web/app/components/base/icons/src/vender/solid/files/index.ts
-- web/app/components/base/icons/src/vender/solid/arrows/index.ts
-- web/app/components/base/icons/src/vender/solid/communication/index.ts
-- web/app/components/base/icons/src/vender/solid/editor/index.ts
-- web/app/components/base/icons/src/vender/solid/FinanceAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/solid/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/system/index.ts
-- web/app/components/base/icons/src/vender/knowledge/index.ts
-- web/app/components/base/icons/src/vender/line/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/line/images/index.ts
-- web/app/components/base/icons/src/vender/line/general/index.ts
-- web/app/components/base/icons/src/vender/line/development/index.ts
-- web/app/components/base/icons/src/vender/line/layout/index.ts
-- web/app/components/base/icons/src/vender/line/education/index.ts
-- web/app/components/base/icons/src/vender/line/others/index.ts
-- web/app/components/base/icons/src/vender/line/time/index.ts
-- web/app/components/base/icons/src/vender/line/files/index.ts
-- web/app/components/base/icons/src/vender/line/arrows/index.ts
-- web/app/components/base/icons/src/vender/line/communication/index.ts
-- web/app/components/base/icons/src/vender/line/editor/index.ts
-- web/app/components/base/icons/src/vender/line/financeAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/line/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/workflow/index.ts
-- web/app/components/base/file-uploader/index.ts
-- web/app/components/billing/utils/index.ts
-- web/config/index.ts
-- web/plugins/eslint/index.js
-- web/plugins/dev-proxy/server.ts
-- web/utils/index.ts
-- web/models/app.ts
-- web/i18n-config/index.ts
-- web/i18n-config/server.ts
-- packages/iconify-collections/custom-vender/index.js
-- packages/iconify-collections/custom-public/index.js
-- api/core/plugin/backwards_invocation/app.py
-- api/app.py
-- api/controllers/web/app.py
-- api/controllers/service_api/app/app.py
-- api/controllers/console/app/app.py
-- api/services/errors/app.py
-
-Total source files: 8531
-
+- **Identifier**: POST /console/api/workspaces/current/tool-provider/api/add
+- **Description**: Custom API tool provider registration. Users can register arbitrary API endpoints as tools, which are then invoked during workflow execution - SSRF and data exfiltration via custom tool definitions
+- **Locations**: api/controllers/console/workspace/tool_providers.py
 
 ## Source Code
 
-### api/core/moderation/api/__init__.py
+### api/controllers/console/workspace/tool_providers.py
 ```py
+import io
+import logging
+from typing import Any, Literal
+from urllib.parse import urlparse
 
-```
+from flask import make_response, redirect, request, send_file
+from flask_restx import Resource
+from graphon.model_runtime.utils.encoders import jsonable_encoder
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from sqlalchemy.orm import sessionmaker
+from werkzeug.exceptions import Forbidden
 
-### api/core/moderation/api/api.py
-```py
-from pydantic import BaseModel, Field
-from sqlalchemy import select
-
-from core.extension.api_based_extension_requestor import APIBasedExtensionPoint, APIBasedExtensionRequestor
-from core.helper.encrypter import decrypt_token
-from core.moderation.base import Moderation, ModerationAction, ModerationInputsResult, ModerationOutputsResult
+from configs import dify_config
+from controllers.common.schema import register_schema_models
+from controllers.console import console_ns
+from controllers.console.wraps import (
+    account_initialization_required,
+    enterprise_license_required,
+    is_admin_or_owner_required,
+    setup_required,
+)
+from core.db.session_factory import session_factory
+from core.entities.mcp_provider import MCPAuthentication, MCPConfiguration
+from core.mcp.auth.auth_flow import auth, handle_callback
+from core.mcp.error import MCPAuthError, MCPError, MCPRefreshTokenError
+from core.mcp.mcp_client import MCPClient
+from core.plugin.entities.plugin_daemon import CredentialType
+from core.plugin.impl.oauth import OAuthHandler
+from core.tools.entities.tool_entities import ApiProviderSchemaType, WorkflowToolParameterConfiguration
 from extensions.ext_database import db
-from models.api_based_extension import APIBasedExtension
+from libs.helper import alphanumeric, uuid_value
+from libs.login import current_account_with_tenant, login_required
+from models.provider_ids import ToolProviderID
+
+# from models.provider_ids import ToolProviderID
+from services.plugin.oauth_service import OAuthProxyService
+from services.tools.api_tools_manage_service import ApiToolManageService
+from services.tools.builtin_tools_manage_service import BuiltinToolManageService
+from services.tools.mcp_tools_manage_service import MCPToolManageService, OAuthDataType
+from services.tools.tool_labels_service import ToolLabelsService
+from services.tools.tools_manage_service import ToolCommonService
+from services.tools.tools_transform_service import ToolTransformService
+from services.tools.workflow_tools_manage_service import WorkflowToolManageService
+
+logger = logging.getLogger(__name__)
 
 
-class ModerationInputParams(BaseModel):
-    app_id: str = ""
-    inputs: dict = Field(default_factory=dict)
-    query: str = ""
+def is_valid_url(url: str) -> bool:
+    if not url:
+        return False
+
+    try:
+        parsed = urlparse(url)
+        return all([parsed.scheme, parsed.netloc]) and parsed.scheme in ["http", "https"]
+    except (ValueError, TypeError):
+        return False
 
 
-class ModerationOutputParams(BaseModel):
-    app_id: str = ""
-    text: str
+class ToolProviderListQuery(BaseModel):
+    type: Literal["builtin", "model", "api", "workflow", "mcp"] | None = None
 
 
-class ApiModeration(Moderation):
-    name: str = "api"
+class BuiltinToolCredentialDeletePayload(BaseModel):
+    credential_id: str
 
+
+class BuiltinToolAddPayload(BaseModel):
+    credentials: dict[str, Any]
+    name: str | None = Field(default=None, max_length=30)
+    type: CredentialType
+
+
+class BuiltinToolUpdatePayload(BaseModel):
+    credential_id: str
+    credentials: dict[str, Any] | None = None
+    name: str | None = Field(default=None, max_length=30)
+
+
+class ApiToolProviderBasePayload(BaseModel):
+    credentials: dict[str, Any]
+    schema_type: ApiProviderSchemaType
+    schema_: str = Field(alias="schema")
+    provider: str
+    icon: dict[str, Any]
+    privacy_policy: str | None = None
+    labels: list[str] | None = None
+    custom_disclaimer: str = ""
+
+
+class ApiToolProviderAddPayload(ApiToolProviderBasePayload):
+    pass
+
+
+class ApiToolProviderUpdatePayload(ApiToolProviderBasePayload):
+    original_provider: str
+
+
+class UrlQuery(BaseModel):
+    url: HttpUrl
+
+
+class ProviderQuery(BaseModel):
+    provider: str
+
+
+class ApiToolProviderDeletePayload(BaseModel):
+    provider: str
+
+
+class ApiToolSchemaPayload(BaseModel):
+    schema_: str = Field(alias="schema")
+
+
+class ApiToolTestPayload(BaseModel):
+    tool_name: str
+    provider_name: str | None = None
+    credentials: dict[str, Any]
+    parameters: dict[str, Any]
+    schema_type: ApiProviderSchemaType
+    schema_: str = Field(alias="schema")
+
+
+class WorkflowToolBasePayload(BaseModel):
+    name: str
+    label: str
+    description: str
+    icon: dict[str, Any]
+    parameters: list[WorkflowToolParameterConfiguration] = Field(default_factory=list)
+    privacy_policy: str | None = ""
+    labels: list[str] | None = None
+
+    @field_validator("name")
     @classmethod
-    def validate_config(cls, tenant_id: str, config: dict):
-        """
-        Validate the incoming form config data.
+    def validate_name(cls, value: str) -> str:
+        return alphanumeric(value)
 
-        :param tenant_id: the id of workspace
-        :param config: the form config data
-        :return:
-        """
-        cls._validate_inputs_and_outputs_config(config, False)
 
-        api_based_extension_id = config.get("api_based_extension_id")
-        if not api_based_extension_id:
-            raise ValueError("api_based_extension_id is required")
+class WorkflowToolCreatePayload(WorkflowToolBasePayload):
+    workflow_app_id: str
 
-        extension = cls._get_api_based_extension(tenant_id, api_based_extension_id)
-        if not extension:
-            raise ValueError("API-based Extension not found. Please check it again.")
+    @field_validator("workflow_app_id")
+    @classmethod
+    def validate_workflow_app_id(cls, value: str) -> str:
+        return uuid_value(value)
 
-    def moderation_for_inputs(self, inputs: dict, query: str = "") -> ModerationInputsResult:
-        flagged = False
-        preset_response = ""
-        if self.config is None:
-            raise ValueError("The config is not set.")
 
-        if self.config["inputs_config"]["enabled"]:
-            params = ModerationInputParams(app_id=self.app_id, inputs=inputs, query=query)
+class WorkflowToolUpdatePayload(WorkflowToolBasePayload):
+    workflow_tool_id: str
 
-            result = self._get_config_by_requestor(APIBasedExtensionPoint.APP_MODERATION_INPUT, params.model_dump())
-            return ModerationInputsResult.model_validate(result)
+    @field_validator("workflow_tool_id")
+    @classmethod
+    def validate_workflow_tool_id(cls, value: str) -> str:
+        return uuid_value(value)
 
-        return ModerationInputsResult(
-            flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response
+
+class WorkflowToolDeletePayload(BaseModel):
+    workflow_tool_id: str
+
+    @field_validator("workflow_tool_id")
+    @classmethod
+    def validate_workflow_tool_id(cls, value: str) -> str:
+        return uuid_value(value)
+
+
+class WorkflowToolGetQuery(BaseModel):
+    workflow_tool_id: str | None = None
+    workflow_app_id: str | None = None
+
+    @field_validator("workflow_tool_id", "workflow_app_id")
+    @classmethod
+    def validate_ids(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return uuid_value(value)
+
+    @model_validator(mode="after")
+    def ensure_one(self) -> "WorkflowToolGetQuery":
+        if not self.workflow_tool_id and not self.workflow_app_id:
+            raise ValueError("workflow_tool_id or workflow_app_id is required")
+        return self
+
+
+class WorkflowToolListQuery(BaseModel):
+    workflow_tool_id: str
+
+    @field_validator("workflow_tool_id")
+    @classmethod
+    def validate_workflow_tool_id(cls, value: str) -> str:
+        return uuid_value(value)
+
+
+class BuiltinProviderDefaultCredentialPayload(BaseModel):
+    id: str
+
+
+class ToolOAuthCustomClientPayload(BaseModel):
+    client_params: dict[str, Any] | None = None
+    enable_oauth_custom_client: bool | None = True
+
+
+class MCPProviderBasePayload(BaseModel):
+    server_url: str
+    name: str
+    icon: str
+    icon_type: str
+    icon_background: str = ""
+    server_identifier: str
+    configuration: dict[str, Any] | None = Field(default_factory=dict)
+    headers: dict[str, Any] | None = Field(default_factory=dict)
+    authentication: dict[str, Any] | None = Field(default_factory=dict)
+
+
+class MCPProviderCreatePayload(MCPProviderBasePayload):
+    pass
+
+
+class MCPProviderUpdatePayload(MCPProviderBasePayload):
+    provider_id: str
+
+
+class MCPProviderDeletePayload(BaseModel):
+    provider_id: str
+
+
+class MCPAuthPayload(BaseModel):
+    provider_id: str
+    authorization_code: str | None = None
+
+
+class MCPCallbackQuery(BaseModel):
+    code: str
+    state: str
+
+
+register_schema_models(
+    console_ns,
+    BuiltinToolCredentialDeletePayload,
+    BuiltinToolAddPayload,
+    BuiltinToolUpdatePayload,
+    ApiToolProviderAddPayload,
+    ApiToolProviderUpdatePayload,
+    ApiToolProviderDeletePayload,
+    ApiToolSchemaPayload,
+    ApiToolTestPayload,
+    WorkflowToolCreatePayload,
+    WorkflowToolUpdatePayload,
+    WorkflowToolDeletePayload,
+    BuiltinProviderDefaultCredentialPayload,
+    ToolOAuthCustomClientPayload,
+    MCPProviderCreatePayload,
+    MCPProviderUpdatePayload,
+    MCPProviderDeletePayload,
+    MCPAuthPayload,
+)
+
+
+@console_ns.route("/workspaces/current/tool-providers")
+class ToolProviderListApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        raw_args = request.args.to_dict()
+        query = ToolProviderListQuery.model_validate(raw_args)
+
+        return ToolCommonService.list_tool_providers(user_id, tenant_id, query.type)  # type: ignore
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/tools")
+class ToolBuiltinProviderListToolsApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider):
+        _, tenant_id = current_account_with_tenant()
+
+        return jsonable_encoder(
+            BuiltinToolManageService.list_builtin_tool_provider_tools(
+                tenant_id,
+                provider,
+            )
         )
 
-    def moderation_for_outputs(self, text: str) -> ModerationOutputsResult:
-        flagged = False
-        preset_response = ""
-        if self.config is None:
-            raise ValueError("The config is not set.")
 
-        if self.config["outputs_config"]["enabled"]:
-            params = ModerationOutputParams(app_id=self.app_id, text=text)
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/info")
+class ToolBuiltinProviderInfoApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider):
+        _, tenant_id = current_account_with_tenant()
 
-            result = self._get_config_by_requestor(APIBasedExtensionPoint.APP_MODERATION_OUTPUT, params.model_dump())
-            return ModerationOutputsResult.model_validate(result)
+        return jsonable_encoder(BuiltinToolManageService.get_builtin_tool_provider_info(tenant_id, provider))
 
-        return ModerationOutputsResult(
-            flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/delete")
+class ToolBuiltinProviderDeleteApi(Resource):
+    @console_ns.expect(console_ns.models[BuiltinToolCredentialDeletePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self, provider):
+        _, tenant_id = current_account_with_tenant()
+
+        payload = BuiltinToolCredentialDeletePayload.model_validate(console_ns.payload or {})
+
+        return BuiltinToolManageService.delete_builtin_tool_provider(
+            tenant_id,
+            provider,
+            payload.credential_id,
         )
 
-    def _get_config_by_requestor(self, extension_point: APIBasedExtensionPoint, params: dict):
-        if self.config is None:
-            raise ValueError("The config is not set.")
-        extension = self._get_api_based_extension(self.tenant_id, self.config.get("api_based_extension_id", ""))
-        if not extension:
-            raise ValueError("API-based Extension not found. Please check it again.")
-        requestor = APIBasedExtensionRequestor(extension.api_endpoint, decrypt_token(self.tenant_id, extension.api_key))
 
-        result = requestor.request(extension_point, params)
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/add")
+class ToolBuiltinProviderAddApi(Resource):
+    @console_ns.expect(console_ns.models[BuiltinToolAddPayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self, provider):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        payload = BuiltinToolAddPayload.model_validate(console_ns.payload or {})
+
+        return BuiltinToolManageService.add_builtin_tool_provider(
+            user_id=user_id,
+            tenant_id=tenant_id,
+            provider=provider,
+            credentials=payload.credentials,
+            name=payload.name,
+            api_type=CredentialType.of(payload.type),
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/update")
+class ToolBuiltinProviderUpdateApi(Resource):
+    @console_ns.expect(console_ns.models[BuiltinToolUpdatePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self, provider):
+        user, tenant_id = current_account_with_tenant()
+        user_id = user.id
+
+        payload = BuiltinToolUpdatePayload.model_validate(console_ns.payload or {})
+
+        result = BuiltinToolManageService.update_builtin_tool_provider(
+            user_id=user_id,
+            tenant_id=tenant_id,
+            provider=provider,
+            credential_id=payload.credential_id,
+            credentials=payload.credentials,
+            name=payload.name or "",
+        )
         return result
 
-    @staticmethod
-    def _get_api_based_extension(tenant_id: str, api_based_extension_id: str) -> APIBasedExtension | None:
-        stmt = select(APIBasedExtension).where(
-            APIBasedExtension.tenant_id == tenant_id, APIBasedExtension.id == api_based_extension_id
-        )
-        extension = db.session.scalar(stmt)
 
-        return extension
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/credentials")
+class ToolBuiltinProviderGetCredentialsApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider):
+        _, tenant_id = current_account_with_tenant()
 
-```
-
-### api/core/moderation/keywords/keywords.py
-```py
-from collections.abc import Sequence
-from typing import Any
-
-from core.moderation.base import Moderation, ModerationAction, ModerationInputsResult, ModerationOutputsResult
-
-
-class KeywordsModeration(Moderation):
-    name: str = "keywords"
-
-    @classmethod
-    def validate_config(cls, tenant_id: str, config: dict):
-        """
-        Validate the incoming form config data.
-
-        :param tenant_id: the id of workspace
-        :param config: the form config data
-        :return:
-        """
-        cls._validate_inputs_and_outputs_config(config, True)
-
-        if not config.get("keywords"):
-            raise ValueError("keywords is required")
-
-        if len(config.get("keywords", [])) > 10000:
-            raise ValueError("keywords length must be less than 10000")
-
-        keywords_row_len = config["keywords"].split("\n")
-        if len(keywords_row_len) > 100:
-            raise ValueError("the number of rows for the keywords must be less than 100")
-
-    def moderation_for_inputs(self, inputs: dict, query: str = "") -> ModerationInputsResult:
-        flagged = False
-        preset_response = ""
-        if self.config is None:
-            raise ValueError("The config is not set.")
-
-        if self.config["inputs_config"]["enabled"]:
-            preset_response = self.config["inputs_config"]["preset_response"]
-
-            if query:
-                inputs["query__"] = query
-
-            # Filter out empty values
-            keywords_list = [keyword for keyword in self.config["keywords"].split("\n") if keyword]
-
-            flagged = self._is_violated(inputs, keywords_list)
-
-        return ModerationInputsResult(
-            flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response
+        return jsonable_encoder(
+            BuiltinToolManageService.get_builtin_tool_provider_credentials(
+                tenant_id=tenant_id,
+                provider_name=provider,
+            )
         )
 
-    def moderation_for_outputs(self, text: str) -> ModerationOutputsResult:
-        flagged = False
-        preset_response = ""
-        if self.config is None:
-            raise ValueError("The config is not set.")
 
-        if self.config["outputs_config"]["enabled"]:
-            # Filter out empty values
-            keywords_list = [keyword for keyword in self.config["keywords"].split("\n") if keyword]
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/icon")
+class ToolBuiltinProviderIconApi(Resource):
+    @setup_required
+    def get(self, provider):
+        icon_bytes, mimetype = BuiltinToolManageService.get_builtin_tool_provider_icon(provider)
+        icon_cache_max_age = dify_config.TOOL_ICON_CACHE_MAX_AGE
+        return send_file(io.BytesIO(icon_bytes), mimetype=mimetype, max_age=icon_cache_max_age)
 
-            flagged = self._is_violated({"text": text}, keywords_list)
-            preset_response = self.config["outputs_config"]["preset_response"]
 
-        return ModerationOutputsResult(
-            flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response
+@console_ns.route("/workspaces/current/tool-provider/api/add")
+class ToolApiProviderAddApi(Resource):
+    @console_ns.expect(console_ns.models[ApiToolProviderAddPayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        payload = ApiToolProviderAddPayload.model_validate(console_ns.payload or {})
+
+        return ApiToolManageService.create_api_tool_provider(
+            user_id,
+            tenant_id,
+            payload.provider,
+            payload.icon,
+            payload.credentials,
+            payload.schema_type,
+            payload.schema_,
+            payload.privacy_policy or "",
+            payload.custom_disclaimer or "",
+            payload.labels or [],
         )
 
-    def _is_violated(self, inputs: dict, keywords_list: list) -> bool:
-        return any(self._check_keywords_in_value(keywords_list, value) for value in inputs.values())
 
-    def _check_keywords_in_value(self, keywords_list: Sequence[str], value: Any) -> bool:
-        return any(keyword.lower() in str(value).lower() for keyword in keywords_list)
+@console_ns.route("/workspaces/current/tool-provider/api/remote")
+class ToolApiProviderGetRemoteSchemaApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
 
-```
+        user_id = user.id
 
-### api/core/moderation/keywords/__init__.py
-```py
+        raw_args = request.args.to_dict()
+        query = UrlQuery.model_validate(raw_args)
 
-```
-
-### api/core/moderation/openai_moderation/openai_moderation.py
-```py
-from graphon.model_runtime.entities.model_entities import ModelType
-
-from core.model_manager import ModelManager
-from core.moderation.base import Moderation, ModerationAction, ModerationInputsResult, ModerationOutputsResult
-
-
-class OpenAIModeration(Moderation):
-    name: str = "openai_moderation"
-
-    @classmethod
-    def validate_config(cls, tenant_id: str, config: dict):
-        """
-        Validate the incoming form config data.
-
-        :param tenant_id: the id of workspace
-        :param config: the form config data
-        :return:
-        """
-        cls._validate_inputs_and_outputs_config(config, True)
-
-    def moderation_for_inputs(self, inputs: dict, query: str = "") -> ModerationInputsResult:
-        flagged = False
-        preset_response = ""
-        if self.config is None:
-            raise ValueError("The config is not set.")
-
-        if self.config["inputs_config"]["enabled"]:
-            preset_response = self.config["inputs_config"]["preset_response"]
-
-            if query:
-                inputs["query__"] = query
-            flagged = self._is_violated(inputs)
-
-        return ModerationInputsResult(
-            flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response
+        return ApiToolManageService.get_api_tool_provider_remote_schema(
+            user_id,
+            tenant_id,
+            str(query.url),
         )
 
-    def moderation_for_outputs(self, text: str) -> ModerationOutputsResult:
-        flagged = False
-        preset_response = ""
-        if self.config is None:
-            raise ValueError("The config is not set.")
 
-        if self.config["outputs_config"]["enabled"]:
-            flagged = self._is_violated({"text": text})
-            preset_response = self.config["outputs_config"]["preset_response"]
+@console_ns.route("/workspaces/current/tool-provider/api/tools")
+class ToolApiProviderListToolsApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
 
-        return ModerationOutputsResult(
-            flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response
+        user_id = user.id
+
+        raw_args = request.args.to_dict()
+        query = ProviderQuery.model_validate(raw_args)
+
+        return jsonable_encoder(
+            ApiToolManageService.list_api_tool_provider_tools(
+                user_id,
+                tenant_id,
+                query.provider,
+            )
         )
 
-    def _is_violated(self, inputs: dict):
-        text = "\n".join(str(inputs.values()))
-        model_manager = ModelManager.for_tenant(tenant_id=self.tenant_id)
-        model_instance = model_manager.get_model_instance(
-            tenant_id=self.tenant_id, provider="openai", model_type=ModelType.MODERATION, model="omni-moderation-latest"
+
+@console_ns.route("/workspaces/current/tool-provider/api/update")
+class ToolApiProviderUpdateApi(Resource):
+    @console_ns.expect(console_ns.models[ApiToolProviderUpdatePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        payload = ApiToolProviderUpdatePayload.model_validate(console_ns.payload or {})
+
+        return ApiToolManageService.update_api_tool_provider(
+            user_id,
+            tenant_id,
+            payload.provider,
+            payload.original_provider,
+            payload.icon,
+            payload.credentials,
+            payload.schema_type,
+            payload.schema_,
+            payload.privacy_policy,
+            payload.custom_disclaimer,
+            payload.labels or [],
         )
 
-        openai_moderation = model_instance.invoke_moderation(text=text)
 
-        return openai_moderation
+@console_ns.route("/workspaces/current/tool-provider/api/delete")
+class ToolApiProviderDeleteApi(Resource):
+    @console_ns.expect(console_ns.models[ApiToolProviderDeletePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self):
+        user, tenant_id = current_account_with_tenant()
 
-```
+        user_id = user.id
 
-### api/core/moderation/openai_moderation/__init__.py
-```py
+        payload = ApiToolProviderDeletePayload.model_validate(console_ns.payload or {})
+
+        return ApiToolManageService.delete_api_tool_provider(
+            user_id,
+            tenant_id,
+            payload.provider,
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/api/get")
+class ToolApiProviderGetApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        raw_args = request.args.to_dict()
+        query = ProviderQuery.model_validate(raw_args)
+
+        return ApiToolManageService.get_api_tool_provider(
+            user_id,
+            tenant_id,
+            query.provider,
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/credential/schema/<path:credential_type>")
+class ToolBuiltinProviderCredentialsSchemaApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider, credential_type):
+        _, tenant_id = current_account_with_tenant()
+
+        return jsonable_encoder(
+            BuiltinToolManageService.list_builtin_provider_credentials_schema(
+                provider, CredentialType.of(credential_type), tenant_id
+            )
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/api/schema")
+class ToolApiProviderSchemaApi(Resource):
+    @console_ns.expect(console_ns.models[ApiToolSchemaPayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        payload = ApiToolSchemaPayload.model_validate(console_ns.payload or {})
+
+        return ApiToolManageService.parser_api_schema(
+            schema=payload.schema_,
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/api/test/pre")
+class ToolApiProviderPreviousTestApi(Resource):
+    @console_ns.expect(console_ns.models[ApiToolTestPayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        payload = ApiToolTestPayload.model_validate(console_ns.payload or {})
+        _, current_tenant_id = current_account_with_tenant()
+        return ApiToolManageService.test_api_tool_preview(
+            current_tenant_id,
+            payload.provider_name or "",
+            payload.tool_name,
+            payload.credentials,
+            payload.parameters,
+            payload.schema_type,
+            payload.schema_,
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/workflow/create")
+class ToolWorkflowProviderCreateApi(Resource):
+    @console_ns.expect(console_ns.models[WorkflowToolCreatePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        payload = WorkflowToolCreatePayload.model_validate(console_ns.payload or {})
+
+        return WorkflowToolManageService.create_workflow_tool(
+            user_id=user_id,
+            tenant_id=tenant_id,
+            workflow_app_id=payload.workflow_app_id,
+            name=payload.name,
+            label=payload.label,
+            icon=payload.icon,
+            description=payload.description,
+            parameters=payload.parameters,
+            privacy_policy=payload.privacy_policy or "",
+            labels=payload.labels or [],
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/workflow/update")
+class ToolWorkflowProviderUpdateApi(Resource):
+    @console_ns.expect(console_ns.models[WorkflowToolUpdatePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self):
+        user, tenant_id = current_account_with_tenant()
+        user_id = user.id
+
+        payload = WorkflowToolUpdatePayload.model_validate(console_ns.payload or {})
+
+        return WorkflowToolManageService.update_workflow_tool(
+            user_id,
+            tenant_id,
+            payload.workflow_tool_id,
+            payload.name,
+            payload.label,
+            payload.icon,
+            payload.description,
+            payload.parameters,
+            payload.privacy_policy or "",
+            payload.labels or [],
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/workflow/delete")
+class ToolWorkflowProviderDeleteApi(Resource):
+    @console_ns.expect(console_ns.models[WorkflowToolDeletePayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        payload = WorkflowToolDeletePayload.model_validate(console_ns.payload or {})
+
+        return WorkflowToolManageService.delete_workflow_tool(
+            user_id,
+            tenant_id,
+            payload.workflow_tool_id,
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/workflow/get")
+class ToolWorkflowProviderGetApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        raw_args = request.args.to_dict()
+        query = WorkflowToolGetQuery.model_validate(raw_args)
+
+        if query.workflow_tool_id:
+            tool = WorkflowToolManageService.get_workflow_tool_by_tool_id(
+                user_id,
+                tenant_id,
+                query.workflow_tool_id,
+            )
+        elif query.workflow_app_id:
+            tool = WorkflowToolManageService.get_workflow_tool_by_app_id(
+                user_id,
+                tenant_id,
+                query.workflow_app_id,
+            )
+        else:
+            raise ValueError("incorrect workflow_tool_id or workflow_app_id")
+
+        return jsonable_encoder(tool)
+
+
+@console_ns.route("/workspaces/current/tool-provider/workflow/tools")
+class ToolWorkflowProviderListToolApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        raw_args = request.args.to_dict()
+        query = WorkflowToolListQuery.model_validate(raw_args)
+
+        return jsonable_encoder(
+            WorkflowToolManageService.list_single_workflow_tools(
+                user_id,
+                tenant_id,
+                query.workflow_tool_id,
+            )
+        )
+
+
+@console_ns.route("/workspaces/current/tools/builtin")
+class ToolBuiltinListApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        return jsonable_encoder(
+            [
+                provider.to_dict()
+                for provider in BuiltinToolManageService.list_builtin_tools(
+                    user_id,
+                    tenant_id,
+                )
+            ]
+        )
+
+
+@console_ns.route("/workspaces/current/tools/api")
+class ToolApiListApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        _, tenant_id = current_account_with_tenant()
+
+        return jsonable_encoder(
+            [
+                provider.to_dict()
+                for provider in ApiToolManageService.list_api_tools(
+                    tenant_id,
+                )
+            ]
+        )
+
+
+@console_ns.route("/workspaces/current/tools/workflow")
+class ToolWorkflowListApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        user, tenant_id = current_account_with_tenant()
+
+        user_id = user.id
+
+        return jsonable_encoder(
+            [
+                provider.to_dict()
+                for provider in WorkflowToolManageService.list_tenant_workflow_tools(
+                    user_id,
+                    tenant_id,
+                )
+            ]
+        )
+
+
+@console_ns.route("/workspaces/current/tool-labels")
+class ToolLabelsApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @enterprise_license_required
+    def get(self):
+        return jsonable_encoder(ToolLabelsService.list_tool_labels())
+
+
+@console_ns.route("/oauth/plugin/<path:provider>/tool/authorization-url")
+class ToolPluginOAuthApi(Resource):
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def get(self, provider):
+        tool_provider = ToolProviderID(provider)
+        plugin_id = tool_provider.plugin_id
+        provider_name = tool_provider.provider_name
+
+        user, tenant_id = current_account_with_tenant()
+
+        oauth_client_params = BuiltinToolManageService.get_oauth_client(tenant_id=tenant_id, provider=provider)
+        if oauth_client_params is None:
+            raise Forbidden("no oauth available client config found for this tool provider")
+
+        oauth_handler = OAuthHandler()
+        context_id = OAuthProxyService.create_proxy_context(
+            user_id=user.id, tenant_id=tenant_id, plugin_id=plugin_id, provider=provider_name
+        )
+        redirect_uri = f"{dify_config.CONSOLE_API_URL}/console/api/oauth/plugin/{provider}/tool/callback"
+        authorization_url_response = oauth_handler.get_authorization_url(
+            tenant_id=tenant_id,
+            user_id=user.id,
+            plugin_id=plugin_id,
+            provider=provider_name,
+            redirect_uri=redirect_uri,
+            system_credentials=oauth_client_params,
+        )
+        response = make_response(jsonable_encoder(authorization_url_response))
+        response.set_cookie(
+            "context_id",
+            context_id,
+            httponly=True,
+            samesite="Lax",
+            max_age=OAuthProxyService.__MAX_AGE__,
+        )
+        return response
+
+
+@console_ns.route("/oauth/plugin/<path:provider>/tool/callback")
+class ToolOAuthCallback(Resource):
+    @setup_required
+    def get(self, provider):
+        context_id = request.cookies.get("context_id")
+        if not context_id:
+            raise Forbidden("context_id not found")
+
+        context = OAuthProxyService.use_proxy_context(context_id)
+        if context is None:
+            raise Forbidden("Invalid context_id")
+
+        tool_provider = ToolProviderID(provider)
+        plugin_id = tool_provider.plugin_id
+        provider_name = tool_provider.provider_name
+        user_id: str = context["user_id"]
+        tenant_id: str = context["tenant_id"]
+
+        oauth_handler = OAuthHandler()
+        oauth_client_params = BuiltinToolManageService.get_oauth_client(tenant_id, provider)
+        if oauth_client_params is None:
+            raise Forbidden("no oauth available client config found for this tool provider")
+
+        redirect_uri = f"{dify_config.CONSOLE_API_URL}/console/api/oauth/plugin/{provider}/tool/callback"
+        credentials_response = oauth_handler.get_credentials(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            plugin_id=plugin_id,
+            provider=provider_name,
+            redirect_uri=redirect_uri,
+            system_credentials=oauth_client_params,
+            request=request,
+        )
+
+        credentials = credentials_response.credentials
+        expires_at = credentials_response.expires_at
+
+        if not credentials:
+            raise Exception("the plugin credentials failed")
+
+        # add credentials to database
+        BuiltinToolManageService.add_builtin_tool_provider(
+            user_id=user_id,
+            tenant_id=tenant_id,
+            provider=provider,
+            credentials=dict(credentials),
+            expires_at=expires_at,
+            api_type=CredentialType.OAUTH2,
+        )
+        return redirect(f"{dify_config.CONSOLE_WEB_URL}/oauth-callback")
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/default-credential")
+class ToolBuiltinProviderSetDefaultApi(Resource):
+    @console_ns.expect(console_ns.models[BuiltinProviderDefaultCredentialPayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self, provider):
+        current_user, current_tenant_id = current_account_with_tenant()
+        payload = BuiltinProviderDefaultCredentialPayload.model_validate(console_ns.payload or {})
+        return BuiltinToolManageService.set_default_provider(
+            tenant_id=current_tenant_id, user_id=current_user.id, provider=provider, id=payload.id
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/oauth/custom-client")
+class ToolOAuthCustomClient(Resource):
+    @console_ns.expect(console_ns.models[ToolOAuthCustomClientPayload.__name__])
+    @setup_required
+    @login_required
+    @is_admin_or_owner_required
+    @account_initialization_required
+    def post(self, provider: str):
+        payload = ToolOAuthCustomClientPayload.model_validate(console_ns.payload or {})
+
+        _, tenant_id = current_account_with_tenant()
+
+        return BuiltinToolManageService.save_custom_oauth_client_params(
+            tenant_id=tenant_id,
+            provider=provider,
+            client_params=payload.client_params or {},
+            enable_oauth_custom_client=payload.enable_oauth_custom_client
+            if payload.enable_oauth_custom_client is not None
+            else True,
+        )
+
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider):
+        _, current_tenant_id = current_account_with_tenant()
+        return jsonable_encoder(
+            BuiltinToolManageService.get_custom_oauth_client_params(tenant_id=current_tenant_id, provider=provider)
+        )
+
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def delete(self, provider):
+        _, current_tenant_id = current_account_with_tenant()
+        return jsonable_encoder(
+            BuiltinToolManageService.delete_custom_oauth_client_params(tenant_id=current_tenant_id, provider=provider)
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/oauth/client-schema")
+class ToolBuiltinProviderGetOauthClientSchemaApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider):
+        _, current_tenant_id = current_account_with_tenant()
+        return jsonable_encoder(
+            BuiltinToolManageService.get_builtin_tool_provider_oauth_client_schema(
+                tenant_id=current_tenant_id, provider_name=provider
+            )
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/builtin/<path:provider>/credential/info")
+class ToolBuiltinProviderGetCredentialInfoApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider):
+        _, tenant_id = current_account_with_tenant()
+
+        return jsonable_encoder(
+            BuiltinToolManageService.get_builtin_tool_provider_credential_info(
+                tenant_id=tenant_id,
+                provider=provider,
+            )
+        )
+
+
+@console_ns.route("/workspaces/current/tool-provider/mcp")
+class ToolProviderMCPApi(Resource):
+    @console_ns.expect(console_ns.models[MCPProviderCreatePayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        payload = MCPProviderCreatePayload.model_validate(console_ns.payload or {})
+        user, tenant_id = current_account_with_tenant()
+
+        # Parse and validate models
+        configuration = MCPConfiguration.model_validate(payload.configuration or {})
+        authentication = MCPAuthentication.model_validate(payload.authentication) if payload.authentication else None
+
+        # 1) Create provider in a short transaction (no network I/O inside)
+        with session_factory.create_session() as session, session.begin():
+            service = MCPToolManageService(session=session)
+            result = service.create_provider(
+                tenant_id=tenant_id,
+                user_id=user.id,
+                server_url=payload.server_url,
+                name=payload.name,
+                icon=payload.icon,
+                icon_type=payload.icon_type,
+                icon_background=payload.icon_background,
+                server_identifier=payload.server_identifier,
+                headers=payload.headers or {},
+                configuration=configuration,
+                authentication=authentication,
+            )
+
+        # 2) Try to fetch tools immediately after creation so they appear without a second save.
+        #    Perform network I/O outside any DB session to avoid holding locks.
+        try:
+            reconnect = MCPToolManageService.reconnect_with_url(
+                server_url=payload.server_url,
+                headers=payload.headers or {},
+                timeout=configuration.timeout,
+                sse_read_timeout=configuration.sse_read_timeout,
+            )
+            # Update just-created provider with authed/tools in a new short transaction
+            with session_factory.create_session() as session, session.begin():
+                service = MCPToolManageService(session=session)
+                db_provider = service.get_provider(provider_id=result.id, tenant_id=tenant_id)
+                db_provider.authed = reconnect.authed
+                db_provider.tools = reconnect.tools
+
+                result = ToolTransformService.mcp_provider_to_user_provider(db_provider, for_list=True)
+        except Exception:
+            # Best-effort: if initial fetch fails (e.g., auth required), return created provider as-is
+            logger.warning("Failed to fetch MCP tools after creation", exc_info=True)
+
+        return jsonable_encoder(result)
+
+    @console_ns.expect(console_ns.models[MCPProviderUpdatePayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def put(self):
+        payload = MCPProviderUpdatePayload.model_validate(console_ns.payload or {})
+        configuration = MCPConfiguration.model_validate(payload.configuration or {})
+        authentication = MCPAuthentication.model_validate(payload.authentication) if payload.authentication else None
+        _, current_tenant_id = current_account_with_tenant()
+
+        # Step 1: Get provider data for URL validation (short-lived session, no network I/O)
+        validation_data = None
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            validation_data = service.get_provider_for_url_validation(
+                tenant_id=current_tenant_id, provider_id=payload.provider_id
+            )
+
+        # Step 2: Perform URL validation with network I/O OUTSIDE of any database session
+        # This prevents holding database locks during potentially slow network operations
+        validation_result = MCPToolManageService.validate_server_url_standalone(
+            tenant_id=current_tenant_id,
+            new_server_url=payload.server_url,
+            validation_data=validation_data,
+        )
+
+        # Step 3: Perform database update in a transaction
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            service.update_provider(
+                tenant_id=current_tenant_id,
+                provider_id=payload.provider_id,
+                server_url=payload.server_url,
+                name=payload.name,
+                icon=payload.icon,
+                icon_type=payload.icon_type,
+                icon_background=payload.icon_background,
+                server_identifier=payload.server_identifier,
+                headers=payload.headers or {},
+                configuration=configuration,
+                authentication=authentication,
+                validation_result=validation_result,
+            )
+
+        return {"result": "success"}
+
+    @console_ns.expect(console_ns.models[MCPProviderDeletePayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def delete(self):
+        payload = MCPProviderDeletePayload.model_validate(console_ns.payload or {})
+        _, current_tenant_id = current_account_with_tenant()
+
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            service.delete_provider(tenant_id=current_tenant_id, provider_id=payload.provider_id)
+
+        return {"result": "success"}
+
+
+@console_ns.route("/workspaces/current/tool-provider/mcp/auth")
+class ToolMCPAuthApi(Resource):
+    @console_ns.expect(console_ns.models[MCPAuthPayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        payload = MCPAuthPayload.model_validate(console_ns.payload or {})
+        provider_id = payload.provider_id
+        _, tenant_id = current_account_with_tenant()
+
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            db_provider = service.get_provider(provider_id=provider_id, tenant_id=tenant_id)
+            if not db_provider:
+                raise ValueError("provider not found")
+
+            # Convert to entity
+            provider_entity = db_provider.to_entity()
+            server_url = provider_entity.decrypt_server_url()
+            headers = provider_entity.decrypt_authentication()
+
+        # Try to connect without active transaction
+        try:
+            # Use MCPClientWithAuthRetry to handle authentication automatically
+            with MCPClient(
+                server_url=server_url,
+                headers=headers,
+                timeout=provider_entity.timeout,
+                sse_read_timeout=provider_entity.sse_read_timeout,
+            ):
+                # Update credentials in new transaction
+                with sessionmaker(db.engine).begin() as session:
+                    service = MCPToolManageService(session=session)
+                    service.update_provider_credentials(
+                        provider_id=provider_id,
+                        tenant_id=tenant_id,
+                        credentials=provider_entity.credentials,
+                        authed=True,
+                    )
+                return {"result": "success"}
+        except MCPAuthError as e:
+            try:
+                # Pass the extracted OAuth metadata hints to auth()
+                auth_result = auth(
+                    provider_entity,
+                    payload.authorization_code,
+                    resource_metadata_url=e.resource_metadata_url,
+                    scope_hint=e.scope_hint,
+                )
+                with sessionmaker(db.engine).begin() as session:
+                    service = MCPToolManageService(session=session)
+                    response = service.execute_auth_actions(auth_result)
+                    return response
+            except MCPRefreshTokenError as e:
+                with sessionmaker(db.engine).begin() as session:
+                    service = MCPToolManageService(session=session)
+                    service.clear_provider_credentials(provider_id=provider_id, tenant_id=tenant_id)
+                raise ValueError(f"Failed to refresh token, please try to authorize again: {e}") from e
+        except (MCPError, ValueError) as e:
+            with sessionmaker(db.engine).begin() as session:
+                service = MCPToolManageService(session=session)
+                service.clear_provider_credentials(provider_id=provider_id, tenant_id=tenant_id)
+            raise ValueError(f"Failed to connect to MCP server: {e}") from e
+
+
+@console_ns.route("/workspaces/current/tool-provider/mcp/tools/<path:provider_id>")
+class ToolMCPDetailApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider_id):
+        _, tenant_id = current_account_with_tenant()
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            provider = service.get_provider(provider_id=provider_id, tenant_id=tenant_id)
+            return jsonable_encoder(ToolTransformService.mcp_provider_to_user_provider(provider, for_list=True))
+
+
+@console_ns.route("/workspaces/current/tools/mcp")
+class ToolMCPListAllApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        _, tenant_id = current_account_with_tenant()
+
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            # Skip sensitive data decryption for list view to improve performance
+            tools = service.list_providers(tenant_id=tenant_id, include_sensitive=False)
+
+            return [tool.to_dict() for tool in tools]
+
+
+@console_ns.route("/workspaces/current/tool-provider/mcp/update/<path:provider_id>")
+class ToolMCPUpdateApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, provider_id):
+        _, tenant_id = current_account_with_tenant()
+        with sessionmaker(db.engine).begin() as session:
+            service = MCPToolManageService(session=session)
+            tools = service.list_provider_tools(
+                tenant_id=tenant_id,
+                provider_id=provider_id,
+            )
+            return jsonable_encoder(tools)
+
+
+@console_ns.route("/mcp/oauth/callback")
+class ToolMCPCallbackApi(Resource):
+    def get(self):
+        raw_args = request.args.to_dict()
+        query = MCPCallbackQuery.model_validate(raw_args)
+        state_key = query.state
+        authorization_code = query.code
+
+        # Create service instance for handle_callback
+        with sessionmaker(db.engine).begin() as session:
+            mcp_service = MCPToolManageService(session=session)
+            # handle_callback now returns state data and tokens
+            state_data, tokens = handle_callback(state_key, authorization_code)
+            # Save tokens using the service layer
+            mcp_service.save_oauth_data(
+                state_data.provider_id, state_data.tenant_id, tokens.model_dump(), OAuthDataType.TOKENS
+            )
+
+        return redirect(f"{dify_config.CONSOLE_WEB_URL}/oauth-callback")
 
 ```
 

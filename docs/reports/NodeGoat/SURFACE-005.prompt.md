@@ -4,138 +4,9 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 
 - **ID**: SURFACE-005
 - **Kind**: endpoint
-- **Identifier**: POST /memos
-- **Description**: Memo creation endpoint that processes user input through marked 0.3.5 (vulnerable markdown parser). Stored XSS via markdown rendering without proper sanitization.
-- **Locations**: app/routes/index.js, app/routes/memos.js, app/data/memos-dao.js
-
-## Repository Context
-
-## Directory Structure
-```
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-Dockerfile
-Gruntfile.js
-LICENSE
-Procfile
-README.md
-app/ 
-  assets/ 
-    images/ 
-    js/ 
-      chart/ 
-      tour/ 
-  data/ 
-  routes/ 
-  views/ 
-    tutorial/ 
-app.json
-artifacts/ 
-  cert/ 
-  db-reset.js
-config/ 
-  config.js
-  env/ 
-cypress.json
-docker-compose.yml
-nodemon.json
-package-lock.json
-package.json
-server.js
-test/ 
-  e2e/ 
-    fixtures/ 
-      users/ 
-    integration/ 
-    plugins/ 
-    support/ 
-  security/ 
-
-```
-
-## Languages
-- JavaScript: 50 files
-- Yaml: 4 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "owasp-nodejs-goat",
-  "private": true,
-  "version": "1.3.0",
-  "description": "A tool to learn OWASP Top 10 for node.js developers",
-  "main": "server.js",
-  "dependencies": {
-    "bcrypt-nodejs": "0.0.3",
-    "body-parser": "^1.15.1",
-    "consolidate": "^0.14.1",
-    "csurf": "^1.8.3",
-    "dont-sniff-mimetype": "^1.0.0",
-    "express": "^4.13.4",
-    "express-session": "^1.13.0",
-    "forever": "^2.0.0",
-    "helmet": "^2.0.0",
-    "marked": "0.3.5",
-    "mongodb": "^2.1.18",
-    "needle": "2.2.4",
-    "node-esapi": "0.0.1",
-    "serve-favicon": "^2.3.0",
-    "swig": "^1.4.2",
-    "underscore": "^1.8.3"
-  },
-  "comments": {
-    "//": "a9 insecure components"
-  },
-  "scripts": {
-    "start": "node server.js",
-    "dev": "cross-env PORT=5000 nodemon",
-    "test:e2e": "cross-env NODE_ENV=test cypress open",
-    "test:ci": "cross-env NODE_ENV=test cypress run",
-    "test": "node node_modules/grunt-cli/bin/grunt test",
-    "db:seed": "cross-env NODE_ENV=test grunt db-reset",
-    "precommit": "grunt precommit",
-    "docker-mongo": "docker run -p 27017:27017 --name mongo  mongo:latest",
-    "start-infra": "docker-compose up",
-    "stop-infra": "docker-compose down",
-    "cy:verify": "cypress verify"
-  },
-  "devDependencies": {
-    "async": "^2.0.0-rc.4",
-    "cross-env": "^7.0.2",
-    "cypress": "^3.3.1",
-    "grunt": "^1.0.3",
-    "grunt-cli": "^1.2.0",
-    "grunt-concurrent": "^2.3.0",
-    "grunt-contrib-jshint": "^3.0.0",
-    "grunt-contrib-watch": "^1.0.0",
-    "grunt-env": "latest",
-    "grunt-if": "https://github.com/binarymist/grunt-if/tarball/master",
-    "grunt-jsbeautifier": "^0.2.12",
-    "grunt-mocha-test": "^0.12.7",
-    "grunt-npm-install": "^0.3.0",
-    "grunt-retire": "^0.3.12",
-    "jshint": "2.12.0",
-    "mocha": "^2.4.5",
-    "nodemon": "^1.19.1",
-    "selenium-webdriver": "^2.53.2",
-    "should": "^8.3.1",
-    "zaproxy": "^0.2.0"
-  },
-  "repository": "https://github.com/OWASP/NodejsGoat",
-  "license": "Apache 2.0"
-}
-
-```
-
-## Entry Points
-- app/routes/index.js
-- test/e2e/plugins/index.js
-- test/e2e/support/index.js
-- server.js
-
-Total source files: 54
-
+- **Identifier**: POST /contributions
+- **Description**: Financial contributions endpoint writing to MongoDB. Warrants review for authorization bypass and input validation on monetary values.
+- **Locations**: app/routes/index.js, app/data/contributions-dao.js
 
 ## Source Code
 
@@ -229,89 +100,94 @@ module.exports = index;
 
 ```
 
-### app/routes/memos.js
+### app/data/contributions-dao.js
 ```js
-const MemosDAO = require("../data/memos-dao").MemosDAO;
-const {
-    environmentalScripts
-} = require("../../config/config");
+const UserDAO = require("./user-dao").UserDAO;
 
-function MemosHandler(db) {
-    "use strict";
-
-    const memosDAO = new MemosDAO(db);
-
-    this.addMemos = (req, res, next) => {
-
-        memosDAO.insert(req.body.memo, (err, docs) => {
-            if (err) return next(err);
-            this.displayMemos(req, res, next);
-        });
-    };
-
-    this.displayMemos = (req, res, next) => {
-
-        const {
-            userId
-        } = req.session;
-
-        memosDAO.getAllMemos((err, docs) => {
-            if (err) return next(err);
-            return res.render("memos", {
-                memosList: docs,
-                userId: userId,
-                environmentalScripts
-            });
-        });
-    };
-
-}
-
-module.exports = MemosHandler;
-
-```
-
-### app/data/memos-dao.js
-```js
-/* The MemosDAO must be constructed with a connected database object */
-function MemosDAO(db) {
-
+/* The ContributionsDAO must be constructed with a connected database object */
+function ContributionsDAO(db) {
     "use strict";
 
     /* If this constructor is called without the "new" operator, "this" points
      * to the global object. Log a warning and call it correctly. */
-    if (false === (this instanceof MemosDAO)) {
-        console.log("Warning: MemosDAO constructor called without 'new' operator");
-        return new MemosDAO(db);
+    if (false === (this instanceof ContributionsDAO)) {
+        console.log("Warning: ContributionsDAO constructor called without 'new' operator");
+        return new ContributionsDAO(db);
     }
 
-    const memosCol = db.collection("memos");
+    const contributionsDB = db.collection("contributions");
+    const userDAO = new UserDAO(db);
 
-    this.insert = (memo, callback) => {
+    this.update = (userId, preTax, afterTax, roth, callback) => {
+        const parsedUserId = parseInt(userId);
 
-        // Create allocations document
-        const memos = {
-            memo,
-            timestamp: new Date()
+        // Create contributions document
+        const contributions = {
+            userId: parsedUserId,
+            preTax: preTax,
+            afterTax: afterTax,
+            roth: roth
         };
 
-        memosCol.insert(memos, (err, result) => !err ? callback(null, result) : callback(err, null));
+        contributionsDB.update({
+            userId
+            },
+            contributions, {
+                upsert: true
+            },
+            err => {
+                if (!err) {
+                    console.log("Updated contributions");
+                    // add user details
+                    userDAO.getUserById(parsedUserId, (err, user) => {
+
+                        if (err) return callback(err, null);
+
+                        contributions.userName = user.userName;
+                        contributions.firstName = user.firstName;
+                        contributions.lastName = user.lastName;
+                        contributions.userId = userId;
+
+                        return callback(null, contributions);
+                    });
+                } else {
+                    return callback(err, null);
+                }
+            }
+        );
     };
 
-    this.getAllMemos = (callback) => {
+    this.getByUserId = (userId, callback) => {
+        contributionsDB.findOne({
+                userId: userId
+            },
+            (err, contributions) => {
+                if (err) return callback(err, null);
 
-        memosCol.find({}).sort({
-            timestamp: -1
-        }).toArray((err, memos) => {
-            if (err) return callback(err, null);
-            if (!memos) return callback("ERROR: No memos found", null);
-            callback(null, memos);
-        });
+                // Set defualt contributions if not set
+                contributions = contributions || {
+                    preTax: 2,
+                    afterTax: 2,
+                    roth: 2
+                };
+
+                // add user details
+                userDAO.getUserById(userId, (err, user) => {
+
+                    if (err) return callback(err, null);
+                    contributions.userName = user.userName;
+                    contributions.firstName = user.firstName;
+                    contributions.lastName = user.lastName;
+                    contributions.userId = userId;
+
+                    callback(null, contributions);
+                });
+            }
+        );
     };
-
 }
 
-module.exports = { MemosDAO };
+module.exports = { ContributionsDAO };
 
 ```
 

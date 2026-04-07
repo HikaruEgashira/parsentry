@@ -1,0 +1,181 @@
+{
+  "app_type": "web_application",
+  "summary": "Dify is a large-scale LLM application platform with a Python/Flask backend, Next.js frontend, and Celery workers. It exposes multiple API layers (console, service, web, internal, MCP, webhook) with varying authentication requirements. Critical attack surfaces include arbitrary code execution via sandboxed executors, SSRF via website crawling and remote file fetching, a plugin system with backwards invocation capabilities, and workflow engines that interpolate user-controlled variables.",
+  "surfaces": [
+    {
+      "id": "SURFACE-001",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/login, POST /console/api/email-code-login, POST /console/api/oauth/login/<provider>",
+      "locations": ["api/controllers/console/auth/login.py", "api/controllers/console/auth/oauth.py", "api/controllers/console/auth/email_register.py"],
+      "description": "Console authentication endpoints handling login, OAuth, and registration. Vulnerable to brute force, credential stuffing, and OAuth redirect manipulation"
+    },
+    {
+      "id": "SURFACE-002",
+      "kind": "endpoint",
+      "identifier": "POST /api/login, POST /api/email-code-login, POST /api/forgot-password/resets",
+      "locations": ["api/controllers/web/login.py", "api/controllers/web/forgot_password.py"],
+      "description": "Public web app authentication with password reset flow. Password reset token validation and email-based login require review for token predictability and rate limiting"
+    },
+    {
+      "id": "SURFACE-003",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/files/upload, POST /v1/files/upload, POST /api/files/upload",
+      "locations": ["api/controllers/console/files.py", "api/controllers/service_api/app/file.py", "api/controllers/web/files.py", "api/factories/file_factory/validation.py"],
+      "description": "File upload endpoints across all API layers accepting multipart form data. Requires review for file type validation bypass, path traversal, and malicious file content"
+    },
+    {
+      "id": "SURFACE-004",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/remote-files/upload, POST /api/remote-files/upload",
+      "locations": ["api/controllers/console/remote_files.py", "api/controllers/web/remote_files.py", "api/factories/file_factory/remote.py"],
+      "description": "Remote file upload endpoints that fetch files from user-supplied URLs. High SSRF risk - can be used to probe internal network, access cloud metadata endpoints, or exfiltrate data"
+    },
+    {
+      "id": "SURFACE-005",
+      "kind": "endpoint",
+      "identifier": "POST /v1/completion-messages, POST /v1/chat-messages, POST /v1/workflows/run",
+      "locations": ["api/controllers/service_api/app/completion.py", "api/controllers/service_api/app/workflow.py"],
+      "description": "Service API endpoints for LLM completion, chat, and workflow execution. Accept user-controlled inputs that flow into prompt templates and tool invocations - prompt injection and variable interpolation risks"
+    },
+    {
+      "id": "SURFACE-006",
+      "kind": "endpoint",
+      "identifier": "POST /api/chat-messages, POST /api/completion-messages, POST /api/workflows/run",
+      "locations": ["api/controllers/web/completion.py", "api/controllers/web/workflow.py"],
+      "description": "Public web API endpoints for chat and workflow execution with JWT passport auth. User inputs flow into LLM prompts and workflow variable interpolation"
+    },
+    {
+      "id": "SURFACE-007",
+      "kind": "public_api",
+      "identifier": "Code Executor (Python3, JavaScript, Jinja2)",
+      "locations": ["api/core/helper/code_executor/code_executor.py", "api/core/helper/code_executor/python3/python3_code_provider.py", "api/core/helper/code_executor/python3/python3_transformer.py", "api/core/helper/code_executor/javascript/javascript_code_provider.py", "api/core/helper/code_executor/jinja2/jinja2_formatter.py", "api/core/helper/code_executor/template_transformer.py"],
+      "description": "Executes user-provided Python, JavaScript, and Jinja2 code via AST transformation and sandboxing. Sandbox escape, AST transformation bypass, and Jinja2 SSTI are critical risks"
+    },
+    {
+      "id": "SURFACE-008",
+      "kind": "public_api",
+      "identifier": "Plugin System (install, execute, backwards invocation)",
+      "locations": ["api/core/plugin/impl/plugin.py", "api/core/plugin/impl/tool.py", "api/core/plugin/impl/endpoint.py", "api/core/plugin/backwards_invocation/app.py", "api/core/plugin/backwards_invocation/tool.py", "api/core/plugin/backwards_invocation/encrypt.py", "api/core/plugin/utils/http_parser.py"],
+      "description": "Plugin system allowing third-party code installation and execution with backwards invocation into host app. Plugin supply chain attacks, privilege escalation via backwards invocation, and HTTP parsing vulnerabilities"
+    },
+    {
+      "id": "SURFACE-009",
+      "kind": "endpoint",
+      "identifier": "POST /mcp/server/<server_code>/mcp (JSON-RPC 2.0)",
+      "locations": ["api/controllers/mcp/mcp.py", "api/core/mcp/server/streamable_http.py", "api/core/mcp/client/streamable_client.py", "api/core/mcp/auth/auth_flow.py", "api/core/mcp/session/base_session.py"],
+      "description": "Model Context Protocol server accepting JSON-RPC requests without explicit authentication. MCP tool invocation can trigger arbitrary tool execution and data access"
+    },
+    {
+      "id": "SURFACE-010",
+      "kind": "public_api",
+      "identifier": "Workflow Execution Engine (node execution, variable interpolation)",
+      "locations": ["api/core/workflow/nodes/agent/agent_node.py", "api/core/workflow/nodes/knowledge_retrieval/knowledge_retrieval_node.py", "api/core/workflow/nodes/datasource/datasource_node.py", "api/core/workflow/nodes/trigger_webhook/node.py"],
+      "description": "Workflow engine executing directed acyclic graphs of nodes with user-controlled variable interpolation. Variable injection, node execution order manipulation, and data leakage between workflow contexts"
+    },
+    {
+      "id": "SURFACE-011",
+      "kind": "endpoint",
+      "identifier": "GET/POST/PUT/PATCH/DELETE /triggers/webhook/<webhook_id>",
+      "locations": ["api/controllers/trigger/webhook.py"],
+      "description": "Webhook trigger endpoint accepting all HTTP methods without authentication by design. Attacker can invoke arbitrary workflows by guessing or enumerating webhook IDs"
+    },
+    {
+      "id": "SURFACE-012",
+      "kind": "endpoint",
+      "identifier": "POST /inner/api/invoke/*, POST /inner/api/upload/file/request",
+      "locations": ["api/controllers/inner_api/plugin/plugin.py", "api/controllers/inner_api/workspace/workspace.py", "api/controllers/inner_api/mail.py"],
+      "description": "Internal API endpoints for plugin invocation, workspace management, and email sending with no visible authentication. If exposed beyond internal network, allows arbitrary LLM invocation, tool execution, and email sending"
+    },
+    {
+      "id": "SURFACE-013",
+      "kind": "public_api",
+      "identifier": "RAG Pipeline (embedding, retrieval, document indexing)",
+      "locations": ["api/core/rag/pipeline/", "api/core/rag/retrieval/", "api/core/rag/embedding/", "api/core/rag/datasource/", "api/core/rag/extractor/"],
+      "description": "RAG pipeline processing user-uploaded documents through extraction, embedding, and retrieval. Document extraction can trigger SSRF, XXE, or code execution via malicious file formats (PDF, DOCX, etc.)"
+    },
+    {
+      "id": "SURFACE-014",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/datasets/<id>/documents, POST /v1/datasets/<id>/documents",
+      "locations": ["api/controllers/console/datasets/datasets_document.py", "api/controllers/service_api/dataset/document.py", "api/controllers/console/datasets/website.py"],
+      "description": "Document upload and website import endpoints for knowledge base. Website import enables SSRF; document upload flows into extraction pipeline with potential for malicious file processing"
+    },
+    {
+      "id": "SURFACE-015",
+      "kind": "endpoint",
+      "identifier": "POST /files/upload/for-plugin",
+      "locations": ["api/controllers/files/upload.py"],
+      "description": "Plugin file upload endpoint with signature-based verification (timestamp, nonce, sign). Signature validation weakness or replay attacks could allow unauthorized file uploads"
+    },
+    {
+      "id": "SURFACE-016",
+      "kind": "external_call",
+      "identifier": "Website Crawl Provider (HTTP fetching of user-supplied URLs)",
+      "locations": ["api/core/datasource/website_crawl/website_crawl_provider.py", "api/core/datasource/website_crawl/website_crawl_plugin.py"],
+      "description": "Fetches content from user-supplied URLs for knowledge base ingestion. Primary SSRF vector - must validate against internal network access, cloud metadata endpoints, and URL scheme restrictions"
+    },
+    {
+      "id": "SURFACE-017",
+      "kind": "file_handler",
+      "identifier": "Multi-backend File Storage (S3, Azure, GCS, Aliyun, Tencent, Supabase)",
+      "locations": ["api/extensions/storage/aws_s3_storage.py", "api/extensions/storage/azure_blob_storage.py", "api/extensions/storage/google_cloud_storage.py", "api/extensions/storage/aliyun_oss_storage.py", "api/extensions/storage/tencent_cos_storage.py", "api/extensions/storage/supabase_storage.py", "api/extensions/storage/opendal_storage.py"],
+      "description": "File storage abstraction with multiple cloud backends. Misconfigured storage credentials, path traversal in storage keys, and insecure direct object reference to stored files"
+    },
+    {
+      "id": "SURFACE-018",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/workspaces/current/model-providers/<provider>/credentials/validate",
+      "locations": ["api/controllers/console/workspace/model_providers.py"],
+      "description": "Model provider credential validation endpoint. Accepts provider credentials and validates them against external services - potential for credential theft or SSRF via malicious provider configuration"
+    },
+    {
+      "id": "SURFACE-019",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/workspaces/current/tool-provider/api/add",
+      "locations": ["api/controllers/console/workspace/tool_providers.py"],
+      "description": "Custom API tool provider registration. Users can register arbitrary API endpoints as tools, which are then invoked during workflow execution - SSRF and data exfiltration via custom tool definitions"
+    },
+    {
+      "id": "SURFACE-020",
+      "kind": "endpoint",
+      "identifier": "POST /api/form/human_input/<form_token>",
+      "locations": ["api/controllers/web/human_input_form.py"],
+      "description": "Human input form submission endpoint using form tokens. Token validation and input sanitization required to prevent unauthorized workflow continuation and injection attacks"
+    },
+    {
+      "id": "SURFACE-021",
+      "kind": "public_api",
+      "identifier": "Celery Task Workers (document indexing, app generation, account deletion)",
+      "locations": ["api/celery_entrypoint.py", "api/tasks/document_indexing_task.py", "api/tasks/app_generate/", "api/tasks/delete_account_task.py", "api/tasks/rag_pipeline/rag_pipeline_run_task.py"],
+      "description": "Asynchronous Celery workers processing user data including document indexing and app generation. Task deserialization, Redis queue poisoning, and privilege escalation in background processing"
+    },
+    {
+      "id": "SURFACE-022",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/apps/<app_id>/audio-to-text, POST /v1/audio-to-text",
+      "locations": ["api/controllers/console/app/audio.py", "api/controllers/service_api/app/audio.py", "api/controllers/web/audio.py"],
+      "description": "Audio file upload and transcription endpoints. Malicious audio files could exploit transcription service vulnerabilities or cause resource exhaustion"
+    },
+    {
+      "id": "SURFACE-023",
+      "kind": "endpoint",
+      "identifier": "POST /console/api/workspaces/current/members/invite-email",
+      "locations": ["api/controllers/console/workspace/members.py"],
+      "description": "Workspace member invitation endpoint. Email injection, invitation token predictability, and privilege escalation via role assignment require security review"
+    },
+    {
+      "id": "SURFACE-024",
+      "kind": "iac_resource",
+      "identifier": "Docker Compose with SSRF Proxy, Redis, PostgreSQL, Vector DB",
+      "locations": ["docker/docker-compose.yaml", "docker/docker-compose.middleware.yaml", "docker/ssrf_proxy/", "docker/nginx/conf.d/"],
+      "description": "Infrastructure configuration including SSRF proxy (Squid), Redis for caching/queuing, PostgreSQL, and vector databases. Misconfigured SSRF proxy rules, exposed Redis, and insecure default credentials"
+    },
+    {
+      "id": "SURFACE-025",
+      "kind": "endpoint",
+      "identifier": "GET /api/passport",
+      "locations": ["api/controllers/web/passport.py"],
+      "description": "JWT passport issuance endpoint for web app authentication. Token generation security, JWT algorithm confusion, and token scope validation require review"
+    }
+  ]
+}

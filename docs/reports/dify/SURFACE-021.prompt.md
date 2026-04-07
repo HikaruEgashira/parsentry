@@ -3,4182 +3,1047 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 ## Surface Under Analysis
 
 - **ID**: SURFACE-021
-- **Kind**: endpoint
-- **Identifier**: Install/Setup Page (/install)
-- **Description**: Initial setup and installation page for first-time deployment. Risk of setup page re-access after installation, admin account creation without proper validation, and database credential exposure.
-- **Locations**: web/app/install/, api/commands/
-
-## Repository Context
-
-## Directory Structure
-```
-AGENTS.md
-AUTHORS
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-Makefile
-README.md
-api/ 
-  AGENTS.md
-  Dockerfile
-  README.md
-  app.py
-  app_factory.py
-  celery_entrypoint.py
-  celery_healthcheck.py
-  cnt_base.sh
-  commands/ 
-  configs/ 
-    deploy/ 
-    enterprise/ 
-    extra/ 
-    feature/ 
-      hosted_service/ 
-    middleware/ 
-      cache/ 
-      storage/ 
-      vdb/ 
-    observability/ 
-      otel/ 
-    packaging/ 
-    remote_settings_sources/ 
-      apollo/ 
-      nacos/ 
-  constants/ 
-  context/ 
-  contexts/ 
-  controllers/ 
-    common/ 
-    console/ 
-      app/ 
-      auth/ 
-      billing/ 
-      datasets/ 
-      explore/ 
-      tag/ 
-      workspace/ 
-    files/ 
-    inner_api/ 
-      app/ 
-      plugin/ 
-      workspace/ 
-    mcp/ 
-    service_api/ 
-      app/ 
-      dataset/ 
-      end_user/ 
-      workspace/ 
-    trigger/ 
-    web/ 
-  core/ 
-    agent/ 
-      output_parser/ 
-      prompt/ 
-      strategy/ 
-    app/ 
-      app_config/ 
-      apps/ 
-      entities/ 
-      features/ 
-      file_access/ 
-      layers/ 
-      llm/ 
-      task_pipeline/ 
-      workflow/ 
-    base/ 
-      tts/ 
-    callback_handler/ 
-    datasource/ 
-      __base/ 
-      entities/ 
-      local_file/ 
-      online_document/ 
-      online_drive/ 
-      utils/ 
-      website_crawl/ 
-    db/ 
-    entities/ 
-    errors/ 
-    extension/ 
-    external_data_tool/ 
-      api/ 
-    helper/ 
-      code_executor/ 
-    llm_generator/ 
-      output_parser/ 
-    logging/ 
-    mcp/ 
-      auth/ 
-      client/ 
-      server/ 
-      session/ 
-    memory/ 
-    moderation/ 
-      api/ 
-      keywords/ 
-      openai_moderation/ 
-    ops/ 
-      aliyun_trace/ 
-      arize_phoenix_trace/ 
-      entities/ 
-      langfuse_trace/ 
-      langsmith_trace/ 
-      mlflow_trace/ 
-      opik_trace/ 
-      tencent_trace/ 
-      weave_trace/ 
-    plugin/ 
-      backwards_invocation/ 
-      endpoint/ 
-      entities/ 
-      impl/ 
-      utils/ 
-    prompt/ 
-      entities/ 
-      prompt_templates/ 
-      utils/ 
-    rag/ 
-      cleaner/ 
-      data_post_processor/ 
-      datasource/ 
-      docstore/ 
-      embedding/ 
-      entities/ 
-      extractor/ 
-      index_processor/ 
-      models/ 
-      pipeline/ 
-      rerank/ 
-      retrieval/ 
-      splitter/ 
-      summary_index/ 
-    repositories/ 
-    schemas/ 
-      builtin/ 
-    telemetry/ 
-    tools/ 
-      __base/ 
-      builtin_tool/ 
-      custom_tool/ 
-      entities/ 
-      mcp_tool/ 
-      plugin_tool/ 
-      utils/ 
-      workflow_as_tool/ 
-    trigger/ 
-      debug/ 
-      entities/ 
-      utils/ 
-    workflow/ 
-      nodes/ 
-  dify_app.py
-  docker/ 
-  enterprise/ 
-    telemetry/ 
-      entities/ 
-  enums/ 
-  events/ 
-    event_handlers/ 
-  extensions/ 
-    logstore/ 
-      repositories/ 
-    otel/ 
-      decorators/ 
-      parser/ 
-      semconv/ 
-    storage/ 
-      clickzetta_volume/ 
-  factories/ 
-    file_factory/ 
-  fields/ 
-  gunicorn.conf.py
-  libs/ 
-    broadcast_channel/ 
-      redis/ 
-  migrations/ 
-    versions/ 
-  models/ 
-    utils/ 
-  pyproject.toml
-  pyrefly-local-excludes.txt
-  pyrightconfig.json
-  pytest.ini
-  repositories/ 
-    entities/ 
-  schedule/ 
-  services/ 
-    auth/ 
-      firecrawl/ 
-      jina/ 
-      watercrawl/ 
-    document_indexing_proxy/ 
-    enterprise/ 
-    entities/ 
-      external_knowledge_entities/ 
-      knowledge_entities/ 
-    errors/ 
-    plugin/ 
-    rag_pipeline/ 
-      entity/ 
-      pipeline_template/ 
-      transform/ 
-    recommend_app/ 
-      buildin/ 
-      database/ 
-      remote/ 
-    retention/ 
-      conversation/ 
-      workflow_run/ 
-    tools/ 
-    trigger/ 
-    workflow/ 
-  tasks/ 
-    annotation/ 
-    app_generate/ 
-    rag_pipeline/ 
-    workflow_cfs_scheduler/ 
-  templates/ 
-    without-brand/ 
-  tests/ 
-    fixtures/ 
-      workflow/ 
-    integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      libs/ 
-      model_runtime/ 
-      plugin/ 
-      services/ 
-      storage/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-      vdb/ 
-      workflow/ 
-    test_containers_integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      helpers/ 
-      libs/ 
-      models/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      trigger/ 
-      workflow/ 
-    unit_tests/ 
-      commands/ 
-      configs/ 
-      controllers/ 
-      core/ 
-      enterprise/ 
-      events/ 
-      extensions/ 
-      factories/ 
-      fields/ 
-      libs/ 
-      models/ 
-      oss/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-  uv.lock
-codecov.yml
-dev/ 
-  basedpyright-check
-  pyrefly-check-local
-  pytest/ 
-  reformat
-  setup
-  start-api
-  start-beat
-  start-docker-compose
-  start-web
-  start-worker
-  sync-uv
-  ty-check
-  update-uv
-docker/ 
-  README.md
-  certbot/ 
-  couchbase-server/ 
-  dify-env-sync.py
-  dify-env-sync.sh
-  docker-compose-template.yaml
-  docker-compose.middleware.yaml
-  docker-compose.png
-  docker-compose.yaml
-  elasticsearch/ 
-  generate_docker_compose
-  iris/ 
-  middleware.env.example
-  nginx/ 
-    conf.d/ 
-    ssl/ 
-  pgvector/ 
-  ssrf_proxy/ 
-  startupscripts/ 
-  tidb/ 
-    config/ 
-  volumes/ 
-    myscale/ 
-      config/ 
-    oceanbase/ 
-      init.d/ 
-    opensearch/ 
-    sandbox/ 
-      conf/ 
-docs/ 
-  ar-SA/ 
-  bn-BD/ 
-  de-DE/ 
-  es-ES/ 
-  eu-ai-act-compliance.md
-  fr-FR/ 
-  hi-IN/ 
-  it-IT/ 
-  ja-JP/ 
-  ko-KR/ 
-  pt-BR/ 
-  sl-SI/ 
-  suggested-questions-configuration.md
-  tlh/ 
-  tr-TR/ 
-  vi-VN/ 
-  weaviate/ 
-    WEAVIATE_MIGRATION_GUIDE/ 
-  zh-CN/ 
-  zh-TW/ 
-e2e/ 
-  AGENTS.md
-  README.md
-  cucumber.config.ts
-  features/ 
-    apps/ 
-    smoke/ 
-    step-definitions/ 
-      apps/ 
-      common/ 
-      smoke/ 
-    support/ 
-  fixtures/ 
-  package.json
-  scripts/ 
-  support/ 
-  test-env.ts
-  tsconfig.json
-  vite.config.ts
-images/ 
-  GitHub_README_if.png
-  describe.png
-  models.png
-package.json
-packages/ 
-  iconify-collections/ 
-    assets/ 
-      public/ 
-      vender/ 
-    custom-public/ 
-    custom-vender/ 
-    scripts/ 
-pnpm-lock.yaml
-pnpm-workspace.yaml
-scripts/ 
-  stress-test/ 
-    common/ 
-    setup/ 
-      dsl/ 
-sdks/ 
-  README.md
-  nodejs-client/ 
-    scripts/ 
-    src/ 
-      client/ 
-      errors/ 
-      http/ 
-      internal/ 
-      types/ 
-    tests/ 
-  php-client/ 
-vite.config.ts
-web/ 
-  AGENTS.md
-  CLAUDE.md
-  Dockerfile
-  Dockerfile.dockerignore
-  README.md
-  __mocks__/ 
-    @tanstack/ 
-  __tests__/ 
-    apps/ 
-    billing/ 
-    datasets/ 
-    develop/ 
-    explore/ 
-    goto-anything/ 
-    plugins/ 
-    rag-pipeline/ 
-    share/ 
-    tools/ 
-  app/ 
-    (commonLayout)/ 
-      app/ 
-      apps/ 
-      datasets/ 
-      education-apply/ 
-      explore/ 
-      plugins/ 
-      tools/ 
-    (humanInputLayout)/ 
-      form/ 
-    (shareLayout)/ 
-      chat/ 
-      chatbot/ 
-      completion/ 
-      components/ 
-      webapp-reset-password/ 
-      webapp-signin/ 
-      workflow/ 
-    account/ 
-      (commonLayout)/ 
-      oauth/ 
-    activate/ 
-    components/ 
-      app/ 
-      app-sidebar/ 
-      apps/ 
-      base/ 
-      billing/ 
-      custom/ 
-      datasets/ 
-      develop/ 
-      devtools/ 
-      explore/ 
-      goto-anything/ 
-      header/ 
-      plugins/ 
-      provider/ 
-      rag-pipeline/ 
-      share/ 
-      signin/ 
-      tools/ 
-      workflow/ 
-      workflow-app/ 
-    education-apply/ 
-    forgot-password/ 
-    init/ 
-    install/ 
-    oauth-callback/ 
-    reset-password/ 
-      check-code/ 
-      set-password/ 
-    signin/ 
-      assets/ 
-      check-code/ 
-      components/ 
-      invite-settings/ 
-      utils/ 
-    signup/ 
-      check-code/ 
-      components/ 
-      set-password/ 
-    styles/ 
-  assets/ 
-  bin/ 
-  config/ 
-  constants/ 
-  context/ 
-    hooks/ 
-  contract/ 
-    console/ 
-  docker/ 
-  docs/ 
-  env.ts
-  eslint-suppressions.json
-  eslint.config.mjs
-  eslint.constants.mjs
-  global.d.ts
-  hooks/ 
-  i18n/ 
-    ar-TN/ 
-    de-DE/ 
-    en-US/ 
-    es-ES/ 
-    fa-IR/ 
-    fr-FR/ 
-    hi-IN/ 
-    id-ID/ 
-    it-IT/ 
-    ja-JP/ 
-    ko-KR/ 
-    nl-NL/ 
-    pl-PL/ 
-    pt-BR/ 
-    ro-RO/ 
-    ru-RU/ 
-    sl-SI/ 
-    th-TH/ 
-    tr-TR/ 
-    uk-UA/ 
-    vi-VN/ 
-    zh-Hans/ 
-    zh-Hant/ 
-  i18n-config/ 
-  instrumentation-client.ts
-  knip.config.ts
-  models/ 
-  next/ 
-  next.config.ts
-  package.json
-  plugins/ 
-    dev-proxy/ 
-    eslint/ 
-      rules/ 
-    vite/ 
-  postcss.config.js
-  proxy.ts
-  public/ 
-    education/ 
-    in-site-message/ 
-    logo/ 
-    screenshots/ 
-      dark/ 
-      light/ 
-    vs/ 
-      base/ 
-      basic-languages/ 
-      editor/ 
-      language/ 
-  scripts/ 
-  service/ 
-    knowledge/ 
-  tailwind-common-config.ts
-  tailwind.config.ts
-  test/ 
-  themes/ 
-  tsconfig.json
-  tsslint.config.ts
-  types/ 
-  typography.js
-  utils/ 
-  vite.config.ts
-  vitest.setup.ts
-
-```
-
-## Languages
-- TypeScript: 5508 files
-- Python: 2785 files
-- JavaScript: 122 files
-- Yaml: 95 files
-- Bash: 20 files
-- Php: 1 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "dify",
-  "private": true,
-  "scripts": {
-    "prepare": "vp config"
-  },
-  "devDependencies": {
-    "vite-plus": "catalog:"
-  },
-  "engines": {
-    "node": "^22.22.1"
-  },
-  "packageManager": "pnpm@10.33.0"
-}
-
-```
-
-## Entry Points
-- sdks/nodejs-client/src/index.ts
-- web/next/index.ts
-- web/types/app.ts
-- web/app/components/tools/utils/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/hooks/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/hooks/index.ts
-- web/app/components/goto-anything/components/index.ts
-- web/app/components/goto-anything/hooks/index.ts
-- web/app/components/goto-anything/actions/commands/index.ts
-- web/app/components/goto-anything/actions/index.ts
-- web/app/components/workflow-app/hooks/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/data-source/store/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/steps/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/hooks/index.ts
-- web/app/components/datasets/documents/components/document-list/components/index.ts
-- web/app/components/datasets/documents/components/document-list/hooks/index.ts
-- web/app/components/datasets/documents/detail/completed/components/index.ts
-- web/app/components/datasets/documents/detail/completed/hooks/index.ts
-- web/app/components/datasets/documents/detail/embedding/components/index.ts
-- web/app/components/datasets/documents/detail/embedding/hooks/index.ts
-- web/app/components/datasets/create/step-one/components/index.ts
-- web/app/components/datasets/create/step-one/hooks/index.ts
-- web/app/components/datasets/create/step-two/components/index.ts
-- web/app/components/datasets/create/step-two/hooks/index.ts
-- web/app/components/rag-pipeline/utils/index.ts
-- web/app/components/rag-pipeline/hooks/index.ts
-- web/app/components/rag-pipeline/store/index.ts
-- web/app/components/workflow/hooks-store/index.ts
-- web/app/components/workflow/note-node/note-editor/theme/index.ts
-- web/app/components/workflow/utils/index.ts
-- web/app/components/workflow/hooks/use-workflow-run-event/index.ts
-- web/app/components/workflow/hooks/index.ts
-- web/app/components/workflow/run/utils/format-log/parallel/index.ts
-- web/app/components/workflow/run/utils/format-log/retry/index.ts
-- web/app/components/workflow/run/utils/format-log/human-input/index.ts
-- web/app/components/workflow/run/utils/format-log/agent/index.ts
-- web/app/components/workflow/run/utils/format-log/index.ts
-- web/app/components/workflow/run/utils/format-log/iteration/index.ts
-- web/app/components/workflow/run/utils/format-log/loop/index.ts
-- web/app/components/workflow/store/workflow/index.ts
-- web/app/components/workflow/store/index.ts
-- web/app/components/header/account-setting/model-provider-page/model-auth/hooks/index.ts
-- web/app/components/header/account-setting/data-source-page-new/hooks/index.ts
-- web/app/components/base/form/utils/secret-input/index.ts
-- web/app/components/base/form/hooks/index.ts
-- web/app/components/base/radio/context/index.ts
-- web/app/components/base/amplitude/index.ts
-- web/app/components/base/markdown-blocks/index.ts
-- web/app/components/base/icons/src/public/tracing/index.ts
-- web/app/components/base/icons/src/public/llm/index.ts
-- web/app/components/base/icons/src/public/education/index.ts
-- web/app/components/base/icons/src/public/other/index.ts
-- web/app/components/base/icons/src/public/common/index.ts
-- web/app/components/base/icons/src/public/knowledge/dataset-card/index.ts
-- web/app/components/base/icons/src/public/knowledge/index.ts
-- web/app/components/base/icons/src/public/knowledge/online-drive/index.ts
-- web/app/components/base/icons/src/public/avatar/index.ts
-- web/app/components/base/icons/src/public/files/index.ts
-- web/app/components/base/icons/src/public/thought/index.ts
-- web/app/components/base/icons/src/public/billing/index.ts
-- web/app/components/base/icons/src/vender/pipeline/index.ts
-- web/app/components/base/icons/src/vender/features/index.ts
-- web/app/components/base/icons/src/vender/other/index.ts
-- web/app/components/base/icons/src/vender/plugin/index.ts
-- web/app/components/base/icons/src/vender/solid/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/solid/security/index.ts
-- web/app/components/base/icons/src/vender/solid/general/index.ts
-- web/app/components/base/icons/src/vender/solid/development/index.ts
-- web/app/components/base/icons/src/vender/solid/education/index.ts
-- web/app/components/base/icons/src/vender/solid/shapes/index.ts
-- web/app/components/base/icons/src/vender/solid/users/index.ts
-- web/app/components/base/icons/src/vender/solid/files/index.ts
-- web/app/components/base/icons/src/vender/solid/arrows/index.ts
-- web/app/components/base/icons/src/vender/solid/communication/index.ts
-- web/app/components/base/icons/src/vender/solid/editor/index.ts
-- web/app/components/base/icons/src/vender/solid/FinanceAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/solid/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/system/index.ts
-- web/app/components/base/icons/src/vender/knowledge/index.ts
-- web/app/components/base/icons/src/vender/line/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/line/images/index.ts
-- web/app/components/base/icons/src/vender/line/general/index.ts
-- web/app/components/base/icons/src/vender/line/development/index.ts
-- web/app/components/base/icons/src/vender/line/layout/index.ts
-- web/app/components/base/icons/src/vender/line/education/index.ts
-- web/app/components/base/icons/src/vender/line/others/index.ts
-- web/app/components/base/icons/src/vender/line/time/index.ts
-- web/app/components/base/icons/src/vender/line/files/index.ts
-- web/app/components/base/icons/src/vender/line/arrows/index.ts
-- web/app/components/base/icons/src/vender/line/communication/index.ts
-- web/app/components/base/icons/src/vender/line/editor/index.ts
-- web/app/components/base/icons/src/vender/line/financeAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/line/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/workflow/index.ts
-- web/app/components/base/file-uploader/index.ts
-- web/app/components/billing/utils/index.ts
-- web/config/index.ts
-- web/plugins/eslint/index.js
-- web/plugins/dev-proxy/server.ts
-- web/utils/index.ts
-- web/models/app.ts
-- web/i18n-config/index.ts
-- web/i18n-config/server.ts
-- packages/iconify-collections/custom-vender/index.js
-- packages/iconify-collections/custom-public/index.js
-- api/core/plugin/backwards_invocation/app.py
-- api/app.py
-- api/controllers/web/app.py
-- api/controllers/service_api/app/app.py
-- api/controllers/console/app/app.py
-- api/services/errors/app.py
-
-Total source files: 8531
-
+- **Kind**: public_api
+- **Identifier**: Celery Task Workers (document indexing, app generation, account deletion)
+- **Description**: Asynchronous Celery workers processing user data including document indexing and app generation. Task deserialization, Redis queue poisoning, and privilege escalation in background processing
+- **Locations**: api/celery_entrypoint.py, api/tasks/document_indexing_task.py, api/tasks/app_generate/, api/tasks/delete_account_task.py, api/tasks/rag_pipeline/rag_pipeline_run_task.py
 
 ## Source Code
 
-### web/app/install/installForm.tsx
-```tsx
-'use client'
-import type { InitValidateStatusResponse, SetupStatusResponse } from '@/models/common'
-import { useStore } from '@tanstack/react-form'
-import * as React from 'react'
-
-import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import * as z from 'zod'
-import Button from '@/app/components/base/button'
-import { formContext, useAppForm } from '@/app/components/base/form'
-import { zodSubmitValidator } from '@/app/components/base/form/utils/zod-submit-validator'
-import Input from '@/app/components/base/input'
-import { validPassword } from '@/config'
-import { LICENSE_LINK } from '@/constants/link'
-import useDocumentTitle from '@/hooks/use-document-title'
-
-import Link from '@/next/link'
-import { useRouter } from '@/next/navigation'
-import { fetchInitValidateStatus, fetchSetupStatus, login, setup } from '@/service/common'
-import { cn } from '@/utils/classnames'
-import { encryptPassword as encodePassword } from '@/utils/encryption'
-import Loading from '../components/base/loading'
-
-const accountFormSchema = z.object({
-  email: z.email('error.emailInValid')
-    .min(1, {
-      error: 'error.emailInValid',
-    }),
-  name: z.string().min(1, {
-    error: 'error.nameEmpty',
-  }),
-  password: z.string().min(8, {
-    error: 'error.passwordLengthInValid',
-  }).regex(validPassword, 'error.passwordInvalid'),
-})
-
-const InstallForm = () => {
-  useDocumentTitle('')
-  const { t, i18n } = useTranslation()
-  const router = useRouter()
-  const [showPassword, setShowPassword] = React.useState(false)
-  const [loading, setLoading] = React.useState(true)
-
-  const form = useAppForm({
-    defaultValues: {
-      name: '',
-      password: '',
-      email: '',
-    },
-    validators: {
-      onSubmit: zodSubmitValidator(accountFormSchema),
-    },
-    onSubmit: async ({ value }) => {
-      // First, setup the admin account
-      await setup({
-        body: {
-          ...value,
-          language: i18n.language,
-        },
-      })
-
-      // Then, automatically login with the same credentials
-      const loginRes = await login({
-        url: '/login',
-        body: {
-          email: value.email,
-          password: encodePassword(value.password),
-        },
-      })
-
-      // Store tokens and redirect to apps if login successful
-      if (loginRes.result === 'success') {
-        router.replace('/apps')
-      }
-      else {
-        // Fallback to signin page if auto-login fails
-        router.replace('/signin')
-      }
-    },
-  })
-
-  const isSubmitting = useStore(form.store, state => state.isSubmitting)
-  const emailErrors = useStore(form.store, state => state.fieldMeta.email?.errors)
-  const nameErrors = useStore(form.store, state => state.fieldMeta.name?.errors)
-  const passwordErrors = useStore(form.store, state => state.fieldMeta.password?.errors)
-
-  useEffect(() => {
-    fetchSetupStatus().then((res: SetupStatusResponse) => {
-      if (res.step === 'finished') {
-        localStorage.setItem('setup_status', 'finished')
-        router.push('/signin')
-      }
-      else {
-        fetchInitValidateStatus().then((res: InitValidateStatusResponse) => {
-          if (res.status === 'not_started')
-            router.push('/init')
-        })
-      }
-      setLoading(false)
-    })
-  }, [])
-
-  return (
-    loading
-      ? <Loading />
-      : (
-          <>
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-              <h2 className="text-[32px] font-bold text-text-primary">{t('setAdminAccount', { ns: 'login' })}</h2>
-              <p className="mt-1 text-sm text-text-secondary">{t('setAdminAccountDesc', { ns: 'login' })}</p>
-            </div>
-            <div className="mt-8 grow sm:mx-auto sm:w-full sm:max-w-md">
-              <div className="relative">
-                <formContext.Provider value={form}>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (isSubmitting)
-                        return
-                      form.handleSubmit()
-                    }}
-                  >
-                    <div className="mb-5">
-                      <label htmlFor="email" className="my-2 flex items-center justify-between text-sm font-medium text-text-primary">
-                        {t('email', { ns: 'login' })}
-                      </label>
-                      <div className="mt-1">
-                        <form.AppField name="email">
-                          {field => (
-                            <Input
-                              id="email"
-                              value={field.state.value}
-                              onChange={e => field.handleChange(e.target.value)}
-                              onBlur={field.handleBlur}
-                              placeholder={t('emailPlaceholder', { ns: 'login' }) || ''}
-                            />
-                          )}
-                        </form.AppField>
-                        {emailErrors && emailErrors.length > 0 && (
-                          <span className="text-sm text-red-400">
-                            {t(`${emailErrors[0]}` as 'error.emailInValid', { ns: 'login' })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mb-5">
-                      <label htmlFor="name" className="my-2 flex items-center justify-between text-sm font-medium text-text-primary">
-                        {t('name', { ns: 'login' })}
-                      </label>
-                      <div className="relative mt-1">
-                        <form.AppField name="name">
-                          {field => (
-                            <Input
-                              id="name"
-                              value={field.state.value}
-                              onChange={e => field.handleChange(e.target.value)}
-                              onBlur={field.handleBlur}
-                              placeholder={t('namePlaceholder', { ns: 'login' }) || ''}
-                            />
-                          )}
-                        </form.AppField>
-                      </div>
-                      {nameErrors && nameErrors.length > 0 && (
-                        <span className="text-sm text-red-400">
-                          {t(`${nameErrors[0]}` as 'error.nameEmpty', { ns: 'login' })}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mb-5">
-                      <label htmlFor="password" className="my-2 flex items-center justify-between text-sm font-medium text-text-primary">
-                        {t('password', { ns: 'login' })}
-                      </label>
-                      <div className="relative mt-1">
-                        <form.AppField name="password">
-                          {field => (
-                            <Input
-                              id="password"
-                              type={showPassword ? 'text' : 'password'}
-                              value={field.state.value}
-                              onChange={e => field.handleChange(e.target.value)}
-                              onBlur={field.handleBlur}
-                              placeholder={t('passwordPlaceholder', { ns: 'login' }) || ''}
-                            />
-                          )}
-                        </form.AppField>
-
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="text-text-quaternary hover:text-text-tertiary focus:text-text-tertiary focus:outline-hidden"
-                          >
-                            {showPassword ? '👀' : '😝'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className={cn('mt-1 text-xs text-text-secondary', {
-                        'text-sm! text-red-400': passwordErrors && passwordErrors.length > 0,
-                      })}
-                      >
-                        {t('error.passwordInvalid', { ns: 'login' })}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Button variant="primary" type="submit" disabled={isSubmitting} loading={isSubmitting} className="w-full">
-                        {t('installBtn', { ns: 'login' })}
-                      </Button>
-                    </div>
-                  </form>
-                </formContext.Provider>
-                <div className="mt-2 block w-full text-xs text-text-secondary">
-                  {t('license.tip', { ns: 'login' })}
-                &nbsp;
-                  <Link
-                    className="text-text-accent"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href={LICENSE_LINK}
-                  >
-                    {t('license.link', { ns: 'login' })}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </>
-        )
-  )
-}
-
-export default InstallForm
-
-```
-
-### web/app/install/installForm.spec.tsx
-```tsx
-import type { InitValidateStatusResponse, SetupStatusResponse } from '@/models/common'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { fetchInitValidateStatus, fetchSetupStatus, login, setup } from '@/service/common'
-import { encryptPassword } from '@/utils/encryption'
-import InstallForm from './installForm'
-
-const mockPush = vi.fn()
-const mockReplace = vi.fn()
-
-vi.mock('@/next/navigation', () => ({
-  useRouter: () => ({ push: mockPush, replace: mockReplace }),
-}))
-
-vi.mock('@/service/common', () => ({
-  fetchSetupStatus: vi.fn(),
-  fetchInitValidateStatus: vi.fn(),
-  setup: vi.fn(),
-  login: vi.fn(),
-}))
-
-vi.mock('@/context/global-public-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/context/global-public-context')>()
-  return {
-    ...actual,
-    useIsSystemFeaturesPending: () => false,
-  }
-})
-
-const mockFetchSetupStatus = vi.mocked(fetchSetupStatus)
-const mockFetchInitValidateStatus = vi.mocked(fetchInitValidateStatus)
-const mockSetup = vi.mocked(setup)
-const mockLogin = vi.mocked(login)
-
-const prepareLoadedState = () => {
-  mockFetchSetupStatus.mockResolvedValue({ step: 'not_started' } as SetupStatusResponse)
-  mockFetchInitValidateStatus.mockResolvedValue({ status: 'finished' } as InitValidateStatusResponse)
-}
-
-describe('InstallForm', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    prepareLoadedState()
-  })
-
-  it('should render form after loading', async () => {
-    render(<InstallForm />)
-
-    expect(await screen.findByLabelText('login.email')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /login\.installBtn/ })).toBeInTheDocument()
-  })
-
-  it('should show validation error when required fields are empty', async () => {
-    render(<InstallForm />)
-
-    await screen.findByLabelText('login.email')
-
-    fireEvent.click(screen.getByRole('button', { name: /login\.installBtn/ }))
-
-    await waitFor(() => {
-      expect(screen.getByText('login.error.emailInValid')).toBeInTheDocument()
-      expect(screen.getByText('login.error.nameEmpty')).toBeInTheDocument()
-    })
-    expect(mockSetup).not.toHaveBeenCalled()
-  })
-
-  it('should submit and redirect to apps on successful login', async () => {
-    mockSetup.mockResolvedValue({ result: 'success' } as any)
-    mockLogin.mockResolvedValue({ result: 'success', data: { access_token: 'token' } } as any)
-
-    render(<InstallForm />)
-
-    fireEvent.change(await screen.findByLabelText('login.email'), { target: { value: 'admin@example.com' } })
-    fireEvent.change(screen.getByLabelText('login.name'), { target: { value: 'Admin' } })
-    fireEvent.change(screen.getByLabelText('login.password'), { target: { value: 'Password123' } })
-
-    const form = screen.getByRole('button', { name: /login\.installBtn/ }).closest('form')
-    expect(form).not.toBeNull()
-
-    fireEvent.submit(form as HTMLFormElement)
-
-    await waitFor(() => {
-      expect(mockSetup).toHaveBeenCalledWith({
-        body: {
-          email: 'admin@example.com',
-          name: 'Admin',
-          password: 'Password123',
-          language: 'en',
-        },
-      })
-    })
-
-    await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith({
-        url: '/login',
-        body: {
-          email: 'admin@example.com',
-          password: encryptPassword('Password123'),
-        },
-      })
-    })
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/apps')
-    })
-  })
-
-  it('should redirect to sign in when login fails', async () => {
-    mockSetup.mockResolvedValue({ result: 'success' } as any)
-    mockLogin.mockResolvedValue({ result: 'fail', data: 'error', code: 'login_failed', message: 'login failed' } as any)
-
-    render(<InstallForm />)
-
-    fireEvent.change(await screen.findByLabelText('login.email'), { target: { value: 'admin@example.com' } })
-    fireEvent.change(screen.getByLabelText('login.name'), { target: { value: 'Admin' } })
-    fireEvent.change(screen.getByLabelText('login.password'), { target: { value: 'Password123' } })
-
-    fireEvent.click(screen.getByRole('button', { name: /login\.installBtn/ }))
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/signin')
-    })
-  })
-
-  it('should disable submit while request is in flight', async () => {
-    let resolveSetup: ((value: any) => void) | undefined
-    const setupPromise = new Promise((resolve) => {
-      resolveSetup = resolve
-    })
-    mockSetup.mockReturnValue(setupPromise as any)
-    mockLogin.mockResolvedValue({ result: 'success', data: { access_token: 'token' } } as any)
-
-    render(<InstallForm />)
-
-    fireEvent.change(await screen.findByLabelText('login.email'), { target: { value: 'admin@example.com' } })
-    fireEvent.change(screen.getByLabelText('login.name'), { target: { value: 'Admin' } })
-    fireEvent.change(screen.getByLabelText('login.password'), { target: { value: 'Password123' } })
-
-    const button = screen.getByRole('button', { name: /login\.installBtn/ })
-    fireEvent.click(button)
-
-    await waitFor(() => {
-      expect(button).toBeDisabled()
-    })
-
-    fireEvent.click(button)
-    expect(mockSetup).toHaveBeenCalledTimes(1)
-
-    resolveSetup?.({ result: 'success' })
-
-    await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  it('should redirect to sign in when setup is finished', async () => {
-    mockFetchSetupStatus.mockResolvedValue({ step: 'finished' } as SetupStatusResponse)
-
-    render(<InstallForm />)
-
-    await waitFor(() => {
-      expect(localStorage.setItem).toHaveBeenCalledWith('setup_status', 'finished')
-      expect(mockPush).toHaveBeenCalledWith('/signin')
-    })
-  })
-})
-
-```
-
-### web/app/install/page.tsx
-```tsx
-'use client'
-import * as React from 'react'
-import { useGlobalPublicStore } from '@/context/global-public-context'
-import { cn } from '@/utils/classnames'
-import Header from '../signin/_header'
-import InstallForm from './installForm'
-
-const Install = () => {
-  const { systemFeatures } = useGlobalPublicStore()
-  return (
-    <div className={cn('flex min-h-screen w-full justify-center bg-background-default-burn p-6')}>
-      <div className={cn('flex w-full shrink-0 flex-col rounded-2xl border border-effects-highlight bg-background-default-subtle')}>
-        <Header />
-        <InstallForm />
-        {!systemFeatures.branding.enabled && (
-          <div className="px-8 py-6 text-sm font-normal text-text-tertiary">
-            ©
-            {' '}
-            {new Date().getFullYear()}
-            {' '}
-            LangGenius, Inc. All rights reserved.
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export default Install
-
-```
-
-### api/commands/system.py
+### api/celery_entrypoint.py
 ```py
-import logging
+import psycogreen.gevent as pscycogreen_gevent  # type: ignore
+from grpc.experimental import gevent as grpc_gevent  # type: ignore
 
-import click
-import sqlalchemy as sa
-from sqlalchemy import delete, select, update
-from sqlalchemy.orm import sessionmaker
-
-from configs import dify_config
-from events.app_event import app_was_created
-from extensions.ext_database import db
-from extensions.ext_redis import redis_client
-from libs.db_migration_lock import DbMigrationAutoRenewLock
-from libs.rsa import generate_key_pair
-from models import Tenant
-from models.model import App, AppMode, Conversation
-from models.provider import Provider, ProviderModel
-
-logger = logging.getLogger(__name__)
-
-DB_UPGRADE_LOCK_TTL_SECONDS = 60
+# grpc gevent
+grpc_gevent.init_gevent()
+print("gRPC patched with gevent.", flush=True)  # noqa: T201
+pscycogreen_gevent.patch_psycopg()
+print("psycopg2 patched with gevent.", flush=True)  # noqa: T201
 
 
-@click.command(
-    "reset-encrypt-key-pair",
-    help="Reset the asymmetric key pair of workspace for encrypt LLM credentials. "
-    "After the reset, all LLM credentials will become invalid, "
-    "requiring re-entry."
-    "Only support SELF_HOSTED mode.",
-)
-@click.confirmation_option(
-    prompt=click.style(
-        "Are you sure you want to reset encrypt key pair? This operation cannot be rolled back!", fg="red"
-    )
-)
-def reset_encrypt_key_pair():
-    """
-    Reset the encrypted key pair of workspace for encrypt LLM credentials.
-    After the reset, all LLM credentials will become invalid, requiring re-entry.
-    Only support SELF_HOSTED mode.
-    """
-    if dify_config.EDITION != "SELF_HOSTED":
-        click.echo(click.style("This command is only for SELF_HOSTED installations.", fg="red"))
-        return
-    with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-        tenants = session.scalars(select(Tenant)).all()
-        for tenant in tenants:
-            if not tenant:
-                click.echo(click.style("No workspaces found. Run /install first.", fg="red"))
-                return
+from app import app, celery
 
-            tenant.encrypt_public_key = generate_key_pair(tenant.id)
-
-            session.execute(delete(Provider).where(Provider.provider_type == "custom", Provider.tenant_id == tenant.id))
-            session.execute(delete(ProviderModel).where(ProviderModel.tenant_id == tenant.id))
-
-            click.echo(
-                click.style(
-                    f"Congratulations! The asymmetric key pair of workspace {tenant.id} has been reset.",
-                    fg="green",
-                )
-            )
-
-
-@click.command("convert-to-agent-apps", help="Convert Agent Assistant to Agent App.")
-def convert_to_agent_apps():
-    """
-    Convert Agent Assistant to Agent App.
-    """
-    click.echo(click.style("Starting convert to agent apps.", fg="green"))
-
-    proceeded_app_ids = []
-
-    while True:
-        # fetch first 1000 apps
-        sql_query = """SELECT a.id AS id FROM apps a
-            INNER JOIN app_model_configs am ON a.app_model_config_id=am.id
-            WHERE a.mode = 'chat'
-            AND am.agent_mode is not null
-            AND (
-                am.agent_mode like '%"strategy": "function_call"%'
-                OR am.agent_mode  like '%"strategy": "react"%'
-            )
-            AND (
-                am.agent_mode like '{"enabled": true%'
-                OR am.agent_mode like '{"max_iteration": %'
-            ) ORDER BY a.created_at DESC LIMIT 1000
-        """
-
-        with db.engine.begin() as conn:
-            rs = conn.execute(sa.text(sql_query))
-
-            apps = []
-            for i in rs:
-                app_id = str(i.id)
-                if app_id not in proceeded_app_ids:
-                    proceeded_app_ids.append(app_id)
-                    app = db.session.scalar(select(App).where(App.id == app_id))
-                    if app is not None:
-                        apps.append(app)
-
-            if len(apps) == 0:
-                break
-
-        for app in apps:
-            click.echo(f"Converting app: {app.id}")
-
-            try:
-                app.mode = AppMode.AGENT_CHAT
-                db.session.commit()
-
-                # update conversation mode to agent
-                db.session.execute(
-                    update(Conversation).where(Conversation.app_id == app.id).values(mode=AppMode.AGENT_CHAT)
-                )
-
-                db.session.commit()
-                click.echo(click.style(f"Converted app: {app.id}", fg="green"))
-            except Exception as e:
-                click.echo(click.style(f"Convert app error: {e.__class__.__name__} {str(e)}", fg="red"))
-
-    click.echo(click.style(f"Conversion complete. Converted {len(proceeded_app_ids)} agent apps.", fg="green"))
-
-
-@click.command("upgrade-db", help="Upgrade the database")
-def upgrade_db():
-    click.echo("Preparing database migration...")
-    lock = DbMigrationAutoRenewLock(
-        redis_client=redis_client,
-        name="db_upgrade_lock",
-        ttl_seconds=DB_UPGRADE_LOCK_TTL_SECONDS,
-        logger=logger,
-        log_context="db_migration",
-    )
-    if lock.acquire(blocking=False):
-        migration_succeeded = False
-        try:
-            click.echo(click.style("Starting database migration.", fg="green"))
-
-            # run db migration
-            import flask_migrate
-
-            flask_migrate.upgrade()
-
-            migration_succeeded = True
-            click.echo(click.style("Database migration successful!", fg="green"))
-
-        except Exception as e:
-            logger.exception("Failed to execute database migration")
-            click.echo(click.style(f"Database migration failed: {e}", fg="red"))
-            raise SystemExit(1)
-        finally:
-            status = "successful" if migration_succeeded else "failed"
-            lock.release_safely(status=status)
-    else:
-        click.echo("Database migration skipped")
-
-
-@click.command("fix-app-site-missing", help="Fix app related site missing issue.")
-def fix_app_site_missing():
-    """
-    Fix app related site missing issue.
-    """
-    click.echo(click.style("Starting fix for missing app-related sites.", fg="green"))
-
-    failed_app_ids = []
-    while True:
-        sql = """select apps.id as id from apps left join sites on sites.app_id=apps.id
-where sites.id is null limit 1000"""
-        with db.engine.begin() as conn:
-            rs = conn.execute(sa.text(sql))
-
-            processed_count = 0
-            for i in rs:
-                processed_count += 1
-                app_id = str(i.id)
-
-                if app_id in failed_app_ids:
-                    continue
-
-                try:
-                    app = db.session.scalar(select(App).where(App.id == app_id))
-                    if not app:
-                        logger.info("App %s not found", app_id)
-                        continue
-
-                    tenant = app.tenant
-                    if tenant:
-                        accounts = tenant.get_accounts()
-                        if not accounts:
-                            logger.info("Fix failed for app %s", app.id)
-                            continue
-
-                        account = accounts[0]
-                        logger.info("Fixing missing site for app %s", app.id)
-                        app_was_created.send(app, account=account)
-                except Exception:
-                    failed_app_ids.append(app_id)
-                    click.echo(click.style(f"Failed to fix missing site for app {app_id}", fg="red"))
-                    logger.exception("Failed to fix app related site missing issue, app_id: %s", app_id)
-                    continue
-
-            if not processed_count:
-                break
-
-    click.echo(click.style("Fix for missing app-related sites completed successfully!", fg="green"))
+__all__ = ["app", "celery"]
 
 ```
 
-### api/commands/vector.py
+### api/tasks/document_indexing_task.py
 ```py
-import json
-
-import click
-from flask import current_app
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
-
-from configs import dify_config
-from core.rag.datasource.vdb.vector_factory import Vector
-from core.rag.datasource.vdb.vector_type import VectorType
-from core.rag.index_processor.constant.built_in_field import BuiltInField
-from core.rag.index_processor.constant.index_type import IndexStructureType, IndexTechniqueType
-from core.rag.models.document import ChildDocument, Document
-from extensions.ext_database import db
-from models.dataset import Dataset, DatasetCollectionBinding, DatasetMetadata, DatasetMetadataBinding, DocumentSegment
-from models.dataset import Document as DatasetDocument
-from models.enums import DatasetMetadataType, IndexingStatus, SegmentStatus
-from models.model import App, AppAnnotationSetting, MessageAnnotation
-
-
-@click.command("vdb-migrate", help="Migrate vector db.")
-@click.option("--scope", default="all", prompt=False, help="The scope of vector database to migrate, Default is All.")
-def vdb_migrate(scope: str):
-    if scope in {"knowledge", "all"}:
-        migrate_knowledge_vector_database()
-    if scope in {"annotation", "all"}:
-        migrate_annotation_vector_database()
-
-
-def migrate_annotation_vector_database():
-    """
-    Migrate annotation datas to target vector database .
-    """
-    click.echo(click.style("Starting annotation data migration.", fg="green"))
-    create_count = 0
-    skipped_count = 0
-    total_count = 0
-    page = 1
-    while True:
-        try:
-            # get apps info
-            per_page = 50
-            with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-                apps = session.scalars(
-                    select(App)
-                    .where(App.status == "normal")
-                    .order_by(App.created_at.desc())
-                    .limit(per_page)
-                    .offset((page - 1) * per_page)
-                ).all()
-            if not apps:
-                break
-        except SQLAlchemyError:
-            raise
-
-        page += 1
-        for app in apps:
-            total_count = total_count + 1
-            click.echo(
-                f"Processing the {total_count} app {app.id}. " + f"{create_count} created, {skipped_count} skipped."
-            )
-            try:
-                click.echo(f"Creating app annotation index: {app.id}")
-                with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-                    app_annotation_setting = session.scalar(
-                        select(AppAnnotationSetting).where(AppAnnotationSetting.app_id == app.id).limit(1)
-                    )
-
-                    if not app_annotation_setting:
-                        skipped_count = skipped_count + 1
-                        click.echo(f"App annotation setting disabled: {app.id}")
-                        continue
-                    # get dataset_collection_binding info
-                    dataset_collection_binding = session.scalar(
-                        select(DatasetCollectionBinding).where(
-                            DatasetCollectionBinding.id == app_annotation_setting.collection_binding_id
-                        )
-                    )
-                    if not dataset_collection_binding:
-                        click.echo(f"App annotation collection binding not found: {app.id}")
-                        continue
-                    annotations = session.scalars(
-                        select(MessageAnnotation).where(MessageAnnotation.app_id == app.id)
-                    ).all()
-                dataset = Dataset(
-                    id=app.id,
-                    tenant_id=app.tenant_id,
-                    indexing_technique=IndexTechniqueType.HIGH_QUALITY,
-                    embedding_model_provider=dataset_collection_binding.provider_name,
-                    embedding_model=dataset_collection_binding.model_name,
-                    collection_binding_id=dataset_collection_binding.id,
-                )
-                documents = []
-                if annotations:
-                    for annotation in annotations:
-                        document = Document(
-                            page_content=annotation.question_text,
-                            metadata={"annotation_id": annotation.id, "app_id": app.id, "doc_id": annotation.id},
-                        )
-                        documents.append(document)
-
-                vector = Vector(dataset, attributes=["doc_id", "annotation_id", "app_id"])
-                click.echo(f"Migrating annotations for app: {app.id}.")
-
-                try:
-                    vector.delete()
-                    click.echo(click.style(f"Deleted vector index for app {app.id}.", fg="green"))
-                except Exception as e:
-                    click.echo(click.style(f"Failed to delete vector index for app {app.id}.", fg="red"))
-                    raise e
-                if documents:
-                    try:
-                        click.echo(
-                            click.style(
-                                f"Creating vector index with {len(documents)} annotations for app {app.id}.",
-                                fg="green",
-                            )
-                        )
-                        vector.create(documents)
-                        click.echo(click.style(f"Created vector index for app {app.id}.", fg="green"))
-                    except Exception as e:
-                        click.echo(click.style(f"Failed to created vector index for app {app.id}.", fg="red"))
-                        raise e
-                click.echo(f"Successfully migrated app annotation {app.id}.")
-                create_count += 1
-            except Exception as e:
-                click.echo(
-                    click.style(f"Error creating app annotation index: {e.__class__.__name__} {str(e)}", fg="red")
-                )
-                continue
-
-    click.echo(
-        click.style(
-            f"Migration complete. Created {create_count} app annotation indexes. Skipped {skipped_count} apps.",
-            fg="green",
-        )
-    )
-
-
-def migrate_knowledge_vector_database():
-    """
-    Migrate vector database datas to target vector database .
-    """
-    click.echo(click.style("Starting vector database migration.", fg="green"))
-    create_count = 0
-    skipped_count = 0
-    total_count = 0
-    vector_type = dify_config.VECTOR_STORE
-    upper_collection_vector_types = {
-        VectorType.MILVUS,
-        VectorType.PGVECTOR,
-        VectorType.VASTBASE,
-        VectorType.RELYT,
-        VectorType.WEAVIATE,
-        VectorType.ORACLE,
-        VectorType.ELASTICSEARCH,
-        VectorType.OPENGAUSS,
-        VectorType.TABLESTORE,
-        VectorType.MATRIXONE,
-    }
-    lower_collection_vector_types = {
-        VectorType.ANALYTICDB,
-        VectorType.HOLOGRES,
-        VectorType.CHROMA,
-        VectorType.MYSCALE,
-        VectorType.PGVECTO_RS,
-        VectorType.TIDB_VECTOR,
-        VectorType.OPENSEARCH,
-        VectorType.TENCENT,
-        VectorType.BAIDU,
-        VectorType.VIKINGDB,
-        VectorType.UPSTASH,
-        VectorType.COUCHBASE,
-        VectorType.OCEANBASE,
-    }
-    page = 1
-    while True:
-        try:
-            stmt = (
-                select(Dataset)
-                .where(Dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY)
-                .order_by(Dataset.created_at.desc())
-            )
-
-            datasets = db.paginate(select=stmt, page=page, per_page=50, max_per_page=50, error_out=False)
-            if not datasets.items:
-                break
-        except SQLAlchemyError:
-            raise
-
-        page += 1
-        for dataset in datasets:
-            total_count = total_count + 1
-            click.echo(
-                f"Processing the {total_count} dataset {dataset.id}. {create_count} created, {skipped_count} skipped."
-            )
-            try:
-                click.echo(f"Creating dataset vector database index: {dataset.id}")
-                if dataset.index_struct_dict:
-                    if dataset.index_struct_dict["type"] == vector_type:
-                        skipped_count = skipped_count + 1
-                        continue
-                collection_name = ""
-                dataset_id = dataset.id
-                if vector_type in upper_collection_vector_types:
-                    collection_name = Dataset.gen_collection_name_by_id(dataset_id)
-                elif vector_type == VectorType.QDRANT:
-                    if dataset.collection_binding_id:
-                        dataset_collection_binding = db.session.execute(
-                            select(DatasetCollectionBinding).where(
-                                DatasetCollectionBinding.id == dataset.collection_binding_id
-                            )
-                        ).scalar_one_or_none()
-                        if dataset_collection_binding:
-                            collection_name = dataset_collection_binding.collection_name
-                        else:
-                            raise ValueError("Dataset Collection Binding not found")
-                    else:
-                        collection_name = Dataset.gen_collection_name_by_id(dataset_id)
-
-                elif vector_type in lower_collection_vector_types:
-                    collection_name = Dataset.gen_collection_name_by_id(dataset_id).lower()
-                else:
-                    raise ValueError(f"Vector store {vector_type} is not supported.")
-
-                index_struct_dict = {"type": vector_type, "vector_store": {"class_prefix": collection_name}}
-                dataset.index_struct = json.dumps(index_struct_dict)
-                vector = Vector(dataset)
-                click.echo(f"Migrating dataset {dataset.id}.")
-
-                try:
-                    vector.delete()
-                    click.echo(
-                        click.style(f"Deleted vector index {collection_name} for dataset {dataset.id}.", fg="green")
-                    )
-                except Exception as e:
-                    click.echo(
-                        click.style(
-                            f"Failed to delete vector index {collection_name} for dataset {dataset.id}.", fg="red"
-                        )
-                    )
-                    raise e
-
-                dataset_documents = db.session.scalars(
-                    select(DatasetDocument).where(
-                        DatasetDocument.dataset_id == dataset.id,
-                        DatasetDocument.indexing_status == IndexingStatus.COMPLETED,
-                        DatasetDocument.enabled == True,
-                        DatasetDocument.archived == False,
-                    )
-                ).all()
-
-                documents = []
-                segments_count = 0
-                for dataset_document in dataset_documents:
-                    segments = db.session.scalars(
-                        select(DocumentSegment).where(
-                            DocumentSegment.document_id == dataset_document.id,
-                            DocumentSegment.status == SegmentStatus.COMPLETED,
-                            DocumentSegment.enabled == True,
-                        )
-                    ).all()
-
-                    for segment in segments:
-                        document = Document(
-                            page_content=segment.content,
-                            metadata={
-                                "doc_id": segment.index_node_id,
-                                "doc_hash": segment.index_node_hash,
-                                "document_id": segment.document_id,
-                                "dataset_id": segment.dataset_id,
-                            },
-                        )
-                        if dataset_document.doc_form == IndexStructureType.PARENT_CHILD_INDEX:
-                            child_chunks = segment.get_child_chunks()
-                            if child_chunks:
-                                child_documents = []
-                                for child_chunk in child_chunks:
-                                    child_document = ChildDocument(
-                                        page_content=child_chunk.content,
-                                        metadata={
-                                            "doc_id": child_chunk.index_node_id,
-                                            "doc_hash": child_chunk.index_node_hash,
-                                            "document_id": segment.document_id,
-                                            "dataset_id": segment.dataset_id,
-                                        },
-                                    )
-                                    child_documents.append(child_document)
-                                document.children = child_documents
-
-                        documents.append(document)
-                        segments_count = segments_count + 1
-
-                if documents:
-                    try:
-                        click.echo(
-                            click.style(
-                                f"Creating vector index with {len(documents)} documents of {segments_count}"
-                                f" segments for dataset {dataset.id}.",
-                                fg="green",
-                            )
-                        )
-                        all_child_documents = []
-                        for doc in documents:
-                            if doc.children:
-                                all_child_documents.extend(doc.children)
-                        vector.create(documents)
-                        if all_child_documents:
-                            vector.create(all_child_documents)
-                        click.echo(click.style(f"Created vector index for dataset {dataset.id}.", fg="green"))
-                    except Exception as e:
-                        click.echo(click.style(f"Failed to created vector index for dataset {dataset.id}.", fg="red"))
-                        raise e
-                db.session.add(dataset)
-                db.session.commit()
-                click.echo(f"Successfully migrated dataset {dataset.id}.")
-                create_count += 1
-            except Exception as e:
-                db.session.rollback()
-                click.echo(click.style(f"Error creating dataset index: {e.__class__.__name__} {str(e)}", fg="red"))
-                continue
-
-    click.echo(
-        click.style(
-            f"Migration complete. Created {create_count} dataset indexes. Skipped {skipped_count} datasets.", fg="green"
-        )
-    )
-
-
-@click.command("add-qdrant-index", help="Add Qdrant index.")
-@click.option("--field", default="metadata.doc_id", prompt=False, help="Index field , default is metadata.doc_id.")
-def add_qdrant_index(field: str):
-    click.echo(click.style("Starting Qdrant index creation.", fg="green"))
-
-    create_count = 0
-
-    try:
-        bindings = db.session.scalars(select(DatasetCollectionBinding)).all()
-        if not bindings:
-            click.echo(click.style("No dataset collection bindings found.", fg="red"))
-            return
-        import qdrant_client
-        from qdrant_client.http.exceptions import UnexpectedResponse
-        from qdrant_client.http.models import PayloadSchemaType
-
-        from core.rag.datasource.vdb.qdrant.qdrant_vector import PathQdrantParams, QdrantConfig
-
-        for binding in bindings:
-            if dify_config.QDRANT_URL is None:
-                raise ValueError("Qdrant URL is required.")
-            qdrant_config = QdrantConfig(
-                endpoint=dify_config.QDRANT_URL,
-                api_key=dify_config.QDRANT_API_KEY,
-                root_path=current_app.root_path,
-                timeout=dify_config.QDRANT_CLIENT_TIMEOUT,
-                grpc_port=dify_config.QDRANT_GRPC_PORT,
-                prefer_grpc=dify_config.QDRANT_GRPC_ENABLED,
-            )
-            try:
-                params = qdrant_config.to_qdrant_params()
-                # Check the type before using
-                if isinstance(params, PathQdrantParams):
-                    # PathQdrantParams case
-                    client = qdrant_client.QdrantClient(path=params.path)
-                else:
-                    # UrlQdrantParams case - params is UrlQdrantParams
-                    client = qdrant_client.QdrantClient(
-                        url=params.url,
-                        api_key=params.api_key,
-                        timeout=int(params.timeout),
-                        verify=params.verify,
-                        grpc_port=params.grpc_port,
-                        prefer_grpc=params.prefer_grpc,
-                    )
-                # create payload index
-                client.create_payload_index(binding.collection_name, field, field_schema=PayloadSchemaType.KEYWORD)
-                create_count += 1
-            except UnexpectedResponse as e:
-                # Collection does not exist, so return
-                if e.status_code == 404:
-                    click.echo(click.style(f"Collection not found: {binding.collection_name}.", fg="red"))
-                    continue
-                # Some other error occurred, so re-raise the exception
-                else:
-                    click.echo(
-                        click.style(
-                            f"Failed to create Qdrant index for collection: {binding.collection_name}.", fg="red"
-                        )
-                    )
-
-    except Exception:
-        click.echo(click.style("Failed to create Qdrant client.", fg="red"))
-
-    click.echo(click.style(f"Index creation complete. Created {create_count} collection indexes.", fg="green"))
-
-
-@click.command("old-metadata-migration", help="Old metadata migration.")
-def old_metadata_migration():
-    """
-    Old metadata migration.
-    """
-    click.echo(click.style("Starting old metadata migration.", fg="green"))
-
-    page = 1
-    while True:
-        try:
-            stmt = (
-                select(DatasetDocument)
-                .where(DatasetDocument.doc_metadata.is_not(None))
-                .order_by(DatasetDocument.created_at.desc())
-            )
-            documents = db.paginate(select=stmt, page=page, per_page=50, max_per_page=50, error_out=False)
-        except SQLAlchemyError:
-            raise
-        if not documents:
-            break
-        for document in documents:
-            if document.doc_metadata:
-                doc_metadata = document.doc_metadata
-                for key in doc_metadata:
-                    for field in BuiltInField:
-                        if field.value == key:
-                            break
-                    else:
-                        dataset_metadata = db.session.scalar(
-                            select(DatasetMetadata)
-                            .where(DatasetMetadata.dataset_id == document.dataset_id, DatasetMetadata.name == key)
-                            .limit(1)
-                        )
-                        if not dataset_metadata:
-                            dataset_metadata = DatasetMetadata(
-                                tenant_id=document.tenant_id,
-                                dataset_id=document.dataset_id,
-                                name=key,
-                                type=DatasetMetadataType.STRING,
-                                created_by=document.created_by,
-                            )
-                            db.session.add(dataset_metadata)
-                            db.session.flush()
-                            dataset_metadata_binding: DatasetMetadataBinding | None = DatasetMetadataBinding(
-                                tenant_id=document.tenant_id,
-                                dataset_id=document.dataset_id,
-                                metadata_id=dataset_metadata.id,
-                                document_id=document.id,
-                                created_by=document.created_by,
-                            )
-                            db.session.add(dataset_metadata_binding)
-                        else:
-                            dataset_metadata_binding = db.session.scalar(
-                                select(DatasetMetadataBinding)
-                                .where(
-                                    DatasetMetadataBinding.dataset_id == document.dataset_id,
-                                    DatasetMetadataBinding.document_id == document.id,
-                                    DatasetMetadataBinding.metadata_id == dataset_metadata.id,
-                                )
-                                .limit(1)
-                            )
-                            if not dataset_metadata_binding:
-                                dataset_metadata_binding = DatasetMetadataBinding(
-                                    tenant_id=document.tenant_id,
-                                    dataset_id=document.dataset_id,
-                                    metadata_id=dataset_metadata.id,
-                                    document_id=document.id,
-                                    created_by=document.created_by,
-                                )
-                                db.session.add(dataset_metadata_binding)
-                        db.session.commit()
-        page += 1
-    click.echo(click.style("Old metadata migration completed.", fg="green"))
-
-```
-
-### api/commands/__init__.py
-```py
-"""
-CLI command modules extracted from `commands.py`.
-"""
-
-from .account import create_tenant, reset_email, reset_password
-from .plugin import (
-    extract_plugins,
-    extract_unique_plugins,
-    install_plugins,
-    install_rag_pipeline_plugins,
-    migrate_data_for_plugin,
-    setup_datasource_oauth_client,
-    setup_system_tool_oauth_client,
-    setup_system_trigger_oauth_client,
-    transform_datasource_credentials,
-)
-from .retention import (
-    archive_workflow_runs,
-    clean_expired_messages,
-    clean_workflow_runs,
-    cleanup_orphaned_draft_variables,
-    clear_free_plan_tenant_expired_logs,
-    delete_archived_workflow_runs,
-    export_app_messages,
-    restore_workflow_runs,
-)
-from .storage import clear_orphaned_file_records, file_usage, migrate_oss, remove_orphaned_files_on_storage
-from .system import convert_to_agent_apps, fix_app_site_missing, reset_encrypt_key_pair, upgrade_db
-from .vector import (
-    add_qdrant_index,
-    migrate_annotation_vector_database,
-    migrate_knowledge_vector_database,
-    old_metadata_migration,
-    vdb_migrate,
-)
-
-__all__ = [
-    "add_qdrant_index",
-    "archive_workflow_runs",
-    "clean_expired_messages",
-    "clean_workflow_runs",
-    "cleanup_orphaned_draft_variables",
-    "clear_free_plan_tenant_expired_logs",
-    "clear_orphaned_file_records",
-    "convert_to_agent_apps",
-    "create_tenant",
-    "delete_archived_workflow_runs",
-    "export_app_messages",
-    "extract_plugins",
-    "extract_unique_plugins",
-    "file_usage",
-    "fix_app_site_missing",
-    "install_plugins",
-    "install_rag_pipeline_plugins",
-    "migrate_annotation_vector_database",
-    "migrate_data_for_plugin",
-    "migrate_knowledge_vector_database",
-    "migrate_oss",
-    "old_metadata_migration",
-    "remove_orphaned_files_on_storage",
-    "reset_email",
-    "reset_encrypt_key_pair",
-    "reset_password",
-    "restore_workflow_runs",
-    "setup_datasource_oauth_client",
-    "setup_system_tool_oauth_client",
-    "setup_system_trigger_oauth_client",
-    "transform_datasource_credentials",
-    "upgrade_db",
-    "vdb_migrate",
-]
-
-```
-
-### api/commands/retention.py
-```py
-import datetime
 import logging
 import time
-from typing import TypedDict
+from collections.abc import Sequence
+from typing import Any, Protocol
 
 import click
-import sqlalchemy as sa
+from celery import current_app, shared_task
 
-from extensions.ext_database import db
+from configs import dify_config
+from core.db.session_factory import session_factory
+from core.entities.document_task import DocumentTask
+from core.indexing_runner import DocumentIsPausedError, IndexingRunner
+from core.rag.index_processor.constant.index_type import IndexStructureType, IndexTechniqueType
+from core.rag.pipeline.queue import TenantIsolatedTaskQueue
+from enums.cloud_plan import CloudPlan
 from libs.datetime_utils import naive_utc_now
-from services.clear_free_plan_tenant_expired_logs import ClearFreePlanTenantExpiredLogs
-from services.retention.conversation.messages_clean_policy import create_message_clean_policy
-from services.retention.conversation.messages_clean_service import MessagesCleanService
-from services.retention.workflow_run.clear_free_plan_expired_workflow_run_logs import WorkflowRunCleanup
-from tasks.remove_app_and_related_data_task import delete_draft_variables_batch
+from models.dataset import Dataset, Document
+from models.enums import IndexingStatus
+from services.feature_service import FeatureService
+from tasks.generate_summary_index_task import generate_summary_index_task
 
 logger = logging.getLogger(__name__)
 
 
-@click.command("clear-free-plan-tenant-expired-logs", help="Clear free plan tenant expired logs.")
-@click.option("--days", prompt=True, help="The days to clear free plan tenant expired logs.", default=30)
-@click.option("--batch", prompt=True, help="The batch size to clear free plan tenant expired logs.", default=100)
-@click.option(
-    "--tenant_ids",
-    prompt=True,
-    multiple=True,
-    help="The tenant ids to clear free plan tenant expired logs.",
-)
-def clear_free_plan_tenant_expired_logs(days: int, batch: int, tenant_ids: list[str]):
+class CeleryTaskLike(Protocol):
+    def delay(self, *args: Any, **kwargs: Any) -> Any: ...
+
+    def apply_async(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
+@shared_task(queue="dataset")
+def document_indexing_task(dataset_id: str, document_ids: list):
     """
-    Clear free plan tenant expired logs.
+    Async process document
+    :param dataset_id:
+    :param document_ids:
+
+    .. warning:: TO BE DEPRECATED
+        This function will be deprecated and removed in a future version.
+        Use normal_document_indexing_task or priority_document_indexing_task instead.
+
+    Usage: document_indexing_task.delay(dataset_id, document_ids)
     """
-    click.echo(click.style("Starting clear free plan tenant expired logs.", fg="white"))
-
-    ClearFreePlanTenantExpiredLogs.process(days, batch, tenant_ids)
-
-    click.echo(click.style("Clear free plan tenant expired logs completed.", fg="green"))
+    logger.warning("document indexing legacy mode received: %s - %s", dataset_id, document_ids)
+    _document_indexing(dataset_id, document_ids)
 
 
-@click.command("clean-workflow-runs", help="Clean expired workflow runs and related data for free tenants.")
-@click.option(
-    "--before-days",
-    "--days",
-    default=30,
-    show_default=True,
-    type=click.IntRange(min=0),
-    help="Delete workflow runs created before N days ago.",
-)
-@click.option("--batch-size", default=200, show_default=True, help="Batch size for selecting workflow runs.")
-@click.option(
-    "--from-days-ago",
-    default=None,
-    type=click.IntRange(min=0),
-    help="Lower bound in days ago (older). Must be paired with --to-days-ago.",
-)
-@click.option(
-    "--to-days-ago",
-    default=None,
-    type=click.IntRange(min=0),
-    help="Upper bound in days ago (newer). Must be paired with --from-days-ago.",
-)
-@click.option(
-    "--start-from",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional lower bound (inclusive) for created_at; must be paired with --end-before.",
-)
-@click.option(
-    "--end-before",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional upper bound (exclusive) for created_at; must be paired with --start-from.",
-)
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    help="Preview cleanup results without deleting any workflow run data.",
-)
-def clean_workflow_runs(
-    before_days: int,
-    batch_size: int,
-    from_days_ago: int | None,
-    to_days_ago: int | None,
-    start_from: datetime.datetime | None,
-    end_before: datetime.datetime | None,
-    dry_run: bool,
-):
+def _document_indexing(dataset_id: str, document_ids: Sequence[str]):
     """
-    Clean workflow runs and related workflow data for free tenants.
+    Process document for tasks
+    :param dataset_id:
+    :param document_ids:
+
+    Usage: _document_indexing(dataset_id, document_ids)
     """
-    from extensions.otel.runtime import flush_telemetry
-
-    if (start_from is None) ^ (end_before is None):
-        raise click.UsageError("--start-from and --end-before must be provided together.")
-
-    if (from_days_ago is None) ^ (to_days_ago is None):
-        raise click.UsageError("--from-days-ago and --to-days-ago must be provided together.")
-
-    if from_days_ago is not None and to_days_ago is not None:
-        if start_from or end_before:
-            raise click.UsageError("Choose either day offsets or explicit dates, not both.")
-        if from_days_ago <= to_days_ago:
-            raise click.UsageError("--from-days-ago must be greater than --to-days-ago.")
-        now = datetime.datetime.now()
-        start_from = now - datetime.timedelta(days=from_days_ago)
-        end_before = now - datetime.timedelta(days=to_days_ago)
-        before_days = 0
-
-    if from_days_ago is not None and to_days_ago is not None:
-        task_label = f"{from_days_ago}to{to_days_ago}"
-    elif start_from is None:
-        task_label = f"before-{before_days}"
-    else:
-        task_label = "custom"
-
-    start_time = datetime.datetime.now(datetime.UTC)
-    click.echo(click.style(f"Starting workflow run cleanup at {start_time.isoformat()}.", fg="white"))
-
-    try:
-        WorkflowRunCleanup(
-            days=before_days,
-            batch_size=batch_size,
-            start_from=start_from,
-            end_before=end_before,
-            dry_run=dry_run,
-            task_label=task_label,
-        ).run()
-    finally:
-        flush_telemetry()
-
-    end_time = datetime.datetime.now(datetime.UTC)
-    elapsed = end_time - start_time
-    click.echo(
-        click.style(
-            f"Workflow run cleanup completed. start={start_time.isoformat()} "
-            f"end={end_time.isoformat()} duration={elapsed}",
-            fg="green",
-        )
-    )
-
-
-@click.command(
-    "archive-workflow-runs",
-    help="Archive workflow runs for paid plan tenants to S3-compatible storage.",
-)
-@click.option("--tenant-ids", default=None, help="Optional comma-separated tenant IDs for grayscale rollout.")
-@click.option("--before-days", default=90, show_default=True, help="Archive runs older than N days.")
-@click.option(
-    "--from-days-ago",
-    default=None,
-    type=click.IntRange(min=0),
-    help="Lower bound in days ago (older). Must be paired with --to-days-ago.",
-)
-@click.option(
-    "--to-days-ago",
-    default=None,
-    type=click.IntRange(min=0),
-    help="Upper bound in days ago (newer). Must be paired with --from-days-ago.",
-)
-@click.option(
-    "--start-from",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Archive runs created at or after this timestamp (UTC if no timezone).",
-)
-@click.option(
-    "--end-before",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Archive runs created before this timestamp (UTC if no timezone).",
-)
-@click.option("--batch-size", default=100, show_default=True, help="Batch size for processing.")
-@click.option("--workers", default=1, show_default=True, type=int, help="Concurrent workflow runs to archive.")
-@click.option("--limit", default=None, type=int, help="Maximum number of runs to archive.")
-@click.option("--dry-run", is_flag=True, help="Preview without archiving.")
-@click.option("--delete-after-archive", is_flag=True, help="Delete runs and related data after archiving.")
-def archive_workflow_runs(
-    tenant_ids: str | None,
-    before_days: int,
-    from_days_ago: int | None,
-    to_days_ago: int | None,
-    start_from: datetime.datetime | None,
-    end_before: datetime.datetime | None,
-    batch_size: int,
-    workers: int,
-    limit: int | None,
-    dry_run: bool,
-    delete_after_archive: bool,
-):
-    """
-    Archive workflow runs for paid plan tenants older than the specified days.
-
-    This command archives the following tables to storage:
-    - workflow_node_executions
-    - workflow_node_execution_offload
-    - workflow_pauses
-    - workflow_pause_reasons
-    - workflow_trigger_logs
-
-    The workflow_runs and workflow_app_logs tables are preserved for UI listing.
-    """
-    from services.retention.workflow_run.archive_paid_plan_workflow_run import WorkflowRunArchiver
-
-    run_started_at = datetime.datetime.now(datetime.UTC)
-    click.echo(
-        click.style(
-            f"Starting workflow run archiving at {run_started_at.isoformat()}.",
-            fg="white",
-        )
-    )
-
-    if (start_from is None) ^ (end_before is None):
-        click.echo(click.style("start-from and end-before must be provided together.", fg="red"))
-        return
-
-    if (from_days_ago is None) ^ (to_days_ago is None):
-        click.echo(click.style("from-days-ago and to-days-ago must be provided together.", fg="red"))
-        return
-
-    if from_days_ago is not None and to_days_ago is not None:
-        if start_from or end_before:
-            click.echo(click.style("Choose either day offsets or explicit dates, not both.", fg="red"))
-            return
-        if from_days_ago <= to_days_ago:
-            click.echo(click.style("from-days-ago must be greater than to-days-ago.", fg="red"))
-            return
-        now = datetime.datetime.now()
-        start_from = now - datetime.timedelta(days=from_days_ago)
-        end_before = now - datetime.timedelta(days=to_days_ago)
-        before_days = 0
-
-    if start_from and end_before and start_from >= end_before:
-        click.echo(click.style("start-from must be earlier than end-before.", fg="red"))
-        return
-    if workers < 1:
-        click.echo(click.style("workers must be at least 1.", fg="red"))
-        return
-
-    archiver = WorkflowRunArchiver(
-        days=before_days,
-        batch_size=batch_size,
-        start_from=start_from,
-        end_before=end_before,
-        workers=workers,
-        tenant_ids=[tid.strip() for tid in tenant_ids.split(",")] if tenant_ids else None,
-        limit=limit,
-        dry_run=dry_run,
-        delete_after_archive=delete_after_archive,
-    )
-    summary = archiver.run()
-    click.echo(
-        click.style(
-            f"Summary: processed={summary.total_runs_processed}, archived={summary.runs_archived}, "
-            f"skipped={summary.runs_skipped}, failed={summary.runs_failed}, "
-            f"time={summary.total_elapsed_time:.2f}s",
-            fg="cyan",
-        )
-    )
-
-    run_finished_at = datetime.datetime.now(datetime.UTC)
-    elapsed = run_finished_at - run_started_at
-    click.echo(
-        click.style(
-            f"Workflow run archiving completed. start={run_started_at.isoformat()} "
-            f"end={run_finished_at.isoformat()} duration={elapsed}",
-            fg="green",
-        )
-    )
-
-
-@click.command(
-    "restore-workflow-runs",
-    help="Restore archived workflow runs from S3-compatible storage.",
-)
-@click.option(
-    "--tenant-ids",
-    required=False,
-    help="Tenant IDs (comma-separated).",
-)
-@click.option("--run-id", required=False, help="Workflow run ID to restore.")
-@click.option(
-    "--start-from",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional lower bound (inclusive) for created_at; must be paired with --end-before.",
-)
-@click.option(
-    "--end-before",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional upper bound (exclusive) for created_at; must be paired with --start-from.",
-)
-@click.option("--workers", default=1, show_default=True, type=int, help="Concurrent workflow runs to restore.")
-@click.option("--limit", type=int, default=100, show_default=True, help="Maximum number of runs to restore.")
-@click.option("--dry-run", is_flag=True, help="Preview without restoring.")
-def restore_workflow_runs(
-    tenant_ids: str | None,
-    run_id: str | None,
-    start_from: datetime.datetime | None,
-    end_before: datetime.datetime | None,
-    workers: int,
-    limit: int,
-    dry_run: bool,
-):
-    """
-    Restore an archived workflow run from storage to the database.
-
-    This restores the following tables:
-    - workflow_node_executions
-    - workflow_node_execution_offload
-    - workflow_pauses
-    - workflow_pause_reasons
-    - workflow_trigger_logs
-    """
-    from services.retention.workflow_run.restore_archived_workflow_run import WorkflowRunRestore
-
-    parsed_tenant_ids = None
-    if tenant_ids:
-        parsed_tenant_ids = [tid.strip() for tid in tenant_ids.split(",") if tid.strip()]
-        if not parsed_tenant_ids:
-            raise click.BadParameter("tenant-ids must not be empty")
-
-    if (start_from is None) ^ (end_before is None):
-        raise click.UsageError("--start-from and --end-before must be provided together.")
-    if run_id is None and (start_from is None or end_before is None):
-        raise click.UsageError("--start-from and --end-before are required for batch restore.")
-    if workers < 1:
-        raise click.BadParameter("workers must be at least 1")
-
-    start_time = datetime.datetime.now(datetime.UTC)
-    click.echo(
-        click.style(
-            f"Starting restore of workflow run {run_id} at {start_time.isoformat()}.",
-            fg="white",
-        )
-    )
-
-    restorer = WorkflowRunRestore(dry_run=dry_run, workers=workers)
-    if run_id:
-        results = [restorer.restore_by_run_id(run_id)]
-    else:
-        assert start_from is not None
-        assert end_before is not None
-        results = restorer.restore_batch(
-            parsed_tenant_ids,
-            start_date=start_from,
-            end_date=end_before,
-            limit=limit,
-        )
-
-    end_time = datetime.datetime.now(datetime.UTC)
-    elapsed = end_time - start_time
-
-    successes = sum(1 for result in results if result.success)
-    failures = len(results) - successes
-
-    if failures == 0:
-        click.echo(
-            click.style(
-                f"Restore completed successfully. success={successes} duration={elapsed}",
-                fg="green",
-            )
-        )
-    else:
-        click.echo(
-            click.style(
-                f"Restore completed with failures. success={successes} failed={failures} duration={elapsed}",
-                fg="red",
-            )
-        )
-
-
-@click.command(
-    "delete-archived-workflow-runs",
-    help="Delete archived workflow runs from the database.",
-)
-@click.option(
-    "--tenant-ids",
-    required=False,
-    help="Tenant IDs (comma-separated).",
-)
-@click.option("--run-id", required=False, help="Workflow run ID to delete.")
-@click.option(
-    "--start-from",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional lower bound (inclusive) for created_at; must be paired with --end-before.",
-)
-@click.option(
-    "--end-before",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional upper bound (exclusive) for created_at; must be paired with --start-from.",
-)
-@click.option("--limit", type=int, default=100, show_default=True, help="Maximum number of runs to delete.")
-@click.option("--dry-run", is_flag=True, help="Preview without deleting.")
-def delete_archived_workflow_runs(
-    tenant_ids: str | None,
-    run_id: str | None,
-    start_from: datetime.datetime | None,
-    end_before: datetime.datetime | None,
-    limit: int,
-    dry_run: bool,
-):
-    """
-    Delete archived workflow runs from the database.
-    """
-    from services.retention.workflow_run.delete_archived_workflow_run import ArchivedWorkflowRunDeletion
-
-    parsed_tenant_ids = None
-    if tenant_ids:
-        parsed_tenant_ids = [tid.strip() for tid in tenant_ids.split(",") if tid.strip()]
-        if not parsed_tenant_ids:
-            raise click.BadParameter("tenant-ids must not be empty")
-
-    if (start_from is None) ^ (end_before is None):
-        raise click.UsageError("--start-from and --end-before must be provided together.")
-    if run_id is None and (start_from is None or end_before is None):
-        raise click.UsageError("--start-from and --end-before are required for batch delete.")
-
-    start_time = datetime.datetime.now(datetime.UTC)
-    target_desc = f"workflow run {run_id}" if run_id else "workflow runs"
-    click.echo(
-        click.style(
-            f"Starting delete of {target_desc} at {start_time.isoformat()}.",
-            fg="white",
-        )
-    )
-
-    deleter = ArchivedWorkflowRunDeletion(dry_run=dry_run)
-    if run_id:
-        results = [deleter.delete_by_run_id(run_id)]
-    else:
-        assert start_from is not None
-        assert end_before is not None
-        results = deleter.delete_batch(
-            parsed_tenant_ids,
-            start_date=start_from,
-            end_date=end_before,
-            limit=limit,
-        )
-
-    for result in results:
-        if result.success:
-            click.echo(
-                click.style(
-                    f"{'[DRY RUN] Would delete' if dry_run else 'Deleted'} "
-                    f"workflow run {result.run_id} (tenant={result.tenant_id})",
-                    fg="green",
-                )
-            )
-        else:
-            click.echo(
-                click.style(
-                    f"Failed to delete workflow run {result.run_id}: {result.error}",
-                    fg="red",
-                )
-            )
-
-    end_time = datetime.datetime.now(datetime.UTC)
-    elapsed = end_time - start_time
-
-    successes = sum(1 for result in results if result.success)
-    failures = len(results) - successes
-
-    if failures == 0:
-        click.echo(
-            click.style(
-                f"Delete completed successfully. success={successes} duration={elapsed}",
-                fg="green",
-            )
-        )
-    else:
-        click.echo(
-            click.style(
-                f"Delete completed with failures. success={successes} failed={failures} duration={elapsed}",
-                fg="red",
-            )
-        )
-
-
-def _find_orphaned_draft_variables(batch_size: int = 1000) -> list[str]:
-    """
-    Find draft variables that reference non-existent apps.
-
-    Args:
-        batch_size: Maximum number of orphaned app IDs to return
-
-    Returns:
-        List of app IDs that have draft variables but don't exist in the apps table
-    """
-    query = """
-        SELECT DISTINCT wdv.app_id
-        FROM workflow_draft_variables AS wdv
-        WHERE NOT EXISTS(
-            SELECT 1 FROM apps WHERE apps.id = wdv.app_id
-        )
-        LIMIT :batch_size
-    """
-
-    with db.engine.connect() as conn:
-        result = conn.execute(sa.text(query), {"batch_size": batch_size})
-        return [row[0] for row in result]
-
-
-class _AppOrphanCounts(TypedDict):
-    variables: int
-    files: int
-
-
-class OrphanedDraftVariableStatsDict(TypedDict):
-    total_orphaned_variables: int
-    total_orphaned_files: int
-    orphaned_app_count: int
-    orphaned_by_app: dict[str, _AppOrphanCounts]
-
-
-def _count_orphaned_draft_variables() -> OrphanedDraftVariableStatsDict:
-    """
-    Count orphaned draft variables by app, including associated file counts.
-
-    Returns:
-        Dictionary with statistics about orphaned variables and files
-    """
-    # Count orphaned variables by app
-    variables_query = """
-        SELECT
-            wdv.app_id,
-            COUNT(*) as variable_count,
-            COUNT(wdv.file_id) as file_count
-        FROM workflow_draft_variables AS wdv
-        WHERE NOT EXISTS(
-            SELECT 1 FROM apps WHERE apps.id = wdv.app_id
-        )
-        GROUP BY wdv.app_id
-        ORDER BY variable_count DESC
-    """
-
-    with db.engine.connect() as conn:
-        result = conn.execute(sa.text(variables_query))
-        orphaned_by_app: dict[str, _AppOrphanCounts] = {}
-        total_files = 0
-
-        for row in result:
-            app_id, variable_count, file_count = row
-            orphaned_by_app[app_id] = {"variables": variable_count, "files": file_count}
-            total_files += file_count
-
-        total_orphaned = sum(app_data["variables"] for app_data in orphaned_by_app.values())
-        app_count = len(orphaned_by_app)
-
-        return {
-            "total_orphaned_variables": total_orphaned,
-            "total_orphaned_files": total_files,
-            "orphaned_app_count": app_count,
-            "orphaned_by_app": orphaned_by_app,
-        }
-
-
-@click.command()
-@click.option("--dry-run", is_flag=True, help="Show what would be deleted without actually deleting")
-@click.option("--batch-size", default=1000, help="Number of records to process per batch (default 1000)")
-@click.option("--max-apps", default=None, type=int, help="Maximum number of apps to process (default: no limit)")
-@click.option("-f", "--force", is_flag=True, help="Skip user confirmation and force the command to execute.")
-def cleanup_orphaned_draft_variables(
-    dry_run: bool,
-    batch_size: int,
-    max_apps: int | None,
-    force: bool = False,
-):
-    """
-    Clean up orphaned draft variables from the database.
-
-    This script finds and removes draft variables that belong to apps
-    that no longer exist in the database.
-    """
-    logger = logging.getLogger(__name__)
-
-    # Get statistics
-    stats = _count_orphaned_draft_variables()
-
-    logger.info("Found %s orphaned draft variables", stats["total_orphaned_variables"])
-    logger.info("Found %s associated offload files", stats["total_orphaned_files"])
-    logger.info("Across %s non-existent apps", stats["orphaned_app_count"])
-
-    if stats["total_orphaned_variables"] == 0:
-        logger.info("No orphaned draft variables found. Exiting.")
-        return
-
-    if dry_run:
-        logger.info("DRY RUN: Would delete the following:")
-        for app_id, data in sorted(stats["orphaned_by_app"].items(), key=lambda x: x[1]["variables"], reverse=True)[
-            :10
-        ]:  # Show top 10
-            logger.info("  App %s: %s variables, %s files", app_id, data["variables"], data["files"])
-        if len(stats["orphaned_by_app"]) > 10:
-            logger.info("  ... and %s more apps", len(stats["orphaned_by_app"]) - 10)
-        return
-
-    # Confirm deletion
-    if not force:
-        click.confirm(
-            f"Are you sure you want to delete {stats['total_orphaned_variables']} "
-            f"orphaned draft variables and {stats['total_orphaned_files']} associated files "
-            f"from {stats['orphaned_app_count']} apps?",
-            abort=True,
-        )
-
-    total_deleted = 0
-    processed_apps = 0
-
-    while True:
-        if max_apps and processed_apps >= max_apps:
-            logger.info("Reached maximum app limit (%s). Stopping.", max_apps)
-            break
-
-        orphaned_app_ids = _find_orphaned_draft_variables(batch_size=10)
-        if not orphaned_app_ids:
-            logger.info("No more orphaned draft variables found.")
-            break
-
-        for app_id in orphaned_app_ids:
-            if max_apps and processed_apps >= max_apps:
-                break
-
-            try:
-                deleted_count = delete_draft_variables_batch(app_id, batch_size)
-                total_deleted += deleted_count
-                processed_apps += 1
-
-                logger.info("Deleted %s variables for app %s", deleted_count, app_id)
-
-            except Exception:
-                logger.exception("Error processing app %s", app_id)
-                continue
-
-    logger.info("Cleanup completed. Total deleted: %s variables across %s apps", total_deleted, processed_apps)
-
-
-@click.command("clean-expired-messages", help="Clean expired messages.")
-@click.option(
-    "--start-from",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    required=False,
-    default=None,
-    help="Lower bound (inclusive) for created_at.",
-)
-@click.option(
-    "--end-before",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    required=False,
-    default=None,
-    help="Upper bound (exclusive) for created_at.",
-)
-@click.option(
-    "--from-days-ago",
-    type=int,
-    default=None,
-    help="Relative lower bound in days ago (inclusive). Must be used with --before-days.",
-)
-@click.option(
-    "--before-days",
-    type=int,
-    default=None,
-    help="Relative upper bound in days ago (exclusive). Required for relative mode.",
-)
-@click.option("--batch-size", default=1000, show_default=True, help="Batch size for selecting messages.")
-@click.option(
-    "--graceful-period",
-    default=21,
-    show_default=True,
-    help="Graceful period in days after subscription expiration, will be ignored when billing is disabled.",
-)
-@click.option("--dry-run", is_flag=True, default=False, help="Show messages logs would be cleaned without deleting")
-def clean_expired_messages(
-    batch_size: int,
-    graceful_period: int,
-    start_from: datetime.datetime | None,
-    end_before: datetime.datetime | None,
-    from_days_ago: int | None,
-    before_days: int | None,
-    dry_run: bool,
-):
-    """
-    Clean expired messages and related data for tenants based on clean policy.
-    """
-    from extensions.otel.runtime import flush_telemetry
-
-    click.echo(click.style("clean_messages: start clean messages.", fg="green"))
-
+    documents = []
     start_at = time.perf_counter()
 
+    with session_factory.create_session() as session:
+        dataset = session.query(Dataset).where(Dataset.id == dataset_id).first()
+        if not dataset:
+            logger.info(click.style(f"Dataset is not found: {dataset_id}", fg="yellow"))
+            return
+        # check document limit
+        features = FeatureService.get_features(dataset.tenant_id)
+        try:
+            if features.billing.enabled:
+                vector_space = features.vector_space
+                count = len(document_ids)
+                batch_upload_limit = int(dify_config.BATCH_UPLOAD_LIMIT)
+                if features.billing.subscription.plan == CloudPlan.SANDBOX and count > 1:
+                    raise ValueError("Your current plan does not support batch upload, please upgrade your plan.")
+                if count > batch_upload_limit:
+                    raise ValueError(f"You have reached the batch upload limit of {batch_upload_limit}.")
+                if 0 < vector_space.limit <= vector_space.size:
+                    raise ValueError(
+                        "Your total number of documents plus the number of uploads have over the limit of "
+                        "your subscription."
+                    )
+        except Exception as e:
+            for document_id in document_ids:
+                document = (
+                    session.query(Document).where(Document.id == document_id, Document.dataset_id == dataset_id).first()
+                )
+                if document:
+                    document.indexing_status = IndexingStatus.ERROR
+                    document.error = str(e)
+                    document.stopped_at = naive_utc_now()
+                    session.add(document)
+            session.commit()
+            return
+
+    # Phase 1: Update status to parsing (short transaction)
+    with session_factory.create_session() as session, session.begin():
+        documents = (
+            session.query(Document).where(Document.id.in_(document_ids), Document.dataset_id == dataset_id).all()
+        )
+
+        for document in documents:
+            if document:
+                document.indexing_status = IndexingStatus.PARSING
+                document.processing_started_at = naive_utc_now()
+                session.add(document)
+    # Transaction committed and closed
+
+    # Phase 2: Execute indexing (no transaction - IndexingRunner creates its own sessions)
+    has_error = False
     try:
-        abs_mode = start_from is not None and end_before is not None
-        rel_mode = before_days is not None
-
-        if abs_mode and rel_mode:
-            raise click.UsageError(
-                "Options are mutually exclusive: use either (--start-from,--end-before) "
-                "or (--from-days-ago,--before-days)."
-            )
-
-        if from_days_ago is not None and before_days is None:
-            raise click.UsageError("--from-days-ago must be used together with --before-days.")
-
-        if (start_from is None) ^ (end_before is None):
-            raise click.UsageError("Both --start-from and --end-before are required when using absolute time range.")
-
-        if not abs_mode and not rel_mode:
-            raise click.UsageError(
-                "You must provide either (--start-from,--end-before) or (--before-days [--from-days-ago])."
-            )
-
-        if rel_mode:
-            assert before_days is not None
-            if before_days < 0:
-                raise click.UsageError("--before-days must be >= 0.")
-            if from_days_ago is not None:
-                if from_days_ago < 0:
-                    raise click.UsageError("--from-days-ago must be >= 0.")
-                if from_days_ago <= before_days:
-                    raise click.UsageError("--from-days-ago must be greater than --before-days.")
-
-        # Create policy based on billing configuration
-        # NOTE: graceful_period will be ignored when billing is disabled.
-        policy = create_message_clean_policy(graceful_period_days=graceful_period)
-
-        if from_days_ago is not None and before_days is not None:
-            task_label = f"{from_days_ago}to{before_days}"
-        elif start_from is None and before_days is not None:
-            task_label = f"before-{before_days}"
-        else:
-            task_label = "custom"
-
-        # Create and run the cleanup service
-        if abs_mode:
-            assert start_from is not None
-            assert end_before is not None
-            service = MessagesCleanService.from_time_range(
-                policy=policy,
-                start_from=start_from,
-                end_before=end_before,
-                batch_size=batch_size,
-                dry_run=dry_run,
-                task_label=task_label,
-            )
-        elif from_days_ago is None:
-            assert before_days is not None
-            service = MessagesCleanService.from_days(
-                policy=policy,
-                days=before_days,
-                batch_size=batch_size,
-                dry_run=dry_run,
-                task_label=task_label,
-            )
-        else:
-            assert before_days is not None
-            assert from_days_ago is not None
-            now = naive_utc_now()
-            service = MessagesCleanService.from_time_range(
-                policy=policy,
-                start_from=now - datetime.timedelta(days=from_days_ago),
-                end_before=now - datetime.timedelta(days=before_days),
-                batch_size=batch_size,
-                dry_run=dry_run,
-                task_label=task_label,
-            )
-        stats = service.run()
-
+        indexing_runner = IndexingRunner()
+        indexing_runner.run(documents)
         end_at = time.perf_counter()
-        click.echo(
-            click.style(
-                f"clean_messages: completed successfully\n"
-                f"  - Latency: {end_at - start_at:.2f}s\n"
-                f"  - Batches processed: {stats['batches']}\n"
-                f"  - Total messages scanned: {stats['total_messages']}\n"
-                f"  - Messages filtered: {stats['filtered_messages']}\n"
-                f"  - Messages deleted: {stats['total_deleted']}",
-                fg="green",
-            )
+        logger.info(click.style(f"Processed dataset: {dataset_id} latency: {end_at - start_at}", fg="green"))
+    except DocumentIsPausedError as ex:
+        logger.info(click.style(str(ex), fg="yellow"))
+        has_error = True
+    except Exception:
+        logger.exception("Document indexing task failed, dataset_id: %s", dataset_id)
+        has_error = True
+
+    if not has_error:
+        with session_factory.create_session() as session:
+            # Trigger summary index generation for completed documents if enabled
+            # Only generate for high_quality indexing technique and when summary_index_setting is enabled
+            # Re-query dataset to get latest summary_index_setting (in case it was updated)
+            dataset = session.query(Dataset).where(Dataset.id == dataset_id).first()
+            if not dataset:
+                logger.warning("Dataset %s not found after indexing", dataset_id)
+                return
+
+            if dataset.indexing_technique == IndexTechniqueType.HIGH_QUALITY:
+                summary_index_setting = dataset.summary_index_setting
+                if summary_index_setting and summary_index_setting.get("enable"):
+                    # expire all session to get latest document's indexing status
+                    session.expire_all()
+                    # Check each document's indexing status and trigger summary generation if completed
+
+                    documents = (
+                        session.query(Document)
+                        .where(Document.id.in_(document_ids), Document.dataset_id == dataset_id)
+                        .all()
+                    )
+
+                    for document in documents:
+                        if document:
+                            logger.info(
+                                "Checking document %s for summary generation: status=%s, doc_form=%s, need_summary=%s",
+                                document.id,
+                                document.indexing_status,
+                                document.doc_form,
+                                document.need_summary,
+                            )
+                            if (
+                                document.indexing_status == IndexingStatus.COMPLETED
+                                and document.doc_form != IndexStructureType.QA_INDEX
+                                and document.need_summary is True
+                            ):
+                                try:
+                                    generate_summary_index_task.delay(dataset.id, document.id, None)
+                                    logger.info(
+                                        "Queued summary index generation task for document %s in dataset %s "
+                                        "after indexing completed",
+                                        document.id,
+                                        dataset.id,
+                                    )
+                                except Exception:
+                                    logger.exception(
+                                        "Failed to queue summary index generation task for document %s",
+                                        document.id,
+                                    )
+                                    # Don't fail the entire indexing process if summary task queuing fails
+                            else:
+                                logger.info(
+                                    "Skipping summary generation for document %s: "
+                                    "status=%s, doc_form=%s, need_summary=%s",
+                                    document.id,
+                                    document.indexing_status,
+                                    document.doc_form,
+                                    document.need_summary,
+                                )
+                        else:
+                            logger.warning("Document %s not found after indexing", document.id)
+            else:
+                logger.info(
+                    "Summary index generation skipped for dataset %s: indexing_technique=%s (not 'high_quality')",
+                    dataset.id,
+                    dataset.indexing_technique,
+                )
+
+
+def _document_indexing_with_tenant_queue(
+    tenant_id: str, dataset_id: str, document_ids: Sequence[str], task_func: CeleryTaskLike
+) -> None:
+    try:
+        _document_indexing(dataset_id, document_ids)
+    except Exception:
+        logger.exception(
+            "Error processing document indexing %s for tenant %s: %s",
+            dataset_id,
+            tenant_id,
+            document_ids,
+            exc_info=True,
         )
-    except Exception as e:
-        end_at = time.perf_counter()
-        logger.exception("clean_messages failed")
-        click.echo(
-            click.style(
-                f"clean_messages: failed after {end_at - start_at:.2f}s - {str(e)}",
-                fg="red",
-            )
-        )
-        raise
     finally:
-        flush_telemetry()
+        tenant_isolated_task_queue = TenantIsolatedTaskQueue(tenant_id, "document_indexing")
 
-    click.echo(click.style("messages cleanup completed.", fg="green"))
+        # Check if there are waiting tasks in the queue
+        # Use rpop to get the next task from the queue (FIFO order)
+        next_tasks = tenant_isolated_task_queue.pull_tasks(count=dify_config.TENANT_ISOLATED_TASK_CONCURRENCY)
+
+        logger.info("document indexing tenant isolation queue %s next tasks: %s", tenant_id, next_tasks)
+
+        if next_tasks:
+            with current_app.producer_or_acquire() as producer:  # type: ignore
+                for next_task in next_tasks:
+                    document_task = DocumentTask(**next_task)
+                    # Keep the flag set to indicate a task is running
+                    tenant_isolated_task_queue.set_task_waiting_time()
+                    task_func.apply_async(
+                        kwargs={
+                            "tenant_id": document_task.tenant_id,
+                            "dataset_id": document_task.dataset_id,
+                            "document_ids": document_task.document_ids,
+                        },
+                        producer=producer,
+                    )
+
+        else:
+            # No more waiting tasks, clear the flag
+            tenant_isolated_task_queue.delete_task_key()
 
 
-@click.command("export-app-messages", help="Export messages for an app to JSONL.GZ.")
-@click.option("--app-id", required=True, help="Application ID to export messages for.")
-@click.option(
-    "--start-from",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    default=None,
-    help="Optional lower bound (inclusive) for created_at.",
-)
-@click.option(
-    "--end-before",
-    type=click.DateTime(formats=["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]),
-    required=True,
-    help="Upper bound (exclusive) for created_at.",
-)
-@click.option(
-    "--filename",
-    required=True,
-    help="Base filename (relative path). Do not include suffix like .jsonl.gz.",
-)
-@click.option("--use-cloud-storage", is_flag=True, default=False, help="Upload to cloud storage instead of local file.")
-@click.option("--batch-size", default=1000, show_default=True, help="Batch size for cursor pagination.")
-@click.option("--dry-run", is_flag=True, default=False, help="Scan only, print stats without writing any file.")
-def export_app_messages(
-    app_id: str,
-    start_from: datetime.datetime | None,
-    end_before: datetime.datetime,
-    filename: str,
-    use_cloud_storage: bool,
-    batch_size: int,
-    dry_run: bool,
-):
-    if start_from and start_from >= end_before:
-        raise click.UsageError("--start-from must be before --end-before.")
+@shared_task(queue="dataset")
+def normal_document_indexing_task(tenant_id: str, dataset_id: str, document_ids: Sequence[str]):
+    """
+    Async process document
+    :param tenant_id:
+    :param dataset_id:
+    :param document_ids:
 
-    from services.retention.conversation.message_export_service import AppMessageExportService
+    Usage: normal_document_indexing_task.delay(tenant_id, dataset_id, document_ids)
+    """
+    logger.info("normal document indexing task received: %s - %s - %s", tenant_id, dataset_id, document_ids)
+    _document_indexing_with_tenant_queue(tenant_id, dataset_id, document_ids, normal_document_indexing_task)
 
-    try:
-        validated_filename = AppMessageExportService.validate_export_filename(filename)
-    except ValueError as e:
-        raise click.BadParameter(str(e), param_hint="--filename") from e
 
-    click.echo(click.style(f"export_app_messages: starting export for app {app_id}.", fg="green"))
-    start_at = time.perf_counter()
+@shared_task(queue="priority_dataset")
+def priority_document_indexing_task(tenant_id: str, dataset_id: str, document_ids: Sequence[str]):
+    """
+    Priority async process document
+    :param tenant_id:
+    :param dataset_id:
+    :param document_ids:
 
-    try:
-        service = AppMessageExportService(
-            app_id=app_id,
-            end_before=end_before,
-            filename=validated_filename,
-            start_from=start_from,
-            batch_size=batch_size,
-            use_cloud_storage=use_cloud_storage,
-            dry_run=dry_run,
-        )
-        stats = service.run()
-
-        elapsed = time.perf_counter() - start_at
-        click.echo(
-            click.style(
-                f"export_app_messages: completed in {elapsed:.2f}s\n"
-                f"  - Batches: {stats.batches}\n"
-                f"  - Total messages: {stats.total_messages}\n"
-                f"  - Messages with feedback: {stats.messages_with_feedback}\n"
-                f"  - Total feedbacks: {stats.total_feedbacks}",
-                fg="green",
-            )
-        )
-    except Exception as e:
-        elapsed = time.perf_counter() - start_at
-        logger.exception("export_app_messages failed")
-        click.echo(click.style(f"export_app_messages: failed after {elapsed:.2f}s - {e}", fg="red"))
-        raise
+    Usage: priority_document_indexing_task.delay(tenant_id, dataset_id, document_ids)
+    """
+    logger.info("priority document indexing task received: %s - %s - %s", tenant_id, dataset_id, document_ids)
+    _document_indexing_with_tenant_queue(tenant_id, dataset_id, document_ids, priority_document_indexing_task)
 
 ```
 
-### api/commands/storage.py
+### api/tasks/app_generate/workflow_execute_task.py
 ```py
-import json
-from typing import cast
+import contextlib
+import logging
+import uuid
+from collections.abc import Generator, Mapping
+from enum import StrEnum
+from typing import Annotated, Any
 
-import click
-import sqlalchemy as sa
-from sqlalchemy import update
-from sqlalchemy.engine import CursorResult
+from celery import shared_task
+from flask import current_app, json
+from graphon.runtime import GraphRuntimeState
+from pydantic import BaseModel, Discriminator, Field, Tag
+from sqlalchemy import Engine, select
+from sqlalchemy.orm import Session, sessionmaker
+
+from core.app.apps.advanced_chat.app_generator import AdvancedChatAppGenerator
+from core.app.apps.message_based_app_generator import MessageBasedAppGenerator
+from core.app.apps.workflow.app_generator import WorkflowAppGenerator
+from core.app.entities.app_invoke_entities import (
+    AdvancedChatAppGenerateEntity,
+    InvokeFrom,
+    WorkflowAppGenerateEntity,
+)
+from core.app.layers.pause_state_persist_layer import PauseStateLayerConfig, WorkflowResumptionContext
+from core.repositories import DifyCoreRepositoryFactory
+from extensions.ext_database import db
+from libs.flask_utils import set_login_user
+from models.account import Account
+from models.enums import CreatorUserRole, WorkflowRunTriggeredFrom
+from models.model import App, AppMode, Conversation, EndUser, Message
+from models.workflow import Workflow, WorkflowNodeExecutionTriggeredFrom, WorkflowRun
+from repositories.factory import DifyAPIRepositoryFactory
+
+logger = logging.getLogger(__name__)
+
+WORKFLOW_BASED_APP_EXECUTION_QUEUE = "workflow_based_app_execution"
+
+
+class _UserType(StrEnum):
+    ACCOUNT = "account"
+    END_USER = "end_user"
+
+
+class _Account(BaseModel):
+    TYPE: _UserType = _UserType.ACCOUNT
+
+    user_id: str
+
+
+class _EndUser(BaseModel):
+    TYPE: _UserType = _UserType.END_USER
+    end_user_id: str
+
+
+def _get_user_type_descriminator(value: Any):
+    if isinstance(value, (_Account, _EndUser)):
+        return value.TYPE
+    elif isinstance(value, dict):
+        user_type_str = value.get("TYPE")
+        if user_type_str is None:
+            return None
+        try:
+            user_type = _UserType(user_type_str)
+        except ValueError:
+            return None
+        return user_type
+    else:
+        # return None if the discriminator value isn't found
+        return None
+
+
+type User = Annotated[
+    (Annotated[_Account, Tag(_UserType.ACCOUNT)] | Annotated[_EndUser, Tag(_UserType.END_USER)]),
+    Discriminator(_get_user_type_descriminator),
+]
+
+
+class AppExecutionParams(BaseModel):
+    app_id: str
+    workflow_id: str
+    tenant_id: str
+    app_mode: AppMode = AppMode.ADVANCED_CHAT
+    user: User
+    args: Mapping[str, Any]
+
+    invoke_from: InvokeFrom
+    streaming: bool = True
+    call_depth: int = 0
+    root_node_id: str | None = None
+    workflow_run_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+    @classmethod
+    def new(
+        cls,
+        app_model: App,
+        workflow: Workflow,
+        user: Account | EndUser,
+        args: Mapping[str, Any],
+        invoke_from: InvokeFrom,
+        streaming: bool = True,
+        call_depth: int = 0,
+        root_node_id: str | None = None,
+        workflow_run_id: str | None = None,
+    ):
+        user_params: _Account | _EndUser
+        if isinstance(user, Account):
+            user_params = _Account(user_id=user.id)
+        elif isinstance(user, EndUser):
+            user_params = _EndUser(end_user_id=user.id)
+        else:
+            raise AssertionError("this statement should be unreachable.")
+        return cls(
+            app_id=app_model.id,
+            workflow_id=workflow.id,
+            tenant_id=app_model.tenant_id,
+            app_mode=AppMode.value_of(app_model.mode),
+            user=user_params,
+            args=args,
+            invoke_from=invoke_from,
+            streaming=streaming,
+            call_depth=call_depth,
+            root_node_id=root_node_id,
+            workflow_run_id=workflow_run_id or str(uuid.uuid4()),
+        )
+
+
+class _AppRunner:
+    def __init__(self, session_factory: sessionmaker | Engine, exec_params: AppExecutionParams):
+        if isinstance(session_factory, Engine):
+            session_factory = sessionmaker(bind=session_factory)
+        self._session_factory = session_factory
+        self._exec_params = exec_params
+
+    @contextlib.contextmanager
+    def _session(self):
+        with self._session_factory(expire_on_commit=False) as session, session.begin():
+            yield session
+
+    @contextlib.contextmanager
+    def _setup_flask_context(self, user: Account | EndUser):
+        flask_app = current_app._get_current_object()  # type: ignore
+        with flask_app.app_context():
+            set_login_user(user)
+            yield
+
+    def run(self):
+        exec_params = self._exec_params
+        with self._session() as session:
+            workflow = session.get(Workflow, exec_params.workflow_id)
+            if workflow is None:
+                logger.warning("Workflow %s not found for execution", exec_params.workflow_id)
+                return None
+            app = session.get(App, workflow.app_id)
+            if app is None:
+                logger.warning("App %s not found for workflow %s", workflow.app_id, exec_params.workflow_id)
+                return None
+
+        pause_config = PauseStateLayerConfig(
+            session_factory=self._session_factory,
+            state_owner_user_id=workflow.created_by,
+        )
+
+        user = self._resolve_user()
+
+        with self._setup_flask_context(user):
+            response = self._run_app(
+                app=app,
+                workflow=workflow,
+                user=user,
+                pause_state_config=pause_config,
+            )
+            if not exec_params.streaming:
+                return response
+
+            assert isinstance(response, Generator)
+            _publish_streaming_response(response, exec_params.workflow_run_id, exec_params.app_mode)
+
+    def _run_app(
+        self,
+        *,
+        app: App,
+        workflow: Workflow,
+        user: Account | EndUser,
+        pause_state_config: PauseStateLayerConfig,
+    ):
+        exec_params = self._exec_params
+        if exec_params.app_mode == AppMode.ADVANCED_CHAT:
+            return AdvancedChatAppGenerator().generate(
+                app_model=app,
+                workflow=workflow,
+                user=user,
+                args=exec_params.args,
+                invoke_from=exec_params.invoke_from,
+                streaming=exec_params.streaming,
+                workflow_run_id=exec_params.workflow_run_id,
+                pause_state_config=pause_state_config,
+            )
+        if exec_params.app_mode == AppMode.WORKFLOW:
+            return WorkflowAppGenerator().generate(
+                app_model=app,
+                workflow=workflow,
+                user=user,
+                args=exec_params.args,
+                invoke_from=exec_params.invoke_from,
+                streaming=exec_params.streaming,
+                call_depth=exec_params.call_depth,
+                root_node_id=exec_params.root_node_id,
+                workflow_run_id=exec_params.workflow_run_id,
+                pause_state_config=pause_state_config,
+            )
+
+        logger.error("Unsupported app mode for execution: %s", exec_params.app_mode)
+        return None
+
+    def _resolve_user(self) -> Account | EndUser:
+        user_params = self._exec_params.user
+
+        if isinstance(user_params, _EndUser):
+            with self._session() as session:
+                return session.get(EndUser, user_params.end_user_id)
+        elif not isinstance(user_params, _Account):
+            raise AssertionError(f"user should only be _Account or _EndUser, got {type(user_params)}")
+
+        with self._session() as session:
+            user: Account = session.get(Account, user_params.user_id)
+            user.set_tenant_id(self._exec_params.tenant_id)
+
+        return user
+
+
+def _resolve_user_for_run(session: Session, workflow_run: WorkflowRun) -> Account | EndUser | None:
+    role = CreatorUserRole(workflow_run.created_by_role)
+    if role == CreatorUserRole.ACCOUNT:
+        user = session.get(Account, workflow_run.created_by)
+        if user:
+            user.set_tenant_id(workflow_run.tenant_id)
+        return user
+
+    return session.get(EndUser, workflow_run.created_by)
+
+
+def _publish_streaming_response(
+    response_stream: Generator[str | Mapping[str, Any] | BaseModel, None, None],
+    workflow_run_id: str,
+    app_mode: AppMode,
+) -> None:
+    topic = MessageBasedAppGenerator.get_response_topic(app_mode, workflow_run_id)
+    for event in response_stream:
+        try:
+            if isinstance(event, BaseModel):
+                payload = json.dumps(event.model_dump(mode="json"), ensure_ascii=False)
+            else:
+                payload = json.dumps(event, ensure_ascii=False, default=str)
+        except (TypeError, ValueError):
+            logger.exception("error while encoding event")
+            continue
+
+        topic.publish(payload.encode())
+
+
+@shared_task(queue=WORKFLOW_BASED_APP_EXECUTION_QUEUE)
+def workflow_based_app_execution_task(
+    payload: str,
+) -> Generator[Mapping[str, Any] | str, None, None] | Mapping[str, Any] | None:
+    exec_params = AppExecutionParams.model_validate_json(payload)
+
+    logger.info("workflow_based_app_execution_task run with params: %s", exec_params)
+
+    runner = _AppRunner(db.engine, exec_params=exec_params)
+    return runner.run()
+
+
+def _resume_app_execution(payload: dict[str, Any]) -> None:
+    workflow_run_id = payload["workflow_run_id"]
+
+    session_factory = sessionmaker(bind=db.engine, expire_on_commit=False)
+    workflow_run_repo = DifyAPIRepositoryFactory.create_api_workflow_run_repository(session_maker=session_factory)
+
+    pause_entity = workflow_run_repo.get_workflow_pause(workflow_run_id)
+    if pause_entity is None:
+        logger.warning("No pause entity found for workflow run %s", workflow_run_id)
+        return
+
+    try:
+        resumption_context = WorkflowResumptionContext.loads(pause_entity.get_state().decode())
+    except Exception:
+        logger.exception("Failed to load resumption context for workflow run %s", workflow_run_id)
+        return
+
+    generate_entity = resumption_context.get_generate_entity()
+
+    graph_runtime_state = GraphRuntimeState.from_snapshot(resumption_context.serialized_graph_runtime_state)
+
+    conversation = None
+    message = None
+    with Session(db.engine, expire_on_commit=False) as session:
+        workflow_run = session.get(WorkflowRun, workflow_run_id)
+        if workflow_run is None:
+            logger.warning("Workflow run %s not found during resume", workflow_run_id)
+            return
+
+        workflow = session.get(Workflow, workflow_run.workflow_id)
+        if workflow is None:
+            logger.warning("Workflow %s not found during resume", workflow_run.workflow_id)
+            return
+
+        app_model = session.get(App, workflow_run.app_id)
+        if app_model is None:
+            logger.warning("App %s not found during resume", workflow_run.app_id)
+            return
+
+        user = _resolve_user_for_run(session, workflow_run)
+        if user is None:
+            logger.warning("User %s not found for workflow run %s", workflow_run.created_by, workflow_run_id)
+            return
+
+        if isinstance(generate_entity, AdvancedChatAppGenerateEntity):
+            if generate_entity.conversation_id is None:
+                logger.warning("Conversation id missing in resumption context for workflow run %s", workflow_run_id)
+                return
+
+            conversation = session.get(Conversation, generate_entity.conversation_id)
+            if conversation is None:
+                logger.warning(
+                    "Conversation %s not found for workflow run %s", generate_entity.conversation_id, workflow_run_id
+                )
+                return
+
+            message = session.scalar(
+                select(Message)
+                .where(
+                    Message.conversation_id == conversation.id,
+                    Message.workflow_run_id == workflow_run_id,
+                )
+                .order_by(Message.created_at.desc())
+                .limit(1)
+            )
+            if message is None:
+                logger.warning("Message not found for workflow run %s", workflow_run_id)
+                return
+
+    if not isinstance(generate_entity, (AdvancedChatAppGenerateEntity, WorkflowAppGenerateEntity)):
+        logger.error(
+            "Unsupported resumption entity for workflow run %s (found %s)",
+            workflow_run_id,
+            type(generate_entity),
+        )
+        return
+
+    workflow_run_repo.resume_workflow_pause(workflow_run_id, pause_entity)
+
+    pause_config = PauseStateLayerConfig(
+        session_factory=session_factory,
+        state_owner_user_id=workflow.created_by,
+    )
+
+    if isinstance(generate_entity, AdvancedChatAppGenerateEntity):
+        assert conversation is not None
+        assert message is not None
+        _resume_advanced_chat(
+            app_model=app_model,
+            workflow=workflow,
+            user=user,
+            conversation=conversation,
+            message=message,
+            generate_entity=generate_entity,
+            graph_runtime_state=graph_runtime_state,
+            session_factory=session_factory,
+            pause_state_config=pause_config,
+            workflow_run_id=workflow_run_id,
+            workflow_run=workflow_run,
+        )
+    elif isinstance(generate_entity, WorkflowAppGenerateEntity):
+        _resume_workflow(
+            app_model=app_model,
+            workflow=workflow,
+            user=user,
+            generate_entity=generate_entity,
+            graph_runtime_state=graph_runtime_state,
+            session_factory=session_factory,
+            pause_state_config=pause_config,
+            workflow_run_id=workflow_run_id,
+            workflow_run=workflow_run,
+            workflow_run_repo=workflow_run_repo,
+            pause_entity=pause_entity,
+        )
+
+
+def _resume_advanced_chat(
+    *,
+    app_model: App,
+    workflow: Workflow,
+    user: Account | EndUser,
+    conversation: Conversation,
+    message: Message,
+    generate_entity: AdvancedChatAppGenerateEntity,
+    graph_runtime_state: GraphRuntimeState,
+    session_factory: sessionmaker,
+    pause_state_config: PauseStateLayerConfig,
+    workflow_run_id: str,
+    workflow_run: WorkflowRun,
+) -> None:
+    try:
+        triggered_from = WorkflowRunTriggeredFrom(workflow_run.triggered_from)
+    except ValueError:
+        triggered_from = WorkflowRunTriggeredFrom.APP_RUN
+
+    workflow_execution_repository = DifyCoreRepositoryFactory.create_workflow_execution_repository(
+        session_factory=session_factory,
+        user=user,
+        app_id=app_model.id,
+        triggered_from=triggered_from,
+    )
+    workflow_node_execution_repository = DifyCoreRepositoryFactory.create_workflow_node_execution_repository(
+        session_factory=session_factory,
+        user=user,
+        app_id=app_model.id,
+        triggered_from=WorkflowNodeExecutionTriggeredFrom.WORKFLOW_RUN,
+    )
+
+    generator = AdvancedChatAppGenerator()
+
+    try:
+        response = generator.resume(
+            app_model=app_model,
+            workflow=workflow,
+            user=user,
+            conversation=conversation,
+            message=message,
+            application_generate_entity=generate_entity,
+            workflow_execution_repository=workflow_execution_repository,
+            workflow_node_execution_repository=workflow_node_execution_repository,
+            graph_runtime_state=graph_runtime_state,
+            pause_state_config=pause_state_config,
+        )
+    except Exception:
+        logger.exception("Failed to resume chatflow execution for workflow run %s", workflow_run_id)
+        raise
+
+    if generate_entity.stream:
+        assert isinstance(response, Generator)
+        _publish_streaming_response(response, workflow_run_id, AppMode.ADVANCED_CHAT)
+
+
+def _resume_workflow(
+    *,
+    app_model: App,
+    workflow: Workflow,
+    user: Account | EndUser,
+    generate_entity: WorkflowAppGenerateEntity,
+    graph_runtime_state: GraphRuntimeState,
+    session_factory: sessionmaker,
+    pause_state_config: PauseStateLayerConfig,
+    workflow_run_id: str,
+    workflow_run: WorkflowRun,
+    workflow_run_repo,
+    pause_entity,
+) -> None:
+    try:
+        triggered_from = WorkflowRunTriggeredFrom(workflow_run.triggered_from)
+    except ValueError:
+        triggered_from = WorkflowRunTriggeredFrom.APP_RUN
+
+    workflow_execution_repository = DifyCoreRepositoryFactory.create_workflow_execution_repository(
+        session_factory=session_factory,
+        user=user,
+        app_id=app_model.id,
+        triggered_from=triggered_from,
+    )
+    workflow_node_execution_repository = DifyCoreRepositoryFactory.create_workflow_node_execution_repository(
+        session_factory=session_factory,
+        user=user,
+        app_id=app_model.id,
+        triggered_from=WorkflowNodeExecutionTriggeredFrom.WORKFLOW_RUN,
+    )
+
+    generator = WorkflowAppGenerator()
+
+    try:
+        response = generator.resume(
+            app_model=app_model,
+            workflow=workflow,
+            user=user,
+            application_generate_entity=generate_entity,
+            graph_runtime_state=graph_runtime_state,
+            workflow_execution_repository=workflow_execution_repository,
+            workflow_node_execution_repository=workflow_node_execution_repository,
+            pause_state_config=pause_state_config,
+        )
+    except Exception:
+        logger.exception("Failed to resume workflow execution for workflow run %s", workflow_run_id)
+        raise
+
+    if generate_entity.stream:
+        assert isinstance(response, Generator)
+        _publish_streaming_response(response, workflow_run_id, AppMode.WORKFLOW)
+
+    workflow_run_repo.delete_workflow_pause(pause_entity)
+
+
+@shared_task(queue=WORKFLOW_BASED_APP_EXECUTION_QUEUE, name="resume_app_execution")
+def resume_app_execution(payload: dict[str, Any]) -> None:
+    _resume_app_execution(payload)
+
+```
+
+### api/tasks/app_generate/__init__.py
+```py
+from .workflow_execute_task import AppExecutionParams, resume_app_execution, workflow_based_app_execution_task
+
+__all__ = ["AppExecutionParams", "resume_app_execution", "workflow_based_app_execution_task"]
+
+```
+
+### api/tasks/delete_account_task.py
+```py
+import logging
+
+from celery import shared_task
 
 from configs import dify_config
-from extensions.ext_database import db
-from extensions.ext_storage import storage
-from extensions.storage.opendal_storage import OpenDALStorage
-from extensions.storage.storage_type import StorageType
-from models.model import UploadFile
+from core.db.session_factory import session_factory
+from models import Account
+from services.billing_service import BillingService
+from tasks.mail_account_deletion_task import send_deletion_success_task
+
+logger = logging.getLogger(__name__)
 
 
-@click.option("-f", "--force", is_flag=True, help="Skip user confirmation and force the command to execute.")
-@click.command("clear-orphaned-file-records", help="Clear orphaned file records.")
-def clear_orphaned_file_records(force: bool):
-    """
-    Clear orphaned file records in the database.
-    """
-
-    # define tables and columns to process
-    files_tables = [
-        {"table": "upload_files", "id_column": "id", "key_column": "key"},
-        {"table": "tool_files", "id_column": "id", "key_column": "file_key"},
-    ]
-    ids_tables = [
-        {"type": "uuid", "table": "message_files", "column": "upload_file_id"},
-        {"type": "text", "table": "documents", "column": "data_source_info"},
-        {"type": "text", "table": "document_segments", "column": "content"},
-        {"type": "text", "table": "messages", "column": "answer"},
-        {"type": "text", "table": "workflow_node_executions", "column": "inputs"},
-        {"type": "text", "table": "workflow_node_executions", "column": "process_data"},
-        {"type": "text", "table": "workflow_node_executions", "column": "outputs"},
-        {"type": "text", "table": "conversations", "column": "introduction"},
-        {"type": "text", "table": "conversations", "column": "system_instruction"},
-        {"type": "text", "table": "accounts", "column": "avatar"},
-        {"type": "text", "table": "apps", "column": "icon"},
-        {"type": "text", "table": "sites", "column": "icon"},
-        {"type": "json", "table": "messages", "column": "inputs"},
-        {"type": "json", "table": "messages", "column": "message"},
-    ]
-
-    # notify user and ask for confirmation
-    click.echo(
-        click.style(
-            "This command will first find and delete orphaned file records from the message_files table,", fg="yellow"
-        )
-    )
-    click.echo(
-        click.style(
-            "and then it will find and delete orphaned file records in the following tables:",
-            fg="yellow",
-        )
-    )
-    for files_table in files_tables:
-        click.echo(click.style(f"- {files_table['table']}", fg="yellow"))
-    click.echo(
-        click.style("The following tables and columns will be scanned to find orphaned file records:", fg="yellow")
-    )
-    for ids_table in ids_tables:
-        click.echo(click.style(f"- {ids_table['table']} ({ids_table['column']})", fg="yellow"))
-    click.echo("")
-
-    click.echo(click.style("!!! USE WITH CAUTION !!!", fg="red"))
-    click.echo(
-        click.style(
-            (
-                "Since not all patterns have been fully tested, "
-                "please note that this command may delete unintended file records."
-            ),
-            fg="yellow",
-        )
-    )
-    click.echo(
-        click.style("This cannot be undone. Please make sure to back up your database before proceeding.", fg="yellow")
-    )
-    click.echo(
-        click.style(
-            (
-                "It is also recommended to run this during the maintenance window, "
-                "as this may cause high load on your instance."
-            ),
-            fg="yellow",
-        )
-    )
-    if not force:
-        click.confirm("Do you want to proceed?", abort=True)
-
-    # start the cleanup process
-    click.echo(click.style("Starting orphaned file records cleanup.", fg="white"))
-
-    # clean up the orphaned records in the message_files table where message_id doesn't exist in messages table
-    try:
-        click.echo(
-            click.style("- Listing message_files records where message_id doesn't exist in messages table", fg="white")
-        )
-        query = (
-            "SELECT mf.id, mf.message_id "
-            "FROM message_files mf LEFT JOIN messages m ON mf.message_id = m.id "
-            "WHERE m.id IS NULL"
-        )
-        orphaned_message_files = []
-        with db.engine.begin() as conn:
-            rs = conn.execute(sa.text(query))
-            for i in rs:
-                orphaned_message_files.append({"id": str(i[0]), "message_id": str(i[1])})
-
-        if orphaned_message_files:
-            click.echo(click.style(f"Found {len(orphaned_message_files)} orphaned message_files records:", fg="white"))
-            for record in orphaned_message_files:
-                click.echo(click.style(f"  - id: {record['id']}, message_id: {record['message_id']}", fg="black"))
-
-            if not force:
-                click.confirm(
-                    (
-                        f"Do you want to proceed "
-                        f"to delete all {len(orphaned_message_files)} orphaned message_files records?"
-                    ),
-                    abort=True,
-                )
-
-            click.echo(click.style("- Deleting orphaned message_files records", fg="white"))
-            query = "DELETE FROM message_files WHERE id IN :ids"
-            with db.engine.begin() as conn:
-                conn.execute(sa.text(query), {"ids": tuple(record["id"] for record in orphaned_message_files)})
-            click.echo(
-                click.style(f"Removed {len(orphaned_message_files)} orphaned message_files records.", fg="green")
-            )
-        else:
-            click.echo(click.style("No orphaned message_files records found. There is nothing to delete.", fg="green"))
-    except Exception as e:
-        click.echo(click.style(f"Error deleting orphaned message_files records: {str(e)}", fg="red"))
-
-    # clean up the orphaned records in the rest of the *_files tables
-    try:
-        # fetch file id and keys from each table
-        all_files_in_tables = []
-        for files_table in files_tables:
-            click.echo(click.style(f"- Listing file records in table {files_table['table']}", fg="white"))
-            query = f"SELECT {files_table['id_column']}, {files_table['key_column']} FROM {files_table['table']}"
-            with db.engine.begin() as conn:
-                rs = conn.execute(sa.text(query))
-            for i in rs:
-                all_files_in_tables.append({"table": files_table["table"], "id": str(i[0]), "key": i[1]})
-        click.echo(click.style(f"Found {len(all_files_in_tables)} files in tables.", fg="white"))
-
-        # fetch referred table and columns
-        guid_regexp = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-        all_ids_in_tables = []
-        for ids_table in ids_tables:
-            query = ""
-            match ids_table["type"]:
-                case "uuid":
-                    click.echo(
-                        click.style(
-                            f"- Listing file ids in column {ids_table['column']} in table {ids_table['table']}",
-                            fg="white",
-                        )
-                    )
-                    c = ids_table["column"]
-                    query = f"SELECT {c} FROM {ids_table['table']} WHERE {c} IS NOT NULL"
-                    with db.engine.begin() as conn:
-                        rs = conn.execute(sa.text(query))
-                    for i in rs:
-                        all_ids_in_tables.append({"table": ids_table["table"], "id": str(i[0])})
-                case "text":
-                    t = ids_table["table"]
-                    click.echo(
-                        click.style(
-                            f"- Listing file-id-like strings in column {ids_table['column']} in table {t}",
-                            fg="white",
-                        )
-                    )
-                    query = (
-                        f"SELECT regexp_matches({ids_table['column']}, '{guid_regexp}', 'g') AS extracted_id "
-                        f"FROM {ids_table['table']}"
-                    )
-                    with db.engine.begin() as conn:
-                        rs = conn.execute(sa.text(query))
-                    for i in rs:
-                        for j in i[0]:
-                            all_ids_in_tables.append({"table": ids_table["table"], "id": j})
-                case "json":
-                    click.echo(
-                        click.style(
-                            (
-                                f"- Listing file-id-like JSON string in column {ids_table['column']} "
-                                f"in table {ids_table['table']}"
-                            ),
-                            fg="white",
-                        )
-                    )
-                    query = (
-                        f"SELECT regexp_matches({ids_table['column']}::text, '{guid_regexp}', 'g') AS extracted_id "
-                        f"FROM {ids_table['table']}"
-                    )
-                    with db.engine.begin() as conn:
-                        rs = conn.execute(sa.text(query))
-                    for i in rs:
-                        for j in i[0]:
-                            all_ids_in_tables.append({"table": ids_table["table"], "id": j})
-                case _:
-                    pass
-        click.echo(click.style(f"Found {len(all_ids_in_tables)} file ids in tables.", fg="white"))
-
-    except Exception as e:
-        click.echo(click.style(f"Error fetching keys: {str(e)}", fg="red"))
-        return
-
-    # find orphaned files
-    all_files = [file["id"] for file in all_files_in_tables]
-    all_ids = [file["id"] for file in all_ids_in_tables]
-    orphaned_files = list(set(all_files) - set(all_ids))
-    if not orphaned_files:
-        click.echo(click.style("No orphaned file records found. There is nothing to delete.", fg="green"))
-        return
-    click.echo(click.style(f"Found {len(orphaned_files)} orphaned file records.", fg="white"))
-    for file in orphaned_files:
-        click.echo(click.style(f"- orphaned file id: {file}", fg="black"))
-    if not force:
-        click.confirm(f"Do you want to proceed to delete all {len(orphaned_files)} orphaned file records?", abort=True)
-
-    # delete orphaned records for each file
-    try:
-        for files_table in files_tables:
-            click.echo(click.style(f"- Deleting orphaned file records in table {files_table['table']}", fg="white"))
-            query = f"DELETE FROM {files_table['table']} WHERE {files_table['id_column']} IN :ids"
-            with db.engine.begin() as conn:
-                conn.execute(sa.text(query), {"ids": tuple(orphaned_files)})
-    except Exception as e:
-        click.echo(click.style(f"Error deleting orphaned file records: {str(e)}", fg="red"))
-        return
-    click.echo(click.style(f"Removed {len(orphaned_files)} orphaned file records.", fg="green"))
-
-
-@click.option("-f", "--force", is_flag=True, help="Skip user confirmation and force the command to execute.")
-@click.command("remove-orphaned-files-on-storage", help="Remove orphaned files on the storage.")
-def remove_orphaned_files_on_storage(force: bool):
-    """
-    Remove orphaned files on the storage.
-    """
-
-    # define tables and columns to process
-    files_tables = [
-        {"table": "upload_files", "key_column": "key"},
-        {"table": "tool_files", "key_column": "file_key"},
-    ]
-    storage_paths = ["image_files", "tools", "upload_files"]
-
-    # notify user and ask for confirmation
-    click.echo(click.style("This command will find and remove orphaned files on the storage,", fg="yellow"))
-    click.echo(
-        click.style("by comparing the files on the storage with the records in the following tables:", fg="yellow")
-    )
-    for files_table in files_tables:
-        click.echo(click.style(f"- {files_table['table']}", fg="yellow"))
-    click.echo(click.style("The following paths on the storage will be scanned to find orphaned files:", fg="yellow"))
-    for storage_path in storage_paths:
-        click.echo(click.style(f"- {storage_path}", fg="yellow"))
-    click.echo("")
-
-    click.echo(click.style("!!! USE WITH CAUTION !!!", fg="red"))
-    click.echo(
-        click.style(
-            "Currently, this command will work only for opendal based storage (STORAGE_TYPE=opendal).", fg="yellow"
-        )
-    )
-    click.echo(
-        click.style(
-            "Since not all patterns have been fully tested, please note that this command may delete unintended files.",
-            fg="yellow",
-        )
-    )
-    click.echo(
-        click.style("This cannot be undone. Please make sure to back up your storage before proceeding.", fg="yellow")
-    )
-    click.echo(
-        click.style(
-            (
-                "It is also recommended to run this during the maintenance window, "
-                "as this may cause high load on your instance."
-            ),
-            fg="yellow",
-        )
-    )
-    if not force:
-        click.confirm("Do you want to proceed?", abort=True)
-
-    # start the cleanup process
-    click.echo(click.style("Starting orphaned files cleanup.", fg="white"))
-
-    # fetch file id and keys from each table
-    all_files_in_tables = []
-    try:
-        for files_table in files_tables:
-            click.echo(click.style(f"- Listing files from table {files_table['table']}", fg="white"))
-            query = f"SELECT {files_table['key_column']} FROM {files_table['table']}"
-            with db.engine.begin() as conn:
-                rs = conn.execute(sa.text(query))
-            for i in rs:
-                all_files_in_tables.append(str(i[0]))
-        click.echo(click.style(f"Found {len(all_files_in_tables)} files in tables.", fg="white"))
-    except Exception as e:
-        click.echo(click.style(f"Error fetching keys: {str(e)}", fg="red"))
-        return
-
-    all_files_on_storage = []
-    for storage_path in storage_paths:
+@shared_task(queue="dataset")
+def delete_account_task(account_id):
+    with session_factory.create_session() as session:
+        account = session.query(Account).where(Account.id == account_id).first()
         try:
-            click.echo(click.style(f"- Scanning files on storage path {storage_path}", fg="white"))
-            files = storage.scan(path=storage_path, files=True, directories=False)
-            all_files_on_storage.extend(files)
-        except FileNotFoundError:
-            click.echo(click.style(f"  -> Skipping path {storage_path} as it does not exist.", fg="yellow"))
-            continue
-        except Exception as e:
-            click.echo(click.style(f"  -> Error scanning files on storage path {storage_path}: {str(e)}", fg="red"))
-            continue
-    click.echo(click.style(f"Found {len(all_files_on_storage)} files on storage.", fg="white"))
+            if dify_config.BILLING_ENABLED:
+                BillingService.delete_account(account_id)
+        except Exception:
+            logger.exception("Failed to delete account %s from billing service.", account_id)
+            raise
 
-    # find orphaned files
-    orphaned_files = list(set(all_files_on_storage) - set(all_files_in_tables))
-    if not orphaned_files:
-        click.echo(click.style("No orphaned files found. There is nothing to remove.", fg="green"))
-        return
-    click.echo(click.style(f"Found {len(orphaned_files)} orphaned files.", fg="white"))
-    for file in orphaned_files:
-        click.echo(click.style(f"- orphaned file: {file}", fg="black"))
-    if not force:
-        click.confirm(f"Do you want to proceed to remove all {len(orphaned_files)} orphaned files?", abort=True)
-
-    # delete orphaned files
-    removed_files = 0
-    error_files = 0
-    for file in orphaned_files:
-        try:
-            storage.delete(file)
-            removed_files += 1
-            click.echo(click.style(f"- Removing orphaned file: {file}", fg="white"))
-        except Exception as e:
-            error_files += 1
-            click.echo(click.style(f"- Error deleting orphaned file {file}: {str(e)}", fg="red"))
-            continue
-    if error_files == 0:
-        click.echo(click.style(f"Removed {removed_files} orphaned files without errors.", fg="green"))
-    else:
-        click.echo(click.style(f"Removed {removed_files} orphaned files, with {error_files} errors.", fg="yellow"))
-
-
-@click.command("file-usage", help="Query file usages and show where files are referenced.")
-@click.option("--file-id", type=str, default=None, help="Filter by file UUID.")
-@click.option("--key", type=str, default=None, help="Filter by storage key.")
-@click.option("--src", type=str, default=None, help="Filter by table.column pattern (e.g., 'documents.%' or '%.icon').")
-@click.option("--limit", type=int, default=100, help="Limit number of results (default: 100).")
-@click.option("--offset", type=int, default=0, help="Offset for pagination (default: 0).")
-@click.option("--json", "output_json", is_flag=True, help="Output results in JSON format.")
-def file_usage(
-    file_id: str | None,
-    key: str | None,
-    src: str | None,
-    limit: int,
-    offset: int,
-    output_json: bool,
-):
-    """
-    Query file usages and show where files are referenced in the database.
-
-    This command reuses the same reference checking logic as clear-orphaned-file-records
-    and displays detailed information about where each file is referenced.
-    """
-    # define tables and columns to process
-    files_tables = [
-        {"table": "upload_files", "id_column": "id", "key_column": "key"},
-        {"table": "tool_files", "id_column": "id", "key_column": "file_key"},
-    ]
-    ids_tables = [
-        {"type": "uuid", "table": "message_files", "column": "upload_file_id", "pk_column": "id"},
-        {"type": "text", "table": "documents", "column": "data_source_info", "pk_column": "id"},
-        {"type": "text", "table": "document_segments", "column": "content", "pk_column": "id"},
-        {"type": "text", "table": "messages", "column": "answer", "pk_column": "id"},
-        {"type": "text", "table": "workflow_node_executions", "column": "inputs", "pk_column": "id"},
-        {"type": "text", "table": "workflow_node_executions", "column": "process_data", "pk_column": "id"},
-        {"type": "text", "table": "workflow_node_executions", "column": "outputs", "pk_column": "id"},
-        {"type": "text", "table": "conversations", "column": "introduction", "pk_column": "id"},
-        {"type": "text", "table": "conversations", "column": "system_instruction", "pk_column": "id"},
-        {"type": "text", "table": "accounts", "column": "avatar", "pk_column": "id"},
-        {"type": "text", "table": "apps", "column": "icon", "pk_column": "id"},
-        {"type": "text", "table": "sites", "column": "icon", "pk_column": "id"},
-        {"type": "json", "table": "messages", "column": "inputs", "pk_column": "id"},
-        {"type": "json", "table": "messages", "column": "message", "pk_column": "id"},
-    ]
-
-    # Stream file usages with pagination to avoid holding all results in memory
-    paginated_usages = []
-    total_count = 0
-
-    # First, build a mapping of file_id -> storage_key from the base tables
-    file_key_map = {}
-    for files_table in files_tables:
-        query = f"SELECT {files_table['id_column']}, {files_table['key_column']} FROM {files_table['table']}"
-        with db.engine.begin() as conn:
-            rs = conn.execute(sa.text(query))
-            for row in rs:
-                file_key_map[str(row[0])] = f"{files_table['table']}:{row[1]}"
-
-    # If filtering by key or file_id, verify it exists
-    if file_id and file_id not in file_key_map:
-        if output_json:
-            click.echo(json.dumps({"error": f"File ID {file_id} not found in base tables"}))
-        else:
-            click.echo(click.style(f"File ID {file_id} not found in base tables.", fg="red"))
-        return
-
-    if key:
-        valid_prefixes = {f"upload_files:{key}", f"tool_files:{key}"}
-        matching_file_ids = [fid for fid, fkey in file_key_map.items() if fkey in valid_prefixes]
-        if not matching_file_ids:
-            if output_json:
-                click.echo(json.dumps({"error": f"Key {key} not found in base tables"}))
-            else:
-                click.echo(click.style(f"Key {key} not found in base tables.", fg="red"))
+        if not account:
+            logger.error("Account %s not found.", account_id)
             return
-
-    guid_regexp = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-
-    # For each reference table/column, find matching file IDs and record the references
-    for ids_table in ids_tables:
-        src_filter = f"{ids_table['table']}.{ids_table['column']}"
-
-        # Skip if src filter doesn't match (use fnmatch for wildcard patterns)
-        if src:
-            if "%" in src or "_" in src:
-                import fnmatch
-
-                # Convert SQL LIKE wildcards to fnmatch wildcards (% -> *, _ -> ?)
-                pattern = src.replace("%", "*").replace("_", "?")
-                if not fnmatch.fnmatch(src_filter, pattern):
-                    continue
-            else:
-                if src_filter != src:
-                    continue
-
-        match ids_table["type"]:
-            case "uuid":
-                # Direct UUID match
-                query = (
-                    f"SELECT {ids_table['pk_column']}, {ids_table['column']} "
-                    f"FROM {ids_table['table']} WHERE {ids_table['column']} IS NOT NULL"
-                )
-                with db.engine.begin() as conn:
-                    rs = conn.execute(sa.text(query))
-                    for row in rs:
-                        record_id = str(row[0])
-                        ref_file_id = str(row[1])
-                        if ref_file_id not in file_key_map:
-                            continue
-                        storage_key = file_key_map[ref_file_id]
-
-                        # Apply filters
-                        if file_id and ref_file_id != file_id:
-                            continue
-                        if key and not storage_key.endswith(key):
-                            continue
-
-                        # Only collect items within the requested page range
-                        if offset <= total_count < offset + limit:
-                            paginated_usages.append(
-                                {
-                                    "src": f"{ids_table['table']}.{ids_table['column']}",
-                                    "record_id": record_id,
-                                    "file_id": ref_file_id,
-                                    "key": storage_key,
-                                }
-                            )
-                        total_count += 1
-
-            case "text" | "json":
-                # Extract UUIDs from text/json content
-                column_cast = f"{ids_table['column']}::text" if ids_table["type"] == "json" else ids_table["column"]
-                query = (
-                    f"SELECT {ids_table['pk_column']}, {column_cast} "
-                    f"FROM {ids_table['table']} WHERE {ids_table['column']} IS NOT NULL"
-                )
-                with db.engine.begin() as conn:
-                    rs = conn.execute(sa.text(query))
-                    for row in rs:
-                        record_id = str(row[0])
-                        content = str(row[1])
-
-                        # Find all UUIDs in the content
-                        import re
-
-                        uuid_pattern = re.compile(guid_regexp, re.IGNORECASE)
-                        matches = uuid_pattern.findall(content)
-
-                        for ref_file_id in matches:
-                            if ref_file_id not in file_key_map:
-                                continue
-                            storage_key = file_key_map[ref_file_id]
-
-                            # Apply filters
-                            if file_id and ref_file_id != file_id:
-                                continue
-                            if key and not storage_key.endswith(key):
-                                continue
-
-                            # Only collect items within the requested page range
-                            if offset <= total_count < offset + limit:
-                                paginated_usages.append(
-                                    {
-                                        "src": f"{ids_table['table']}.{ids_table['column']}",
-                                        "record_id": record_id,
-                                        "file_id": ref_file_id,
-                                        "key": storage_key,
-                                    }
-                                )
-                            total_count += 1
-            case _:
-                pass
-
-    # Output results
-    if output_json:
-        result = {
-            "total": total_count,
-            "offset": offset,
-            "limit": limit,
-            "usages": paginated_usages,
-        }
-        click.echo(json.dumps(result, indent=2))
-    else:
-        click.echo(
-            click.style(f"Found {total_count} file usages (showing {len(paginated_usages)} results)", fg="white")
-        )
-        click.echo("")
-
-        if not paginated_usages:
-            click.echo(click.style("No file usages found matching the specified criteria.", fg="yellow"))
-            return
-
-        # Print table header
-        click.echo(
-            click.style(
-                f"{'Src (Table.Column)':<50} {'Record ID':<40} {'File ID':<40} {'Storage Key':<60}",
-                fg="cyan",
-            )
-        )
-        click.echo(click.style("-" * 190, fg="white"))
-
-        # Print each usage
-        for usage in paginated_usages:
-            click.echo(f"{usage['src']:<50} {usage['record_id']:<40} {usage['file_id']:<40} {usage['key']:<60}")
-
-        # Show pagination info
-        if offset + limit < total_count:
-            click.echo("")
-            click.echo(
-                click.style(
-                    f"Showing {offset + 1}-{offset + len(paginated_usages)} of {total_count} results", fg="white"
-                )
-            )
-            click.echo(click.style(f"Use --offset {offset + limit} to see next page", fg="white"))
-
-
-@click.command(
-    "migrate-oss",
-    help="Migrate files from Local or OpenDAL source to a cloud OSS storage (destination must NOT be local/opendal).",
-)
-@click.option(
-    "--path",
-    "paths",
-    multiple=True,
-    help="Storage path prefixes to migrate (repeatable). Defaults: privkeys, upload_files, image_files,"
-    " tools, website_files, keyword_files, ops_trace",
-)
-@click.option(
-    "--source",
-    type=click.Choice(["local", "opendal"], case_sensitive=False),
-    default="opendal",
-    show_default=True,
-    help="Source storage type to read from",
-)
-@click.option("--overwrite", is_flag=True, default=False, help="Overwrite destination if file already exists")
-@click.option("--dry-run", is_flag=True, default=False, help="Show what would be migrated without uploading")
-@click.option("-f", "--force", is_flag=True, help="Skip confirmation and run without prompts")
-@click.option(
-    "--update-db/--no-update-db",
-    default=True,
-    help="Update upload_files.storage_type from source type to current storage after migration",
-)
-def migrate_oss(
-    paths: tuple[str, ...],
-    source: str,
-    overwrite: bool,
-    dry_run: bool,
-    force: bool,
-    update_db: bool,
-):
-    """
-    Copy all files under selected prefixes from a source storage
-    (Local filesystem or OpenDAL-backed) into the currently configured
-    destination storage backend, then optionally update DB records.
-
-    Expected usage: set STORAGE_TYPE (and its credentials) to your target backend.
-    """
-    # Ensure target storage is not local/opendal
-    if dify_config.STORAGE_TYPE in (StorageType.LOCAL, StorageType.OPENDAL):
-        click.echo(
-            click.style(
-                "Target STORAGE_TYPE must be a cloud OSS (not 'local' or 'opendal').\n"
-                "Please set STORAGE_TYPE to one of: s3, aliyun-oss, azure-blob, google-storage, tencent-cos, \n"
-                "volcengine-tos, supabase, oci-storage, huawei-obs, baidu-obs, clickzetta-volume.",
-                fg="red",
-            )
-        )
-        return
-
-    # Default paths if none specified
-    default_paths = ("privkeys", "upload_files", "image_files", "tools", "website_files", "keyword_files", "ops_trace")
-    path_list = list(paths) if paths else list(default_paths)
-    is_source_local = source.lower() == "local"
-
-    click.echo(click.style("Preparing migration to target storage.", fg="yellow"))
-    click.echo(click.style(f"Target storage type: {dify_config.STORAGE_TYPE}", fg="white"))
-    if is_source_local:
-        src_root = dify_config.STORAGE_LOCAL_PATH
-        click.echo(click.style(f"Source: local fs, root: {src_root}", fg="white"))
-    else:
-        click.echo(click.style(f"Source: opendal scheme={dify_config.OPENDAL_SCHEME}", fg="white"))
-    click.echo(click.style(f"Paths to migrate: {', '.join(path_list)}", fg="white"))
-    click.echo("")
-
-    if not force:
-        click.confirm("Proceed with migration?", abort=True)
-
-    # Instantiate source storage
-    try:
-        if is_source_local:
-            src_root = dify_config.STORAGE_LOCAL_PATH
-            source_storage = OpenDALStorage(scheme="fs", root=src_root)
-        else:
-            source_storage = OpenDALStorage(scheme=dify_config.OPENDAL_SCHEME)
-    except Exception as e:
-        click.echo(click.style(f"Failed to initialize source storage: {str(e)}", fg="red"))
-        return
-
-    total_files = 0
-    copied_files = 0
-    skipped_files = 0
-    errored_files = 0
-    copied_upload_file_keys: list[str] = []
-
-    for prefix in path_list:
-        click.echo(click.style(f"Scanning source path: {prefix}", fg="white"))
-        try:
-            keys = source_storage.scan(path=prefix, files=True, directories=False)
-        except FileNotFoundError:
-            click.echo(click.style(f"  -> Skipping missing path: {prefix}", fg="yellow"))
-            continue
-        except NotImplementedError:
-            click.echo(click.style("  -> Source storage does not support scanning.", fg="red"))
-            return
-        except Exception as e:
-            click.echo(click.style(f"  -> Error scanning '{prefix}': {str(e)}", fg="red"))
-            continue
-
-        click.echo(click.style(f"Found {len(keys)} files under {prefix}", fg="white"))
-
-        for key in keys:
-            total_files += 1
-
-            # check destination existence
-            if not overwrite:
-                try:
-                    if storage.exists(key):
-                        skipped_files += 1
-                        continue
-                except Exception as e:
-                    # existence check failures should not block migration attempt
-                    # but should be surfaced to user as a warning for visibility
-                    click.echo(
-                        click.style(
-                            f"  -> Warning: failed target existence check for {key}: {str(e)}",
-                            fg="yellow",
-                        )
-                    )
-
-            if dry_run:
-                copied_files += 1
-                continue
-
-            # read from source and write to destination
-            try:
-                data = source_storage.load_once(key)
-            except FileNotFoundError:
-                errored_files += 1
-                click.echo(click.style(f"  -> Missing on source: {key}", fg="yellow"))
-                continue
-            except Exception as e:
-                errored_files += 1
-                click.echo(click.style(f"  -> Error reading {key}: {str(e)}", fg="red"))
-                continue
-
-            try:
-                storage.save(key, data)
-                copied_files += 1
-                if prefix == "upload_files":
-                    copied_upload_file_keys.append(key)
-            except Exception as e:
-                errored_files += 1
-                click.echo(click.style(f"  -> Error writing {key} to target: {str(e)}", fg="red"))
-                continue
-
-    click.echo("")
-    click.echo(click.style("Migration summary:", fg="yellow"))
-    click.echo(click.style(f"  Total:   {total_files}", fg="white"))
-    click.echo(click.style(f"  Copied:  {copied_files}", fg="green"))
-    click.echo(click.style(f"  Skipped: {skipped_files}", fg="white"))
-    if errored_files:
-        click.echo(click.style(f"  Errors:  {errored_files}", fg="red"))
-
-    if dry_run:
-        click.echo(click.style("Dry-run complete. No changes were made.", fg="green"))
-        return
-
-    if errored_files:
-        click.echo(
-            click.style(
-                "Some files failed to migrate. Review errors above before updating DB records.",
-                fg="yellow",
-            )
-        )
-        if update_db and not force:
-            if not click.confirm("Proceed to update DB storage_type despite errors?", default=False):
-                update_db = False
-
-    # Optionally update DB records for upload_files.storage_type (only for successfully copied upload_files)
-    if update_db:
-        if not copied_upload_file_keys:
-            click.echo(click.style("No upload_files copied. Skipping DB storage_type update.", fg="yellow"))
-        else:
-            try:
-                source_storage_type = StorageType.LOCAL if is_source_local else StorageType.OPENDAL
-                updated = cast(
-                    CursorResult,
-                    db.session.execute(
-                        update(UploadFile)
-                        .where(
-                            UploadFile.storage_type == source_storage_type,
-                            UploadFile.key.in_(copied_upload_file_keys),
-                        )
-                        .values(storage_type=dify_config.STORAGE_TYPE)
-                    ),
-                ).rowcount
-                db.session.commit()
-                click.echo(click.style(f"Updated storage_type for {updated} upload_files records.", fg="green"))
-            except Exception as e:
-                db.session.rollback()
-                click.echo(click.style(f"Failed to update DB storage_type: {str(e)}", fg="red"))
+        # send success email
+        send_deletion_success_task.delay(account.email)
 
 ```
 
-### api/commands/plugin.py
+### api/tasks/rag_pipeline/rag_pipeline_run_task.py
 ```py
+import contextvars
 import json
 import logging
-from typing import Any, cast
+import time
+import uuid
+from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
+from typing import Any
 
 import click
-from pydantic import TypeAdapter
-from sqlalchemy import delete, select
-from sqlalchemy.engine import CursorResult
+from celery import group, shared_task
+from flask import current_app, g
+from sqlalchemy.orm import Session, sessionmaker
 
 from configs import dify_config
-from core.helper import encrypter
-from core.plugin.entities.plugin_daemon import CredentialType
-from core.plugin.impl.plugin import PluginInstaller
-from core.tools.utils.system_oauth_encryption import encrypt_system_oauth_params
+from core.app.entities.app_invoke_entities import InvokeFrom, RagPipelineGenerateEntity
+from core.app.entities.rag_pipeline_invoke_entities import RagPipelineInvokeEntity
+from core.rag.pipeline.queue import TenantIsolatedTaskQueue
+from core.repositories.factory import DifyCoreRepositoryFactory
 from extensions.ext_database import db
-from models import Tenant
-from models.oauth import DatasourceOauthParamConfig, DatasourceProvider
-from models.provider_ids import DatasourceProviderID, ToolProviderID
-from models.source import DataSourceApiKeyAuthBinding, DataSourceOauthBinding
-from models.tools import ToolOAuthSystemClient
-from services.plugin.data_migration import PluginDataMigration
-from services.plugin.plugin_migration import PluginMigration
-from services.plugin.plugin_service import PluginService
+from models import Account, Tenant
+from models.dataset import Pipeline
+from models.enums import WorkflowRunTriggeredFrom
+from models.workflow import Workflow, WorkflowNodeExecutionTriggeredFrom
+from services.file_service import FileService
 
 logger = logging.getLogger(__name__)
 
 
-@click.command("setup-system-tool-oauth-client", help="Setup system tool oauth client.")
-@click.option("--provider", prompt=True, help="Provider name")
-@click.option("--client-params", prompt=True, help="Client Params")
-def setup_system_tool_oauth_client(provider, client_params):
+def chunked(iterable: Sequence, size: int):
+    it = iter(iterable)
+    return iter(lambda: list(islice(it, size)), [])
+
+
+@shared_task(queue="pipeline")
+def rag_pipeline_run_task(
+    rag_pipeline_invoke_entities_file_id: str,
+    tenant_id: str,
+):
     """
-    Setup system tool oauth client
+    Async Run rag pipeline task using regular priority queue.
+
+    :param rag_pipeline_invoke_entities_file_id: File ID containing serialized RAG pipeline invoke entities
+    :param tenant_id: Tenant ID for the pipeline execution
     """
-    provider_id = ToolProviderID(provider)
-    provider_name = provider_id.provider_name
-    plugin_id = provider_id.plugin_id
+    # run with threading, thread pool size is 10
 
     try:
-        # json validate
-        click.echo(click.style(f"Validating client params: {client_params}", fg="yellow"))
-        client_params_dict = TypeAdapter(dict[str, Any]).validate_json(client_params)
-        click.echo(click.style("Client params validated successfully.", fg="green"))
-
-        click.echo(click.style(f"Encrypting client params: {client_params}", fg="yellow"))
-        click.echo(click.style(f"Using SECRET_KEY: `{dify_config.SECRET_KEY}`", fg="yellow"))
-        oauth_client_params = encrypt_system_oauth_params(client_params_dict)
-        click.echo(click.style("Client params encrypted successfully.", fg="green"))
-    except Exception as e:
-        click.echo(click.style(f"Error parsing client params: {str(e)}", fg="red"))
-        return
-
-    deleted_count = cast(
-        CursorResult,
-        db.session.execute(
-            delete(ToolOAuthSystemClient).where(
-                ToolOAuthSystemClient.provider == provider_name,
-                ToolOAuthSystemClient.plugin_id == plugin_id,
-            )
-        ),
-    ).rowcount
-    if deleted_count > 0:
-        click.echo(click.style(f"Deleted {deleted_count} existing oauth client params.", fg="yellow"))
-
-    oauth_client = ToolOAuthSystemClient(
-        provider=provider_name,
-        plugin_id=plugin_id,
-        encrypted_oauth_params=oauth_client_params,
-    )
-    db.session.add(oauth_client)
-    db.session.commit()
-    click.echo(click.style(f"OAuth client params setup successfully. id: {oauth_client.id}", fg="green"))
-
-
-@click.command("setup-system-trigger-oauth-client", help="Setup system trigger oauth client.")
-@click.option("--provider", prompt=True, help="Provider name")
-@click.option("--client-params", prompt=True, help="Client Params")
-def setup_system_trigger_oauth_client(provider, client_params):
-    """
-    Setup system trigger oauth client
-    """
-    from models.provider_ids import TriggerProviderID
-    from models.trigger import TriggerOAuthSystemClient
-
-    provider_id = TriggerProviderID(provider)
-    provider_name = provider_id.provider_name
-    plugin_id = provider_id.plugin_id
-
-    try:
-        # json validate
-        click.echo(click.style(f"Validating client params: {client_params}", fg="yellow"))
-        client_params_dict = TypeAdapter(dict[str, Any]).validate_json(client_params)
-        click.echo(click.style("Client params validated successfully.", fg="green"))
-
-        click.echo(click.style(f"Encrypting client params: {client_params}", fg="yellow"))
-        click.echo(click.style(f"Using SECRET_KEY: `{dify_config.SECRET_KEY}`", fg="yellow"))
-        oauth_client_params = encrypt_system_oauth_params(client_params_dict)
-        click.echo(click.style("Client params encrypted successfully.", fg="green"))
-    except Exception as e:
-        click.echo(click.style(f"Error parsing client params: {str(e)}", fg="red"))
-        return
-
-    deleted_count = cast(
-        CursorResult,
-        db.session.execute(
-            delete(TriggerOAuthSystemClient).where(
-                TriggerOAuthSystemClient.provider == provider_name,
-                TriggerOAuthSystemClient.plugin_id == plugin_id,
-            )
-        ),
-    ).rowcount
-    if deleted_count > 0:
-        click.echo(click.style(f"Deleted {deleted_count} existing oauth client params.", fg="yellow"))
-
-    oauth_client = TriggerOAuthSystemClient(
-        provider=provider_name,
-        plugin_id=plugin_id,
-        encrypted_oauth_params=oauth_client_params,
-    )
-    db.session.add(oauth_client)
-    db.session.commit()
-    click.echo(click.style(f"OAuth client params setup successfully. id: {oauth_client.id}", fg="green"))
-
-
-@click.command("setup-datasource-oauth-client", help="Setup datasource oauth client.")
-@click.option("--provider", prompt=True, help="Provider name")
-@click.option("--client-params", prompt=True, help="Client Params")
-def setup_datasource_oauth_client(provider, client_params):
-    """
-    Setup datasource oauth client
-    """
-    provider_id = DatasourceProviderID(provider)
-    provider_name = provider_id.provider_name
-    plugin_id = provider_id.plugin_id
-
-    try:
-        # json validate
-        click.echo(click.style(f"Validating client params: {client_params}", fg="yellow"))
-        client_params_dict = TypeAdapter(dict[str, Any]).validate_json(client_params)
-        click.echo(click.style("Client params validated successfully.", fg="green"))
-    except Exception as e:
-        click.echo(click.style(f"Error parsing client params: {str(e)}", fg="red"))
-        return
-
-    click.echo(click.style(f"Ready to delete existing oauth client params: {provider_name}", fg="yellow"))
-    deleted_count = cast(
-        CursorResult,
-        db.session.execute(
-            delete(DatasourceOauthParamConfig).where(
-                DatasourceOauthParamConfig.provider == provider_name,
-                DatasourceOauthParamConfig.plugin_id == plugin_id,
-            )
-        ),
-    ).rowcount
-    if deleted_count > 0:
-        click.echo(click.style(f"Deleted {deleted_count} existing oauth client params.", fg="yellow"))
-
-    click.echo(click.style(f"Ready to setup datasource oauth client: {provider_name}", fg="yellow"))
-    oauth_client = DatasourceOauthParamConfig(
-        provider=provider_name,
-        plugin_id=plugin_id,
-        system_credentials=client_params_dict,
-    )
-    db.session.add(oauth_client)
-    db.session.commit()
-    click.echo(click.style(f"provider: {provider_name}", fg="green"))
-    click.echo(click.style(f"plugin_id: {plugin_id}", fg="green"))
-    click.echo(click.style(f"params: {json.dumps(client_params_dict, indent=2, ensure_ascii=False)}", fg="green"))
-    click.echo(click.style(f"Datasource oauth client setup successfully. id: {oauth_client.id}", fg="green"))
-
-
-@click.command("transform-datasource-credentials", help="Transform datasource credentials.")
-@click.option(
-    "--environment", prompt=True, help="the environment to transform datasource credentials", default="online"
-)
-def transform_datasource_credentials(environment: str):
-    """
-    Transform datasource credentials
-    """
-    try:
-        installer_manager = PluginInstaller()
-        plugin_migration = PluginMigration()
-
-        notion_plugin_id = "langgenius/notion_datasource"
-        firecrawl_plugin_id = "langgenius/firecrawl_datasource"
-        jina_plugin_id = "langgenius/jina_datasource"
-        if environment == "online":
-            notion_plugin_unique_identifier = plugin_migration._fetch_plugin_unique_identifier(notion_plugin_id)  # pyright: ignore[reportPrivateUsage]
-            firecrawl_plugin_unique_identifier = plugin_migration._fetch_plugin_unique_identifier(firecrawl_plugin_id)  # pyright: ignore[reportPrivateUsage]
-            jina_plugin_unique_identifier = plugin_migration._fetch_plugin_unique_identifier(jina_plugin_id)  # pyright: ignore[reportPrivateUsage]
-        else:
-            notion_plugin_unique_identifier = None
-            firecrawl_plugin_unique_identifier = None
-            jina_plugin_unique_identifier = None
-        oauth_credential_type = CredentialType.OAUTH2
-        api_key_credential_type = CredentialType.API_KEY
-
-        # deal notion credentials
-        deal_notion_count = 0
-        notion_credentials = db.session.scalars(
-            select(DataSourceOauthBinding).where(DataSourceOauthBinding.provider == "notion")
-        ).all()
-        if notion_credentials:
-            notion_credentials_tenant_mapping: dict[str, list[DataSourceOauthBinding]] = {}
-            for notion_credential in notion_credentials:
-                tenant_id = notion_credential.tenant_id
-                if tenant_id not in notion_credentials_tenant_mapping:
-                    notion_credentials_tenant_mapping[tenant_id] = []
-                notion_credentials_tenant_mapping[tenant_id].append(notion_credential)
-            for tenant_id, notion_tenant_credentials in notion_credentials_tenant_mapping.items():
-                tenant = db.session.scalar(select(Tenant).where(Tenant.id == tenant_id))
-                if not tenant:
-                    continue
-                try:
-                    # check notion plugin is installed
-                    installed_plugins = installer_manager.list_plugins(tenant_id)
-                    installed_plugins_ids = [plugin.plugin_id for plugin in installed_plugins]
-                    if notion_plugin_id not in installed_plugins_ids:
-                        if notion_plugin_unique_identifier:
-                            # install notion plugin
-                            PluginService.install_from_marketplace_pkg(tenant_id, [notion_plugin_unique_identifier])
-                    auth_count = 0
-                    for notion_tenant_credential in notion_tenant_credentials:
-                        auth_count += 1
-                        # get credential oauth params
-                        access_token = notion_tenant_credential.access_token
-                        # notion info
-                        notion_info = notion_tenant_credential.source_info
-                        workspace_id = notion_info.get("workspace_id")
-                        workspace_name = notion_info.get("workspace_name")
-                        workspace_icon = notion_info.get("workspace_icon")
-                        new_credentials = {
-                            "integration_secret": encrypter.encrypt_token(tenant_id, access_token),
-                            "workspace_id": workspace_id,
-                            "workspace_name": workspace_name,
-                            "workspace_icon": workspace_icon,
-                        }
-                        datasource_provider = DatasourceProvider(
-                            provider="notion_datasource",
-                            tenant_id=tenant_id,
-                            plugin_id=notion_plugin_id,
-                            auth_type=oauth_credential_type.value,
-                            encrypted_credentials=new_credentials,
-                            name=f"Auth {auth_count}",
-                            avatar_url=workspace_icon or "default",
-                            is_default=False,
-                        )
-                        db.session.add(datasource_provider)
-                        deal_notion_count += 1
-                except Exception as e:
-                    click.echo(
-                        click.style(
-                            f"Error transforming notion credentials: {str(e)}, tenant_id: {tenant_id}", fg="red"
-                        )
-                    )
-                    continue
-                db.session.commit()
-        # deal firecrawl credentials
-        deal_firecrawl_count = 0
-        firecrawl_credentials = db.session.scalars(
-            select(DataSourceApiKeyAuthBinding).where(DataSourceApiKeyAuthBinding.provider == "firecrawl")
-        ).all()
-        if firecrawl_credentials:
-            firecrawl_credentials_tenant_mapping: dict[str, list[DataSourceApiKeyAuthBinding]] = {}
-            for firecrawl_credential in firecrawl_credentials:
-                tenant_id = firecrawl_credential.tenant_id
-                if tenant_id not in firecrawl_credentials_tenant_mapping:
-                    firecrawl_credentials_tenant_mapping[tenant_id] = []
-                firecrawl_credentials_tenant_mapping[tenant_id].append(firecrawl_credential)
-            for tenant_id, firecrawl_tenant_credentials in firecrawl_credentials_tenant_mapping.items():
-                tenant = db.session.scalar(select(Tenant).where(Tenant.id == tenant_id))
-                if not tenant:
-                    continue
-                try:
-                    # check firecrawl plugin is installed
-                    installed_plugins = installer_manager.list_plugins(tenant_id)
-                    installed_plugins_ids = [plugin.plugin_id for plugin in installed_plugins]
-                    if firecrawl_plugin_id not in installed_plugins_ids:
-                        if firecrawl_plugin_unique_identifier:
-                            # install firecrawl plugin
-                            PluginService.install_from_marketplace_pkg(tenant_id, [firecrawl_plugin_unique_identifier])
-
-                    auth_count = 0
-                    for firecrawl_tenant_credential in firecrawl_tenant_credentials:
-                        auth_count += 1
-                        if not firecrawl_tenant_credential.credentials:
-                            click.echo(
-                                click.style(
-                                    f"Skipping firecrawl credential for tenant {tenant_id} due to missing credentials.",
-                                    fg="yellow",
-                                )
-                            )
-                            continue
-                        # get credential api key
-                        credentials_json = json.loads(firecrawl_tenant_credential.credentials)
-                        api_key = credentials_json.get("config", {}).get("api_key")
-                        base_url = credentials_json.get("config", {}).get("base_url")
-                        new_credentials = {
-                            "firecrawl_api_key": api_key,
-                            "base_url": base_url,
-                        }
-                        datasource_provider = DatasourceProvider(
-                            provider="firecrawl",
-                            tenant_id=tenant_id,
-                            plugin_id=firecrawl_plugin_id,
-                            auth_type=api_key_credential_type.value,
-                            encrypted_credentials=new_credentials,
-                            name=f"Auth {auth_count}",
-                            avatar_url="default",
-                            is_default=False,
-                        )
-                        db.session.add(datasource_provider)
-                        deal_firecrawl_count += 1
-                except Exception as e:
-                    click.echo(
-                        click.style(
-                            f"Error transforming firecrawl credentials: {str(e)}, tenant_id: {tenant_id}", fg="red"
-                        )
-                    )
-                    continue
-                db.session.commit()
-        # deal jina credentials
-        deal_jina_count = 0
-        jina_credentials = db.session.scalars(
-            select(DataSourceApiKeyAuthBinding).where(DataSourceApiKeyAuthBinding.provider == "jinareader")
-        ).all()
-        if jina_credentials:
-            jina_credentials_tenant_mapping: dict[str, list[DataSourceApiKeyAuthBinding]] = {}
-            for jina_credential in jina_credentials:
-                tenant_id = jina_credential.tenant_id
-                if tenant_id not in jina_credentials_tenant_mapping:
-                    jina_credentials_tenant_mapping[tenant_id] = []
-                jina_credentials_tenant_mapping[tenant_id].append(jina_credential)
-            for tenant_id, jina_tenant_credentials in jina_credentials_tenant_mapping.items():
-                tenant = db.session.scalar(select(Tenant).where(Tenant.id == tenant_id))
-                if not tenant:
-                    continue
-                try:
-                    # check jina plugin is installed
-                    installed_plugins = installer_manager.list_plugins(tenant_id)
-                    installed_plugins_ids = [plugin.plugin_id for plugin in installed_plugins]
-                    if jina_plugin_id not in installed_plugins_ids:
-                        if jina_plugin_unique_identifier:
-                            # install jina plugin
-                            logger.debug("Installing Jina plugin %s", jina_plugin_unique_identifier)
-                            PluginService.install_from_marketplace_pkg(tenant_id, [jina_plugin_unique_identifier])
-
-                    auth_count = 0
-                    for jina_tenant_credential in jina_tenant_credentials:
-                        auth_count += 1
-                        if not jina_tenant_credential.credentials:
-                            click.echo(
-                                click.style(
-                                    f"Skipping jina credential for tenant {tenant_id} due to missing credentials.",
-                                    fg="yellow",
-                                )
-                            )
-                            continue
-                        # get credential api key
-                        credentials_json = json.loads(jina_tenant_credential.credentials)
-                        api_key = credentials_json.get("config", {}).get("api_key")
-                        new_credentials = {
-                            "integration_secret": api_key,
-                        }
-                        datasource_provider = DatasourceProvider(
-                            provider="jinareader",
-                            tenant_id=tenant_id,
-                            plugin_id=jina_plugin_id,
-                            auth_type=api_key_credential_type.value,
-                            encrypted_credentials=new_credentials,
-                            name=f"Auth {auth_count}",
-                            avatar_url="default",
-                            is_default=False,
-                        )
-                        db.session.add(datasource_provider)
-                        deal_jina_count += 1
-                except Exception as e:
-                    click.echo(
-                        click.style(f"Error transforming jina credentials: {str(e)}, tenant_id: {tenant_id}", fg="red")
-                    )
-                    continue
-                db.session.commit()
-    except Exception as e:
-        click.echo(click.style(f"Error parsing client params: {str(e)}", fg="red"))
-        return
-    click.echo(click.style(f"Transforming notion successfully. deal_notion_count: {deal_notion_count}", fg="green"))
-    click.echo(
-        click.style(f"Transforming firecrawl successfully. deal_firecrawl_count: {deal_firecrawl_count}", fg="green")
-    )
-    click.echo(click.style(f"Transforming jina successfully. deal_jina_count: {deal_jina_count}", fg="green"))
-
-
-@click.command("migrate-data-for-plugin", help="Migrate data for plugin.")
-def migrate_data_for_plugin():
-    """
-    Migrate data for plugin.
-    """
-    click.echo(click.style("Starting migrate data for plugin.", fg="white"))
-
-    PluginDataMigration.migrate()
-
-    click.echo(click.style("Migrate data for plugin completed.", fg="green"))
-
-
-@click.command("extract-plugins", help="Extract plugins.")
-@click.option("--output_file", prompt=True, help="The file to store the extracted plugins.", default="plugins.jsonl")
-@click.option("--workers", prompt=True, help="The number of workers to extract plugins.", default=10)
-def extract_plugins(output_file: str, workers: int):
-    """
-    Extract plugins.
-    """
-    click.echo(click.style("Starting extract plugins.", fg="white"))
-
-    PluginMigration.extract_plugins(output_file, workers)
-
-    click.echo(click.style("Extract plugins completed.", fg="green"))
-
-
-@click.command("extract-unique-identifiers", help="Extract unique identifiers.")
-@click.option(
-    "--output_file",
-    prompt=True,
-    help="The file to store the extracted unique identifiers.",
-    default="unique_identifiers.json",
-)
-@click.option(
-    "--input_file", prompt=True, help="The file to store the extracted unique identifiers.", default="plugins.jsonl"
-)
-def extract_unique_plugins(output_file: str, input_file: str):
-    """
-    Extract unique plugins.
-    """
-    click.echo(click.style("Starting extract unique plugins.", fg="white"))
-
-    PluginMigration.extract_unique_plugins_to_file(input_file, output_file)
-
-    click.echo(click.style("Extract unique plugins completed.", fg="green"))
-
-
-@click.command("install-plugins", help="Install plugins.")
-@click.option(
-    "--input_file", prompt=True, help="The file to store the extracted unique identifiers.", default="plugins.jsonl"
-)
-@click.option(
-    "--output_file", prompt=True, help="The file to store the installed plugins.", default="installed_plugins.jsonl"
-)
-@click.option("--workers", prompt=True, help="The number of workers to install plugins.", default=100)
-def install_plugins(input_file: str, output_file: str, workers: int):
-    """
-    Install plugins.
-    """
-    click.echo(click.style("Starting install plugins.", fg="white"))
-
-    PluginMigration.install_plugins(input_file, output_file, workers)
-
-    click.echo(click.style("Install plugins completed.", fg="green"))
-
-
-@click.command("install-rag-pipeline-plugins", help="Install rag pipeline plugins.")
-@click.option(
-    "--input_file", prompt=True, help="The file to store the extracted unique identifiers.", default="plugins.jsonl"
-)
-@click.option(
-    "--output_file", prompt=True, help="The file to store the installed plugins.", default="installed_plugins.jsonl"
-)
-@click.option("--workers", prompt=True, help="The number of workers to install plugins.", default=100)
-def install_rag_pipeline_plugins(input_file, output_file, workers):
-    """
-    Install rag pipeline plugins
-    """
-    click.echo(click.style("Installing rag pipeline plugins", fg="yellow"))
-    plugin_migration = PluginMigration()
-    plugin_migration.install_rag_pipeline_plugins(
-        input_file,
-        output_file,
-        workers,
-    )
-    click.echo(click.style("Installing rag pipeline plugins successfully", fg="green"))
-
-```
-
-### api/commands/account.py
-```py
-import base64
-import secrets
-
-import click
-from sqlalchemy.orm import sessionmaker
-
-from constants.languages import languages
-from extensions.ext_database import db
-from libs.helper import email as email_validate
-from libs.password import hash_password, password_pattern, valid_password
-from services.account_service import AccountService, RegisterService, TenantService
-
-
-@click.command("reset-password", help="Reset the account password.")
-@click.option("--email", prompt=True, help="Account email to reset password for")
-@click.option("--new-password", prompt=True, help="New password")
-@click.option("--password-confirm", prompt=True, help="Confirm new password")
-def reset_password(email, new_password, password_confirm):
-    """
-    Reset password of owner account
-    Only available in SELF_HOSTED mode
-    """
-    if str(new_password).strip() != str(password_confirm).strip():
-        click.echo(click.style("Passwords do not match.", fg="red"))
-        return
-    normalized_email = email.strip().lower()
-
-    with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-        account = AccountService.get_account_by_email_with_case_fallback(email.strip(), session=session)
-
-        if not account:
-            click.echo(click.style(f"Account not found for email: {email}", fg="red"))
-            return
-
-        try:
-            valid_password(new_password)
-        except:
-            click.echo(click.style(f"Invalid password. Must match {password_pattern}", fg="red"))
-            return
-
-        # generate password salt
-        salt = secrets.token_bytes(16)
-        base64_salt = base64.b64encode(salt).decode()
-
-        # encrypt password with salt
-        password_hashed = hash_password(new_password, salt)
-        base64_password_hashed = base64.b64encode(password_hashed).decode()
-        account.password = base64_password_hashed
-        account.password_salt = base64_salt
-        AccountService.reset_login_error_rate_limit(normalized_email)
-        click.echo(click.style("Password reset successfully.", fg="green"))
-
-
-@click.command("reset-email", help="Reset the account email.")
-@click.option("--email", prompt=True, help="Current account email")
-@click.option("--new-email", prompt=True, help="New email")
-@click.option("--email-confirm", prompt=True, help="Confirm new email")
-def reset_email(email, new_email, email_confirm):
-    """
-    Replace account email
-    :return:
-    """
-    if str(new_email).strip() != str(email_confirm).strip():
-        click.echo(click.style("New emails do not match.", fg="red"))
-        return
-    normalized_new_email = new_email.strip().lower()
-
-    with sessionmaker(db.engine, expire_on_commit=False).begin() as session:
-        account = AccountService.get_account_by_email_with_case_fallback(email.strip(), session=session)
-
-        if not account:
-            click.echo(click.style(f"Account not found for email: {email}", fg="red"))
-            return
-
-        try:
-            email_validate(normalized_new_email)
-        except:
-            click.echo(click.style(f"Invalid email: {new_email}", fg="red"))
-            return
-
-        account.email = normalized_new_email
-        click.echo(click.style("Email updated successfully.", fg="green"))
-
-
-@click.command("create-tenant", help="Create account and tenant.")
-@click.option("--email", prompt=True, help="Tenant account email.")
-@click.option("--name", prompt=True, help="Workspace name.")
-@click.option("--language", prompt=True, help="Account language, default: en-US.")
-def create_tenant(email: str, language: str | None = None, name: str | None = None):
-    """
-    Create tenant account
-    """
-    if not email:
-        click.echo(click.style("Email is required.", fg="red"))
-        return
-
-    # Create account
-    email = email.strip().lower()
-
-    if "@" not in email:
-        click.echo(click.style("Invalid email address.", fg="red"))
-        return
-
-    account_name = email.split("@")[0]
-
-    if language not in languages:
-        language = "en-US"
-
-    # Validates name encoding for non-Latin characters.
-    name = name.strip().encode("utf-8").decode("utf-8") if name else None
-
-    # generate random password
-    new_password = secrets.token_urlsafe(16)
-
-    # register account
-    account = RegisterService.register(
-        email=email,
-        name=account_name,
-        password=new_password,
-        language=language,
-        create_workspace_required=False,
-    )
-    TenantService.create_owner_tenant_if_not_exist(account, name)
-
-    click.echo(
-        click.style(
-            f"Account and tenant created.\nAccount: {email}\nPassword: {new_password}",
-            fg="green",
+        start_at = time.perf_counter()
+        rag_pipeline_invoke_entities_content = FileService(db.engine).get_file_content(
+            rag_pipeline_invoke_entities_file_id
         )
-    )
+        rag_pipeline_invoke_entities = json.loads(rag_pipeline_invoke_entities_content)
+
+        logger.info("tenant %s received %d rag pipeline invoke entities", tenant_id, len(rag_pipeline_invoke_entities))
+
+        # Get Flask app object for thread context
+        flask_app = current_app._get_current_object()  # type: ignore
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for rag_pipeline_invoke_entity in rag_pipeline_invoke_entities:
+                # Submit task to thread pool with Flask app
+                future = executor.submit(run_single_rag_pipeline_task, rag_pipeline_invoke_entity, flask_app)
+                futures.append(future)
+
+            # Wait for all tasks to complete
+            for future in futures:
+                try:
+                    future.result()  # This will raise any exceptions that occurred in the thread
+                except Exception:
+                    logging.exception("Error in pipeline task")
+        end_at = time.perf_counter()
+        logging.info(
+            click.style(
+                f"tenant_id: {tenant_id}, Rag pipeline run completed. Latency: {end_at - start_at}s", fg="green"
+            )
+        )
+    except Exception:
+        logging.exception(click.style(f"Error running rag pipeline, tenant_id: {tenant_id}", fg="red"))
+        raise
+    finally:
+        tenant_isolated_task_queue = TenantIsolatedTaskQueue(tenant_id, "pipeline")
+
+        # Check if there are waiting tasks in the queue
+        # Use rpop to get the next task from the queue (FIFO order)
+        next_file_ids = tenant_isolated_task_queue.pull_tasks(count=dify_config.TENANT_ISOLATED_TASK_CONCURRENCY)
+        logger.info("rag pipeline tenant isolation queue %s next files: %s", tenant_id, next_file_ids)
+
+        if next_file_ids:
+            for batch in chunked(next_file_ids, 100):
+                jobs = []
+                for next_file_id in batch:
+                    tenant_isolated_task_queue.set_task_waiting_time()
+
+                    file_id = (
+                        next_file_id.decode("utf-8") if isinstance(next_file_id, (bytes, bytearray)) else next_file_id
+                    )
+
+                    jobs.append(
+                        rag_pipeline_run_task.s(
+                            rag_pipeline_invoke_entities_file_id=file_id,
+                            tenant_id=tenant_id,
+                        )
+                    )
+
+                if jobs:
+                    group(jobs).apply_async()
+        else:
+            # No more waiting tasks, clear the flag
+            tenant_isolated_task_queue.delete_task_key()
+        file_service = FileService(db.engine)
+        file_service.delete_file(rag_pipeline_invoke_entities_file_id)
+        db.session.close()
+
+
+def run_single_rag_pipeline_task(rag_pipeline_invoke_entity: Mapping[str, Any], flask_app):
+    """Run a single RAG pipeline task within Flask app context."""
+    # Create Flask application context for this thread
+    with flask_app.app_context():
+        try:
+            rag_pipeline_invoke_entity_model = RagPipelineInvokeEntity.model_validate(rag_pipeline_invoke_entity)
+            user_id = rag_pipeline_invoke_entity_model.user_id
+            tenant_id = rag_pipeline_invoke_entity_model.tenant_id
+            pipeline_id = rag_pipeline_invoke_entity_model.pipeline_id
+            workflow_id = rag_pipeline_invoke_entity_model.workflow_id
+            streaming = rag_pipeline_invoke_entity_model.streaming
+            workflow_execution_id = rag_pipeline_invoke_entity_model.workflow_execution_id
+            workflow_thread_pool_id = rag_pipeline_invoke_entity_model.workflow_thread_pool_id
+            application_generate_entity = rag_pipeline_invoke_entity_model.application_generate_entity
+
+            with Session(db.engine) as session:
+                # Load required entities
+                account = session.query(Account).where(Account.id == user_id).first()
+                if not account:
+                    raise ValueError(f"Account {user_id} not found")
+
+                tenant = session.query(Tenant).where(Tenant.id == tenant_id).first()
+                if not tenant:
+                    raise ValueError(f"Tenant {tenant_id} not found")
+                account.current_tenant = tenant
+
+                pipeline = session.query(Pipeline).where(Pipeline.id == pipeline_id).first()
+                if not pipeline:
+                    raise ValueError(f"Pipeline {pipeline_id} not found")
+
+                workflow = session.query(Workflow).where(Workflow.id == pipeline.workflow_id).first()
+                if not workflow:
+                    raise ValueError(f"Workflow {pipeline.workflow_id} not found")
+
+                if workflow_execution_id is None:
+                    workflow_execution_id = str(uuid.uuid4())
+
+                # Create application generate entity from dict
+                entity = RagPipelineGenerateEntity.model_validate(application_generate_entity)
+
+                # Create workflow repositories
+                session_factory = sessionmaker(bind=db.engine, expire_on_commit=False)
+                workflow_execution_repository = DifyCoreRepositoryFactory.create_workflow_execution_repository(
+                    session_factory=session_factory,
+                    user=account,
+                    app_id=entity.app_config.app_id,
+                    triggered_from=WorkflowRunTriggeredFrom.RAG_PIPELINE_RUN,
+                )
+
+                workflow_node_execution_repository = (
+                    DifyCoreRepositoryFactory.create_workflow_node_execution_repository(
+                        session_factory=session_factory,
+                        user=account,
+                        app_id=entity.app_config.app_id,
+                        triggered_from=WorkflowNodeExecutionTriggeredFrom.RAG_PIPELINE_RUN,
+                    )
+                )
+
+                # Set the user directly in g for preserve_flask_contexts
+                g._login_user = account
+
+                # Copy context for passing to pipeline generator
+                context = contextvars.copy_context()
+
+                # Direct execution without creating another thread
+                # Since we're already in a thread pool, no need for nested threading
+                from core.app.apps.pipeline.pipeline_generator import PipelineGenerator
+
+                pipeline_generator = PipelineGenerator()
+                # Using protected method intentionally for async execution
+                pipeline_generator._generate(  # type: ignore[attr-defined]
+                    flask_app=flask_app,
+                    context=context,
+                    pipeline=pipeline,
+                    workflow_id=workflow_id,
+                    user=account,
+                    application_generate_entity=entity,
+                    invoke_from=InvokeFrom.PUBLISHED_PIPELINE,
+                    workflow_execution_repository=workflow_execution_repository,
+                    workflow_node_execution_repository=workflow_node_execution_repository,
+                    streaming=streaming,
+                    workflow_thread_pool_id=workflow_thread_pool_id,
+                )
+        except Exception:
+            logging.exception("Error in pipeline task")
+            raise
 
 ```
 

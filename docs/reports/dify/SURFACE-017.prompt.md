@@ -3,1011 +3,574 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 ## Surface Under Analysis
 
 - **ID**: SURFACE-017
-- **Kind**: endpoint
-- **Identifier**: External Data Tool API Integration
-- **Description**: Fetches data from user-configured external API endpoints during app execution. SSRF risk via user-controlled URLs, credential leakage in request headers, and injection via untrusted external response data.
-- **Locations**: api/core/external_data_tool/api/, api/core/external_data_tool/
-
-## Repository Context
-
-## Directory Structure
-```
-AGENTS.md
-AUTHORS
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-Makefile
-README.md
-api/ 
-  AGENTS.md
-  Dockerfile
-  README.md
-  app.py
-  app_factory.py
-  celery_entrypoint.py
-  celery_healthcheck.py
-  cnt_base.sh
-  commands/ 
-  configs/ 
-    deploy/ 
-    enterprise/ 
-    extra/ 
-    feature/ 
-      hosted_service/ 
-    middleware/ 
-      cache/ 
-      storage/ 
-      vdb/ 
-    observability/ 
-      otel/ 
-    packaging/ 
-    remote_settings_sources/ 
-      apollo/ 
-      nacos/ 
-  constants/ 
-  context/ 
-  contexts/ 
-  controllers/ 
-    common/ 
-    console/ 
-      app/ 
-      auth/ 
-      billing/ 
-      datasets/ 
-      explore/ 
-      tag/ 
-      workspace/ 
-    files/ 
-    inner_api/ 
-      app/ 
-      plugin/ 
-      workspace/ 
-    mcp/ 
-    service_api/ 
-      app/ 
-      dataset/ 
-      end_user/ 
-      workspace/ 
-    trigger/ 
-    web/ 
-  core/ 
-    agent/ 
-      output_parser/ 
-      prompt/ 
-      strategy/ 
-    app/ 
-      app_config/ 
-      apps/ 
-      entities/ 
-      features/ 
-      file_access/ 
-      layers/ 
-      llm/ 
-      task_pipeline/ 
-      workflow/ 
-    base/ 
-      tts/ 
-    callback_handler/ 
-    datasource/ 
-      __base/ 
-      entities/ 
-      local_file/ 
-      online_document/ 
-      online_drive/ 
-      utils/ 
-      website_crawl/ 
-    db/ 
-    entities/ 
-    errors/ 
-    extension/ 
-    external_data_tool/ 
-      api/ 
-    helper/ 
-      code_executor/ 
-    llm_generator/ 
-      output_parser/ 
-    logging/ 
-    mcp/ 
-      auth/ 
-      client/ 
-      server/ 
-      session/ 
-    memory/ 
-    moderation/ 
-      api/ 
-      keywords/ 
-      openai_moderation/ 
-    ops/ 
-      aliyun_trace/ 
-      arize_phoenix_trace/ 
-      entities/ 
-      langfuse_trace/ 
-      langsmith_trace/ 
-      mlflow_trace/ 
-      opik_trace/ 
-      tencent_trace/ 
-      weave_trace/ 
-    plugin/ 
-      backwards_invocation/ 
-      endpoint/ 
-      entities/ 
-      impl/ 
-      utils/ 
-    prompt/ 
-      entities/ 
-      prompt_templates/ 
-      utils/ 
-    rag/ 
-      cleaner/ 
-      data_post_processor/ 
-      datasource/ 
-      docstore/ 
-      embedding/ 
-      entities/ 
-      extractor/ 
-      index_processor/ 
-      models/ 
-      pipeline/ 
-      rerank/ 
-      retrieval/ 
-      splitter/ 
-      summary_index/ 
-    repositories/ 
-    schemas/ 
-      builtin/ 
-    telemetry/ 
-    tools/ 
-      __base/ 
-      builtin_tool/ 
-      custom_tool/ 
-      entities/ 
-      mcp_tool/ 
-      plugin_tool/ 
-      utils/ 
-      workflow_as_tool/ 
-    trigger/ 
-      debug/ 
-      entities/ 
-      utils/ 
-    workflow/ 
-      nodes/ 
-  dify_app.py
-  docker/ 
-  enterprise/ 
-    telemetry/ 
-      entities/ 
-  enums/ 
-  events/ 
-    event_handlers/ 
-  extensions/ 
-    logstore/ 
-      repositories/ 
-    otel/ 
-      decorators/ 
-      parser/ 
-      semconv/ 
-    storage/ 
-      clickzetta_volume/ 
-  factories/ 
-    file_factory/ 
-  fields/ 
-  gunicorn.conf.py
-  libs/ 
-    broadcast_channel/ 
-      redis/ 
-  migrations/ 
-    versions/ 
-  models/ 
-    utils/ 
-  pyproject.toml
-  pyrefly-local-excludes.txt
-  pyrightconfig.json
-  pytest.ini
-  repositories/ 
-    entities/ 
-  schedule/ 
-  services/ 
-    auth/ 
-      firecrawl/ 
-      jina/ 
-      watercrawl/ 
-    document_indexing_proxy/ 
-    enterprise/ 
-    entities/ 
-      external_knowledge_entities/ 
-      knowledge_entities/ 
-    errors/ 
-    plugin/ 
-    rag_pipeline/ 
-      entity/ 
-      pipeline_template/ 
-      transform/ 
-    recommend_app/ 
-      buildin/ 
-      database/ 
-      remote/ 
-    retention/ 
-      conversation/ 
-      workflow_run/ 
-    tools/ 
-    trigger/ 
-    workflow/ 
-  tasks/ 
-    annotation/ 
-    app_generate/ 
-    rag_pipeline/ 
-    workflow_cfs_scheduler/ 
-  templates/ 
-    without-brand/ 
-  tests/ 
-    fixtures/ 
-      workflow/ 
-    integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      libs/ 
-      model_runtime/ 
-      plugin/ 
-      services/ 
-      storage/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-      vdb/ 
-      workflow/ 
-    test_containers_integration_tests/ 
-      controllers/ 
-      core/ 
-      factories/ 
-      helpers/ 
-      libs/ 
-      models/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      trigger/ 
-      workflow/ 
-    unit_tests/ 
-      commands/ 
-      configs/ 
-      controllers/ 
-      core/ 
-      enterprise/ 
-      events/ 
-      extensions/ 
-      factories/ 
-      fields/ 
-      libs/ 
-      models/ 
-      oss/ 
-      repositories/ 
-      services/ 
-      tasks/ 
-      tools/ 
-      utils/ 
-  uv.lock
-codecov.yml
-dev/ 
-  basedpyright-check
-  pyrefly-check-local
-  pytest/ 
-  reformat
-  setup
-  start-api
-  start-beat
-  start-docker-compose
-  start-web
-  start-worker
-  sync-uv
-  ty-check
-  update-uv
-docker/ 
-  README.md
-  certbot/ 
-  couchbase-server/ 
-  dify-env-sync.py
-  dify-env-sync.sh
-  docker-compose-template.yaml
-  docker-compose.middleware.yaml
-  docker-compose.png
-  docker-compose.yaml
-  elasticsearch/ 
-  generate_docker_compose
-  iris/ 
-  middleware.env.example
-  nginx/ 
-    conf.d/ 
-    ssl/ 
-  pgvector/ 
-  ssrf_proxy/ 
-  startupscripts/ 
-  tidb/ 
-    config/ 
-  volumes/ 
-    myscale/ 
-      config/ 
-    oceanbase/ 
-      init.d/ 
-    opensearch/ 
-    sandbox/ 
-      conf/ 
-docs/ 
-  ar-SA/ 
-  bn-BD/ 
-  de-DE/ 
-  es-ES/ 
-  eu-ai-act-compliance.md
-  fr-FR/ 
-  hi-IN/ 
-  it-IT/ 
-  ja-JP/ 
-  ko-KR/ 
-  pt-BR/ 
-  sl-SI/ 
-  suggested-questions-configuration.md
-  tlh/ 
-  tr-TR/ 
-  vi-VN/ 
-  weaviate/ 
-    WEAVIATE_MIGRATION_GUIDE/ 
-  zh-CN/ 
-  zh-TW/ 
-e2e/ 
-  AGENTS.md
-  README.md
-  cucumber.config.ts
-  features/ 
-    apps/ 
-    smoke/ 
-    step-definitions/ 
-      apps/ 
-      common/ 
-      smoke/ 
-    support/ 
-  fixtures/ 
-  package.json
-  scripts/ 
-  support/ 
-  test-env.ts
-  tsconfig.json
-  vite.config.ts
-images/ 
-  GitHub_README_if.png
-  describe.png
-  models.png
-package.json
-packages/ 
-  iconify-collections/ 
-    assets/ 
-      public/ 
-      vender/ 
-    custom-public/ 
-    custom-vender/ 
-    scripts/ 
-pnpm-lock.yaml
-pnpm-workspace.yaml
-scripts/ 
-  stress-test/ 
-    common/ 
-    setup/ 
-      dsl/ 
-sdks/ 
-  README.md
-  nodejs-client/ 
-    scripts/ 
-    src/ 
-      client/ 
-      errors/ 
-      http/ 
-      internal/ 
-      types/ 
-    tests/ 
-  php-client/ 
-vite.config.ts
-web/ 
-  AGENTS.md
-  CLAUDE.md
-  Dockerfile
-  Dockerfile.dockerignore
-  README.md
-  __mocks__/ 
-    @tanstack/ 
-  __tests__/ 
-    apps/ 
-    billing/ 
-    datasets/ 
-    develop/ 
-    explore/ 
-    goto-anything/ 
-    plugins/ 
-    rag-pipeline/ 
-    share/ 
-    tools/ 
-  app/ 
-    (commonLayout)/ 
-      app/ 
-      apps/ 
-      datasets/ 
-      education-apply/ 
-      explore/ 
-      plugins/ 
-      tools/ 
-    (humanInputLayout)/ 
-      form/ 
-    (shareLayout)/ 
-      chat/ 
-      chatbot/ 
-      completion/ 
-      components/ 
-      webapp-reset-password/ 
-      webapp-signin/ 
-      workflow/ 
-    account/ 
-      (commonLayout)/ 
-      oauth/ 
-    activate/ 
-    components/ 
-      app/ 
-      app-sidebar/ 
-      apps/ 
-      base/ 
-      billing/ 
-      custom/ 
-      datasets/ 
-      develop/ 
-      devtools/ 
-      explore/ 
-      goto-anything/ 
-      header/ 
-      plugins/ 
-      provider/ 
-      rag-pipeline/ 
-      share/ 
-      signin/ 
-      tools/ 
-      workflow/ 
-      workflow-app/ 
-    education-apply/ 
-    forgot-password/ 
-    init/ 
-    install/ 
-    oauth-callback/ 
-    reset-password/ 
-      check-code/ 
-      set-password/ 
-    signin/ 
-      assets/ 
-      check-code/ 
-      components/ 
-      invite-settings/ 
-      utils/ 
-    signup/ 
-      check-code/ 
-      components/ 
-      set-password/ 
-    styles/ 
-  assets/ 
-  bin/ 
-  config/ 
-  constants/ 
-  context/ 
-    hooks/ 
-  contract/ 
-    console/ 
-  docker/ 
-  docs/ 
-  env.ts
-  eslint-suppressions.json
-  eslint.config.mjs
-  eslint.constants.mjs
-  global.d.ts
-  hooks/ 
-  i18n/ 
-    ar-TN/ 
-    de-DE/ 
-    en-US/ 
-    es-ES/ 
-    fa-IR/ 
-    fr-FR/ 
-    hi-IN/ 
-    id-ID/ 
-    it-IT/ 
-    ja-JP/ 
-    ko-KR/ 
-    nl-NL/ 
-    pl-PL/ 
-    pt-BR/ 
-    ro-RO/ 
-    ru-RU/ 
-    sl-SI/ 
-    th-TH/ 
-    tr-TR/ 
-    uk-UA/ 
-    vi-VN/ 
-    zh-Hans/ 
-    zh-Hant/ 
-  i18n-config/ 
-  instrumentation-client.ts
-  knip.config.ts
-  models/ 
-  next/ 
-  next.config.ts
-  package.json
-  plugins/ 
-    dev-proxy/ 
-    eslint/ 
-      rules/ 
-    vite/ 
-  postcss.config.js
-  proxy.ts
-  public/ 
-    education/ 
-    in-site-message/ 
-    logo/ 
-    screenshots/ 
-      dark/ 
-      light/ 
-    vs/ 
-      base/ 
-      basic-languages/ 
-      editor/ 
-      language/ 
-  scripts/ 
-  service/ 
-    knowledge/ 
-  tailwind-common-config.ts
-  tailwind.config.ts
-  test/ 
-  themes/ 
-  tsconfig.json
-  tsslint.config.ts
-  types/ 
-  typography.js
-  utils/ 
-  vite.config.ts
-  vitest.setup.ts
-
-```
-
-## Languages
-- TypeScript: 5508 files
-- Python: 2785 files
-- JavaScript: 122 files
-- Yaml: 95 files
-- Bash: 20 files
-- Php: 1 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "dify",
-  "private": true,
-  "scripts": {
-    "prepare": "vp config"
-  },
-  "devDependencies": {
-    "vite-plus": "catalog:"
-  },
-  "engines": {
-    "node": "^22.22.1"
-  },
-  "packageManager": "pnpm@10.33.0"
-}
-
-```
-
-## Entry Points
-- sdks/nodejs-client/src/index.ts
-- web/next/index.ts
-- web/types/app.ts
-- web/app/components/tools/utils/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/tool-selector/hooks/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/components/index.ts
-- web/app/components/plugins/plugin-detail-panel/detail-header/hooks/index.ts
-- web/app/components/goto-anything/components/index.ts
-- web/app/components/goto-anything/hooks/index.ts
-- web/app/components/goto-anything/actions/commands/index.ts
-- web/app/components/goto-anything/actions/index.ts
-- web/app/components/workflow-app/hooks/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/data-source/store/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/steps/index.ts
-- web/app/components/datasets/documents/create-from-pipeline/hooks/index.ts
-- web/app/components/datasets/documents/components/document-list/components/index.ts
-- web/app/components/datasets/documents/components/document-list/hooks/index.ts
-- web/app/components/datasets/documents/detail/completed/components/index.ts
-- web/app/components/datasets/documents/detail/completed/hooks/index.ts
-- web/app/components/datasets/documents/detail/embedding/components/index.ts
-- web/app/components/datasets/documents/detail/embedding/hooks/index.ts
-- web/app/components/datasets/create/step-one/components/index.ts
-- web/app/components/datasets/create/step-one/hooks/index.ts
-- web/app/components/datasets/create/step-two/components/index.ts
-- web/app/components/datasets/create/step-two/hooks/index.ts
-- web/app/components/rag-pipeline/utils/index.ts
-- web/app/components/rag-pipeline/hooks/index.ts
-- web/app/components/rag-pipeline/store/index.ts
-- web/app/components/workflow/hooks-store/index.ts
-- web/app/components/workflow/note-node/note-editor/theme/index.ts
-- web/app/components/workflow/utils/index.ts
-- web/app/components/workflow/hooks/use-workflow-run-event/index.ts
-- web/app/components/workflow/hooks/index.ts
-- web/app/components/workflow/run/utils/format-log/parallel/index.ts
-- web/app/components/workflow/run/utils/format-log/retry/index.ts
-- web/app/components/workflow/run/utils/format-log/human-input/index.ts
-- web/app/components/workflow/run/utils/format-log/agent/index.ts
-- web/app/components/workflow/run/utils/format-log/index.ts
-- web/app/components/workflow/run/utils/format-log/iteration/index.ts
-- web/app/components/workflow/run/utils/format-log/loop/index.ts
-- web/app/components/workflow/store/workflow/index.ts
-- web/app/components/workflow/store/index.ts
-- web/app/components/header/account-setting/model-provider-page/model-auth/hooks/index.ts
-- web/app/components/header/account-setting/data-source-page-new/hooks/index.ts
-- web/app/components/base/form/utils/secret-input/index.ts
-- web/app/components/base/form/hooks/index.ts
-- web/app/components/base/radio/context/index.ts
-- web/app/components/base/amplitude/index.ts
-- web/app/components/base/markdown-blocks/index.ts
-- web/app/components/base/icons/src/public/tracing/index.ts
-- web/app/components/base/icons/src/public/llm/index.ts
-- web/app/components/base/icons/src/public/education/index.ts
-- web/app/components/base/icons/src/public/other/index.ts
-- web/app/components/base/icons/src/public/common/index.ts
-- web/app/components/base/icons/src/public/knowledge/dataset-card/index.ts
-- web/app/components/base/icons/src/public/knowledge/index.ts
-- web/app/components/base/icons/src/public/knowledge/online-drive/index.ts
-- web/app/components/base/icons/src/public/avatar/index.ts
-- web/app/components/base/icons/src/public/files/index.ts
-- web/app/components/base/icons/src/public/thought/index.ts
-- web/app/components/base/icons/src/public/billing/index.ts
-- web/app/components/base/icons/src/vender/pipeline/index.ts
-- web/app/components/base/icons/src/vender/features/index.ts
-- web/app/components/base/icons/src/vender/other/index.ts
-- web/app/components/base/icons/src/vender/plugin/index.ts
-- web/app/components/base/icons/src/vender/solid/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/solid/security/index.ts
-- web/app/components/base/icons/src/vender/solid/general/index.ts
-- web/app/components/base/icons/src/vender/solid/development/index.ts
-- web/app/components/base/icons/src/vender/solid/education/index.ts
-- web/app/components/base/icons/src/vender/solid/shapes/index.ts
-- web/app/components/base/icons/src/vender/solid/users/index.ts
-- web/app/components/base/icons/src/vender/solid/files/index.ts
-- web/app/components/base/icons/src/vender/solid/arrows/index.ts
-- web/app/components/base/icons/src/vender/solid/communication/index.ts
-- web/app/components/base/icons/src/vender/solid/editor/index.ts
-- web/app/components/base/icons/src/vender/solid/FinanceAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/solid/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/system/index.ts
-- web/app/components/base/icons/src/vender/knowledge/index.ts
-- web/app/components/base/icons/src/vender/line/mediaAndDevices/index.ts
-- web/app/components/base/icons/src/vender/line/images/index.ts
-- web/app/components/base/icons/src/vender/line/general/index.ts
-- web/app/components/base/icons/src/vender/line/development/index.ts
-- web/app/components/base/icons/src/vender/line/layout/index.ts
-- web/app/components/base/icons/src/vender/line/education/index.ts
-- web/app/components/base/icons/src/vender/line/others/index.ts
-- web/app/components/base/icons/src/vender/line/time/index.ts
-- web/app/components/base/icons/src/vender/line/files/index.ts
-- web/app/components/base/icons/src/vender/line/arrows/index.ts
-- web/app/components/base/icons/src/vender/line/communication/index.ts
-- web/app/components/base/icons/src/vender/line/editor/index.ts
-- web/app/components/base/icons/src/vender/line/financeAndECommerce/index.ts
-- web/app/components/base/icons/src/vender/line/alertsAndFeedback/index.ts
-- web/app/components/base/icons/src/vender/workflow/index.ts
-- web/app/components/base/file-uploader/index.ts
-- web/app/components/billing/utils/index.ts
-- web/config/index.ts
-- web/plugins/eslint/index.js
-- web/plugins/dev-proxy/server.ts
-- web/utils/index.ts
-- web/models/app.ts
-- web/i18n-config/index.ts
-- web/i18n-config/server.ts
-- packages/iconify-collections/custom-vender/index.js
-- packages/iconify-collections/custom-public/index.js
-- api/core/plugin/backwards_invocation/app.py
-- api/app.py
-- api/controllers/web/app.py
-- api/controllers/service_api/app/app.py
-- api/controllers/console/app/app.py
-- api/services/errors/app.py
-
-Total source files: 8531
-
+- **Kind**: file_handler
+- **Identifier**: Multi-backend File Storage (S3, Azure, GCS, Aliyun, Tencent, Supabase)
+- **Description**: File storage abstraction with multiple cloud backends. Misconfigured storage credentials, path traversal in storage keys, and insecure direct object reference to stored files
+- **Locations**: api/extensions/storage/aws_s3_storage.py, api/extensions/storage/azure_blob_storage.py, api/extensions/storage/google_cloud_storage.py, api/extensions/storage/aliyun_oss_storage.py, api/extensions/storage/tencent_cos_storage.py, api/extensions/storage/supabase_storage.py, api/extensions/storage/opendal_storage.py
 
 ## Source Code
 
-### api/core/external_data_tool/api/__init__.py
-```py
-
-```
-
-### api/core/external_data_tool/api/api.py
-```py
-from sqlalchemy import select
-
-from core.extension.api_based_extension_requestor import APIBasedExtensionRequestor
-from core.external_data_tool.base import ExternalDataTool
-from core.helper import encrypter
-from extensions.ext_database import db
-from models.api_based_extension import APIBasedExtension, APIBasedExtensionPoint
-
-
-class ApiExternalDataTool(ExternalDataTool):
-    """
-    The api external data tool.
-    """
-
-    name: str = "api"
-    """the unique name of external data tool"""
-
-    @classmethod
-    def validate_config(cls, tenant_id: str, config: dict):
-        """
-        Validate the incoming form config data.
-
-        :param tenant_id: the id of workspace
-        :param config: the form config data
-        :return:
-        """
-        # own validation logic
-        api_based_extension_id = config.get("api_based_extension_id")
-        if not api_based_extension_id:
-            raise ValueError("api_based_extension_id is required")
-        # get api_based_extension
-        stmt = select(APIBasedExtension).where(
-            APIBasedExtension.tenant_id == tenant_id, APIBasedExtension.id == api_based_extension_id
-        )
-        api_based_extension = db.session.scalar(stmt)
-
-        if not api_based_extension:
-            raise ValueError("api_based_extension_id is invalid")
-
-    def query(self, inputs: dict, query: str | None = None) -> str:
-        """
-        Query the external data tool.
-
-        :param inputs: user inputs
-        :param query: the query of chat app
-        :return: the tool query result
-        """
-        # get params from config
-        if not self.config:
-            raise ValueError(f"config is required, config: {self.config}")
-        api_based_extension_id = self.config.get("api_based_extension_id")
-        assert api_based_extension_id is not None, "api_based_extension_id is required"
-        # get api_based_extension
-        stmt = select(APIBasedExtension).where(
-            APIBasedExtension.tenant_id == self.tenant_id, APIBasedExtension.id == api_based_extension_id
-        )
-        api_based_extension = db.session.scalar(stmt)
-
-        if not api_based_extension:
-            raise ValueError(
-                "[External data tool] API query failed, variable: {}, error: api_based_extension_id is invalid".format(
-                    self.variable
-                )
-            )
-
-        # decrypt api_key
-        api_key = encrypter.decrypt_token(tenant_id=self.tenant_id, token=api_based_extension.api_key)
-
-        try:
-            # request api
-            requestor = APIBasedExtensionRequestor(api_endpoint=api_based_extension.api_endpoint, api_key=api_key)
-        except Exception as e:
-            raise ValueError(f"[External data tool] API query failed, variable: {self.variable}, error: {e}")
-
-        response_json = requestor.request(
-            point=APIBasedExtensionPoint.APP_EXTERNAL_DATA_TOOL_QUERY,
-            params={"app_id": self.app_id, "tool_variable": self.variable, "inputs": inputs, "query": query},
-        )
-
-        if "result" not in response_json:
-            raise ValueError(
-                "[External data tool] API query failed, variable: {}, error: result not found in response".format(
-                    self.variable
-                )
-            )
-
-        if not isinstance(response_json["result"], str):
-            raise ValueError(
-                f"[External data tool] API query failed, variable: {self.variable}, error: result is not string"
-            )
-
-        return response_json["result"]
-
-```
-
-### api/core/external_data_tool/__init__.py
-```py
-
-```
-
-### api/core/external_data_tool/factory.py
-```py
-from collections.abc import Mapping
-from typing import Any, cast
-
-from core.extension.extensible import ExtensionModule
-from extensions.ext_code_based_extension import code_based_extension
-
-
-class ExternalDataToolFactory:
-    def __init__(self, name: str, tenant_id: str, app_id: str, variable: str, config: dict):
-        extension_class = code_based_extension.extension_class(ExtensionModule.EXTERNAL_DATA_TOOL, name)
-        self.__extension_instance = extension_class(
-            tenant_id=tenant_id, app_id=app_id, variable=variable, config=config
-        )
-
-    @classmethod
-    def validate_config(cls, name: str, tenant_id: str, config: dict):
-        """
-        Validate the incoming form config data.
-
-        :param name: the name of external data tool
-        :param tenant_id: the id of workspace
-        :param config: the form config data
-        :return:
-        """
-        extension_class = code_based_extension.extension_class(ExtensionModule.EXTERNAL_DATA_TOOL, name)
-        # FIXME mypy issue here, figure out how to fix it
-        extension_class.validate_config(tenant_id, config)  # type: ignore
-
-    def query(self, inputs: Mapping[str, Any], query: str | None = None) -> str:
-        """
-        Query the external data tool.
-
-        :param inputs: user inputs
-        :param query: the query of chat app
-        :return: the tool query result
-        """
-        return cast(str, self.__extension_instance.query(inputs, query))
-
-```
-
-### api/core/external_data_tool/external_data_fetch.py
+### api/extensions/storage/aws_s3_storage.py
 ```py
 import logging
-from collections.abc import Mapping
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from typing import Any
+from collections.abc import Generator
 
-from flask import Flask, current_app
+import boto3
+from botocore.client import Config
+from botocore.exceptions import ClientError
 
-from core.app.app_config.entities import ExternalDataVariableEntity
-from core.external_data_tool.factory import ExternalDataToolFactory
+from configs import dify_config
+from extensions.storage.base_storage import BaseStorage
 
 logger = logging.getLogger(__name__)
 
 
-class ExternalDataFetch:
-    def fetch(
-        self,
-        tenant_id: str,
-        app_id: str,
-        external_data_tools: list[ExternalDataVariableEntity],
-        inputs: Mapping[str, Any],
-        query: str,
-    ) -> Mapping[str, Any]:
-        """
-        Fill in variable inputs from external data tools if exists.
+class AwsS3Storage(BaseStorage):
+    """Implementation for Amazon Web Services S3 storage."""
 
-        :param tenant_id: workspace id
-        :param app_id: app id
-        :param external_data_tools: external data tools configs
-        :param inputs: the inputs
-        :param query: the query
-        :return: the filled inputs
-        """
-        results: dict[str, Any] = {}
-        inputs = dict(inputs)
-        with ThreadPoolExecutor() as executor:
-            futures = {}
-            for tool in external_data_tools:
-                future: Future[tuple[str | None, str | None]] = executor.submit(
-                    self._query_external_data_tool,
-                    current_app._get_current_object(),  # type: ignore
-                    tenant_id,
-                    app_id,
-                    tool,
-                    inputs,
-                    query,
-                )
+    def __init__(self):
+        super().__init__()
+        self.bucket_name = dify_config.S3_BUCKET_NAME
+        if dify_config.S3_USE_AWS_MANAGED_IAM:
+            logger.info("Using AWS managed IAM role for S3")
 
-                futures[future] = tool
+            session = boto3.Session()
+            region_name = dify_config.S3_REGION
+            self.client = session.client(service_name="s3", region_name=region_name)
+        else:
+            logger.info("Using ak and sk for S3")
 
-            for future in as_completed(futures):
-                tool_variable, result = future.result()
-                if tool_variable is not None:
-                    results[tool_variable] = result
-
-        inputs.update(results)
-        return inputs
-
-    def _query_external_data_tool(
-        self,
-        flask_app: Flask,
-        tenant_id: str,
-        app_id: str,
-        external_data_tool: ExternalDataVariableEntity,
-        inputs: Mapping[str, Any],
-        query: str,
-    ) -> tuple[str | None, str | None]:
-        """
-        Query external data tool.
-        :param flask_app: flask app
-        :param tenant_id: tenant id
-        :param app_id: app id
-        :param external_data_tool: external data tool
-        :param inputs: inputs
-        :param query: query
-        :return:
-        """
-        with flask_app.app_context():
-            tool_variable = external_data_tool.variable
-            tool_type = external_data_tool.type
-            tool_config = external_data_tool.config
-
-            external_data_tool_factory = ExternalDataToolFactory(
-                name=tool_type, tenant_id=tenant_id, app_id=app_id, variable=tool_variable, config=tool_config
+            self.client = boto3.client(
+                "s3",
+                aws_secret_access_key=dify_config.S3_SECRET_KEY,
+                aws_access_key_id=dify_config.S3_ACCESS_KEY,
+                endpoint_url=dify_config.S3_ENDPOINT,
+                region_name=dify_config.S3_REGION,
+                config=Config(s3={"addressing_style": dify_config.S3_ADDRESS_STYLE}),
             )
+        # create bucket
+        try:
+            self.client.head_bucket(Bucket=self.bucket_name)
+        except ClientError as e:
+            # if bucket not exists, create it
+            if e.response.get("Error", {}).get("Code") == "404":
+                self.client.create_bucket(Bucket=self.bucket_name)
+            # if bucket is not accessible, pass, maybe the bucket is existing but not accessible
+            elif e.response.get("Error", {}).get("Code") == "403":
+                pass
+            else:
+                # other error, raise exception
+                raise
 
-            # query external data tool
-            result = external_data_tool_factory.query(inputs=inputs, query=query)
+    def save(self, filename, data):
+        self.client.put_object(Bucket=self.bucket_name, Key=filename, Body=data)
 
-            return tool_variable, result
+    def load_once(self, filename: str) -> bytes:
+        try:
+            data: bytes = self.client.get_object(Bucket=self.bucket_name, Key=filename)["Body"].read()
+        except ClientError as ex:
+            if ex.response.get("Error", {}).get("Code") == "NoSuchKey":
+                raise FileNotFoundError("File not found")
+            else:
+                raise
+        return data
+
+    def load_stream(self, filename: str) -> Generator:
+        try:
+            response = self.client.get_object(Bucket=self.bucket_name, Key=filename)
+            yield from response["Body"].iter_chunks()
+        except ClientError as ex:
+            if ex.response.get("Error", {}).get("Code") == "NoSuchKey":
+                raise FileNotFoundError("file not found")
+            elif "reached max retries" in str(ex):
+                raise ValueError("please do not request the same file too frequently")
+            else:
+                raise
+
+    def download(self, filename, target_filepath):
+        self.client.download_file(self.bucket_name, filename, target_filepath)
+
+    def exists(self, filename):
+        try:
+            self.client.head_object(Bucket=self.bucket_name, Key=filename)
+            return True
+        except:
+            return False
+
+    def delete(self, filename: str):
+        self.client.delete_object(Bucket=self.bucket_name, Key=filename)
 
 ```
 
-### api/core/external_data_tool/base.py
+### api/extensions/storage/azure_blob_storage.py
 ```py
-from abc import ABC, abstractmethod
+from collections.abc import Generator
+from datetime import timedelta
 
-from core.extension.extensible import Extensible, ExtensionModule
+from azure.identity import ChainedTokenCredential, DefaultAzureCredential
+from azure.storage.blob import AccountSasPermissions, BlobServiceClient, ResourceTypes, generate_account_sas
+
+from configs import dify_config
+from extensions.ext_redis import redis_client
+from extensions.storage.base_storage import BaseStorage
+from libs.datetime_utils import naive_utc_now
 
 
-class ExternalDataTool(Extensible, ABC):
-    """
-    The base class of external data tool.
-    """
+class AzureBlobStorage(BaseStorage):
+    """Implementation for Azure Blob storage."""
 
-    module: ExtensionModule = ExtensionModule.EXTERNAL_DATA_TOOL
+    def __init__(self):
+        super().__init__()
+        self.bucket_name = dify_config.AZURE_BLOB_CONTAINER_NAME
+        self.account_url = dify_config.AZURE_BLOB_ACCOUNT_URL
+        self.account_name = dify_config.AZURE_BLOB_ACCOUNT_NAME
+        self.account_key = dify_config.AZURE_BLOB_ACCOUNT_KEY
 
-    app_id: str
-    """the id of app"""
-    variable: str
-    """the tool variable name of app tool"""
+        self.credential: ChainedTokenCredential | None = None
+        if self.account_key == "managedidentity":
+            self.credential = DefaultAzureCredential()
+        else:
+            self.credential = None
 
-    def __init__(self, tenant_id: str, app_id: str, variable: str, config: dict | None = None):
-        super().__init__(tenant_id, config)
-        self.app_id = app_id
-        self.variable = variable
+    def save(self, filename, data):
+        if not self.bucket_name:
+            return
 
-    @classmethod
-    @abstractmethod
-    def validate_config(cls, tenant_id: str, config: dict):
-        """
-        Validate the incoming form config data.
+        client = self._sync_client()
+        blob_container = client.get_container_client(container=self.bucket_name)
+        blob_container.upload_blob(filename, data)
 
-        :param tenant_id: the id of workspace
-        :param config: the form config data
-        :return:
-        """
-        raise NotImplementedError
+    def load_once(self, filename: str) -> bytes:
+        if not self.bucket_name:
+            raise FileNotFoundError("Azure bucket name is not configured.")
 
-    @abstractmethod
-    def query(self, inputs: dict, query: str | None = None) -> str:
-        """
-        Query the external data tool.
+        client = self._sync_client()
+        blob = client.get_container_client(container=self.bucket_name)
+        blob = blob.get_blob_client(blob=filename)
+        data = blob.download_blob().readall()
+        if not isinstance(data, bytes):
+            raise TypeError(f"Expected bytes from blob.readall(), got {type(data).__name__}")
+        return data
 
-        :param inputs: user inputs
-        :param query: the query of chat app
-        :return: the tool query result
-        """
-        raise NotImplementedError
+    def load_stream(self, filename: str) -> Generator:
+        if not self.bucket_name:
+            raise FileNotFoundError("Azure bucket name is not configured.")
+
+        client = self._sync_client()
+        blob = client.get_blob_client(container=self.bucket_name, blob=filename)
+        blob_data = blob.download_blob()
+        yield from blob_data.chunks()
+
+    def download(self, filename, target_filepath):
+        if not self.bucket_name:
+            return
+
+        client = self._sync_client()
+
+        blob = client.get_blob_client(container=self.bucket_name, blob=filename)
+        with open(target_filepath, "wb") as my_blob:
+            blob_data = blob.download_blob()
+            blob_data.readinto(my_blob)
+
+    def exists(self, filename):
+        if not self.bucket_name:
+            return False
+
+        client = self._sync_client()
+
+        blob = client.get_blob_client(container=self.bucket_name, blob=filename)
+        return blob.exists()
+
+    def delete(self, filename: str):
+        if not self.bucket_name:
+            return
+
+        client = self._sync_client()
+
+        blob_container = client.get_container_client(container=self.bucket_name)
+        blob_container.delete_blob(filename)
+
+    def _sync_client(self):
+        if self.account_key == "managedidentity":
+            return BlobServiceClient(account_url=self.account_url, credential=self.credential)  # type: ignore
+
+        cache_key = f"azure_blob_sas_token_{self.account_name}_{self.account_key}"
+        cache_result = redis_client.get(cache_key)
+        if cache_result is not None:
+            sas_token = cache_result.decode("utf-8")
+        else:
+            sas_token = generate_account_sas(
+                account_name=self.account_name or "",
+                account_key=self.account_key or "",
+                resource_types=ResourceTypes(service=True, container=True, object=True),
+                permission=AccountSasPermissions(read=True, write=True, delete=True, list=True, add=True, create=True),
+                expiry=naive_utc_now() + timedelta(hours=1),
+            )
+            redis_client.set(cache_key, sas_token, ex=3000)
+        return BlobServiceClient(account_url=self.account_url or "", credential=sas_token)
+
+```
+
+### api/extensions/storage/google_cloud_storage.py
+```py
+import base64
+import io
+from collections.abc import Generator
+from typing import Any
+
+from google.cloud import storage as google_cloud_storage  # type: ignore
+from pydantic import TypeAdapter
+
+from configs import dify_config
+from extensions.storage.base_storage import BaseStorage
+
+_service_account_adapter: TypeAdapter[dict[str, Any]] = TypeAdapter(dict[str, Any])
+
+
+class GoogleCloudStorage(BaseStorage):
+    """Implementation for Google Cloud storage."""
+
+    def __init__(self):
+        super().__init__()
+
+        self.bucket_name = dify_config.GOOGLE_STORAGE_BUCKET_NAME
+        service_account_json_str = dify_config.GOOGLE_STORAGE_SERVICE_ACCOUNT_JSON_BASE64
+        # if service_account_json_str is empty, use Application Default Credentials
+        if service_account_json_str:
+            service_account_json = base64.b64decode(service_account_json_str).decode("utf-8")
+            # convert str to object
+            service_account_obj = _service_account_adapter.validate_json(service_account_json)
+            self.client = google_cloud_storage.Client.from_service_account_info(service_account_obj)
+        else:
+            self.client = google_cloud_storage.Client()
+
+    def save(self, filename, data):
+        bucket = self.client.get_bucket(self.bucket_name)
+        blob = bucket.blob(filename)
+        with io.BytesIO(data) as stream:
+            blob.upload_from_file(stream)
+
+    def load_once(self, filename: str) -> bytes:
+        bucket = self.client.get_bucket(self.bucket_name)
+        blob = bucket.get_blob(filename)
+        if blob is None:
+            raise FileNotFoundError("File not found")
+        data: bytes = blob.download_as_bytes()
+        return data
+
+    def load_stream(self, filename: str) -> Generator:
+        bucket = self.client.get_bucket(self.bucket_name)
+        blob = bucket.get_blob(filename)
+        if blob is None:
+            raise FileNotFoundError("File not found")
+        with blob.open(mode="rb") as blob_stream:
+            while chunk := blob_stream.read(4096):
+                yield chunk
+
+    def download(self, filename, target_filepath):
+        bucket = self.client.get_bucket(self.bucket_name)
+        blob = bucket.get_blob(filename)
+        if blob is None:
+            raise FileNotFoundError("File not found")
+        blob.download_to_filename(target_filepath)
+
+    def exists(self, filename):
+        bucket = self.client.get_bucket(self.bucket_name)
+        blob = bucket.blob(filename)
+        return blob.exists()
+
+    def delete(self, filename: str):
+        bucket = self.client.get_bucket(self.bucket_name)
+        bucket.delete_blob(filename)
+
+```
+
+### api/extensions/storage/aliyun_oss_storage.py
+```py
+import posixpath
+from collections.abc import Generator
+
+import oss2 as aliyun_s3
+
+from configs import dify_config
+from extensions.storage.base_storage import BaseStorage
+
+
+class AliyunOssStorage(BaseStorage):
+    """Implementation for Aliyun OSS storage."""
+
+    def __init__(self):
+        super().__init__()
+        self.bucket_name = dify_config.ALIYUN_OSS_BUCKET_NAME
+        self.folder = dify_config.ALIYUN_OSS_PATH
+        oss_auth_method = aliyun_s3.Auth
+        region = None
+        if dify_config.ALIYUN_OSS_AUTH_VERSION == "v4":
+            oss_auth_method = aliyun_s3.AuthV4
+            region = dify_config.ALIYUN_OSS_REGION
+        oss_auth = oss_auth_method(dify_config.ALIYUN_OSS_ACCESS_KEY, dify_config.ALIYUN_OSS_SECRET_KEY)
+        self.client = aliyun_s3.Bucket(
+            oss_auth,
+            dify_config.ALIYUN_OSS_ENDPOINT,
+            self.bucket_name,
+            connect_timeout=30,
+            region=region,
+            cloudbox_id=dify_config.ALIYUN_CLOUDBOX_ID,
+        )
+
+    def save(self, filename, data):
+        self.client.put_object(self.__wrapper_folder_filename(filename), data)
+
+    def load_once(self, filename: str) -> bytes:
+        obj = self.client.get_object(self.__wrapper_folder_filename(filename))
+        data = obj.read()
+        if not isinstance(data, bytes):
+            return b""
+        return data
+
+    def load_stream(self, filename: str) -> Generator:
+        obj = self.client.get_object(self.__wrapper_folder_filename(filename))
+        while chunk := obj.read(4096):
+            yield chunk
+
+    def download(self, filename: str, target_filepath):
+        self.client.get_object_to_file(self.__wrapper_folder_filename(filename), target_filepath)
+
+    def exists(self, filename: str):
+        return self.client.object_exists(self.__wrapper_folder_filename(filename))
+
+    def delete(self, filename: str):
+        self.client.delete_object(self.__wrapper_folder_filename(filename))
+
+    def __wrapper_folder_filename(self, filename: str) -> str:
+        return posixpath.join(self.folder, filename) if self.folder else filename
+
+```
+
+### api/extensions/storage/tencent_cos_storage.py
+```py
+from collections.abc import Generator
+
+from qcloud_cos import CosConfig, CosS3Client
+
+from configs import dify_config
+from extensions.storage.base_storage import BaseStorage
+
+
+class TencentCosStorage(BaseStorage):
+    """Implementation for Tencent Cloud COS storage."""
+
+    def __init__(self):
+        super().__init__()
+
+        self.bucket_name = dify_config.TENCENT_COS_BUCKET_NAME
+        if dify_config.TENCENT_COS_CUSTOM_DOMAIN:
+            config = CosConfig(
+                Domain=dify_config.TENCENT_COS_CUSTOM_DOMAIN,
+                SecretId=dify_config.TENCENT_COS_SECRET_ID,
+                SecretKey=dify_config.TENCENT_COS_SECRET_KEY,
+                Scheme=dify_config.TENCENT_COS_SCHEME,
+            )
+        else:
+            config = CosConfig(
+                Region=dify_config.TENCENT_COS_REGION,
+                SecretId=dify_config.TENCENT_COS_SECRET_ID,
+                SecretKey=dify_config.TENCENT_COS_SECRET_KEY,
+                Scheme=dify_config.TENCENT_COS_SCHEME,
+            )
+        self.client = CosS3Client(config)
+
+    def save(self, filename, data):
+        self.client.put_object(Bucket=self.bucket_name, Body=data, Key=filename)
+
+    def load_once(self, filename: str) -> bytes:
+        data: bytes = self.client.get_object(Bucket=self.bucket_name, Key=filename)["Body"].get_raw_stream().read()
+        return data
+
+    def load_stream(self, filename: str) -> Generator:
+        response = self.client.get_object(Bucket=self.bucket_name, Key=filename)
+        yield from response["Body"].get_stream(chunk_size=4096)
+
+    def download(self, filename, target_filepath):
+        response = self.client.get_object(Bucket=self.bucket_name, Key=filename)
+        response["Body"].get_stream_to_file(target_filepath)
+
+    def exists(self, filename):
+        return self.client.object_exists(Bucket=self.bucket_name, Key=filename)
+
+    def delete(self, filename: str):
+        self.client.delete_object(Bucket=self.bucket_name, Key=filename)
+
+```
+
+### api/extensions/storage/supabase_storage.py
+```py
+import io
+from collections.abc import Generator
+from pathlib import Path
+
+from supabase import Client
+
+from configs import dify_config
+from extensions.storage.base_storage import BaseStorage
+
+
+class SupabaseStorage(BaseStorage):
+    """Implementation for supabase obs storage."""
+
+    def __init__(self):
+        super().__init__()
+        if dify_config.SUPABASE_URL is None:
+            raise ValueError("SUPABASE_URL is not set")
+        if dify_config.SUPABASE_API_KEY is None:
+            raise ValueError("SUPABASE_API_KEY is not set")
+        if dify_config.SUPABASE_BUCKET_NAME is None:
+            raise ValueError("SUPABASE_BUCKET_NAME is not set")
+
+        self.bucket_name = dify_config.SUPABASE_BUCKET_NAME
+        self.client = Client(supabase_url=dify_config.SUPABASE_URL, supabase_key=dify_config.SUPABASE_API_KEY)
+        self.create_bucket(id=dify_config.SUPABASE_BUCKET_NAME, bucket_name=dify_config.SUPABASE_BUCKET_NAME)
+
+    def create_bucket(self, id, bucket_name):
+        if not self.bucket_exists():
+            self.client.storage.create_bucket(id=id, name=bucket_name)
+
+    def save(self, filename, data):
+        self.client.storage.from_(self.bucket_name).upload(filename, data)
+
+    def load_once(self, filename: str) -> bytes:
+        content: bytes = self.client.storage.from_(self.bucket_name).download(filename)
+        return content
+
+    def load_stream(self, filename: str) -> Generator:
+        result = self.client.storage.from_(self.bucket_name).download(filename)
+        byte_stream = io.BytesIO(result)
+        while chunk := byte_stream.read(4096):  # Read in chunks of 4KB
+            yield chunk
+
+    def download(self, filename, target_filepath):
+        result = self.client.storage.from_(self.bucket_name).download(filename)
+        Path(target_filepath).write_bytes(result)
+
+    def exists(self, filename):
+        result = self.client.storage.from_(self.bucket_name).list(path=filename)
+        if len(result) > 0:
+            return True
+        return False
+
+    def delete(self, filename: str):
+        self.client.storage.from_(self.bucket_name).remove([filename])
+
+    def bucket_exists(self):
+        buckets = self.client.storage.list_buckets()
+        return any(bucket.name == self.bucket_name for bucket in buckets)
+
+```
+
+### api/extensions/storage/opendal_storage.py
+```py
+import logging
+import os
+from collections.abc import Generator
+from pathlib import Path
+
+import opendal
+from dotenv import dotenv_values
+from opendal import Operator
+
+from extensions.storage.base_storage import BaseStorage
+
+logger = logging.getLogger(__name__)
+
+
+def _get_opendal_kwargs(*, scheme: str, env_file_path: str = ".env", prefix: str = "OPENDAL_"):
+    kwargs = {}
+    config_prefix = prefix + scheme.upper() + "_"
+    for key, value in os.environ.items():
+        if key.startswith(config_prefix):
+            kwargs[key[len(config_prefix) :].lower()] = value
+
+    file_env_vars: dict = dotenv_values(env_file_path) or {}
+    for key, value in file_env_vars.items():
+        if key.startswith(config_prefix) and key[len(config_prefix) :].lower() not in kwargs and value:
+            kwargs[key[len(config_prefix) :].lower()] = value
+
+    return kwargs
+
+
+class OpenDALStorage(BaseStorage):
+    def __init__(self, scheme: str, **kwargs):
+        kwargs = kwargs or _get_opendal_kwargs(scheme=scheme)
+
+        if scheme == "fs":
+            root = kwargs.setdefault("root", "storage")
+            Path(root).mkdir(parents=True, exist_ok=True)
+
+        retry_layer = opendal.layers.RetryLayer(max_times=3, factor=2.0, jitter=True)
+        self.op = Operator(scheme=scheme, **kwargs).layer(retry_layer)
+        logger.debug("opendal operator created with scheme %s", scheme)
+        logger.debug("added retry layer to opendal operator")
+
+    def save(self, filename: str, data: bytes):
+        self.op.write(path=filename, bs=data)
+        logger.debug("file %s saved", filename)
+
+    def load_once(self, filename: str) -> bytes:
+        if not self.exists(filename):
+            raise FileNotFoundError("File not found")
+
+        content: bytes = self.op.read(path=filename)
+        logger.debug("file %s loaded", filename)
+        return content
+
+    def load_stream(self, filename: str) -> Generator:
+        if not self.exists(filename):
+            raise FileNotFoundError("File not found")
+
+        batch_size = 4096
+        with self.op.open(
+            path=filename,
+            mode="rb",
+            chunck=batch_size,
+        ) as file:
+            while chunk := file.read(batch_size):
+                yield chunk
+        logger.debug("file %s loaded as stream", filename)
+
+    def download(self, filename: str, target_filepath: str):
+        if not self.exists(filename):
+            raise FileNotFoundError("File not found")
+
+        Path(target_filepath).write_bytes(self.op.read(path=filename))
+        logger.debug("file %s downloaded to %s", filename, target_filepath)
+
+    def exists(self, filename: str) -> bool:
+        return self.op.exists(path=filename)
+
+    def delete(self, filename: str):
+        if self.exists(filename):
+            self.op.delete(path=filename)
+            logger.debug("file %s deleted", filename)
+            return
+        logger.debug("file %s not found, skip delete", filename)
+
+    def scan(self, path: str, files: bool = True, directories: bool = False) -> list[str]:
+        if not self.exists(path):
+            raise FileNotFoundError("Path not found")
+
+        # Use the new OpenDAL 0.46.0+ API with recursive listing
+        lister = self.op.list(path, recursive=True)
+        if files and directories:
+            logger.debug("files and directories on %s scanned", path)
+            return [entry.path for entry in lister]
+        if files:
+            logger.debug("files on %s scanned", path)
+            return [entry.path for entry in lister if not entry.metadata.is_dir]
+        elif directories:
+            logger.debug("directories on %s scanned", path)
+            return [entry.path for entry in lister if entry.metadata.is_dir]
+        else:
+            raise ValueError("At least one of files or directories must be True")
 
 ```
 

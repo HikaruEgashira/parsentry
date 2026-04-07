@@ -1,0 +1,146 @@
+{
+  "app_type": "web_application",
+  "summary": "OWASP NodeGoat is a deliberately vulnerable Node.js/Express web application using MongoDB, designed to demonstrate OWASP Top 10 risks. It uses known-vulnerable dependencies (marked 0.3.5, bcrypt-nodejs 0.0.3, needle 2.2.4) and implements intentionally insecure patterns across authentication, authorization, input handling, and session management.",
+  "surfaces": [
+    {
+      "id": "SURFACE-001",
+      "kind": "endpoint",
+      "identifier": "POST /login",
+      "locations": ["app/routes/index.js", "app/data/user-dao.js"],
+      "description": "Login endpoint handling credentials against MongoDB. Susceptible to NoSQL injection if user input is passed directly into MongoDB query operators without sanitization."
+    },
+    {
+      "id": "SURFACE-002",
+      "kind": "endpoint",
+      "identifier": "POST /signup",
+      "locations": ["app/routes/index.js", "app/data/user-dao.js"],
+      "description": "User registration endpoint using bcrypt-nodejs (deprecated, unmaintained) for password hashing. Accepts untrusted input for user creation."
+    },
+    {
+      "id": "SURFACE-003",
+      "kind": "endpoint",
+      "identifier": "GET /profile",
+      "locations": ["app/routes/index.js", "app/data/profile-dao.js"],
+      "description": "Profile retrieval endpoint vulnerable to Insecure Direct Object Reference (IDOR) — users may access other users' profiles by manipulating the userId parameter."
+    },
+    {
+      "id": "SURFACE-004",
+      "kind": "endpoint",
+      "identifier": "POST /profile",
+      "locations": ["app/routes/index.js", "app/data/profile-dao.js"],
+      "description": "Profile update endpoint accepting user-supplied fields. Vulnerable to mass assignment and stored XSS if input is rendered unsanitized in views."
+    },
+    {
+      "id": "SURFACE-005",
+      "kind": "endpoint",
+      "identifier": "POST /contributions",
+      "locations": ["app/routes/index.js", "app/data/contributions-dao.js"],
+      "description": "Financial contributions endpoint writing to MongoDB. Warrants review for authorization bypass and input validation on monetary values."
+    },
+    {
+      "id": "SURFACE-006",
+      "kind": "endpoint",
+      "identifier": "POST /allocations",
+      "locations": ["app/routes/index.js", "app/data/allocations-dao.js"],
+      "description": "Allocation threshold processing endpoint. Historically uses eval() on user input for server-side JavaScript injection (A1 Injection)."
+    },
+    {
+      "id": "SURFACE-007",
+      "kind": "endpoint",
+      "identifier": "POST /memos",
+      "locations": ["app/routes/index.js", "app/data/memos-dao.js"],
+      "description": "Memo creation endpoint that renders user-supplied markdown via marked 0.3.5 (known XSS vulnerabilities). Stored XSS attack vector."
+    },
+    {
+      "id": "SURFACE-008",
+      "kind": "endpoint",
+      "identifier": "GET /benefits",
+      "locations": ["app/routes/index.js"],
+      "description": "Benefits lookup that makes outbound HTTP requests via needle 2.2.4. Vulnerable to SSRF if the target URL is user-controlled."
+    },
+    {
+      "id": "SURFACE-009",
+      "kind": "endpoint",
+      "identifier": "GET /research",
+      "locations": ["app/routes/index.js"],
+      "description": "Research page that may accept a URL or redirect parameter. Potential unvalidated redirect/forward vulnerability (A10)."
+    },
+    {
+      "id": "SURFACE-010",
+      "kind": "endpoint",
+      "identifier": "GET /tutorial/*",
+      "locations": ["app/routes/index.js", "app/views/tutorial/"],
+      "description": "Tutorial pages rendering content from view templates. Path traversal risk if tutorial page identifier is derived from user input."
+    },
+    {
+      "id": "SURFACE-011",
+      "kind": "db_table",
+      "identifier": "users collection (MongoDB)",
+      "locations": ["app/data/user-dao.js", "app/data/profile-dao.js", "artifacts/db-reset.js"],
+      "description": "MongoDB users collection storing credentials and PII. NoSQL injection risk if query construction uses unsanitized input. Password hashing uses deprecated bcrypt-nodejs."
+    },
+    {
+      "id": "SURFACE-012",
+      "kind": "db_table",
+      "identifier": "allocations collection (MongoDB)",
+      "locations": ["app/data/allocations-dao.js", "artifacts/db-reset.js"],
+      "description": "MongoDB collection for allocation data. Server-side JS injection vector if allocation processing uses eval() or $where operators."
+    },
+    {
+      "id": "SURFACE-013",
+      "kind": "db_table",
+      "identifier": "memos collection (MongoDB)",
+      "locations": ["app/data/memos-dao.js"],
+      "description": "Stores user-created memos rendered as HTML via vulnerable marked library. Stored XSS payload persistence."
+    },
+    {
+      "id": "SURFACE-014",
+      "kind": "external_call",
+      "identifier": "needle HTTP client requests",
+      "locations": ["app/routes/index.js"],
+      "description": "Outbound HTTP requests using needle 2.2.4. SSRF risk if request target is user-controllable. needle 2.2.4 has known prototype pollution vulnerabilities."
+    },
+    {
+      "id": "SURFACE-015",
+      "kind": "file_handler",
+      "identifier": "express-session configuration",
+      "locations": ["server.js", "config/config.js"],
+      "description": "Session management configuration. Review for insecure defaults: missing secure/httpOnly cookie flags, weak secret, lack of session expiration."
+    },
+    {
+      "id": "SURFACE-016",
+      "kind": "file_handler",
+      "identifier": "config/env/ environment configuration",
+      "locations": ["config/config.js", "config/env/"],
+      "description": "Environment-specific configuration files containing database connection strings and secrets. Risk of sensitive data exposure if defaults are insecure."
+    },
+    {
+      "id": "SURFACE-017",
+      "kind": "file_handler",
+      "identifier": "TLS certificate artifacts",
+      "locations": ["artifacts/cert/"],
+      "description": "Self-signed or test TLS certificates bundled in artifacts. May be used in production if misconfigured, enabling MitM attacks."
+    },
+    {
+      "id": "SURFACE-018",
+      "kind": "endpoint",
+      "identifier": "GET /logout",
+      "locations": ["app/routes/index.js"],
+      "description": "Logout endpoint handling session destruction. Review for session fixation — whether session is properly invalidated server-side on logout."
+    },
+    {
+      "id": "SURFACE-019",
+      "kind": "file_handler",
+      "identifier": "Swig template rendering",
+      "locations": ["app/views/", "server.js"],
+      "description": "Swig 1.4.2 (unmaintained) template engine rendering user data. Autoescape configuration determines XSS exposure across all views."
+    },
+    {
+      "id": "SURFACE-020",
+      "kind": "file_handler",
+      "identifier": "MongoDB connection setup",
+      "locations": ["server.js", "config/config.js"],
+      "description": "MongoDB driver 2.1.x connection without authentication by default. Database accessible without credentials if network-exposed."
+    }
+  ]
+}

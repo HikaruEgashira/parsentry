@@ -3,339 +3,396 @@ You are a security auditor. Analyze the following source code for vulnerabilitie
 ## Surface Under Analysis
 
 - **ID**: SURFACE-011
-- **Kind**: endpoint
-- **Identifier**: POST /benefits
-- **Description**: Benefits modification endpoint. Risk of privilege escalation and unauthorized benefit changes through missing authorization checks.
-- **Locations**: app/routes/index.js, app/routes/benefits.js, app/data/benefits-dao.js
-
-## Repository Context
-
-## Directory Structure
-```
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-Dockerfile
-Gruntfile.js
-LICENSE
-Procfile
-README.md
-app/ 
-  assets/ 
-    images/ 
-    js/ 
-      chart/ 
-      tour/ 
-  data/ 
-  routes/ 
-  views/ 
-    tutorial/ 
-app.json
-artifacts/ 
-  cert/ 
-  db-reset.js
-config/ 
-  config.js
-  env/ 
-cypress.json
-docker-compose.yml
-nodemon.json
-package-lock.json
-package.json
-server.js
-test/ 
-  e2e/ 
-    fixtures/ 
-      users/ 
-    integration/ 
-    plugins/ 
-    support/ 
-  security/ 
-
-```
-
-## Languages
-- JavaScript: 50 files
-- Yaml: 4 files
-
-## Dependencies
-### package.json
-```
-{
-  "name": "owasp-nodejs-goat",
-  "private": true,
-  "version": "1.3.0",
-  "description": "A tool to learn OWASP Top 10 for node.js developers",
-  "main": "server.js",
-  "dependencies": {
-    "bcrypt-nodejs": "0.0.3",
-    "body-parser": "^1.15.1",
-    "consolidate": "^0.14.1",
-    "csurf": "^1.8.3",
-    "dont-sniff-mimetype": "^1.0.0",
-    "express": "^4.13.4",
-    "express-session": "^1.13.0",
-    "forever": "^2.0.0",
-    "helmet": "^2.0.0",
-    "marked": "0.3.5",
-    "mongodb": "^2.1.18",
-    "needle": "2.2.4",
-    "node-esapi": "0.0.1",
-    "serve-favicon": "^2.3.0",
-    "swig": "^1.4.2",
-    "underscore": "^1.8.3"
-  },
-  "comments": {
-    "//": "a9 insecure components"
-  },
-  "scripts": {
-    "start": "node server.js",
-    "dev": "cross-env PORT=5000 nodemon",
-    "test:e2e": "cross-env NODE_ENV=test cypress open",
-    "test:ci": "cross-env NODE_ENV=test cypress run",
-    "test": "node node_modules/grunt-cli/bin/grunt test",
-    "db:seed": "cross-env NODE_ENV=test grunt db-reset",
-    "precommit": "grunt precommit",
-    "docker-mongo": "docker run -p 27017:27017 --name mongo  mongo:latest",
-    "start-infra": "docker-compose up",
-    "stop-infra": "docker-compose down",
-    "cy:verify": "cypress verify"
-  },
-  "devDependencies": {
-    "async": "^2.0.0-rc.4",
-    "cross-env": "^7.0.2",
-    "cypress": "^3.3.1",
-    "grunt": "^1.0.3",
-    "grunt-cli": "^1.2.0",
-    "grunt-concurrent": "^2.3.0",
-    "grunt-contrib-jshint": "^3.0.0",
-    "grunt-contrib-watch": "^1.0.0",
-    "grunt-env": "latest",
-    "grunt-if": "https://github.com/binarymist/grunt-if/tarball/master",
-    "grunt-jsbeautifier": "^0.2.12",
-    "grunt-mocha-test": "^0.12.7",
-    "grunt-npm-install": "^0.3.0",
-    "grunt-retire": "^0.3.12",
-    "jshint": "2.12.0",
-    "mocha": "^2.4.5",
-    "nodemon": "^1.19.1",
-    "selenium-webdriver": "^2.53.2",
-    "should": "^8.3.1",
-    "zaproxy": "^0.2.0"
-  },
-  "repository": "https://github.com/OWASP/NodejsGoat",
-  "license": "Apache 2.0"
-}
-
-```
-
-## Entry Points
-- app/routes/index.js
-- test/e2e/plugins/index.js
-- test/e2e/support/index.js
-- server.js
-
-Total source files: 54
-
+- **Kind**: db_table
+- **Identifier**: users collection (MongoDB)
+- **Description**: MongoDB users collection storing credentials and PII. NoSQL injection risk if query construction uses unsanitized input. Password hashing uses deprecated bcrypt-nodejs.
+- **Locations**: app/data/user-dao.js, app/data/profile-dao.js, artifacts/db-reset.js
 
 ## Source Code
 
-### app/routes/index.js
+### app/data/user-dao.js
 ```js
-const SessionHandler = require("./session");
-const ProfileHandler = require("./profile");
-const BenefitsHandler = require("./benefits");
-const ContributionsHandler = require("./contributions");
-const AllocationsHandler = require("./allocations");
-const MemosHandler = require("./memos");
-const ResearchHandler = require("./research");
-const tutorialRouter = require("./tutorial");
-const ErrorHandler = require("./error").errorHandler;
+const bcrypt = require("bcrypt-nodejs");
 
-const index = (app, db) => {
-
-    "use strict";
-
-    const sessionHandler = new SessionHandler(db);
-    const profileHandler = new ProfileHandler(db);
-    const benefitsHandler = new BenefitsHandler(db);
-    const contributionsHandler = new ContributionsHandler(db);
-    const allocationsHandler = new AllocationsHandler(db);
-    const memosHandler = new MemosHandler(db);
-    const researchHandler = new ResearchHandler(db);
-
-    // Middleware to check if a user is logged in
-    const isLoggedIn = sessionHandler.isLoggedInMiddleware;
-
-    //Middleware to check if user has admin rights
-    const isAdmin = sessionHandler.isAdminUserMiddleware;
-
-    // The main page of the app
-    app.get("/", sessionHandler.displayWelcomePage);
-
-    // Login form
-    app.get("/login", sessionHandler.displayLoginPage);
-    app.post("/login", sessionHandler.handleLoginRequest);
-
-    // Signup form
-    app.get("/signup", sessionHandler.displaySignupPage);
-    app.post("/signup", sessionHandler.handleSignup);
-
-    // Logout page
-    app.get("/logout", sessionHandler.displayLogoutPage);
-
-    // The main page of the app
-    app.get("/dashboard", isLoggedIn, sessionHandler.displayWelcomePage);
-
-    // Profile page
-    app.get("/profile", isLoggedIn, profileHandler.displayProfile);
-    app.post("/profile", isLoggedIn, profileHandler.handleProfileUpdate);
-
-    // Contributions Page
-    app.get("/contributions", isLoggedIn, contributionsHandler.displayContributions);
-    app.post("/contributions", isLoggedIn, contributionsHandler.handleContributionsUpdate);
-
-    // Benefits Page
-    app.get("/benefits", isLoggedIn, benefitsHandler.displayBenefits);
-    app.post("/benefits", isLoggedIn, benefitsHandler.updateBenefits);
-    /* Fix for A7 - checks user role to implement  Function Level Access Control
-     app.get("/benefits", isLoggedIn, isAdmin, benefitsHandler.displayBenefits);
-     app.post("/benefits", isLoggedIn, isAdmin, benefitsHandler.updateBenefits);
-     */
-
-    // Allocations Page
-    app.get("/allocations/:userId", isLoggedIn, allocationsHandler.displayAllocations);
-
-    // Memos Page
-    app.get("/memos", isLoggedIn, memosHandler.displayMemos);
-    app.post("/memos", isLoggedIn, memosHandler.addMemos);
-
-    // Handle redirect for learning resources link
-    app.get("/learn", isLoggedIn, (req, res) => {
-        // Insecure way to handle redirects by taking redirect url from query string
-        return res.redirect(req.query.url);
-    });
-
-    // Research Page
-    app.get("/research", isLoggedIn, researchHandler.displayResearch);
-
-    // Mount tutorial router
-    app.use("/tutorial", tutorialRouter);
-
-    // Error handling middleware
-    app.use(ErrorHandler);
-};
-
-module.exports = index;
-
-```
-
-### app/routes/benefits.js
-```js
-const {
-    BenefitsDAO
-} = require("../data/benefits-dao");
-const {
-    environmentalScripts
-} = require("../../config/config");
-
-function BenefitsHandler(db) {
-    "use strict";
-
-    const benefitsDAO = new BenefitsDAO(db);
-
-    this.displayBenefits = (req, res, next) => {
-
-        benefitsDAO.getAllNonAdminUsers((error, users) => {
-
-            if (error) return next(error);
-
-            return res.render("benefits", {
-                users,
-                user: {
-                    isAdmin: true
-                },
-                environmentalScripts
-            });
-        });
-    };
-
-    this.updateBenefits = (req, res, next) => {
-        const {
-            userId,
-            benefitStartDate
-        } = req.body;
-
-        benefitsDAO.updateBenefits(userId, benefitStartDate, (error) => {
-
-            if (error) return next(error);
-
-            benefitsDAO.getAllNonAdminUsers((error, users) => {
-                if (error) return next(error);
-
-                const data = {
-                    users,
-                    user: {
-                        isAdmin: true
-                    },
-                    updateSuccess: true,
-                    environmentalScripts
-                };
-
-                return res.render("benefits", data);
-            });
-        });
-    };
-}
-
-module.exports = BenefitsHandler;
-
-```
-
-### app/data/benefits-dao.js
-```js
-/* The BenefitsDAO must be constructed with a connected database object */
-function BenefitsDAO(db) {
+/* The UserDAO must be constructed with a connected database object */
+function UserDAO(db) {
 
     "use strict";
 
     /* If this constructor is called without the "new" operator, "this" points
      * to the global object. Log a warning and call it correctly. */
-    if (false === (this instanceof BenefitsDAO)) {
-        console.log("Warning: BenefitsDAO constructor called without 'new' operator");
-        return new BenefitsDAO(db);
+    if (false === (this instanceof UserDAO)) {
+        console.log("Warning: UserDAO constructor called without 'new' operator");
+        return new UserDAO(db);
     }
 
     const usersCol = db.collection("users");
 
-    this.getAllNonAdminUsers = callback => {
-        usersCol.find({
-            "isAdmin": {
-                $ne: true
+    this.addUser = (userName, firstName, lastName, password, email, callback) => {
+
+        // Create user document
+        const user = {
+            userName,
+            firstName,
+            lastName,
+            benefitStartDate: this.getRandomFutureDate(),
+            password //received from request param
+            /*
+            // Fix for A2-1 - Broken Auth
+            // Stores password  in a safer way using one way encryption and salt hashing
+            password: bcrypt.hashSync(password, bcrypt.genSaltSync())
+            */
+        };
+
+        // Add email if set
+        if (email) {
+            user.email = email;
+        }
+
+        this.getNextSequence("userId", (err, id) => {
+            if (err) {
+                return callback(err, null);
             }
-        }).toArray((err, users) => callback(null, users));
+            console.log(typeof(id));
+
+            user._id = id;
+            usersCol.insert(user, (err, result) => !err ? callback(null, result.ops[0]) : callback(err, null));
+        });
     };
 
-    this.updateBenefits = (userId, startDate, callback) => {
-        usersCol.update({
+    this.getRandomFutureDate = () => {
+        const today = new Date();
+        const day = (Math.floor(Math.random() * 10) + today.getDay()) % 29;
+        const month = (Math.floor(Math.random() * 10) + today.getMonth()) % 12;
+        const year = Math.ceil(Math.random() * 30) + today.getFullYear();
+        return `${year}-${("0" + month).slice(-2)}-${("0" + day).slice(-2)}`;
+    };
+
+    this.validateLogin = (userName, password, callback) => {
+
+        // Helper function to compare passwords
+        const comparePassword = (fromDB, fromUser) => {
+            return fromDB === fromUser;
+            /*
+            // Fix for A2-Broken Auth
+            // compares decrypted password stored in this.addUser()
+            return bcrypt.compareSync(fromDB, fromUser);
+            */
+        };
+
+        // Callback to pass to MongoDB that validates a user document
+        const validateUserDoc = (err, user) => {
+
+            if (err) return callback(err, null);
+
+            if (user) {
+                if (comparePassword(password, user.password)) {
+                    callback(null, user);
+                } else {
+                    const invalidPasswordError = new Error("Invalid password");
+                    // Set an extra field so we can distinguish this from a db error
+                    invalidPasswordError.invalidPassword = true;
+                    callback(invalidPasswordError, null);
+                }
+            } else {
+                const noSuchUserError = new Error("User: " + user + " does not exist");
+                // Set an extra field so we can distinguish this from a db error
+                noSuchUserError.noSuchUser = true;
+                callback(noSuchUserError, null);
+            }
+        };
+
+        usersCol.findOne({
+            userName: userName
+        }, validateUserDoc);
+    };
+
+    // This is the good one, see the next function
+    this.getUserById = (userId, callback) => {
+        usersCol.findOne({
+            _id: parseInt(userId)
+        }, callback);
+    };
+
+    this.getUserByUserName = (userName, callback) => {
+        usersCol.findOne({
+            userName: userName
+        }, callback);
+    };
+
+    this.getNextSequence = (name, callback) => {
+        db.collection("counters").findAndModify({
+                _id: name
+            }, [], {
+                $inc: {
+                    seq: 1
+                }
+            }, {
+                new: true
+            },
+            (err, data) =>  err ? callback(err, null) : callback(null, data.value.seq));
+    };
+}
+
+module.exports = { UserDAO };
+
+```
+
+### app/data/profile-dao.js
+```js
+/* The ProfileDAO must be constructed with a connected database object */
+function ProfileDAO(db) {
+
+    "use strict";
+
+    /* If this constructor is called without the "new" operator, "this" points
+     * to the global object. Log a warning and call it correctly. */
+    if (false === (this instanceof ProfileDAO)) {
+        console.log("Warning: ProfileDAO constructor called without 'new' operator");
+        return new ProfileDAO(db);
+    }
+
+    const users = db.collection("users");
+
+    /* Fix for A6 - Sensitive Data Exposure
+
+    // Use crypto module to save sensitive data such as ssn, dob in encrypted format
+    const crypto = require("crypto");
+    const config = require("../../config/config");
+
+    /// Helper method create initialization vector
+    // By default the initialization vector is not secure enough, so we create our own
+    const createIV = () => {
+        // create a random salt for the PBKDF2 function - 16 bytes is the minimum length according to NIST
+        const salt = crypto.randomBytes(16);
+        return crypto.pbkdf2Sync(config.cryptoKey, salt, 100000, 512, "sha512");
+    };
+
+    // Helper methods to encryt / decrypt
+    const encrypt = (toEncrypt) => {
+        config.iv = createIV();
+        const cipher = crypto.createCipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
+        return `${cipher.update(toEncrypt, "utf8", "hex")} ${cipher.final("hex")}`;
+    };
+
+    const decrypt = (toDecrypt) => {
+        const decipher = crypto.createDecipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
+        return `${decipher.update(toDecrypt, "hex", "utf8")} ${decipher.final("utf8")}`;
+    };
+    */
+
+    this.updateUser = (userId, firstName, lastName, ssn, dob, address, bankAcc, bankRouting, callback) => {
+
+        // Create user document
+        const user = {};
+        if (firstName) {
+            user.firstName = firstName;
+        }
+        if (lastName) {
+            user.lastName = lastName;
+        }
+        if (address) {
+            user.address = address;
+        }
+        if (bankAcc) {
+            user.bankAcc = bankAcc;
+        }
+        if (bankRouting) {
+            user.bankRouting = bankRouting;
+        }
+        if (ssn) {
+            user.ssn = ssn;
+        }
+        if (dob) {
+            user.dob = dob;
+        }
+        /*
+        // Fix for A7 - Sensitive Data Exposure
+        // Store encrypted ssn and DOB
+        if(ssn) {
+            user.ssn = encrypt(ssn);
+        }
+        if(dob) {
+            user.dob = encrypt(dob);
+        }
+        */
+
+        users.update({
                 _id: parseInt(userId)
             }, {
-                $set: {
-                    benefitStartDate: startDate
-                }
+                $set: user
             },
-            (err, result) => {
+            err => {
                 if (!err) {
-                    console.log("Updated benefits");
-                    return callback(null, result);
+                    console.log("Updated user profile");
+                    return callback(null, user);
                 }
 
                 return callback(err, null);
             }
         );
     };
+
+    this.getByUserId = (userId, callback) => {
+        users.findOne({
+                _id: parseInt(userId)
+            },
+            (err, user) => {
+                if (err) return callback(err, null);
+                /*
+                // Fix for A6 - Sensitive Data Exposure
+                // Decrypt ssn and DOB values to display to user
+                user.ssn = user.ssn ? decrypt(user.ssn) : "";
+                user.dob = user.dob ? decrypt(user.dob) : "";
+                */
+
+                callback(null, user);
+            }
+        );
+    };
 }
 
-module.exports = { BenefitsDAO };
+module.exports = { ProfileDAO };
+
+```
+
+### artifacts/db-reset.js
+```js
+#!/usr/bin/env nodejs
+
+"use strict";
+
+// This script initializes the database. You can set the environment variable
+// before running it (default: development). ie:
+// NODE_ENV=production node artifacts/db-reset.js
+
+const { MongoClient } = require("mongodb");
+const { db } = require("../config/config");
+
+const USERS_TO_INSERT = [
+    {
+        "_id": 1,
+        "userName": "admin",
+        "firstName": "Node Goat",
+        "lastName": "Admin",
+        "password": "Admin_123",
+        //"password" : "$2a$10$8Zo/1e8KM8QzqOKqbDlYlONBOzukWXrM.IiyzqHRYDXqwB3gzDsba", // Admin_123
+        "isAdmin": true
+    }, {
+        "_id": 2,
+        "userName": "user1",
+        "firstName": "John",
+        "lastName": "Doe",
+        "benefitStartDate": "2030-01-10",
+        "password": "User1_123"
+        // "password" : "$2a$10$RNFhiNmt2TTpVO9cqZElb.LQM9e1mzDoggEHufLjAnAKImc6FNE86",// User1_123
+    }, {
+        "_id": 3,
+        "userName": "user2",
+        "firstName": "Will",
+        "lastName": "Smith",
+        "benefitStartDate": "2025-11-30",
+        "password": "User2_123"
+        //"password" : "$2a$10$Tlx2cNv15M0Aia7wyItjsepeA8Y6PyBYaNdQqvpxkIUlcONf1ZHyq", // User2_123
+    }];
+
+const tryDropCollection = (db, name) => {
+    return new Promise((resolve, reject) => {
+        db.dropCollection(name, (err, data) => {
+            if (!err) {
+                console.log(`Dropped collection: ${name}`);
+            }
+            resolve(undefined);
+        });
+    });
+};
+
+const parseResponse = (err, res, comm) => {
+    if (err) {
+        console.log("ERROR:");
+        console.log(comm);
+        console.log(JSON.stringify(err));
+        process.exit(1);
+    }
+    console.log(comm);
+    console.log(JSON.stringify(res));
+};
+
+
+// Starting here
+MongoClient.connect(db, (err, db) =>  {
+    if (err) {
+        console.log("ERROR: connect");
+        console.log(JSON.stringify(err));
+        process.exit(1);
+    }
+    console.log("Connected to the database");
+
+    const collectionNames = [
+        "users",
+        "allocations",
+        "contributions",
+        "memos",
+        "counters"
+    ];
+
+    // remove existing data (if any), we don't want to look for errors here
+    console.log("Dropping existing collections");
+    const dropPromises = collectionNames.map((name) => tryDropCollection(db, name));
+
+    // Wait for all drops to finish (or fail) before continuing
+    Promise.all(dropPromises).then(() => {
+        const usersCol = db.collection("users");
+        const allocationsCol = db.collection("allocations");
+        const countersCol = db.collection("counters");
+
+        // reset unique id counter
+        countersCol.insert({
+            _id: "userId",
+            seq: 3
+        }, (err, data) => {
+            parseResponse(err, data, "countersCol.insert");
+        });
+
+        // insert admin and test users
+        console.log("Users to insert:");
+        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify(user)));
+
+        usersCol.insertMany(USERS_TO_INSERT, (err, data) => {
+            const finalAllocations = [];
+
+            // We can't continue if error here
+            if (err) {
+                console.log("ERROR: insertMany");
+                console.log(JSON.stringify(err));
+                process.exit(1);
+            }
+            parseResponse(err, data, "users.insertMany");
+
+            data.ops.forEach((user) => {
+                const stocks = Math.floor((Math.random() * 40) + 1);
+                const funds = Math.floor((Math.random() * 40) + 1);
+
+                finalAllocations.push({
+                    userId: user._id,
+                    stocks: stocks,
+                    funds: funds,
+                    bonds: 100 - (stocks + funds)
+                });
+            });
+
+            console.log("Allocations to insert:");
+            finalAllocations.forEach(allocation => console.log(JSON.stringify(allocation)));
+
+            allocationsCol.insertMany(finalAllocations, (err, data) => {
+                parseResponse(err, data, "allocations.insertMany");
+                console.log("Database reset performed successfully");
+                process.exit(0);
+            });
+
+        });
+    });
+});
 
 ```
 
