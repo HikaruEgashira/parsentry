@@ -109,11 +109,10 @@ pub fn build_surface_prompt(
     let mut prompt = String::new();
 
     prompt.push_str(
-        "You are a security auditor. Analyze the following source code \
-         for vulnerabilities.\n\n",
+        "You are a security auditor. Read the source files listed in Locations \
+         and analyze them for vulnerabilities.\n\n",
     );
 
-    // Surface context
     prompt.push_str("## Surface Under Analysis\n\n");
     prompt.push_str(&format!("- **ID**: {}\n", surface.id));
     prompt.push_str(&format!("- **Kind**: {}\n", surface.kind));
@@ -124,22 +123,8 @@ pub fn build_surface_prompt(
         surface.locations.join(", ")
     ));
 
-    prompt.push_str("## Source Code\n\n");
-
-    for src in &sources {
-        // Infer language hint from extension
-        let lang_hint = Path::new(&src.rel_path)
-            .extension()
-            .map(|e| e.to_string_lossy().to_string())
-            .unwrap_or_default();
-        prompt.push_str(&format!(
-            "### {}\n```{}\n{}\n```\n\n",
-            src.rel_path, lang_hint, src.contents,
-        ));
-    }
-
     prompt.push_str("## Output Instructions\n\n");
-    prompt.push_str("Output valid SARIF v2.1.0 JSON.\n");
+    prompt.push_str("Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.\n");
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
     prompt.push_str("- level: error/warning/note\n");
@@ -281,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn builds_prompt_with_file_contents() {
+    fn builds_prompt_with_surface_metadata() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
         let src_dir = root.join("src");
@@ -291,9 +276,9 @@ mod tests {
         let surface = make_surface("S-1", vec!["src/auth.py"]);
         let sp = build_surface_prompt(&surface, root).unwrap();
         assert_eq!(sp.surface_id, "S-1");
-        assert!(sp.prompt.contains("password = input()"));
         assert!(sp.prompt.contains("src/auth.py"));
         assert!(sp.prompt.contains("SARIF"));
+        assert!(!sp.prompt.contains("password = input()"));
         assert_eq!(sp.cache_key.len(), 64);
     }
 
@@ -308,8 +293,9 @@ mod tests {
 
         let surface = make_surface("S-1", vec!["src"]);
         let sp = build_surface_prompt(&surface, root).unwrap();
-        assert!(sp.prompt.contains("os.system(cmd)"));
-        assert!(sp.prompt.contains("def helper(): pass"));
+        // Source code not inlined, but prompt should exist
+        assert!(sp.prompt.contains("S-1"));
+        assert!(!sp.prompt.contains("os.system(cmd)"));
     }
 
     #[test]
@@ -364,6 +350,7 @@ mod tests {
 
         let surface = make_surface("S-1", vec!["src/app.py", "src/app.py"]);
         let sp = build_surface_prompt(&surface, root).unwrap();
-        assert_eq!(sp.prompt.matches("eval(x)").count(), 1);
+        // Cache key should still be deterministic with deduped files
+        assert_eq!(sp.cache_key.len(), 64);
     }
 }
