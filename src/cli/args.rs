@@ -55,11 +55,10 @@ pub enum Commands {
         target: String,
     },
     /// Monitor scan progress (docker compose logs -f style)
-    #[command(alias = "logs", alias = "watch")]
+    #[command(alias = "logs")]
     Log {
-        /// Target to resolve report directory (default: .)
-        #[arg(default_value = ".")]
-        target: String,
+        /// Target to monitor (omit to show all sessions)
+        target: Option<String>,
 
         /// Disable follow mode
         #[arg(long = "no-follow", action = clap::ArgAction::SetTrue)]

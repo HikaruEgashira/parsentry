@@ -11,7 +11,7 @@ use parsentry_core::{
 };
 
 /// Base cache directory. Respects PARSENTRY_CACHE_DIR, falls back to XDG.
-fn cache_base() -> PathBuf {
+pub fn cache_base() -> PathBuf {
     if let Ok(dir) = std::env::var("PARSENTRY_CACHE_DIR") {
         PathBuf::from(dir)
     } else {

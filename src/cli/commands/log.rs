@@ -21,8 +21,25 @@ const SURFACE_COLORS: &[&str] = &[
 /// Interval for session discovery (heavier operation)
 const SESSION_POLL_SECS: u64 = 10;
 
-pub async fn run_watch_command(
-    output_dir: &Path,
+/// List all report directories under the parsentry cache base.
+fn list_all_report_dirs() -> Vec<(String, PathBuf)> {
+    let cache_base = super::common::cache_base();
+    let mut dirs = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&cache_base) {
+        for entry in entries.flatten() {
+            let reports = entry.path().join("reports");
+            if reports.is_dir() {
+                let name = entry.file_name().to_string_lossy().replace("__", "/");
+                dirs.push((name, reports));
+            }
+        }
+    }
+    dirs.sort_by(|a, b| a.0.cmp(&b.0));
+    dirs
+}
+
+pub async fn run_log_command(
+    target: Option<&str>,
     follow: bool,
     _tail: Option<usize>,
     timestamps: bool,
@@ -33,8 +50,39 @@ pub async fn run_watch_command(
     let use_colors = !no_color && colors_enabled();
     let start = Instant::now();
 
+    // If no target, list all sessions summary
+    if target.is_none() {
+        let all = list_all_report_dirs();
+        if all.is_empty() {
+            print_log("parsentry", "no sessions found", use_colors, timestamps, colors::DIM);
+            return Ok(());
+        }
+        for (name, reports_dir) in &all {
+            let prompt_count = std::fs::read_dir(reports_dir)
+                .map(|e| e.flatten().filter(|f| f.file_name().to_string_lossy().ends_with(".prompt.md")).count())
+                .unwrap_or(0);
+            let sarif_count = std::fs::read_dir(reports_dir)
+                .map(|e| e.flatten().filter(|f| f.file_name().to_string_lossy().ends_with(".sarif.json")).count())
+                .unwrap_or(0);
+            let status = if sarif_count >= prompt_count && prompt_count > 0 {
+                "complete"
+            } else if sarif_count > 0 {
+                "in progress"
+            } else if prompt_count > 0 {
+                "waiting"
+            } else {
+                "empty"
+            };
+            print_log(name, &format!("{} surfaces, {} results ({})", prompt_count, sarif_count, status), use_colors, timestamps, colors::CYAN);
+        }
+        return Ok(());
+    }
+
+    let target = target.unwrap();
+    let output_dir = super::common::cache_dir_for(target).join("reports");
+
     if !follow && !output_dir.exists() {
-        anyhow::bail!("Output directory does not exist: {}", output_dir.display());
+        anyhow::bail!("No reports found for {}. Run `parsentry scan {}` first.", target, target);
     }
 
     let cwd = std::env::current_dir()?;
@@ -42,7 +90,7 @@ pub async fn run_watch_command(
 
     print_log(
         "parsentry",
-        &format!("watching {}", output_dir.display()),
+        &format!("watching {}", target),
         use_colors,
         timestamps,
         colors::BOLD,
@@ -59,8 +107,8 @@ pub async fn run_watch_command(
 
     // Initial discovery
     if dir_existed {
-        discover_new_surfaces(output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
-        check_completed_surfaces(output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
+        discover_new_surfaces(&output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
+        check_completed_surfaces(&output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
     }
 
     if !follow {
@@ -82,7 +130,7 @@ pub async fn run_watch_command(
 
     // Watch output directory (for prompt.md and sarif.json)
     if dir_existed {
-        watcher.watch(output_dir, RecursiveMode::NonRecursive)?;
+        watcher.watch(&output_dir, RecursiveMode::NonRecursive)?;
     }
     // Watch project sessions directory (for JSONL changes)
     if project_dir.exists() {
@@ -123,7 +171,7 @@ pub async fn run_watch_command(
                     // If output dir just appeared, start watching it
                     if !dir_existed && output_dir.exists() {
                         dir_existed = true;
-                        let _ = watcher.watch(output_dir, RecursiveMode::NonRecursive);
+                        let _ = watcher.watch(&output_dir, RecursiveMode::NonRecursive);
                         print_log("parsentry", &format!("directory appeared: {}", output_dir.display()), use_colors, timestamps, colors::BRIGHT_GREEN);
                     }
                     // If project dir appeared, watch it
@@ -134,7 +182,7 @@ pub async fn run_watch_command(
                     // Process based on which paths changed
                     for path in &event.paths {
                         let is_jsonl = path.extension().and_then(|e| e.to_str()) == Some("jsonl");
-                        let is_in_output = path.starts_with(output_dir);
+                        let is_in_output = path.starts_with(&output_dir);
 
                         if is_jsonl && matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
                             // JSONL changed — read new events immediately
@@ -153,8 +201,8 @@ pub async fn run_watch_command(
 
                         if is_in_output && matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_)) {
                             // New file in output dir — check for new surfaces or completions
-                            discover_new_surfaces(output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
-                            check_completed_surfaces(output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
+                            discover_new_surfaces(&output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
+                            check_completed_surfaces(&output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
                         }
                     }
                 }
@@ -172,12 +220,12 @@ pub async fn run_watch_command(
 
             if !dir_existed && output_dir.exists() {
                 dir_existed = true;
-                let _ = watcher.watch(output_dir, RecursiveMode::NonRecursive);
+                let _ = watcher.watch(&output_dir, RecursiveMode::NonRecursive);
                 print_log("parsentry", &format!("directory appeared: {}", output_dir.display()), use_colors, timestamps, colors::BRIGHT_GREEN);
             }
 
             if dir_existed {
-                discover_new_surfaces(output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
+                discover_new_surfaces(&output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
             }
 
             poll_sessions(
@@ -191,7 +239,7 @@ pub async fn run_watch_command(
                 use_colors, timestamps,
             );
 
-            check_completed_surfaces(output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
+            check_completed_surfaces(&output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
         }
 
         // All done?

@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use crate::cli::args::{Args, Commands};
-use crate::cli::commands::{run_scan_command, run_model_command, run_watch_command};
+use crate::cli::commands::{run_scan_command, run_model_command, run_log_command};
 
 pub struct RootCommand;
 
@@ -27,10 +27,9 @@ impl RootCommand {
                 Ok(())
             },
             Commands::Log { target, no_follow, tail, no_timestamps, interval, timeout, no_color } => {
-                let reports_dir = crate::cli::commands::common::cache_dir_for(&target).join("reports");
                 let follow = !no_follow;
                 let timestamps = !no_timestamps;
-                run_watch_command(&reports_dir, follow, tail, timestamps, interval, timeout, no_color).await
+                run_log_command(target.as_deref(), follow, tail, timestamps, interval, timeout, no_color).await
             },
         }
     }

@@ -1,8 +1,8 @@
 pub mod common;
+pub mod log;
 pub mod model;
 pub mod scan;
-pub mod watch;
 
+pub use log::run_log_command;
 pub use model::run_model_command;
 pub use scan::run_scan_command;
-pub use watch::run_watch_command;
