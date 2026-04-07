@@ -1,0 +1,181 @@
+{
+  "app_type": "web_application",
+  "summary": "A deliberately vulnerable Flask web application with extensive attack surface across authentication, injection, file operations, and deserialization. Hardcoded secrets, SQL injection in nearly every database query, no input validation, and direct command/code execution endpoints make this application critically insecure across all OWASP Top 10 categories.",
+  "surfaces": [
+    {
+      "id": "SURFACE-001",
+      "kind": "endpoint",
+      "identifier": "POST /login",
+      "locations": ["app.py", "models.py"],
+      "description": "Login endpoint with SQL injection in authentication query (string formatting), plaintext password logging, predictable MD5 session tokens, and information disclosure in error messages"
+    },
+    {
+      "id": "SURFACE-002",
+      "kind": "endpoint",
+      "identifier": "GET /sqli?username=&order=",
+      "locations": ["app.py"],
+      "description": "SQL injection page with two injection points: LIKE clause via username parameter and ORDER BY clause via order parameter, both using direct string interpolation"
+    },
+    {
+      "id": "SURFACE-003",
+      "kind": "endpoint",
+      "identifier": "GET /xss?name=&comment=",
+      "locations": ["app.py"],
+      "description": "Reflected XSS via f-string template construction bypassing Jinja2 autoescaping, with injection in HTML, attribute, JavaScript, and CSS contexts"
+    },
+    {
+      "id": "SURFACE-004",
+      "kind": "endpoint",
+      "identifier": "GET /cmdi?hostname=&count=",
+      "locations": ["app.py"],
+      "description": "OS command injection via os.popen() and os.system() with unsanitized hostname and count parameters, allowing arbitrary command execution"
+    },
+    {
+      "id": "SURFACE-005",
+      "kind": "endpoint",
+      "identifier": "GET /lfi?file=",
+      "locations": ["app.py"],
+      "description": "Local file inclusion via arbitrary file read with no path validation, enabling access to /etc/passwd and other sensitive system files"
+    },
+    {
+      "id": "SURFACE-006",
+      "kind": "endpoint",
+      "identifier": "GET /ssti?template=&name=",
+      "locations": ["app.py"],
+      "description": "Server-side template injection via user-controlled Jinja2 Template() instantiation, enabling RCE through __subclasses__ traversal"
+    },
+    {
+      "id": "SURFACE-007",
+      "kind": "endpoint",
+      "identifier": "POST /api/auth/login",
+      "locations": ["api.py", "models.py"],
+      "description": "API authentication with SQL injection in credential check, weak HS256 JWT with hardcoded secret, password logged in audit trail, and API key exposure in response"
+    },
+    {
+      "id": "SURFACE-008",
+      "kind": "endpoint",
+      "identifier": "GET /api/user/<user_id>",
+      "locations": ["api.py", "models.py"],
+      "description": "IDOR vulnerability exposing any user's data without authorization check, plus SQL injection in user lookup query via unvalidated user_id"
+    },
+    {
+      "id": "SURFACE-009",
+      "kind": "endpoint",
+      "identifier": "POST /api/ssrf/fetch",
+      "locations": ["api.py"],
+      "description": "Server-side request forgery allowing arbitrary HTTP requests to internal services and cloud metadata endpoints with no URL validation"
+    },
+    {
+      "id": "SURFACE-010",
+      "kind": "endpoint",
+      "identifier": "POST /api/exec/command",
+      "locations": ["api.py"],
+      "description": "Direct arbitrary command execution via subprocess.run() with shell=True and user-supplied command string"
+    },
+    {
+      "id": "SURFACE-011",
+      "kind": "endpoint",
+      "identifier": "POST /api/eval/python",
+      "locations": ["api.py"],
+      "description": "Arbitrary Python code execution via eval() on user-supplied input, enabling full system compromise"
+    },
+    {
+      "id": "SURFACE-012",
+      "kind": "endpoint",
+      "identifier": "POST /api/pickle/deserialize",
+      "locations": ["api.py"],
+      "description": "Insecure deserialization via pickle.loads() on base64-decoded user input, enabling arbitrary code execution through crafted pickle payloads"
+    },
+    {
+      "id": "SURFACE-013",
+      "kind": "endpoint",
+      "identifier": "POST /api/yaml/load",
+      "locations": ["api.py"],
+      "description": "Unsafe YAML deserialization using yaml.FullLoader which can instantiate arbitrary Python objects leading to code execution"
+    },
+    {
+      "id": "SURFACE-014",
+      "kind": "endpoint",
+      "identifier": "POST /api/xml/parse",
+      "locations": ["api.py"],
+      "description": "XML External Entity (XXE) injection via ET.fromstring() without disabling external entity resolution, enabling file read and SSRF"
+    },
+    {
+      "id": "SURFACE-015",
+      "kind": "endpoint",
+      "identifier": "POST /api/file/upload",
+      "locations": ["api.py"],
+      "description": "Unrestricted file upload with no type validation and path traversal via filename, allowing arbitrary file write to the filesystem"
+    },
+    {
+      "id": "SURFACE-016",
+      "kind": "endpoint",
+      "identifier": "POST /api/file/extract",
+      "locations": ["api.py"],
+      "description": "Zip slip vulnerability via extractall() without path validation, enabling arbitrary file overwrite through crafted archive entries"
+    },
+    {
+      "id": "SURFACE-017",
+      "kind": "endpoint",
+      "identifier": "POST /api/template/render",
+      "locations": ["api.py"],
+      "description": "Server-side template injection via unsandboxed Jinja2 Template() with user-controlled template string and context"
+    },
+    {
+      "id": "SURFACE-018",
+      "kind": "endpoint",
+      "identifier": "POST /api/ldap/search",
+      "locations": ["api.py"],
+      "description": "LDAP injection via unsanitized username in filter string construction, enabling authentication bypass and data exfiltration"
+    },
+    {
+      "id": "SURFACE-019",
+      "kind": "endpoint",
+      "identifier": "GET /api/redirect?next=",
+      "locations": ["api.py"],
+      "description": "Open redirect with no URL validation, enabling phishing attacks by redirecting users to attacker-controlled domains"
+    },
+    {
+      "id": "SURFACE-020",
+      "kind": "endpoint",
+      "identifier": "GET /api/documents/search?q=&user_id=",
+      "locations": ["api.py", "models.py"],
+      "description": "SQL injection in document search LIKE clause plus IDOR allowing access to any user's documents without authorization"
+    },
+    {
+      "id": "SURFACE-021",
+      "kind": "endpoint",
+      "identifier": "GET /api/documents/<doc_id>/content",
+      "locations": ["api.py", "models.py"],
+      "description": "Chained SQL injection and local file inclusion: injection in doc_id query retrieves arbitrary file_path, which is then read without validation"
+    },
+    {
+      "id": "SURFACE-022",
+      "kind": "endpoint",
+      "identifier": "GET /logs?user_id=",
+      "locations": ["app.py", "models.py"],
+      "description": "IDOR in audit log viewer allowing any authenticated user to view other users' logs via user_id parameter, plus SQL injection in log retrieval"
+    },
+    {
+      "id": "SURFACE-023",
+      "kind": "db_table",
+      "identifier": "users",
+      "locations": ["models.py"],
+      "description": "Users table storing passwords in plaintext, hardcoded default credentials (admin/admin123, guest/guest), and API keys without encryption"
+    },
+    {
+      "id": "SURFACE-024",
+      "kind": "db_table",
+      "identifier": "audit_logs",
+      "locations": ["models.py"],
+      "description": "Audit log table with SQL injection in INSERT via string formatting, logging sensitive data including passwords in cleartext"
+    },
+    {
+      "id": "SURFACE-025",
+      "kind": "endpoint",
+      "identifier": "GET /api/logs/<user_id>",
+      "locations": ["api.py", "models.py"],
+      "description": "API log retrieval with IDOR (no auth check) and SQL injection via user_id parameter in log query"
+    }
+  ]
+}
