@@ -55,11 +55,13 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     )
     .await?;
 
-    // Phase 3: Tree-sitter pattern matching (filtered by threat model surfaces)
+    // Phase 3: Tree-sitter pattern matching on ALL files.
+    // Surface-level filtering happens later in prompt generation, not here.
+    // This avoids dropping patterns when LLM-generated locations are imprecise.
     printer.status("Scanning", "tree-sitter pattern matching");
     let all_pattern_matches = run_pattern_matching(
         &root_dir,
-        Some(&threat_model),
+        None,
         args.diff_base.as_deref(),
         args.filter_lang.as_deref(),
         &printer,
