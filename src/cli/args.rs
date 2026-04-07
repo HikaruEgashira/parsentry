@@ -37,8 +37,8 @@ pub enum Commands {
     },
     /// Generate per-surface analysis prompts from a threat model
     Scan {
-        /// Path to threat model JSON file
-        threat_model: PathBuf,
+        /// Path to threat model JSON file, or "-" for stdin
+        threat_model: String,
 
         /// Target to analyze: local path or GitHub repository (owner/repo)
         #[arg(default_value = ".")]

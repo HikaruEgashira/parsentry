@@ -31,7 +31,7 @@ fn write_cache_key(output_dir: &Path, sp: &SurfacePrompt) -> Result<()> {
 }
 
 pub async fn run_scan_command(
-    threat_model_path: &Path,
+    threat_model_source: &str,
     target: &str,
     output_dir: Option<&Path>,
     _diff_base: Option<&str>,
@@ -52,9 +52,20 @@ pub async fn run_scan_command(
         ),
     );
 
-    // Phase 2: Load threat model
-    let json = std::fs::read_to_string(threat_model_path)?;
-    let threat_model: ThreatModel = serde_json::from_str(&json)?;
+    // Phase 2: Load threat model (from stdin or file)
+    let json = if threat_model_source == "-" {
+        use std::io::Read;
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf)?;
+        buf
+    } else {
+        std::fs::read_to_string(threat_model_source)?
+    };
+    // Strip markdown code fences that LLMs often wrap around JSON
+    let json = json.trim();
+    let json = json.strip_prefix("```json").or_else(|| json.strip_prefix("```")).unwrap_or(json);
+    let json = json.strip_suffix("```").unwrap_or(json);
+    let threat_model: ThreatModel = serde_json::from_str(json.trim())?;
     printer.status(
         "Loaded",
         &format!("threat model with {} surfaces", threat_model.total_surfaces()),
