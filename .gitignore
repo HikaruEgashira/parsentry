@@ -4,6 +4,11 @@ pkg
 *.sqlite
 reports
 !docs/reports
+docs/reports/dify/*.sarif.json
+docs/reports/dify/*.cache_key
+docs/reports/dify/threat-model.json
+docs/reports/dify/report.md
+docs/reports/dify/merged.sarif.json
 !src/reports
 repo
 .claude/settings.local.json
