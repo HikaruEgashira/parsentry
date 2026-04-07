@@ -10,16 +10,16 @@
 /// - New findings → create Linear issue with label "parsentry" and parentId set
 /// - `baselineState == "absent"` → cancel existing issue
 /// - `baselineState == "unchanged"` or fingerprint already exists → skip
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 
 use crate::report_common::{
-    build_markdown_body, build_title, extract_fingerprint, load_surface_reports,
-    parse_fingerprint_from_body, parse_surface_from_body, SURFACE_MARKER,
+    SURFACE_MARKER, build_markdown_body, build_title, extract_fingerprint, load_surface_reports,
+    parse_fingerprint_from_body, parse_surface_from_body,
 };
 
 const LINEAR_API: &str = "https://api.linear.app/graphql";
@@ -31,8 +31,7 @@ pub async fn run_linear_command(
     dry_run: bool,
     min_level: &str,
 ) -> Result<()> {
-    let api_key = env::var("LINEAR_API_KEY")
-        .map_err(|_| anyhow!("LINEAR_API_KEY not set"))?;
+    let api_key = env::var("LINEAR_API_KEY").map_err(|_| anyhow!("LINEAR_API_KEY not set"))?;
 
     let client = Client::new();
 
@@ -49,11 +48,11 @@ pub async fn run_linear_command(
     let label_id = ensure_label(&client, &api_key, &team_uuid).await?;
 
     // Fetch existing issues: build fp → id and surface → id maps.
-    let (fp_map, surface_issue_map) =
-        fetch_existing_issues(&client, &api_key, &team_uuid).await?;
+    let (fp_map, surface_issue_map) = fetch_existing_issues(&client, &api_key, &team_uuid).await?;
     eprintln!(
         "Found {} existing child issue(s) and {} surface issue(s) in Linear team {team_id}.",
-        fp_map.len(), surface_issue_map.len()
+        fp_map.len(),
+        surface_issue_map.len()
     );
 
     let (mut created, mut skipped, mut closed) = (0usize, 0usize, 0usize);
@@ -75,9 +74,15 @@ pub async fn run_linear_command(
                 surface.surface_name, surface.surface_name
             );
             let url = create_issue(
-                &client, &api_key, &team_uuid, &label_id,
-                &surface_title, &parent_desc, None,
-            ).await?;
+                &client,
+                &api_key,
+                &team_uuid,
+                &label_id,
+                &surface_title,
+                &parent_desc,
+                None,
+            )
+            .await?;
             eprintln!("Created surface issue: {url}");
             // Fetch the id for the newly created issue by re-querying
             let id = fetch_issue_id_by_title(&client, &api_key, &team_uuid, &surface_title).await?;
@@ -91,7 +96,10 @@ pub async fn run_linear_command(
             if result.baseline_state.as_deref() == Some("absent") {
                 if let Some(issue_id) = fp.as_ref().and_then(|f| fp_map.get(f)) {
                     if dry_run {
-                        eprintln!("[dry-run] Would cancel issue {issue_id} (absent: {})", result.rule_id);
+                        eprintln!(
+                            "[dry-run] Would cancel issue {issue_id} (absent: {})",
+                            result.rule_id
+                        );
                     } else {
                         cancel_issue(&client, &api_key, issue_id).await?;
                         eprintln!("Cancelled issue {issue_id} (resolved: {})", result.rule_id);
@@ -118,15 +126,21 @@ pub async fn run_linear_command(
             if dry_run {
                 eprintln!("[dry-run] Would create: {title}");
             } else {
-                let parent = if parent_id.is_empty() { None } else { Some(parent_id.as_str()) };
+                let parent = if parent_id.is_empty() {
+                    None
+                } else {
+                    Some(parent_id.as_str())
+                };
                 let url = create_issue(
-                    &client, &api_key, &team_uuid, &label_id,
-                    &title, &body, parent,
-                ).await?;
+                    &client, &api_key, &team_uuid, &label_id, &title, &body, parent,
+                )
+                .await?;
                 eprintln!("Created: {url}");
                 if let Some(f) = fp {
                     // Fetch id for dedup on next run
-                    if let Ok(id) = fetch_issue_id_by_title(&client, &api_key, &team_uuid, &title).await {
+                    if let Ok(id) =
+                        fetch_issue_id_by_title(&client, &api_key, &team_uuid, &title).await
+                    {
                         fp_map.insert(f, id);
                     }
                 }
@@ -152,7 +166,10 @@ async fn gql(client: &Client, api_key: &str, query: &str, variables: Value) -> R
         .map_err(|e| anyhow!("Linear API request failed: {e}"))?;
 
     let status = resp.status();
-    let body: Value = resp.json().await.map_err(|e| anyhow!("Linear response parse failed: {e}"))?;
+    let body: Value = resp
+        .json()
+        .await
+        .map_err(|e| anyhow!("Linear response parse failed: {e}"))?;
 
     if !status.is_success() {
         anyhow::bail!("Linear API error ({}): {}", status, body);
@@ -170,10 +187,12 @@ async fn resolve_team_id(client: &Client, api_key: &str, team_id: &str) -> Resul
     }
 
     let data = gql(
-        client, api_key,
+        client,
+        api_key,
         r#"query($key: String!) { team(id: $key) { id } }"#,
         json!({ "key": team_id }),
-    ).await?;
+    )
+    .await?;
 
     data["team"]["id"]
         .as_str()
@@ -184,28 +203,32 @@ async fn resolve_team_id(client: &Client, api_key: &str, team_id: &str) -> Resul
 /// Ensure the "parsentry" label exists in the team, create if missing. Returns label ID.
 async fn ensure_label(client: &Client, api_key: &str, team_id: &str) -> Result<String> {
     let data = gql(
-        client, api_key,
+        client,
+        api_key,
         r#"query($teamId: String!, $name: String!) {
             issueLabels(filter: { team: { id: { eq: $teamId } }, name: { eq: $name } }) {
                 nodes { id }
             }
         }"#,
         json!({ "teamId": team_id, "name": LINEAR_LABEL }),
-    ).await?;
+    )
+    .await?;
 
     if let Some(id) = data["issueLabels"]["nodes"][0]["id"].as_str() {
         return Ok(id.to_string());
     }
 
     let data = gql(
-        client, api_key,
+        client,
+        api_key,
         r#"mutation($teamId: String!, $name: String!, $color: String!) {
             issueLabelCreate(input: { teamId: $teamId, name: $name, color: $color }) {
                 issueLabel { id }
             }
         }"#,
         json!({ "teamId": team_id, "name": LINEAR_LABEL, "color": "#e11d48" }),
-    ).await?;
+    )
+    .await?;
 
     data["issueLabelCreate"]["issueLabel"]["id"]
         .as_str()
@@ -247,11 +270,17 @@ async fn fetch_existing_issues(
         );
 
         let data = gql(
-            client, api_key, &query,
+            client,
+            api_key,
+            &query,
             json!({ "teamId": team_id, "label": LINEAR_LABEL }),
-        ).await?;
+        )
+        .await?;
 
-        let nodes = data["issues"]["nodes"].as_array().cloned().unwrap_or_default();
+        let nodes = data["issues"]["nodes"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
         for node in &nodes {
             let id = node["id"].as_str().unwrap_or("").to_string();
             let desc = node["description"].as_str().unwrap_or("");
@@ -294,14 +323,16 @@ async fn create_issue(
     }
 
     let data = gql(
-        client, api_key,
+        client,
+        api_key,
         r#"mutation($input: IssueCreateInput!) {
             issueCreate(input: $input) {
                 issue { url }
             }
         }"#,
         json!({ "input": input }),
-    ).await?;
+    )
+    .await?;
 
     data["issueCreate"]["issue"]["url"]
         .as_str()
@@ -317,7 +348,8 @@ async fn fetch_issue_id_by_title(
     title: &str,
 ) -> Result<String> {
     let data = gql(
-        client, api_key,
+        client,
+        api_key,
         r#"query($teamId: String!, $title: String!) {
             issues(filter: {
                 team: { id: { eq: $teamId } }
@@ -327,7 +359,8 @@ async fn fetch_issue_id_by_title(
             }
         }"#,
         json!({ "teamId": team_id, "title": title }),
-    ).await?;
+    )
+    .await?;
 
     data["issues"]["nodes"][0]["id"]
         .as_str()
@@ -337,7 +370,8 @@ async fn fetch_issue_id_by_title(
 
 async fn cancel_issue(client: &Client, api_key: &str, issue_id: &str) -> Result<()> {
     let data = gql(
-        client, api_key,
+        client,
+        api_key,
         r#"query($id: String!) {
             issue(id: $id) {
                 team {
@@ -348,7 +382,8 @@ async fn cancel_issue(client: &Client, api_key: &str, issue_id: &str) -> Result<
             }
         }"#,
         json!({ "id": issue_id }),
-    ).await?;
+    )
+    .await?;
 
     let state_id = data["issue"]["team"]["states"]["nodes"][0]["id"]
         .as_str()
@@ -356,14 +391,16 @@ async fn cancel_issue(client: &Client, api_key: &str, issue_id: &str) -> Result<
         .to_string();
 
     gql(
-        client, api_key,
+        client,
+        api_key,
         r#"mutation($id: String!, $stateId: String!) {
             issueUpdate(id: $id, input: { stateId: $stateId }) {
                 issue { id }
             }
         }"#,
         json!({ "id": issue_id, "stateId": state_id }),
-    ).await?;
+    )
+    .await?;
 
     Ok(())
 }

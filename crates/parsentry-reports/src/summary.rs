@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 use parsentry_core::{Response, VulnType};
 
@@ -139,9 +139,21 @@ mod tests {
     #[test]
     fn test_sort_by_confidence_descending() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("low.py"), make_response(30, vec![]), "low.py.md".to_string());
-        summary.add_result(PathBuf::from("high.py"), make_response(90, vec![]), "high.py.md".to_string());
-        summary.add_result(PathBuf::from("mid.py"), make_response(60, vec![]), "mid.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("low.py"),
+            make_response(30, vec![]),
+            "low.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("high.py"),
+            make_response(90, vec![]),
+            "high.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("mid.py"),
+            make_response(60, vec![]),
+            "mid.py.md".to_string(),
+        );
 
         summary.sort_by_confidence();
 
@@ -153,8 +165,16 @@ mod tests {
     #[test]
     fn test_sort_by_confidence_already_sorted() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(90, vec![]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(50, vec![]), "b.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(90, vec![]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(50, vec![]),
+            "b.py.md".to_string(),
+        );
 
         summary.sort_by_confidence();
 
@@ -165,8 +185,16 @@ mod tests {
     #[test]
     fn test_sort_by_confidence_equal_scores() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(70, vec![]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(70, vec![]), "b.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(70, vec![]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(70, vec![]),
+            "b.py.md".to_string(),
+        );
 
         summary.sort_by_confidence();
 
@@ -180,20 +208,45 @@ mod tests {
     #[test]
     fn test_filter_by_min_confidence_keeps_above() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(30, vec![]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(70, vec![]), "b.py.md".to_string());
-        summary.add_result(PathBuf::from("c.py"), make_response(90, vec![]), "c.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(30, vec![]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(70, vec![]),
+            "b.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("c.py"),
+            make_response(90, vec![]),
+            "c.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_min_confidence(70);
         assert_eq!(filtered.results.len(), 2);
-        assert!(filtered.results.iter().all(|r| r.response.confidence_score >= 70));
+        assert!(
+            filtered
+                .results
+                .iter()
+                .all(|r| r.response.confidence_score >= 70)
+        );
     }
 
     #[test]
     fn test_filter_by_min_confidence_boundary() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(50, vec![]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(49, vec![]), "b.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(50, vec![]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(49, vec![]),
+            "b.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_min_confidence(50);
         assert_eq!(filtered.results.len(), 1);
@@ -203,7 +256,11 @@ mod tests {
     #[test]
     fn test_filter_by_min_confidence_none_match() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(30, vec![]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(30, vec![]),
+            "a.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_min_confidence(90);
         assert_eq!(filtered.results.len(), 0);
@@ -212,8 +269,16 @@ mod tests {
     #[test]
     fn test_filter_by_min_confidence_all_match() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(80, vec![]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(90, vec![]), "b.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(80, vec![]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(90, vec![]),
+            "b.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_min_confidence(50);
         assert_eq!(filtered.results.len(), 2);
@@ -224,9 +289,21 @@ mod tests {
     #[test]
     fn test_filter_by_vuln_types_single() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(80, vec![VulnType::SQLI]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(80, vec![VulnType::XSS]), "b.py.md".to_string());
-        summary.add_result(PathBuf::from("c.py"), make_response(80, vec![VulnType::SQLI, VulnType::RCE]), "c.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(80, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(80, vec![VulnType::XSS]),
+            "b.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("c.py"),
+            make_response(80, vec![VulnType::SQLI, VulnType::RCE]),
+            "c.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_vuln_types(&[VulnType::SQLI]);
         assert_eq!(filtered.results.len(), 2);
@@ -235,9 +312,21 @@ mod tests {
     #[test]
     fn test_filter_by_vuln_types_multiple() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(80, vec![VulnType::SQLI]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(80, vec![VulnType::XSS]), "b.py.md".to_string());
-        summary.add_result(PathBuf::from("c.py"), make_response(80, vec![VulnType::LFI]), "c.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(80, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(80, vec![VulnType::XSS]),
+            "b.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("c.py"),
+            make_response(80, vec![VulnType::LFI]),
+            "c.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_vuln_types(&[VulnType::SQLI, VulnType::XSS]);
         assert_eq!(filtered.results.len(), 2);
@@ -246,7 +335,11 @@ mod tests {
     #[test]
     fn test_filter_by_vuln_types_none_match() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(80, vec![VulnType::SQLI]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(80, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
 
         let filtered = summary.filter_by_vuln_types(&[VulnType::XSS]);
         assert_eq!(filtered.results.len(), 0);
@@ -265,7 +358,11 @@ mod tests {
     #[test]
     fn test_to_markdown_confidence_high() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(95, vec![VulnType::RCE]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(95, vec![VulnType::RCE]),
+            "a.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(md.contains("🔴 高"));
     }
@@ -273,7 +370,11 @@ mod tests {
     #[test]
     fn test_to_markdown_confidence_medium_high() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(75, vec![VulnType::XSS]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(75, vec![VulnType::XSS]),
+            "a.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(md.contains("🟠 中高"));
     }
@@ -281,7 +382,11 @@ mod tests {
     #[test]
     fn test_to_markdown_confidence_medium() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(55, vec![VulnType::SQLI]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(55, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(md.contains("🟡 中"));
     }
@@ -289,7 +394,11 @@ mod tests {
     #[test]
     fn test_to_markdown_confidence_medium_low() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(35, vec![VulnType::LFI]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(35, vec![VulnType::LFI]),
+            "a.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(md.contains("🟢 中低"));
     }
@@ -297,7 +406,11 @@ mod tests {
     #[test]
     fn test_to_markdown_confidence_low() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(10, vec![VulnType::IDOR]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(10, vec![VulnType::IDOR]),
+            "a.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(md.contains("🔵 低"));
     }
@@ -305,43 +418,83 @@ mod tests {
     #[test]
     fn test_to_markdown_confidence_boundaries() {
         let mut s90 = AnalysisSummary::new();
-        s90.add_result(PathBuf::from("a.py"), make_response(90, vec![VulnType::RCE]), "a.py.md".to_string());
+        s90.add_result(
+            PathBuf::from("a.py"),
+            make_response(90, vec![VulnType::RCE]),
+            "a.py.md".to_string(),
+        );
         assert!(s90.to_markdown().contains("🔴 高"));
 
         let mut s89 = AnalysisSummary::new();
-        s89.add_result(PathBuf::from("a.py"), make_response(89, vec![VulnType::XSS]), "a.py.md".to_string());
+        s89.add_result(
+            PathBuf::from("a.py"),
+            make_response(89, vec![VulnType::XSS]),
+            "a.py.md".to_string(),
+        );
         assert!(s89.to_markdown().contains("🟠 中高"));
 
         let mut s70 = AnalysisSummary::new();
-        s70.add_result(PathBuf::from("a.py"), make_response(70, vec![VulnType::XSS]), "a.py.md".to_string());
+        s70.add_result(
+            PathBuf::from("a.py"),
+            make_response(70, vec![VulnType::XSS]),
+            "a.py.md".to_string(),
+        );
         assert!(s70.to_markdown().contains("🟠 中高"));
 
         let mut s69 = AnalysisSummary::new();
-        s69.add_result(PathBuf::from("a.py"), make_response(69, vec![VulnType::SQLI]), "a.py.md".to_string());
+        s69.add_result(
+            PathBuf::from("a.py"),
+            make_response(69, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
         assert!(s69.to_markdown().contains("🟡 中"));
 
         let mut s50 = AnalysisSummary::new();
-        s50.add_result(PathBuf::from("a.py"), make_response(50, vec![VulnType::SQLI]), "a.py.md".to_string());
+        s50.add_result(
+            PathBuf::from("a.py"),
+            make_response(50, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
         assert!(s50.to_markdown().contains("🟡 中"));
 
         let mut s49 = AnalysisSummary::new();
-        s49.add_result(PathBuf::from("a.py"), make_response(49, vec![VulnType::LFI]), "a.py.md".to_string());
+        s49.add_result(
+            PathBuf::from("a.py"),
+            make_response(49, vec![VulnType::LFI]),
+            "a.py.md".to_string(),
+        );
         assert!(s49.to_markdown().contains("🟢 中低"));
 
         let mut s30 = AnalysisSummary::new();
-        s30.add_result(PathBuf::from("a.py"), make_response(30, vec![VulnType::LFI]), "a.py.md".to_string());
+        s30.add_result(
+            PathBuf::from("a.py"),
+            make_response(30, vec![VulnType::LFI]),
+            "a.py.md".to_string(),
+        );
         assert!(s30.to_markdown().contains("🟢 中低"));
 
         let mut s29 = AnalysisSummary::new();
-        s29.add_result(PathBuf::from("a.py"), make_response(29, vec![VulnType::IDOR]), "a.py.md".to_string());
+        s29.add_result(
+            PathBuf::from("a.py"),
+            make_response(29, vec![VulnType::IDOR]),
+            "a.py.md".to_string(),
+        );
         assert!(s29.to_markdown().contains("🔵 低"));
     }
 
     #[test]
     fn test_to_markdown_skips_zero_confidence() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("a.py"), make_response(0, vec![VulnType::SQLI]), "a.py.md".to_string());
-        summary.add_result(PathBuf::from("b.py"), make_response(80, vec![VulnType::XSS]), "b.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(0, vec![VulnType::SQLI]),
+            "a.py.md".to_string(),
+        );
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(80, vec![VulnType::XSS]),
+            "b.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(!md.contains("a.py"));
         assert!(md.contains("b.py"));
@@ -373,7 +526,11 @@ mod tests {
     #[test]
     fn test_to_markdown_output_filename_as_link() {
         let mut summary = AnalysisSummary::new();
-        summary.add_result(PathBuf::from("app.py"), make_response(80, vec![VulnType::RCE]), "app.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("app.py"),
+            make_response(80, vec![VulnType::RCE]),
+            "app.py.md".to_string(),
+        );
         let md = summary.to_markdown();
         assert!(md.contains("[app.py](app.py.md)"));
     }
@@ -384,9 +541,17 @@ mod tests {
     fn test_add_result_increments_count() {
         let mut summary = AnalysisSummary::new();
         assert_eq!(summary.results.len(), 0);
-        summary.add_result(PathBuf::from("a.py"), make_response(50, vec![]), "a.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("a.py"),
+            make_response(50, vec![]),
+            "a.py.md".to_string(),
+        );
         assert_eq!(summary.results.len(), 1);
-        summary.add_result(PathBuf::from("b.py"), make_response(60, vec![]), "b.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("b.py"),
+            make_response(60, vec![]),
+            "b.py.md".to_string(),
+        );
         assert_eq!(summary.results.len(), 2);
     }
 }

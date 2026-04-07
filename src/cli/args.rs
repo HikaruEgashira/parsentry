@@ -46,7 +46,6 @@ pub enum Commands {
         /// Filter by language (comma-separated)
         #[arg(long)]
         filter_lang: Option<String>,
-
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
@@ -78,6 +77,16 @@ pub enum Commands {
         /// Show what would be created without making changes
         #[arg(long)]
         dry_run: bool,
+    },
+    /// Generate PDF report from scan results
+    Generate {
+        /// Target to resolve report directory (owner/repo or local path)
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Output PDF path (default: <reports_dir>/report.pdf)
+        #[arg(short, long)]
+        output: Option<String>,
     },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]

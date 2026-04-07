@@ -21,12 +21,17 @@ impl CacheStorage {
 
         // Use symlink_metadata to detect broken symlinks (exists() follows symlinks and returns false for broken ones)
         if cache_dir.symlink_metadata().is_ok() && !cache_dir.is_dir() {
-            fs::remove_file(&cache_dir)
-                .with_context(|| format!("Failed to remove invalid cache path: {}", cache_dir.display()))?;
+            fs::remove_file(&cache_dir).with_context(|| {
+                format!(
+                    "Failed to remove invalid cache path: {}",
+                    cache_dir.display()
+                )
+            })?;
         }
         if !cache_dir.exists() {
-            fs::create_dir_all(&cache_dir)
-                .with_context(|| format!("Failed to create cache directory: {}", cache_dir.display()))?;
+            fs::create_dir_all(&cache_dir).with_context(|| {
+                format!("Failed to create cache directory: {}", cache_dir.display())
+            })?;
         }
 
         Ok(Self { cache_dir })
@@ -78,12 +83,13 @@ impl CacheStorage {
         let path = self.get_cache_path(&entry.namespace, &entry.key);
 
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create cache subdirectory: {}", parent.display()))?;
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create cache subdirectory: {}", parent.display())
+            })?;
         }
 
-        let content = serde_json::to_string_pretty(entry)
-            .context("Failed to serialize cache entry")?;
+        let content =
+            serde_json::to_string_pretty(entry).context("Failed to serialize cache entry")?;
 
         fs::write(&path, content)
             .with_context(|| format!("Failed to write cache file: {}", path.display()))?;
@@ -137,7 +143,9 @@ impl CacheStorage {
             .into_iter()
             .filter_map(|e| e.ok())
         {
-            if entry.file_type().is_file() && entry.path().extension().map_or(false, |ext| ext == "json") {
+            if entry.file_type().is_file()
+                && entry.path().extension().map_or(false, |ext| ext == "json")
+            {
                 count += 1;
             }
         }
@@ -153,7 +161,9 @@ impl CacheStorage {
             .into_iter()
             .filter_map(|e| e.ok())
         {
-            if entry.file_type().is_file() && entry.path().extension().map_or(false, |ext| ext == "json") {
+            if entry.file_type().is_file()
+                && entry.path().extension().map_or(false, |ext| ext == "json")
+            {
                 fs::remove_file(entry.path())?;
                 removed += 1;
             }

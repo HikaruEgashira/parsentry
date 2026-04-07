@@ -1,0 +1,25 @@
+{
+  "name": "@react-pdf/primitives",
+  "version": "4.2.0",
+  "license": "MIT",
+  "description": "Define uninitialized elements",
+  "author": "Diego Muracciole <diegomuracciole@gmail.com>",
+  "homepage": "https://github.com/diegomura/react-pdf#readme",
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diegomura/react-pdf.git",
+    "directory": "packages/primitives"
+  },
+  "scripts": {
+    "build": "rimraf ./lib && rollup -c",
+    "watch": "rimraf ./lib && rollup -c -w",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "lib"
+  ]
+}

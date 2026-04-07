@@ -166,11 +166,17 @@ mod tests {
     fn test_from_str() {
         assert_eq!(Language::from_str("python").unwrap(), Language::Python);
         assert_eq!(Language::from_str("rust").unwrap(), Language::Rust);
-        assert_eq!(Language::from_str("javascript").unwrap(), Language::JavaScript);
+        assert_eq!(
+            Language::from_str("javascript").unwrap(),
+            Language::JavaScript
+        );
 
         assert_eq!(Language::from_str("PYTHON").unwrap(), Language::Python);
         assert_eq!(Language::from_str("Rust").unwrap(), Language::Rust);
-        assert_eq!(Language::from_str("JavaScript").unwrap(), Language::JavaScript);
+        assert_eq!(
+            Language::from_str("JavaScript").unwrap(),
+            Language::JavaScript
+        );
 
         assert_eq!(Language::from_str("py").unwrap(), Language::Python);
         assert_eq!(Language::from_str("js").unwrap(), Language::JavaScript);
@@ -198,10 +204,19 @@ mod tests {
         assert_eq!(Language::from_str("c").unwrap(), Language::C);
         assert_eq!(Language::from_str("cpp").unwrap(), Language::Cpp);
         assert_eq!(Language::from_str("cxx").unwrap(), Language::Cpp);
-        assert_eq!(Language::from_str("terraform").unwrap(), Language::Terraform);
-        assert_eq!(Language::from_str("cloudformation").unwrap(), Language::CloudFormation);
+        assert_eq!(
+            Language::from_str("terraform").unwrap(),
+            Language::Terraform
+        );
+        assert_eq!(
+            Language::from_str("cloudformation").unwrap(),
+            Language::CloudFormation
+        );
         assert_eq!(Language::from_str("cfn").unwrap(), Language::CloudFormation);
-        assert_eq!(Language::from_str("kubernetes").unwrap(), Language::Kubernetes);
+        assert_eq!(
+            Language::from_str("kubernetes").unwrap(),
+            Language::Kubernetes
+        );
         assert_eq!(Language::from_str("yaml").unwrap(), Language::Yaml);
         assert_eq!(Language::from_str("yml").unwrap(), Language::Yaml);
         assert_eq!(Language::from_str("bash").unwrap(), Language::Bash);
@@ -210,7 +225,10 @@ mod tests {
         assert_eq!(Language::from_str("php").unwrap(), Language::Php);
         assert_eq!(Language::from_str("other").unwrap(), Language::Other);
         assert_eq!(Language::from_str("tsx").unwrap(), Language::TypeScript);
-        assert_eq!(Language::from_str("typescript").unwrap(), Language::TypeScript);
+        assert_eq!(
+            Language::from_str("typescript").unwrap(),
+            Language::TypeScript
+        );
     }
 
     // --- Mutant-killing: every from_extension arm ---

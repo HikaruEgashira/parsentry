@@ -1,6 +1,6 @@
 //! Code parser using tree-sitter.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,9 +42,8 @@ impl CodeParser {
 
     /// Add a file to the parser.
     pub fn add_file(&mut self, path: &Path) -> Result<()> {
-        let content = fs::read_to_string(path).map_err(|e| {
-            anyhow!("Failed to read file: {}: {}", path.display(), e)
-        })?;
+        let content = fs::read_to_string(path)
+            .map_err(|e| anyhow!("Failed to read file: {}: {}", path.display(), e))?;
         self.files.insert(path.to_path_buf(), content);
         Ok(())
     }
@@ -160,9 +159,10 @@ impl CodeParser {
         name: &str,
         source_file: &Path,
     ) -> Result<Option<(PathBuf, Definition)>> {
-        let content = self.files.get(source_file).ok_or_else(|| {
-            anyhow!("File not found in parser: {}", source_file.display())
-        })?;
+        let content = self
+            .files
+            .get(source_file)
+            .ok_or_else(|| anyhow!("File not found in parser: {}", source_file.display()))?;
 
         let language = match self.get_language(source_file) {
             Some(lang) => lang,

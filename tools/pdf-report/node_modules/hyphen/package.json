@@ -1,0 +1,22 @@
+{
+  "name": "hyphen",
+  "version": "1.14.1",
+  "description": "Text hyphenation in Javascript.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ytiurin/hyphen"
+  },
+  "keywords": [
+    "hyphen",
+    "hyphenate",
+    "hyphenation",
+    "hyphenator"
+  ],
+  "author": "Eugene Tiurin <yevhentiurin@gmail.com> (https://github.com/ytiurin)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ytiurin/hyphen/issues"
+  },
+  "homepage": "https://ytiurin.github.io/hyphen",
+  "browser": "./hyphen.js"
+}

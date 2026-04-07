@@ -25,11 +25,11 @@ pub struct TestCategoryResult {
 
 #[derive(Debug, Clone)]
 pub enum TestCategory {
-    PARClassification,    // PAR分類精度
-    ContextQuality,       // コンテキスト品質
-    RealWorldBenchmark,   // 実世界ベンチマーク
-    ExternalBenchmark,    // 外部ベンチマーク
-    EndToEndPipeline,     // エンドツーエンドパイプライン
+    PARClassification,  // PAR分類精度
+    ContextQuality,     // コンテキスト品質
+    RealWorldBenchmark, // 実世界ベンチマーク
+    ExternalBenchmark,  // 外部ベンチマーク
+    EndToEndPipeline,   // エンドツーエンドパイプライン
 }
 
 impl std::fmt::Display for TestCategory {
@@ -54,7 +54,8 @@ impl AccuracyTestSuite {
     }
 
     pub fn add_result(&mut self, result: TestCategoryResult) {
-        self.test_results.insert(format!("{}", result.category), result);
+        self.test_results
+            .insert(format!("{}", result.category), result);
     }
 
     pub fn calculate_overall_score(&mut self) {
@@ -65,11 +66,11 @@ impl AccuracyTestSuite {
 
         // 重み付きスコア計算
         let weighted_scores = [
-            (TestCategory::PARClassification, 0.25),   // 最重要：25%
-            (TestCategory::ContextQuality, 0.20),      // 重要：20%
-            (TestCategory::RealWorldBenchmark, 0.25),  // 最重要：25%
-            (TestCategory::ExternalBenchmark, 0.20),   // 重要：20%
-            (TestCategory::EndToEndPipeline, 0.10),    // 統合：10%
+            (TestCategory::PARClassification, 0.25),  // 最重要：25%
+            (TestCategory::ContextQuality, 0.20),     // 重要：20%
+            (TestCategory::RealWorldBenchmark, 0.25), // 最重要：25%
+            (TestCategory::ExternalBenchmark, 0.20),  // 重要：20%
+            (TestCategory::EndToEndPipeline, 0.10),   // 統合：10%
         ];
 
         let mut total_weighted_score = 0.0;
@@ -91,11 +92,17 @@ impl AccuracyTestSuite {
 
     pub fn generate_report(&self) -> String {
         let mut report = String::new();
-        
+
         report.push_str("# Parsentry 精度テスト総合レポート\n\n");
-        report.push_str(&format!("**実行日時**: {}\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
+        report.push_str(&format!(
+            "**実行日時**: {}\n",
+            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+        ));
         report.push_str(&format!("**総合スコア**: {:.1}%\n", self.overall_score));
-        report.push_str(&format!("**実行時間**: {:.2}秒\n\n", self.execution_time.as_secs_f64()));
+        report.push_str(&format!(
+            "**実行時間**: {:.2}秒\n\n",
+            self.execution_time.as_secs_f64()
+        ));
 
         // 品質レベル評価
         let quality_level = match self.overall_score {
@@ -138,7 +145,7 @@ impl AccuracyTestSuite {
         // クリティカルな問題
         report.push_str("\n## クリティカルな問題\n\n");
         let mut has_critical_issues = false;
-        
+
         for result in self.test_results.values() {
             if !result.critical_failures.is_empty() {
                 has_critical_issues = true;
@@ -156,24 +163,31 @@ impl AccuracyTestSuite {
 
         // 推奨事項
         report.push_str("## 推奨事項\n\n");
-        
+
         if self.overall_score < 90.0 {
             report.push_str("### 緊急改善項目\n");
-            
+
             for result in self.test_results.values() {
                 if result.score < 85.0 {
-                    report.push_str(&format!("- **{}**: スコア{:.1}% - 基準値85%を下回っています\n", result.category, result.score));
+                    report.push_str(&format!(
+                        "- **{}**: スコア{:.1}% - 基準値85%を下回っています\n",
+                        result.category, result.score
+                    ));
                 }
             }
             report.push_str("\n");
         }
 
         if self.overall_score >= 90.0 {
-            report.push_str("🎉 **優秀な結果です！** 以下の項目で更なる向上を目指してください：\n\n");
-            
+            report
+                .push_str("🎉 **優秀な結果です！** 以下の項目で更なる向上を目指してください：\n\n");
+
             for result in self.test_results.values() {
                 if result.score < 95.0 {
-                    report.push_str(&format!("- {}: {:.1}% → 95%目標\n", result.category, result.score));
+                    report.push_str(&format!(
+                        "- {}: {:.1}% → 95%目標\n",
+                        result.category, result.score
+                    ));
                 }
             }
         }
@@ -192,8 +206,7 @@ impl AccuracyTestSuite {
 
     pub fn meets_quality_threshold(&self) -> bool {
         // 最低品質基準：85%
-        self.overall_score >= 85.0 && 
-        self.test_results.values().all(|r| r.score >= 80.0)  // 各カテゴリも最低80%
+        self.overall_score >= 85.0 && self.test_results.values().all(|r| r.score >= 80.0) // 各カテゴリも最低80%
     }
 
     pub fn get_failing_categories(&self) -> Vec<String> {
@@ -243,9 +256,7 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
         passed: 14,
         total: 15,
         score: 88.0,
-        critical_failures: vec![
-            "複合脆弱性検出で一部漏れ".to_string(),
-        ],
+        critical_failures: vec!["複合脆弱性検出で一部漏れ".to_string()],
         execution_time_ms: 3200,
     });
 
@@ -275,7 +286,7 @@ pub async fn run_comprehensive_accuracy_suite() -> Result<AccuracyTestSuite> {
     println!("\n📊 精度テスト総合結果:");
     println!("  総合スコア: {:.1}%", suite.overall_score);
     println!("  実行時間: {:.2}秒", suite.execution_time.as_secs_f64());
-    
+
     if suite.meets_quality_threshold() {
         println!("  品質基準: ✅ 合格");
     } else {
@@ -298,10 +309,7 @@ async fn test_accuracy_suite_integration() -> Result<()> {
     let suite = run_comprehensive_accuracy_suite().await?;
 
     // 統合テストの検証
-    assert!(
-        suite.overall_score > 0.0,
-        "総合スコアが計算されていません"
-    );
+    assert!(suite.overall_score > 0.0, "総合スコアが計算されていません");
 
     assert!(
         !suite.test_results.is_empty(),
@@ -335,7 +343,7 @@ async fn test_report_generation() -> Result<()> {
     println!("📄 レポート生成テスト");
 
     let suite = run_comprehensive_accuracy_suite().await?;
-    
+
     // レポートをファイルに保存
     let report_path = "/tmp/parsentry_accuracy_report.md";
     suite.save_report(report_path)?;
@@ -381,26 +389,39 @@ fn test_quality_threshold_calculation() {
     });
 
     suite.calculate_overall_score();
-    
-    assert!(suite.meets_quality_threshold(), "高品質ケースで品質基準を満たしていません");
-    assert!(suite.overall_score >= 85.0, "総合スコアが低すぎます: {:.1}%", suite.overall_score);
+
+    assert!(
+        suite.meets_quality_threshold(),
+        "高品質ケースで品質基準を満たしていません"
+    );
+    assert!(
+        suite.overall_score >= 85.0,
+        "総合スコアが低すぎます: {:.1}%",
+        suite.overall_score
+    );
 
     // 低品質ケース
     let mut low_quality_suite = AccuracyTestSuite::new();
-    
+
     low_quality_suite.add_result(TestCategoryResult {
         category: TestCategory::PARClassification,
         passed: 15,
         total: 20,
-        score: 75.0,  // 基準以下
+        score: 75.0, // 基準以下
         critical_failures: vec!["重大な分類エラー".to_string()],
         execution_time_ms: 1200,
     });
 
     low_quality_suite.calculate_overall_score();
-    
-    assert!(!low_quality_suite.meets_quality_threshold(), "低品質ケースで品質基準を満たしてしまっています");
-    assert!(!low_quality_suite.get_failing_categories().is_empty(), "失敗カテゴリが検出されていません");
+
+    assert!(
+        !low_quality_suite.meets_quality_threshold(),
+        "低品質ケースで品質基準を満たしてしまっています"
+    );
+    assert!(
+        !low_quality_suite.get_failing_categories().is_empty(),
+        "失敗カテゴリが検出されていません"
+    );
 
     println!("✅ 品質基準計算テスト完了");
 }
@@ -420,14 +441,26 @@ fn test_suite_health_check() {
     // 各カテゴリが適切にDisplay traitを実装しているかチェック
     for category in all_categories {
         let display_str = format!("{}", category);
-        assert!(!display_str.is_empty(), "カテゴリの表示名が空です: {:?}", category);
-        assert!(display_str.len() > 2, "カテゴリの表示名が短すぎます: {}", display_str);
+        assert!(
+            !display_str.is_empty(),
+            "カテゴリの表示名が空です: {:?}",
+            category
+        );
+        assert!(
+            display_str.len() > 2,
+            "カテゴリの表示名が短すぎます: {}",
+            display_str
+        );
     }
 
     // 重み付けの合計が1.0になることをチェック
     let weights = [0.25, 0.20, 0.25, 0.20, 0.10];
     let total_weight: f64 = weights.iter().sum();
-    assert!((total_weight - 1.0).abs() < 0.001, "重み付けの合計が1.0になりません: {}", total_weight);
+    assert!(
+        (total_weight - 1.0).abs() < 0.001,
+        "重み付けの合計が1.0になりません: {}",
+        total_weight
+    );
 
     println!("✅ テストスイート健全性チェック完了");
 }

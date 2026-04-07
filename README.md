@@ -13,12 +13,17 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 ### Usage
 
 ```bash
-# 1. Generate threat model → 2. Generate & run analysis prompts
+# Claude Code
 parsentry model owner/repo | claude -p
 parsentry scan owner/repo | claude -p
+
+# Codex CLI (local target example)
+CACHE="${PARSENTRY_CACHE_DIR:-$HOME/Library/Caches/parsentry}"
+parsentry model . | codex -a never exec -C . -s workspace-write --add-dir "$CACHE" -
+parsentry scan . | codex -a never exec -C . -s workspace-write --add-dir "$CACHE" -
 ```
 
-That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to any CLI agent and it dispatches parallel subagents automatically.
+That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to a CLI agent with subagent support and it dispatches parallel workers automatically. Tested with Claude Code and Codex CLI.
 
 ### How it works
 

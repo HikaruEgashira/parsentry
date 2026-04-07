@@ -210,7 +210,12 @@ mod tests {
     fn test_owasp_categories_broken_access_control_group() {
         for vt in &[VulnType::LFI, VulnType::AFO, VulnType::IDOR] {
             let cats = vt.owasp_categories();
-            assert_eq!(cats, vec!["A01:2021-Broken Access Control"], "Failed for {:?}", vt);
+            assert_eq!(
+                cats,
+                vec!["A01:2021-Broken Access Control"],
+                "Failed for {:?}",
+                vt
+            );
         }
     }
 

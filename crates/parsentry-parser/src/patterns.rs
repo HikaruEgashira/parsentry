@@ -208,122 +208,121 @@ impl SecurityRiskPatterns {
         let mut pattern_matches = Vec::new();
         let content_bytes = content.as_bytes();
 
-        let mut process_queries =
-            |queries: &[Query], is_definition: bool| {
-                for (query_idx, query) in queries.iter().enumerate() {
-                    let mut cursor = QueryCursor::new();
-                    let mut matches = cursor.matches(query, root_node, content_bytes);
+        let mut process_queries = |queries: &[Query], is_definition: bool| {
+            for (query_idx, query) in queries.iter().enumerate() {
+                let mut cursor = QueryCursor::new();
+                let mut matches = cursor.matches(query, root_node, content_bytes);
 
-                    while let Some(match_) = matches.next() {
-                        let mut best_node = None;
-                        let mut best_text = String::new();
-                        let mut best_priority = 0;
+                while let Some(match_) = matches.next() {
+                    let mut best_node = None;
+                    let mut best_text = String::new();
+                    let mut best_priority = 0;
 
-                        for capture in match_.captures {
-                            let capture_name = &query.capture_names()[capture.index as usize];
-                            let node = capture.node;
-                            let start_byte = node.start_byte();
-                            let end_byte = node.end_byte();
-                            let matched_text = content[start_byte..end_byte].to_string();
+                    for capture in match_.captures {
+                        let capture_name = &query.capture_names()[capture.index as usize];
+                        let node = capture.node;
+                        let start_byte = node.start_byte();
+                        let end_byte = node.end_byte();
+                        let matched_text = content[start_byte..end_byte].to_string();
 
-                            if matched_text.trim().len() <= 2 {
-                                continue;
-                            }
-
-                            let (priority, candidate_node, candidate_text) = match *capture_name {
-                                "function" | "definition" | "class" | "method_def" => {
-                                    (100, Some(node), matched_text.clone())
-                                }
-                                "call" | "expression" | "attribute" => {
-                                    (90, Some(node), matched_text.clone())
-                                }
-                                "name" | "func" | "attr" | "obj" | "method" => {
-                                    let mut found_parent = None;
-                                    let mut parent = node.parent();
-                                    while let Some(p) = parent {
-                                        if (is_definition
-                                            && (p.kind().contains("definition")
-                                                || p.kind().contains("declaration")))
-                                            || (!is_definition
-                                                && (p.kind().contains("call")
-                                                    || p.kind().contains("attribute")
-                                                    || p.kind().contains("expression")))
-                                        {
-                                            found_parent = Some(p);
-                                            break;
-                                        }
-                                        parent = p.parent();
-                                    }
-                                    if let Some(p) = found_parent {
-                                        (
-                                            80,
-                                            Some(p),
-                                            content[p.start_byte()..p.end_byte()].to_string(),
-                                        )
-                                    } else {
-                                        (70, Some(node), matched_text.clone())
-                                    }
-                                }
-                                "param" | "func_name" => {
-                                    let mut found_func = None;
-                                    let mut parent = node.parent();
-                                    while let Some(p) = parent {
-                                        if p.kind() == "function_definition" {
-                                            found_func = Some(p);
-                                            break;
-                                        }
-                                        parent = p.parent();
-                                    }
-                                    if let Some(p) = found_func {
-                                        (
-                                            85,
-                                            Some(p),
-                                            content[p.start_byte()..p.end_byte()].to_string(),
-                                        )
-                                    } else {
-                                        (60, Some(node), matched_text.clone())
-                                    }
-                                }
-                                _ => (50, Some(node), matched_text.clone()),
-                            };
-
-                            if priority > best_priority {
-                                best_priority = priority;
-                                best_node = candidate_node;
-                                best_text = candidate_text;
-                            }
+                        if matched_text.trim().len() <= 2 {
+                            continue;
                         }
 
-                        if let Some(node) = best_node {
-                            let start_byte = node.start_byte();
-                            let end_byte = node.end_byte();
-
-                            // Find the matching config by counting definition/reference queries
-                            let mut config_idx = 0;
-                            for config in &self.pattern_configs {
-                                let matches_type = matches!(
-                                    (&config.pattern_type, is_definition),
-                                    (PatternQuery::Definition { .. }, true)
-                                        | (PatternQuery::Reference { .. }, false)
-                                );
-
-                                if matches_type {
-                                    if config_idx == query_idx {
-                                        pattern_matches.push(PatternMatch {
-                                            pattern_config: config.clone(),
-                                            start_byte,
-                                            end_byte,
-                                            matched_text: best_text.clone(),
-                                        });
+                        let (priority, candidate_node, candidate_text) = match *capture_name {
+                            "function" | "definition" | "class" | "method_def" => {
+                                (100, Some(node), matched_text.clone())
+                            }
+                            "call" | "expression" | "attribute" => {
+                                (90, Some(node), matched_text.clone())
+                            }
+                            "name" | "func" | "attr" | "obj" | "method" => {
+                                let mut found_parent = None;
+                                let mut parent = node.parent();
+                                while let Some(p) = parent {
+                                    if (is_definition
+                                        && (p.kind().contains("definition")
+                                            || p.kind().contains("declaration")))
+                                        || (!is_definition
+                                            && (p.kind().contains("call")
+                                                || p.kind().contains("attribute")
+                                                || p.kind().contains("expression")))
+                                    {
+                                        found_parent = Some(p);
                                         break;
                                     }
-                                    config_idx += 1;
+                                    parent = p.parent();
                                 }
+                                if let Some(p) = found_parent {
+                                    (
+                                        80,
+                                        Some(p),
+                                        content[p.start_byte()..p.end_byte()].to_string(),
+                                    )
+                                } else {
+                                    (70, Some(node), matched_text.clone())
+                                }
+                            }
+                            "param" | "func_name" => {
+                                let mut found_func = None;
+                                let mut parent = node.parent();
+                                while let Some(p) = parent {
+                                    if p.kind() == "function_definition" {
+                                        found_func = Some(p);
+                                        break;
+                                    }
+                                    parent = p.parent();
+                                }
+                                if let Some(p) = found_func {
+                                    (
+                                        85,
+                                        Some(p),
+                                        content[p.start_byte()..p.end_byte()].to_string(),
+                                    )
+                                } else {
+                                    (60, Some(node), matched_text.clone())
+                                }
+                            }
+                            _ => (50, Some(node), matched_text.clone()),
+                        };
+
+                        if priority > best_priority {
+                            best_priority = priority;
+                            best_node = candidate_node;
+                            best_text = candidate_text;
+                        }
+                    }
+
+                    if let Some(node) = best_node {
+                        let start_byte = node.start_byte();
+                        let end_byte = node.end_byte();
+
+                        // Find the matching config by counting definition/reference queries
+                        let mut config_idx = 0;
+                        for config in &self.pattern_configs {
+                            let matches_type = matches!(
+                                (&config.pattern_type, is_definition),
+                                (PatternQuery::Definition { .. }, true)
+                                    | (PatternQuery::Reference { .. }, false)
+                            );
+
+                            if matches_type {
+                                if config_idx == query_idx {
+                                    pattern_matches.push(PatternMatch {
+                                        pattern_config: config.clone(),
+                                        start_byte,
+                                        end_byte,
+                                        matched_text: best_text.clone(),
+                                    });
+                                    break;
+                                }
+                                config_idx += 1;
                             }
                         }
                     }
                 }
-            };
+            }
+        };
 
         process_queries(&self.definition_queries, true);
         process_queries(&self.reference_queries, false);
@@ -363,7 +362,7 @@ impl SecurityRiskPatterns {
 
         // Load CI/CD platform patterns and merge into Yaml language
         let cicd_patterns = [
-            include_str!("patterns/github-actions.yml"),  // GitHub Actions
+            include_str!("patterns/github-actions.yml"), // GitHub Actions
             include_str!("patterns/gitlab-ci.yml"),
             include_str!("patterns/circleci.yml"),
             include_str!("patterns/travis.yml"),
@@ -379,13 +378,25 @@ impl SecurityRiskPatterns {
         for content in cicd_patterns {
             if let Ok(patterns) = serde_yaml::from_str::<LanguagePatterns>(content) {
                 if let Some(principals) = patterns.principals {
-                    merged_yaml_patterns.principals.as_mut().unwrap().extend(principals);
+                    merged_yaml_patterns
+                        .principals
+                        .as_mut()
+                        .unwrap()
+                        .extend(principals);
                 }
                 if let Some(actions) = patterns.actions {
-                    merged_yaml_patterns.actions.as_mut().unwrap().extend(actions);
+                    merged_yaml_patterns
+                        .actions
+                        .as_mut()
+                        .unwrap()
+                        .extend(actions);
                 }
                 if let Some(resources) = patterns.resources {
-                    merged_yaml_patterns.resources.as_mut().unwrap().extend(resources);
+                    merged_yaml_patterns
+                        .resources
+                        .as_mut()
+                        .unwrap()
+                        .extend(resources);
                 }
             }
         }
@@ -439,7 +450,10 @@ impl SecurityRiskPatterns {
         true
     }
 
-    fn load_custom_patterns(map: &mut HashMap<Language, LanguagePatterns>, root_dir: Option<&Path>) {
+    fn load_custom_patterns(
+        map: &mut HashMap<Language, LanguagePatterns>,
+        root_dir: Option<&Path>,
+    ) {
         let vuln_patterns_path = if let Some(root) = root_dir {
             root.join("vuln-patterns.yml")
         } else {

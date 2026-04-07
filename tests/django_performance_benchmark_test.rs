@@ -7,7 +7,7 @@ use tempfile::tempdir;
 
 /// Django実世界脆弱性検出のパフォーマンスベンチマーク
 /// Issue #120: PERF: Create Python Django performance benchmark for real-world vulnerability detection
-/// 
+///
 /// Django Webアプリケーションでの複数脆弱性タイプの同時検出性能を測定し、
 /// 実世界のWebアプリケーションで実用的な検出率とパフォーマンスを維持できているかを検証する
 
@@ -24,9 +24,10 @@ struct DjangoBenchmarkResult {
 
 fn generate_django_ecommerce_app() -> String {
     let mut code = String::new();
-    
+
     // Django settings with vulnerabilities
-    code.push_str(r#"
+    code.push_str(
+        r#"
 # Django E-commerce Application with Multiple Vulnerabilities
 import os
 import pickle
@@ -72,11 +73,13 @@ class DatabaseManager:
             cursor.execute(query)
             return cursor.fetchall()
 
-"#);
+"#,
+    );
 
     // Generate Django models with vulnerabilities
     for i in 0..10 {
-        code.push_str(&format!(r#"
+        code.push_str(&format!(
+            r#"
 # Model {} with serialization vulnerabilities
 class Product{}(models.Model):
     name = models.CharField(max_length=255)
@@ -115,12 +118,15 @@ class Order{}(models.Model):
         self.payment_info = str(payment_data)  # Credit card data in plain text
         self.save()
 
-"#, i, i, i, i));
+"#,
+            i, i, i, i
+        ));
     }
 
     // Generate Django views with multiple vulnerability types
     for i in 0..15 {
-        code.push_str(&format!(r#"
+        code.push_str(&format!(
+            r#"
 # View {} with multiple vulnerabilities
 @csrf_exempt  # CSRF protection disabled
 def product_search_view_{}(request):
@@ -210,12 +216,15 @@ def file_upload_view_{}(request):
     
     return render(request, 'upload.html')
 
-"#, i, i, i, i));
+"#,
+            i, i, i, i
+        ));
     }
 
     // Generate template injection vulnerabilities
     for i in 0..8 {
-        code.push_str(&format!(r#"
+        code.push_str(&format!(
+            r#"
 # Template injection view {}
 def dynamic_template_view_{}(request):
     template_content = request.GET.get('template', '')
@@ -261,11 +270,14 @@ def webhook_handler_{}(request):
     
     return JsonResponse({{'error': 'Only POST method allowed'}})
 
-"#, i, i, i));
+"#,
+            i, i, i
+        ));
     }
 
     // Add Django middleware with vulnerabilities
-    code.push_str(r#"
+    code.push_str(
+        r#"
 # Custom middleware with security vulnerabilities
 class VulnerableMiddleware:
     def __init__(self, get_response):
@@ -356,37 +368,41 @@ urlpatterns = [
     path('template/<str:template_name>/', dynamic_template_view_0, name='template'),
     path('webhook/<path:endpoint>/', webhook_handler_0, name='webhook'),
 ]
-"#);
+"#,
+    );
 
     code
 }
 
 async fn run_django_performance_benchmark(model: &str) -> Result<DjangoBenchmarkResult> {
     let start_time = Instant::now();
-    
+
     // Generate Django application code
     let django_code = generate_django_ecommerce_app();
     let lines_analyzed = django_code.lines().count();
-    
+
     // Create temporary file
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("django_ecommerce.py");
     std::fs::write(&test_file, &django_code)?;
-    
+
     println!("📊 Django Performance Benchmark");
     println!("   ├─ Generated code: {} lines", lines_analyzed);
     println!("   ├─ File size: {} KB", django_code.len() / 1024);
     println!("   └─ Analysis target: Django e-commerce application");
-    
+
     // Parse and build context
     let parse_start = Instant::now();
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let context = parser.build_context_from_file(&test_file)?;
     let parse_duration = parse_start.elapsed();
-    
-    println!("   ├─ Parsing time: {:.2} seconds", parse_duration.as_secs_f64());
-    
+
+    println!(
+        "   ├─ Parsing time: {:.2} seconds",
+        parse_duration.as_secs_f64()
+    );
+
     // Analyze file
     let analysis_start = Instant::now();
     let response = analyze_file(
@@ -400,39 +416,61 @@ async fn run_django_performance_benchmark(model: &str) -> Result<DjangoBenchmark
         &None,
         None,
         &LocaleLanguage::Japanese,
-    ).await?;
+    )
+    .await?;
     let analysis_duration = analysis_start.elapsed();
-    
+
     let total_duration = start_time.elapsed();
     let analysis_speed = lines_analyzed as f64 / total_duration.as_secs_f64();
-    
+
     // Calculate vulnerability types found
-    let vulnerability_types_found: Vec<String> = response.vulnerability_types
+    let vulnerability_types_found: Vec<String> = response
+        .vulnerability_types
         .iter()
         .map(|v| format!("{:?}", v))
         .collect();
-    
+
     // Performance targets for Django
     let target_max_time_ms = 240_000; // 4 minutes
     let target_min_speed = 60.0; // 60 lines per second
     let target_min_vulnerabilities = 40; // Should detect at least 40 vulnerabilities
     let expected_vulnerability_types = 8; // Should find multiple types
-    
-    let detection_rate = vulnerability_types_found.len() as f64 / expected_vulnerability_types as f64;
-    
-    let performance_target_met = total_duration.as_millis() <= target_max_time_ms 
+
+    let detection_rate =
+        vulnerability_types_found.len() as f64 / expected_vulnerability_types as f64;
+
+    let performance_target_met = total_duration.as_millis() <= target_max_time_ms
         && analysis_speed >= target_min_speed
         && response.vulnerability_types.len() >= target_min_vulnerabilities
         && vulnerability_types_found.len() >= 5; // At least 5 different vulnerability types
-    
-    println!("   ├─ Analysis time: {:.2} seconds", analysis_duration.as_secs_f64());
-    println!("   ├─ Total time: {:.2} seconds", total_duration.as_secs_f64());
+
+    println!(
+        "   ├─ Analysis time: {:.2} seconds",
+        analysis_duration.as_secs_f64()
+    );
+    println!(
+        "   ├─ Total time: {:.2} seconds",
+        total_duration.as_secs_f64()
+    );
     println!("   ├─ Analysis speed: {:.1} lines/second", analysis_speed);
-    println!("   ├─ Vulnerabilities detected: {}", response.vulnerability_types.len());
-    println!("   ├─ Vulnerability types: {}", vulnerability_types_found.len());
+    println!(
+        "   ├─ Vulnerabilities detected: {}",
+        response.vulnerability_types.len()
+    );
+    println!(
+        "   ├─ Vulnerability types: {}",
+        vulnerability_types_found.len()
+    );
     println!("   ├─ Detection rate: {:.1}%", detection_rate * 100.0);
-    println!("   └─ Performance target: {}", if performance_target_met { "✅ MET" } else { "❌ FAILED" });
-    
+    println!(
+        "   └─ Performance target: {}",
+        if performance_target_met {
+            "✅ MET"
+        } else {
+            "❌ FAILED"
+        }
+    );
+
     Ok(DjangoBenchmarkResult {
         execution_time_ms: total_duration.as_millis(),
         lines_analyzed,
@@ -451,69 +489,91 @@ async fn test_django_multi_vulnerability_detection() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping Django performance benchmark test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     println!("\n🐍 Django Multi-Vulnerability Detection Performance Benchmark");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Testing performance with Django e-commerce application");
     println!("Target: Detect multiple vulnerability types simultaneously in < 4 minutes");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let result = run_django_performance_benchmark(model).await?;
-    
+
     println!("\n📈 Performance Results:");
-    println!("   ├─ Execution Time: {:.2} seconds ({} ms)", 
-            result.execution_time_ms as f64 / 1000.0, result.execution_time_ms);
+    println!(
+        "   ├─ Execution Time: {:.2} seconds ({} ms)",
+        result.execution_time_ms as f64 / 1000.0,
+        result.execution_time_ms
+    );
     println!("   ├─ Lines Analyzed: {} lines", result.lines_analyzed);
-    println!("   ├─ Analysis Speed: {:.1} lines/second", result.analysis_speed);
-    println!("   ├─ Vulnerabilities: {} detected", result.vulnerabilities_detected);
-    println!("   ├─ Vulnerability Types: {} different types", result.vulnerability_types_found.len());
-    println!("   ├─ Detection Rate: {:.1}%", result.detection_rate * 100.0);
-    println!("   └─ Overall Performance: {}", if result.performance_target_met { "✅ PASSED" } else { "❌ FAILED" });
-    
+    println!(
+        "   ├─ Analysis Speed: {:.1} lines/second",
+        result.analysis_speed
+    );
+    println!(
+        "   ├─ Vulnerabilities: {} detected",
+        result.vulnerabilities_detected
+    );
+    println!(
+        "   ├─ Vulnerability Types: {} different types",
+        result.vulnerability_types_found.len()
+    );
+    println!(
+        "   ├─ Detection Rate: {:.1}%",
+        result.detection_rate * 100.0
+    );
+    println!(
+        "   └─ Overall Performance: {}",
+        if result.performance_target_met {
+            "✅ PASSED"
+        } else {
+            "❌ FAILED"
+        }
+    );
+
     if !result.vulnerability_types_found.is_empty() {
         println!("\n🔍 Detected Vulnerability Types:");
         for (i, vuln_type) in result.vulnerability_types_found.iter().enumerate() {
             println!("   {}. {}", i + 1, vuln_type);
         }
     }
-    
+
     // Detailed performance assertions
     assert!(
         result.execution_time_ms <= 240_000,
         "Analysis took too long: {} ms (limit: 240,000 ms / 4 minutes)",
         result.execution_time_ms
     );
-    
+
     assert!(
         result.analysis_speed >= 60.0,
         "Analysis too slow: {:.1} lines/second (minimum: 60.0 lines/second)",
         result.analysis_speed
     );
-    
+
     assert!(
         result.vulnerabilities_detected >= 40,
         "Too few vulnerabilities detected: {} (minimum: 40)",
         result.vulnerabilities_detected
     );
-    
+
     assert!(
         result.vulnerability_types_found.len() >= 5,
         "Too few vulnerability types detected: {} (minimum: 5)",
         result.vulnerability_types_found.len()
     );
-    
+
     assert!(
         result.detection_rate >= 0.6,
         "Detection rate too low: {:.1}% (minimum: 60%)",
         result.detection_rate * 100.0
     );
-    
+
     println!("\n🎉 Django Multi-Vulnerability Detection Performance Benchmark PASSED!");
     println!("   The scanner successfully analyzed Django application with multiple");
     println!("   vulnerability types within performance targets.");
-    
+
     Ok(())
 }
 
@@ -521,7 +581,7 @@ async fn test_django_multi_vulnerability_detection() -> Result<()> {
 async fn test_django_orm_performance() -> Result<()> {
     println!("\n🗄️ Django ORM Analysis Performance Test (API-free)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Generate Django models with ORM vulnerabilities
     let django_models = r#"
 from django.db import models, connection
@@ -567,37 +627,37 @@ class Order(models.Model):
             query = f"INSERT INTO payments (card_number) VALUES ('{card_number}')"
             cursor.execute(query)
 "#;
-    
+
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("django_models.py");
     std::fs::write(&test_file, django_models)?;
-    
+
     let start_time = Instant::now();
-    
+
     // Test Django ORM parsing performance
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let _context = parser.build_context_from_file(&test_file)?;
-    
+
     let duration = start_time.elapsed();
     let lines = django_models.lines().count();
     let speed = lines as f64 / duration.as_secs_f64();
-    
+
     println!("   📊 Django ORM Analysis:");
     println!("      ├─ Lines: {} lines", lines);
     println!("      ├─ Time: {:.3} seconds", duration.as_secs_f64());
     println!("      └─ Speed: {:.1} lines/second", speed);
-    
+
     // ORM analysis should be efficient
     assert!(
         speed > 150.0,
         "Django ORM analysis too slow: {:.1} lines/s (minimum: 150 lines/s)",
         speed
     );
-    
+
     println!("   ✅ Django ORM analysis performance acceptable");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     Ok(())
 }
 
@@ -605,18 +665,21 @@ class Order(models.Model):
 async fn test_django_template_injection_performance() -> Result<()> {
     println!("\n📄 Django Template Injection Performance Test (API-free)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Generate Django views with template injection patterns
     let mut template_code = String::new();
-    template_code.push_str(r#"
+    template_code.push_str(
+        r#"
 from django.template import Template, Context
 from django.http import HttpResponse
 from django.utils.safestring import mark_safe
 
-"#);
-    
+"#,
+    );
+
     for i in 0..20 {
-        template_code.push_str(&format!(r#"
+        template_code.push_str(&format!(
+            r#"
 def template_view_{}(request):
     template_content = request.GET.get('template', '')
     user_data = request.GET.get('data', '')
@@ -636,38 +699,40 @@ def unsafe_render_{}(request):
     # XSS via mark_safe
     safe_content = mark_safe(content)
     return HttpResponse(f"<div>{{safe_content}}</div>")
-"#, i, i));
+"#,
+            i, i
+        ));
     }
-    
+
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("django_templates.py");
     std::fs::write(&test_file, &template_code)?;
-    
+
     let start_time = Instant::now();
-    
+
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let _context = parser.build_context_from_file(&test_file)?;
-    
+
     let duration = start_time.elapsed();
     let lines = template_code.lines().count();
     let speed = lines as f64 / duration.as_secs_f64();
-    
+
     println!("   📊 Template Injection Analysis:");
     println!("      ├─ Lines: {} lines", lines);
     println!("      ├─ Template functions: 40");
     println!("      ├─ Time: {:.3} seconds", duration.as_secs_f64());
     println!("      └─ Speed: {:.1} lines/second", speed);
-    
+
     // Template analysis should handle complex patterns efficiently
     assert!(
         speed > 100.0,
         "Template injection analysis too slow: {:.1} lines/s (minimum: 100 lines/s)",
         speed
     );
-    
+
     println!("   ✅ Django template injection analysis performance acceptable");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     Ok(())
 }

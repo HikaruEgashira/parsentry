@@ -54,20 +54,32 @@ pub async fn run_log_command(
     if target.is_none() {
         let all = list_all_report_dirs();
         if all.is_empty() {
-            print_log("parsentry", "no sessions found", use_colors, timestamps, colors::DIM);
+            print_log(
+                "parsentry",
+                "no sessions found",
+                use_colors,
+                timestamps,
+                colors::DIM,
+            );
             return Ok(());
         }
         for (name, reports_dir) in &all {
             // Surface directories contain prompt.md; orchestrator is a flat file
             let prompt_count = std::fs::read_dir(reports_dir)
-                .map(|e| e.flatten().filter(|f| {
-                    f.path().is_dir() && f.path().join("prompt.md").exists()
-                }).count())
+                .map(|e| {
+                    e.flatten()
+                        .filter(|f| f.path().is_dir() && f.path().join("prompt.md").exists())
+                        .count()
+                })
                 .unwrap_or(0);
             let sarif_count = std::fs::read_dir(reports_dir)
-                .map(|e| e.flatten().filter(|f| {
-                    f.path().is_dir() && f.path().join("result.sarif.json").exists()
-                }).count())
+                .map(|e| {
+                    e.flatten()
+                        .filter(|f| {
+                            f.path().is_dir() && f.path().join("result.sarif.json").exists()
+                        })
+                        .count()
+                })
                 .unwrap_or(0);
             let status = if sarif_count >= prompt_count && prompt_count > 0 {
                 "complete"
@@ -78,7 +90,16 @@ pub async fn run_log_command(
             } else {
                 "empty"
             };
-            print_log(name, &format!("{} surfaces, {} results ({})", prompt_count, sarif_count, status), use_colors, timestamps, colors::CYAN);
+            print_log(
+                name,
+                &format!(
+                    "{} surfaces, {} results ({})",
+                    prompt_count, sarif_count, status
+                ),
+                use_colors,
+                timestamps,
+                colors::CYAN,
+            );
         }
         return Ok(());
     }
@@ -87,7 +108,11 @@ pub async fn run_log_command(
     let output_dir = super::common::cache_dir_for(target).join("reports");
 
     if !follow && !output_dir.exists() {
-        anyhow::bail!("No reports found for {}. Run `parsentry scan {}` first.", target, target);
+        anyhow::bail!(
+            "No reports found for {}. Run `parsentry scan {}` first.",
+            target,
+            target
+        );
     }
 
     let cwd = std::env::current_dir()?;
@@ -112,20 +137,51 @@ pub async fn run_log_command(
 
     // Initial discovery
     if dir_existed {
-        discover_new_surfaces(&output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
-        check_completed_surfaces(&output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
+        discover_new_surfaces(
+            &output_dir,
+            &mut known_surfaces,
+            &mut surface_colors_map,
+            use_colors,
+            timestamps,
+        );
+        check_completed_surfaces(
+            &output_dir,
+            &known_surfaces,
+            &mut completed,
+            &surface_colors_map,
+            use_colors,
+            timestamps,
+        );
     }
 
     if !follow {
         if known_surfaces.is_empty() {
-            print_log("parsentry", "no surfaces found yet", use_colors, timestamps, colors::DIM);
+            print_log(
+                "parsentry",
+                "no surfaces found yet",
+                use_colors,
+                timestamps,
+                colors::DIM,
+            );
         }
-        print_summary(&known_surfaces, &completed, start.elapsed(), use_colors, timestamps);
+        print_summary(
+            &known_surfaces,
+            &completed,
+            start.elapsed(),
+            use_colors,
+            timestamps,
+        );
         return Ok(());
     }
 
     if !known_surfaces.is_empty() && completed.len() == known_surfaces.len() {
-        print_summary(&known_surfaces, &completed, start.elapsed(), use_colors, timestamps);
+        print_summary(
+            &known_surfaces,
+            &completed,
+            start.elapsed(),
+            use_colors,
+            timestamps,
+        );
         return Ok(());
     }
 
@@ -145,21 +201,39 @@ pub async fn run_log_command(
     let mut last_session_poll = Instant::now();
     // Do initial session discovery
     poll_sessions(
-        &project_dir, &mut session_jsonls, &mut last_session_count,
-        use_colors, timestamps,
+        &project_dir,
+        &mut session_jsonls,
+        &mut last_session_count,
+        use_colors,
+        timestamps,
     );
     // Read initial events from already-tracked JSONL files
     flush_jsonl_events(
-        &session_jsonls, &mut offsets, &surface_colors_map,
-        use_colors, timestamps,
+        &session_jsonls,
+        &mut offsets,
+        &surface_colors_map,
+        use_colors,
+        timestamps,
     );
 
     loop {
         // Check timeout
         if let Some(timeout) = timeout_secs {
             if start.elapsed().as_secs() >= timeout {
-                print_log("parsentry", &format!("timeout after {}s", timeout), use_colors, timestamps, colors::BRIGHT_RED);
-                print_summary(&known_surfaces, &completed, start.elapsed(), use_colors, timestamps);
+                print_log(
+                    "parsentry",
+                    &format!("timeout after {}s", timeout),
+                    use_colors,
+                    timestamps,
+                    colors::BRIGHT_RED,
+                );
+                print_summary(
+                    &known_surfaces,
+                    &completed,
+                    start.elapsed(),
+                    use_colors,
+                    timestamps,
+                );
                 std::process::exit(1);
             }
         }
@@ -170,14 +244,24 @@ pub async fn run_log_command(
 
         // Drain all pending events
         loop {
-            match fs_rx.recv_timeout(if got_event { Duration::from_millis(50) } else { recv_timeout }) {
+            match fs_rx.recv_timeout(if got_event {
+                Duration::from_millis(50)
+            } else {
+                recv_timeout
+            }) {
                 Ok(Ok(event)) => {
                     got_event = true;
                     // If output dir just appeared, start watching it
                     if !dir_existed && output_dir.exists() {
                         dir_existed = true;
                         let _ = watcher.watch(&output_dir, RecursiveMode::NonRecursive);
-                        print_log("parsentry", &format!("directory appeared: {}", output_dir.display()), use_colors, timestamps, colors::BRIGHT_GREEN);
+                        print_log(
+                            "parsentry",
+                            &format!("directory appeared: {}", output_dir.display()),
+                            use_colors,
+                            timestamps,
+                            colors::BRIGHT_GREEN,
+                        );
                     }
                     // If project dir appeared, watch it
                     if project_dir.exists() {
@@ -189,14 +273,22 @@ pub async fn run_log_command(
                         let is_jsonl = path.extension().and_then(|e| e.to_str()) == Some("jsonl");
                         let is_in_output = path.starts_with(&output_dir);
 
-                        if is_jsonl && matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
+                        if is_jsonl
+                            && matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_))
+                        {
                             // JSONL changed — read new events immediately
-                            if let Some((surface_id, _)) = session_jsonls.iter().find(|(_, p)| p == path) {
+                            if let Some((surface_id, _)) =
+                                session_jsonls.iter().find(|(_, p)| p == path)
+                            {
                                 let surface_id = surface_id.clone();
                                 let offset = offsets.get(path).copied().unwrap_or(0);
-                                if let Ok((events, new_offset)) = parsentry_claude::read_events_from(path, offset) {
+                                if let Ok((events, new_offset)) =
+                                    parsentry_claude::read_events_from(path, offset)
+                                {
                                     offsets.insert(path.clone(), new_offset);
-                                    let color = surface_colors_map.get(&surface_id).unwrap_or(&colors::RESET);
+                                    let color = surface_colors_map
+                                        .get(&surface_id)
+                                        .unwrap_or(&colors::RESET);
                                     for ev in &events {
                                         print_event(&surface_id, ev, use_colors, timestamps, color);
                                     }
@@ -204,14 +296,31 @@ pub async fn run_log_command(
                             }
                         }
 
-                        if is_in_output && matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_)) {
+                        if is_in_output
+                            && matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_))
+                        {
                             // New file in output dir — check for new surfaces or completions
-                            discover_new_surfaces(&output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
-                            check_completed_surfaces(&output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
+                            discover_new_surfaces(
+                                &output_dir,
+                                &mut known_surfaces,
+                                &mut surface_colors_map,
+                                use_colors,
+                                timestamps,
+                            );
+                            check_completed_surfaces(
+                                &output_dir,
+                                &known_surfaces,
+                                &mut completed,
+                                &surface_colors_map,
+                                use_colors,
+                                timestamps,
+                            );
                         }
                     }
                 }
-                Ok(Err(_)) => { got_event = true; }
+                Ok(Err(_)) => {
+                    got_event = true;
+                }
                 Err(mpsc::RecvTimeoutError::Timeout) => break,
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
                     anyhow::bail!("filesystem watcher disconnected");
@@ -226,30 +335,61 @@ pub async fn run_log_command(
             if !dir_existed && output_dir.exists() {
                 dir_existed = true;
                 let _ = watcher.watch(&output_dir, RecursiveMode::NonRecursive);
-                print_log("parsentry", &format!("directory appeared: {}", output_dir.display()), use_colors, timestamps, colors::BRIGHT_GREEN);
+                print_log(
+                    "parsentry",
+                    &format!("directory appeared: {}", output_dir.display()),
+                    use_colors,
+                    timestamps,
+                    colors::BRIGHT_GREEN,
+                );
             }
 
             if dir_existed {
-                discover_new_surfaces(&output_dir, &mut known_surfaces, &mut surface_colors_map, use_colors, timestamps);
+                discover_new_surfaces(
+                    &output_dir,
+                    &mut known_surfaces,
+                    &mut surface_colors_map,
+                    use_colors,
+                    timestamps,
+                );
             }
 
             poll_sessions(
-                &project_dir, &mut session_jsonls, &mut last_session_count,
-                use_colors, timestamps,
+                &project_dir,
+                &mut session_jsonls,
+                &mut last_session_count,
+                use_colors,
+                timestamps,
             );
 
             // Read any new events from newly discovered JSONL files
             flush_jsonl_events(
-                &session_jsonls, &mut offsets, &surface_colors_map,
-                use_colors, timestamps,
+                &session_jsonls,
+                &mut offsets,
+                &surface_colors_map,
+                use_colors,
+                timestamps,
             );
 
-            check_completed_surfaces(&output_dir, &known_surfaces, &mut completed, &surface_colors_map, use_colors, timestamps);
+            check_completed_surfaces(
+                &output_dir,
+                &known_surfaces,
+                &mut completed,
+                &surface_colors_map,
+                use_colors,
+                timestamps,
+            );
         }
 
         // All done?
         if !known_surfaces.is_empty() && completed.len() == known_surfaces.len() {
-            print_summary(&known_surfaces, &completed, start.elapsed(), use_colors, timestamps);
+            print_summary(
+                &known_surfaces,
+                &completed,
+                start.elapsed(),
+                use_colors,
+                timestamps,
+            );
             return Ok(());
         }
     }
@@ -265,7 +405,13 @@ fn poll_sessions(
     if let Ok(active_sessions) = parsentry_claude::find_active_project_sessions(project_dir) {
         let count = active_sessions.len();
         if *last_session_count != Some(count) {
-            print_log("parsentry", &format!("active sessions: {}", count), use_colors, timestamps, colors::DIM);
+            print_log(
+                "parsentry",
+                &format!("active sessions: {}", count),
+                use_colors,
+                timestamps,
+                colors::DIM,
+            );
             *last_session_count = Some(count);
         }
 
@@ -320,7 +466,13 @@ fn print_event(
 ) {
     match event {
         parsentry_claude::SessionEvent::ToolUse { name, summary, .. } => {
-            print_log(surface_id, &format!("{} {}", name, summary), use_colors, timestamps, color);
+            print_log(
+                surface_id,
+                &format!("{} {}", name, summary),
+                use_colors,
+                timestamps,
+                color,
+            );
         }
         parsentry_claude::SessionEvent::Text { content, .. } => {
             print_log(surface_id, content, use_colors, timestamps, color);
@@ -380,13 +532,22 @@ fn check_completed_surfaces(
             let findings = count_sarif_findings(output_dir, surface);
             completed.insert(surface.clone());
             let color = color_map.get(surface).unwrap_or(&colors::RESET);
-            print_log(surface, &format!("✓ complete ({} findings)", findings), use_colors, timestamps, color);
+            print_log(
+                surface,
+                &format!("✓ complete ({} findings)", findings),
+                use_colors,
+                timestamps,
+                color,
+            );
         }
     }
 }
 
 fn sarif_exists(output_dir: &Path, surface_id: &str) -> bool {
-    output_dir.join(surface_id).join("result.sarif.json").exists()
+    output_dir
+        .join(surface_id)
+        .join("result.sarif.json")
+        .exists()
 }
 
 fn count_sarif_findings(output_dir: &Path, surface_id: &str) -> usize {
@@ -399,7 +560,8 @@ fn count_sarif_findings(output_dir: &Path, surface_id: &str) -> usize {
         Ok(v) => v,
         Err(_) => return 0,
     };
-    value.get("runs")
+    value
+        .get("runs")
         .and_then(|r| r.as_array())
         .and_then(|runs| runs.first())
         .and_then(|run| run.get("results"))
@@ -420,7 +582,10 @@ fn print_log(service: &str, message: &str, use_colors: bool, show_timestamps: bo
         if use_colors {
             eprintln!(
                 "{}{}{:<14}{} {} {}",
-                color, colors::BOLD, service, colors::RESET,
+                color,
+                colors::BOLD,
+                service,
+                colors::RESET,
                 format!("{}|{}", colors::DIM, colors::RESET),
                 format!("{}{}", ts, line),
             );
@@ -434,7 +599,10 @@ fn print_log(service: &str, message: &str, use_colors: bool, show_timestamps: bo
         if use_colors {
             eprintln!(
                 "{}{}{:<14}{} {} {}",
-                color, colors::BOLD, service, colors::RESET,
+                color,
+                colors::BOLD,
+                service,
+                colors::RESET,
                 format!("{}|{}", colors::DIM, colors::RESET),
                 ts.trim_end(),
             );
@@ -457,15 +625,30 @@ fn print_summary(
         format!("{}s", elapsed.as_secs())
     };
 
-    let total = if surfaces.is_empty() { "?".to_string() } else { surfaces.len().to_string() };
-    let msg = format!("{}/{} surfaces complete (elapsed {})", completed.len(), total, elapsed_str);
+    let total = if surfaces.is_empty() {
+        "?".to_string()
+    } else {
+        surfaces.len().to_string()
+    };
+    let msg = format!(
+        "{}/{} surfaces complete (elapsed {})",
+        completed.len(),
+        total,
+        elapsed_str
+    );
     print_log("parsentry", &msg, use_colors, timestamps, colors::BOLD);
 }
 
 fn extract_surface_from_description(desc: &str) -> Option<String> {
     let idx = desc.find("SURFACE-")?;
     let rest = &desc[idx..];
-    let end = rest.find(|c: char| !c.is_ascii_alphanumeric() && c != '-').unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| !c.is_ascii_alphanumeric() && c != '-')
+        .unwrap_or(rest.len());
     let surface_id = &rest[..end];
-    if surface_id.len() > 8 { Some(surface_id.to_string()) } else { None }
+    if surface_id.len() > 8 {
+        Some(surface_id.to_string())
+    } else {
+        None
+    }
 }

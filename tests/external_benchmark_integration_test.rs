@@ -115,9 +115,12 @@ fn get_benchmarks_directory() -> PathBuf {
 
 fn clone_validation_benchmarks() -> Result<()> {
     let benchmarks_dir = get_benchmarks_directory();
-    
+
     if benchmarks_dir.exists() {
-        println!("📁 ベンチマークディレクトリが既に存在します: {:?}", benchmarks_dir);
+        println!(
+            "📁 ベンチマークディレクトリが既に存在します: {:?}",
+            benchmarks_dir
+        );
         return Ok(());
     }
 
@@ -141,9 +144,12 @@ fn clone_validation_benchmarks() -> Result<()> {
 
 fn clone_ossf_cve_benchmark() -> Result<()> {
     let ossf_dir = PathBuf::from("ossf-cve-benchmark");
-    
+
     if ossf_dir.exists() {
-        println!("📁 OSSF CVE ベンチマークディレクトリが既に存在します: {:?}", ossf_dir);
+        println!(
+            "📁 OSSF CVE ベンチマークディレクトリが既に存在します: {:?}",
+            ossf_dir
+        );
         return Ok(());
     }
 
@@ -158,7 +164,10 @@ fn clone_ossf_cve_benchmark() -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("OSSF CVE ベンチマーククローンに失敗: {}", stderr));
+        return Err(anyhow::anyhow!(
+            "OSSF CVE ベンチマーククローンに失敗: {}",
+            stderr
+        ));
     }
 
     println!("✅ OSSF CVE Benchmark クローン完了");
@@ -167,13 +176,13 @@ fn clone_ossf_cve_benchmark() -> Result<()> {
 
 fn discover_ossf_cve_benchmarks() -> Result<Vec<PathBuf>> {
     let ossf_dir = PathBuf::from("ossf-cve-benchmark");
-    
+
     if !ossf_dir.exists() {
         clone_ossf_cve_benchmark()?;
     }
 
     let mut benchmark_files = Vec::new();
-    
+
     // CVE benchmarkファイルを検索
     if let Ok(entries) = std::fs::read_dir(&ossf_dir) {
         for entry in entries.flatten() {
@@ -185,7 +194,14 @@ fn discover_ossf_cve_benchmarks() -> Result<Vec<PathBuf>> {
                         let sub_path = sub_entry.path();
                         if sub_path.is_file() {
                             if let Some(extension) = sub_path.extension() {
-                                if matches!(extension.to_str(), Some("java") | Some("py") | Some("js") | Some("c") | Some("cpp")) {
+                                if matches!(
+                                    extension.to_str(),
+                                    Some("java")
+                                        | Some("py")
+                                        | Some("js")
+                                        | Some("c")
+                                        | Some("cpp")
+                                ) {
                                     benchmark_files.push(sub_path);
                                 }
                             }
@@ -197,47 +213,54 @@ fn discover_ossf_cve_benchmarks() -> Result<Vec<PathBuf>> {
     }
 
     benchmark_files.sort();
-    println!("🔍 発見されたOSSF CVE Benchmarks: {}個", benchmark_files.len());
-    
+    println!(
+        "🔍 発見されたOSSF CVE Benchmarks: {}個",
+        benchmark_files.len()
+    );
+
     Ok(benchmark_files)
 }
 
 fn load_ossf_cve_benchmark(benchmark_file: &Path) -> Result<Option<OssfCveBenchmark>> {
     // OSSF CVE Benchmarkのメタデータ読み込み
-    let file_name = benchmark_file.file_stem()
+    let file_name = benchmark_file
+        .file_stem()
         .and_then(|name| name.to_str())
         .unwrap_or("unknown");
 
     // ファイル内容からCVE情報を推測
     let content = std::fs::read_to_string(benchmark_file)?;
-    
+
     // CVE-YYYY-NNNN パターンを検索
     let cve_regex = regex::Regex::new(r"CVE-\d{4}-\d{4,}").unwrap();
-    let cve_id = cve_regex.find(&content)
-        .map(|m| m.as_str().to_string());
+    let cve_id = cve_regex.find(&content).map(|m| m.as_str().to_string());
 
     // 言語をファイル拡張子から判定
     let language = match benchmark_file.extension().and_then(|ext| ext.to_str()) {
         Some("java") => "Java",
-        Some("py") => "Python", 
+        Some("py") => "Python",
         Some("js") => "JavaScript",
         Some("c") => "C",
         Some("cpp") | Some("cc") | Some("cxx") => "C++",
         _ => "Unknown",
-    }.to_string();
+    }
+    .to_string();
 
     // 脆弱性クラスを内容から推測
     let vulnerability_class = if content.to_lowercase().contains("sql") {
         "SQL Injection"
     } else if content.to_lowercase().contains("exec") || content.to_lowercase().contains("system") {
         "Command Injection"
-    } else if content.to_lowercase().contains("script") || content.to_lowercase().contains("innerHTML") {
+    } else if content.to_lowercase().contains("script")
+        || content.to_lowercase().contains("innerHTML")
+    {
         "Cross-site Scripting"
     } else if content.to_lowercase().contains("file") || content.to_lowercase().contains("path") {
         "Path Traversal"
     } else {
         "Other"
-    }.to_string();
+    }
+    .to_string();
 
     Ok(Some(OssfCveBenchmark {
         id: file_name.to_string(),
@@ -247,7 +270,8 @@ fn load_ossf_cve_benchmark(benchmark_file: &Path) -> Result<Option<OssfCveBenchm
         language,
         vulnerability_class,
         severity: "High".to_string(), // デフォルト
-        source_file: benchmark_file.file_name()
+        source_file: benchmark_file
+            .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("unknown")
             .to_string(),
@@ -280,7 +304,8 @@ async fn test_ossf_cve_benchmark(
         &None,
         None,
         &LocaleLanguage::Japanese,
-    ).await?;
+    )
+    .await?;
 
     let execution_time = start_time.elapsed().as_millis();
 
@@ -312,13 +337,13 @@ async fn test_ossf_cve_benchmark(
 
 fn discover_validation_benchmarks() -> Result<Vec<PathBuf>> {
     let benchmarks_dir = get_benchmarks_directory();
-    
+
     if !benchmarks_dir.exists() {
         clone_validation_benchmarks()?;
     }
 
     let mut benchmark_dirs = Vec::new();
-    
+
     // XBEN-XXX-24 パターンのディレクトリを検索
     if let Ok(entries) = std::fs::read_dir(&benchmarks_dir) {
         for entry in entries.flatten() {
@@ -336,21 +361,24 @@ fn discover_validation_benchmarks() -> Result<Vec<PathBuf>> {
     }
 
     benchmark_dirs.sort();
-    println!("🔍 発見されたValidation Benchmarks: {}個", benchmark_dirs.len());
-    
+    println!(
+        "🔍 発見されたValidation Benchmarks: {}個",
+        benchmark_dirs.len()
+    );
+
     Ok(benchmark_dirs)
 }
 
 fn load_validation_benchmark(benchmark_dir: &Path) -> Result<Option<ValidationBenchmark>> {
     let benchmark_json = benchmark_dir.join("benchmark.json");
-    
+
     if !benchmark_json.exists() {
         return Ok(None);
     }
 
     let content = std::fs::read_to_string(&benchmark_json)?;
     let benchmark: ValidationBenchmark = serde_json::from_str(&content)?;
-    
+
     Ok(Some(benchmark))
 }
 
@@ -363,7 +391,7 @@ async fn test_validation_benchmark(
 
     for test_file in &benchmark.test_files {
         let file_path = benchmark_dir.join(&test_file.path);
-        
+
         if !file_path.exists() {
             continue;
         }
@@ -387,12 +415,14 @@ async fn test_validation_benchmark(
             &None,
             None,
             &LocaleLanguage::Japanese,
-        ).await?;
+        )
+        .await?;
 
         let execution_time = start_time.elapsed().as_millis();
 
         // 期待される脆弱性タイプの解析
-        let _expected_vuln_types: Vec<VulnType> = benchmark.expected_findings
+        let _expected_vuln_types: Vec<VulnType> = benchmark
+            .expected_findings
             .iter()
             .filter(|f| f.file == test_file.path)
             .flat_map(|f| f.vulnerability_types.iter())
@@ -430,9 +460,15 @@ async fn test_validation_benchmark(
 
 fn calculate_benchmark_summary(results: &[BenchmarkResult]) -> BenchmarkSummary {
     let total_benchmarks = results.len();
-    let true_positives = results.iter().filter(|r| r.detected && !r.false_positive).count();
+    let true_positives = results
+        .iter()
+        .filter(|r| r.detected && !r.false_positive)
+        .count();
     let false_positives = results.iter().filter(|r| r.false_positive).count();
-    let true_negatives = results.iter().filter(|r| !r.detected && !r.false_negative).count();
+    let true_negatives = results
+        .iter()
+        .filter(|r| !r.detected && !r.false_negative)
+        .count();
     let false_negatives = results.iter().filter(|r| r.false_negative).count();
 
     let precision = if true_positives + false_positives > 0 {
@@ -460,13 +496,21 @@ fn calculate_benchmark_summary(results: &[BenchmarkResult]) -> BenchmarkSummary 
     };
 
     let avg_confidence = if total_benchmarks > 0 {
-        results.iter().map(|r| r.confidence_score as f64).sum::<f64>() / total_benchmarks as f64
+        results
+            .iter()
+            .map(|r| r.confidence_score as f64)
+            .sum::<f64>()
+            / total_benchmarks as f64
     } else {
         0.0
     };
 
     let avg_execution_time_ms = if total_benchmarks > 0 {
-        results.iter().map(|r| r.execution_time_ms as f64).sum::<f64>() / total_benchmarks as f64
+        results
+            .iter()
+            .map(|r| r.execution_time_ms as f64)
+            .sum::<f64>()
+            / total_benchmarks as f64
     } else {
         0.0
     };
@@ -507,7 +551,7 @@ async fn test_validation_benchmarks_sample() -> Result<()> {
 
     // ベンチマークディレクトリを発見
     let benchmark_dirs = discover_validation_benchmarks()?;
-    
+
     if benchmark_dirs.is_empty() {
         println!("⚠️  Validation Benchmarks が見つかりませんでした");
         return Ok(());
@@ -524,14 +568,20 @@ async fn test_validation_benchmarks_sample() -> Result<()> {
 
     for benchmark_dir in sample_dirs {
         if let Some(benchmark) = load_validation_benchmark(benchmark_dir)? {
-            println!("  [{}] テスト中: {} - {}",
-                    benchmark_count + 1, benchmark.benchmark_id, benchmark.title);
+            println!(
+                "  [{}] テスト中: {} - {}",
+                benchmark_count + 1,
+                benchmark.benchmark_id,
+                benchmark.title
+            );
 
             let results = test_validation_benchmark(&benchmark, benchmark_dir, model).await?;
-            
-            println!("    ファイル数: {}, 検出数: {}",
-                    results.len(),
-                    results.iter().filter(|r| r.detected).count());
+
+            println!(
+                "    ファイル数: {}, 検出数: {}",
+                results.len(),
+                results.iter().filter(|r| r.detected).count()
+            );
 
             all_results.extend(results);
             benchmark_count += 1;
@@ -575,7 +625,7 @@ async fn test_high_severity_validation_benchmarks() -> Result<()> {
     let model = "gpt-4.1-mini";
 
     let benchmark_dirs = discover_validation_benchmarks()?;
-    
+
     if benchmark_dirs.is_empty() {
         println!("⚠️  Validation Benchmarks が見つかりませんでした");
         return Ok(());
@@ -589,11 +639,13 @@ async fn test_high_severity_validation_benchmarks() -> Result<()> {
     for benchmark_dir in &benchmark_dirs {
         if let Some(benchmark) = load_validation_benchmark(benchmark_dir)? {
             // 高深刻度のみフィルタリング
-            if benchmark.risk_level.to_uppercase() == "HIGH" || 
-               benchmark.risk_level.to_uppercase() == "CRITICAL" {
-                
-                println!("  テスト中: {} ({}) - {}",
-                        benchmark.benchmark_id, benchmark.risk_level, benchmark.title);
+            if benchmark.risk_level.to_uppercase() == "HIGH"
+                || benchmark.risk_level.to_uppercase() == "CRITICAL"
+            {
+                println!(
+                    "  テスト中: {} ({}) - {}",
+                    benchmark.benchmark_id, benchmark.risk_level, benchmark.title
+                );
 
                 let results = test_validation_benchmark(&benchmark, benchmark_dir, model).await?;
                 high_severity_results.extend(results);
@@ -642,7 +694,7 @@ async fn test_benchmark_performance_characteristics() -> Result<()> {
     let model = "gpt-4.1-mini";
 
     let benchmark_dirs = discover_validation_benchmarks()?;
-    
+
     if benchmark_dirs.is_empty() {
         println!("⚠️  Validation Benchmarks が見つかりませんでした");
         return Ok(());
@@ -679,9 +731,14 @@ async fn test_benchmark_performance_characteristics() -> Result<()> {
 
             // 言語別統計
             for test_file in &benchmark.test_files {
-                let lang_entry = language_stats.entry(test_file.language.clone()).or_insert((0, 0));
+                let lang_entry = language_stats
+                    .entry(test_file.language.clone())
+                    .or_insert((0, 0));
                 lang_entry.0 += 1; // 総数
-                if results.iter().any(|r| r.benchmark_id.contains(&test_file.path) && r.detected) {
+                if results
+                    .iter()
+                    .any(|r| r.benchmark_id.contains(&test_file.path) && r.detected)
+                {
                     lang_entry.1 += 1; // 検出数
                 }
             }
@@ -703,7 +760,7 @@ async fn test_benchmark_performance_characteristics() -> Result<()> {
     let max_time = *execution_times.iter().max().unwrap_or(&0) as f64;
 
     println!("\n📊 性能特性結果:");
-    
+
     println!("\n実行時間統計:");
     println!("  平均: {:.1}ms", avg_time);
     println!("  中央値: {:.1}ms", median_time);
@@ -712,13 +769,22 @@ async fn test_benchmark_performance_characteristics() -> Result<()> {
     println!("\n脆弱性タイプ別検出:");
     for (vuln_type, (count, total_confidence)) in vulnerability_type_stats {
         let avg_confidence = total_confidence as f64 / count as f64;
-        println!("  {}: {}件 (平均信頼度: {:.1})", vuln_type, count, avg_confidence);
+        println!(
+            "  {}: {}件 (平均信頼度: {:.1})",
+            vuln_type, count, avg_confidence
+        );
     }
 
     println!("\n言語別検出率:");
     for (language, (total, detected)) in language_stats {
         let detection_rate = detected as f64 / total as f64;
-        println!("  {}: {:.1}% ({}/{})", language, detection_rate * 100.0, detected, total);
+        println!(
+            "  {}: {:.1}% ({}/{})",
+            language,
+            detection_rate * 100.0,
+            detected,
+            total
+        );
     }
 
     // 性能要件チェック
@@ -750,7 +816,7 @@ async fn test_ossf_cve_benchmark_sample() -> Result<()> {
 
     // OSSF CVE Benchmarkファイルを発見
     let benchmark_files = discover_ossf_cve_benchmarks()?;
-    
+
     if benchmark_files.is_empty() {
         println!("⚠️  OSSF CVE Benchmarks が見つかりませんでした");
         return Ok(());
@@ -767,15 +833,22 @@ async fn test_ossf_cve_benchmark_sample() -> Result<()> {
 
     for benchmark_file in sample_files {
         if let Some(benchmark) = load_ossf_cve_benchmark(benchmark_file)? {
-            println!("  [{}] テスト中: {} - {} ({})",
-                    benchmark_count + 1, benchmark.id, benchmark.vulnerability_class, benchmark.language);
+            println!(
+                "  [{}] テスト中: {} - {} ({})",
+                benchmark_count + 1,
+                benchmark.id,
+                benchmark.vulnerability_class,
+                benchmark.language
+            );
 
             let result = test_ossf_cve_benchmark(&benchmark, benchmark_file, model).await?;
-            
-            println!("    検出: {}, 信頼度: {}, 脆弱性: {:?}",
-                    if result.detected { "✅" } else { "❌" },
-                    result.confidence_score,
-                    result.detected_types);
+
+            println!(
+                "    検出: {}, 信頼度: {}, 脆弱性: {:?}",
+                if result.detected { "✅" } else { "❌" },
+                result.confidence_score,
+                result.detected_types
+            );
 
             all_results.push(result);
             benchmark_count += 1;
@@ -814,7 +887,7 @@ async fn test_ossf_cve_by_language() -> Result<()> {
 
     let model = "gpt-4.1-mini";
     let benchmark_files = discover_ossf_cve_benchmarks()?;
-    
+
     if benchmark_files.is_empty() {
         println!("⚠️  OSSF CVE Benchmarks が見つかりませんでした");
         return Ok(());
@@ -828,7 +901,9 @@ async fn test_ossf_cve_by_language() -> Result<()> {
     for benchmark_file in &benchmark_files {
         if let Some(benchmark) = load_ossf_cve_benchmark(benchmark_file)? {
             // 各言語から最大2個まで
-            let lang_results = language_results.entry(benchmark.language.clone()).or_default();
+            let lang_results = language_results
+                .entry(benchmark.language.clone())
+                .or_default();
             if lang_results.len() >= 2 {
                 continue;
             }
@@ -852,7 +927,12 @@ async fn test_ossf_cve_by_language() -> Result<()> {
 
     for (language, results) in language_results {
         let summary = calculate_benchmark_summary(&results);
-        println!("  {}: 再現率={:.3}, 件数={}", language, summary.recall, results.len());
+        println!(
+            "  {}: 再現率={:.3}, 件数={}",
+            language,
+            summary.recall,
+            results.len()
+        );
         overall_recall += summary.recall;
         total_languages += 1;
     }

@@ -123,7 +123,11 @@ pub struct CleanupManager {
 impl CleanupManager {
     /// Create a new cleanup manager
     pub fn new<P: AsRef<Path>>(cache_dir: P) -> Result<Self> {
-        Self::with_config(cache_dir, CleanupPolicy::default(), CleanupTrigger::default())
+        Self::with_config(
+            cache_dir,
+            CleanupPolicy::default(),
+            CleanupTrigger::default(),
+        )
     }
 
     /// Create a cleanup manager with custom configuration
@@ -331,11 +335,11 @@ impl CleanupManager {
             return Ok(CleanupState::default());
         }
 
-        let content = fs::read_to_string(&self.state_file)
-            .context("Failed to read cleanup state file")?;
+        let content =
+            fs::read_to_string(&self.state_file).context("Failed to read cleanup state file")?;
 
-        let state: CleanupState = serde_json::from_str(&content)
-            .context("Failed to parse cleanup state")?;
+        let state: CleanupState =
+            serde_json::from_str(&content).context("Failed to parse cleanup state")?;
 
         Ok(state)
     }
@@ -344,11 +348,10 @@ impl CleanupManager {
     fn save_state(&self, state: CleanupState) -> Result<()> {
         fs::create_dir_all(self.cache_dir.parent().unwrap_or(&self.cache_dir))?;
 
-        let content = serde_json::to_string_pretty(&state)
-            .context("Failed to serialize cleanup state")?;
+        let content =
+            serde_json::to_string_pretty(&state).context("Failed to serialize cleanup state")?;
 
-        fs::write(&self.state_file, content)
-            .context("Failed to write cleanup state file")?;
+        fs::write(&self.state_file, content).context("Failed to write cleanup state file")?;
 
         Ok(())
     }
@@ -736,17 +739,17 @@ mod tests {
             remove_version_mismatch: true,
         };
 
-        let manager = CleanupManager::with_config(
-            cache_dir,
-            policy,
-            CleanupTrigger::Manual,
-        )
-        .unwrap();
+        let manager =
+            CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
 
         let entry = make_entry("1.0.0", "ns", "abc123", "small value");
         let dir = cache_dir.join("ns").join("ab");
         fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join("abc123.json"), serde_json::to_string(&entry).unwrap()).unwrap();
+        fs::write(
+            dir.join("abc123.json"),
+            serde_json::to_string(&entry).unwrap(),
+        )
+        .unwrap();
 
         let stats = manager.cleanup_by_size().unwrap();
         assert_eq!(stats.removed_count, 0);
@@ -765,12 +768,8 @@ mod tests {
             remove_version_mismatch: true,
         };
 
-        let manager = CleanupManager::with_config(
-            cache_dir,
-            policy,
-            CleanupTrigger::Manual,
-        )
-        .unwrap();
+        let manager =
+            CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
 
         let mut old_entry = make_entry("1.0.0", "ns", "old111", "old value");
         old_entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(10);
@@ -810,12 +809,8 @@ mod tests {
             remove_version_mismatch: true,
         };
 
-        let manager = CleanupManager::with_config(
-            cache_dir,
-            policy,
-            CleanupTrigger::Manual,
-        )
-        .unwrap();
+        let manager =
+            CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
 
         let mut entry_oldest = make_entry("1.0.0", "ns", "aaa111", "oldest");
         entry_oldest.metadata.last_accessed = Utc::now() - chrono::Duration::days(100);
@@ -866,10 +861,7 @@ mod tests {
 
         let loaded = manager.load_state().unwrap();
         assert_eq!(loaded.last_cleanup_type, "stale");
-        assert_eq!(
-            loaded.last_cleanup_timestamp.timestamp(),
-            now.timestamp()
-        );
+        assert_eq!(loaded.last_cleanup_timestamp.timestamp(), now.timestamp());
     }
 
     #[test]
@@ -1035,12 +1027,8 @@ mod tests {
             remove_version_mismatch: true,
         };
 
-        let manager = CleanupManager::with_config(
-            cache_dir,
-            policy,
-            CleanupTrigger::Manual,
-        )
-        .unwrap();
+        let manager =
+            CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
 
         let mut entry1 = make_entry("1.0.0", "ns", "hash11", "resp1");
         entry1.metadata.last_accessed = Utc::now() - chrono::Duration::days(10);
@@ -1050,8 +1038,16 @@ mod tests {
 
         let dir1 = cache_dir.join("ns").join("ha");
         fs::create_dir_all(&dir1).unwrap();
-        fs::write(dir1.join("hash11.json"), serde_json::to_string(&entry1).unwrap()).unwrap();
-        fs::write(dir1.join("hash22.json"), serde_json::to_string(&entry2).unwrap()).unwrap();
+        fs::write(
+            dir1.join("hash11.json"),
+            serde_json::to_string(&entry1).unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            dir1.join("hash22.json"),
+            serde_json::to_string(&entry2).unwrap(),
+        )
+        .unwrap();
 
         let stats = manager.cleanup_by_size().unwrap();
         assert_eq!(stats.removed_count, 2);

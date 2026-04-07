@@ -17,9 +17,9 @@
 /// - New findings → create page with Type="finding", Surface=surface_name
 /// - `baselineState == "absent"` → set Status to "Done"
 /// - `baselineState == "unchanged"` or Fingerprint already exists → skip
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::env;
 use std::path::Path;
@@ -38,8 +38,7 @@ pub async fn run_notion_command(
     dry_run: bool,
     min_level: &str,
 ) -> Result<()> {
-    let token = env::var("NOTION_TOKEN")
-        .map_err(|_| anyhow!("NOTION_TOKEN not set"))?;
+    let token = env::var("NOTION_TOKEN").map_err(|_| anyhow!("NOTION_TOKEN not set"))?;
     let db_id = env::var("NOTION_DATABASE_ID").unwrap_or_else(|_| database_id.to_string());
 
     let client = Client::new();
@@ -51,11 +50,11 @@ pub async fn run_notion_command(
     }
 
     // Fetch all existing pages: build fp → page_id and surface → page_id maps.
-    let (fp_map, surface_page_map) =
-        fetch_existing_pages(&client, &token, &db_id).await?;
+    let (fp_map, surface_page_map) = fetch_existing_pages(&client, &token, &db_id).await?;
     eprintln!(
         "Found {} existing finding page(s) and {} surface page(s) in Notion database.",
-        fp_map.len(), surface_page_map.len()
+        fp_map.len(),
+        surface_page_map.len()
     );
 
     let (mut created, mut skipped, mut closed) = (0usize, 0usize, 0usize);
@@ -68,12 +67,15 @@ pub async fn run_notion_command(
         let _surface_page_id = if let Some(id) = surface_page_map.get(&surface.surface_name) {
             id.clone()
         } else if dry_run {
-            eprintln!("[dry-run] Would create surface page: {}", surface.surface_name);
+            eprintln!(
+                "[dry-run] Would create surface page: {}",
+                surface.surface_name
+            );
             String::new()
         } else {
-            let page_id = create_surface_page(
-                &client, &token, &db_id, &surface.surface_name, &surface_fp,
-            ).await?;
+            let page_id =
+                create_surface_page(&client, &token, &db_id, &surface.surface_name, &surface_fp)
+                    .await?;
             eprintln!("Created surface page: {page_id}");
             surface_page_map.insert(surface.surface_name.clone(), page_id.clone());
             page_id
@@ -85,7 +87,10 @@ pub async fn run_notion_command(
             if result.baseline_state.as_deref() == Some("absent") {
                 if let Some(page_id) = fp.as_ref().and_then(|f| fp_map.get(f)) {
                     if dry_run {
-                        eprintln!("[dry-run] Would archive page {page_id} (absent: {})", result.rule_id);
+                        eprintln!(
+                            "[dry-run] Would archive page {page_id} (absent: {})",
+                            result.rule_id
+                        );
                     } else {
                         mark_done(&client, &token, page_id).await?;
                         eprintln!("Marked done: page {page_id} (resolved: {})", result.rule_id);
@@ -113,9 +118,16 @@ pub async fn run_notion_command(
                 eprintln!("[dry-run] Would create: {title}");
             } else {
                 let url = create_finding_page(
-                    &client, &token, &db_id, result, &title, &body,
-                    fp.as_deref(), &surface.surface_name,
-                ).await?;
+                    &client,
+                    &token,
+                    &db_id,
+                    result,
+                    &title,
+                    &body,
+                    fp.as_deref(),
+                    &surface.surface_name,
+                )
+                .await?;
                 eprintln!("Created: {url}");
                 if let Some(f) = &fp {
                     // Extract page_id from URL for dedup map

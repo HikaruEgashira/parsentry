@@ -75,7 +75,11 @@ impl Cache {
             return Ok(None);
         }
 
-        log::debug!("Cache lookup: ns={}, key={}", namespace, &key[..key.len().min(8)]);
+        log::debug!(
+            "Cache lookup: ns={}, key={}",
+            namespace,
+            &key[..key.len().min(8)]
+        );
 
         if let Some(entry) = self.storage.get(namespace, key)? {
             log::info!("Cache hit: {}", &key[..key.len().min(8)]);
@@ -101,7 +105,11 @@ impl Cache {
         );
 
         self.storage.set(&entry)?;
-        log::info!("Cache stored: ns={}, key={}", namespace, &key[..key.len().min(8)]);
+        log::info!(
+            "Cache stored: ns={}, key={}",
+            namespace,
+            &key[..key.len().min(8)]
+        );
 
         Ok(())
     }
@@ -353,7 +361,11 @@ mod tests {
         );
         let dir = temp_dir.path().join("ns").join("st");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("stalekey.json"), serde_json::to_string(&entry).unwrap()).unwrap();
+        std::fs::write(
+            dir.join("stalekey.json"),
+            serde_json::to_string(&entry).unwrap(),
+        )
+        .unwrap();
 
         let stats = cache.cleanup_stale().unwrap();
         assert_eq!(stats.removed_count, 1);
@@ -382,7 +394,11 @@ mod tests {
         );
         let dir = temp_dir.path().join("ns").join("si");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("sizekey.json"), serde_json::to_string(&entry).unwrap()).unwrap();
+        std::fs::write(
+            dir.join("sizekey.json"),
+            serde_json::to_string(&entry).unwrap(),
+        )
+        .unwrap();
 
         let stats = cache.cleanup_by_size().unwrap();
         assert_eq!(stats.removed_count, 1);

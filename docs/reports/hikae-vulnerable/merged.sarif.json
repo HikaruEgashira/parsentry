@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "parsentry",
-          "version": "0.17.0",
+          "version": "0.18.0",
           "information_uri": "https://github.com/HikaruEgashira/parsentry",
           "rules": [
             {
@@ -770,8 +770,8 @@
             }
           ],
           "fingerprints": {
-            "primary": "sqli-orderby-order-app.py-194",
-            "parsentry/v1": "sqli-orderby-order-app.py-194"
+            "parsentry/v1": "sqli-orderby-order-app.py-194",
+            "primary": "sqli-orderby-order-app.py-194"
           },
           "properties": {
             "confidence": 1.0
@@ -801,8 +801,8 @@
             }
           ],
           "fingerprints": {
-            "primary": "info-disclosure-query-app.py-214",
-            "parsentry/v1": "info-disclosure-query-app.py-214"
+            "parsentry/v1": "info-disclosure-query-app.py-214",
+            "primary": "info-disclosure-query-app.py-214"
           },
           "properties": {
             "confidence": 0.95
@@ -832,8 +832,8 @@
             }
           ],
           "fingerprints": {
-            "primary": "info-disclosure-error-app.py-199",
-            "parsentry/v1": "info-disclosure-error-app.py-199"
+            "parsentry/v1": "info-disclosure-error-app.py-199",
+            "primary": "info-disclosure-error-app.py-199"
           },
           "properties": {
             "confidence": 0.95
@@ -892,8 +892,8 @@
             }
           ],
           "fingerprints": {
-            "parsentry/v1": "os.popen-cmdi-count-hostname",
-            "primaryLocationLineHash": "os.popen-cmdi-count-hostname"
+            "primaryLocationLineHash": "os.popen-cmdi-count-hostname",
+            "parsentry/v1": "os.popen-cmdi-count-hostname"
           },
           "properties": {
             "confidence": 0.99
@@ -923,8 +923,8 @@
             }
           ],
           "fingerprints": {
-            "primaryLocationLineHash": "os.system-cmdi-hostname",
-            "parsentry/v1": "os.system-cmdi-hostname"
+            "parsentry/v1": "os.system-cmdi-hostname",
+            "primaryLocationLineHash": "os.system-cmdi-hostname"
           },
           "properties": {
             "confidence": 0.99
@@ -985,8 +985,8 @@
             }
           ],
           "fingerprints": {
-            "primaryLocationLineHash": "path-injection-cmdi-hostname-tempfile",
-            "parsentry/v1": "path-injection-cmdi-hostname-tempfile"
+            "parsentry/v1": "path-injection-cmdi-hostname-tempfile",
+            "primaryLocationLineHash": "path-injection-cmdi-hostname-tempfile"
           },
           "properties": {
             "confidence": 0.92

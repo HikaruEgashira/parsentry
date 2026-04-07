@@ -23,7 +23,7 @@ pub use linear::run_linear_command;
 pub use markdown::to_markdown;
 pub use merge::merge_sarif_dir;
 pub use notion::run_notion_command;
-pub use report_common::{load_surface_reports, SurfaceReport};
+pub use report_common::{SurfaceReport, load_surface_reports};
 pub use sarif::{SarifReport, SarifResult, SarifResultProperties};
 pub use summary::AnalysisSummary;
 pub use validation::validate_output_directory;

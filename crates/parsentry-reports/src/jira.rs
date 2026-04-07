@@ -10,16 +10,16 @@
 /// - New findings → create Sub-task under the surface Story
 /// - `baselineState == "absent"` → transition existing Sub-task to done
 /// - `baselineState == "unchanged"` or fingerprint already open → skip
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use reqwest::{Client, StatusCode};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 
 use crate::report_common::{
-    build_markdown_body, build_title, extract_fingerprint, load_surface_reports,
-    parse_fingerprint_from_body, parse_surface_from_body, SURFACE_MARKER,
+    SURFACE_MARKER, build_markdown_body, build_title, extract_fingerprint, load_surface_reports,
+    parse_fingerprint_from_body, parse_surface_from_body,
 };
 
 const JIRA_LABEL: &str = "parsentry";
@@ -34,13 +34,15 @@ pub async fn run_jira_command(
         .map_err(|_| anyhow!("JIRA_URL not set (e.g. https://company.atlassian.net)"))?
         .trim_end_matches('/')
         .to_string();
-    let email = env::var("JIRA_EMAIL")
-        .map_err(|_| anyhow!("JIRA_EMAIL not set"))?;
-    let token = env::var("JIRA_API_TOKEN")
-        .map_err(|_| anyhow!("JIRA_API_TOKEN not set"))?;
+    let email = env::var("JIRA_EMAIL").map_err(|_| anyhow!("JIRA_EMAIL not set"))?;
+    let token = env::var("JIRA_API_TOKEN").map_err(|_| anyhow!("JIRA_API_TOKEN not set"))?;
 
     let client = Client::new();
-    let auth = JiraAuth { base_url, email, token };
+    let auth = JiraAuth {
+        base_url,
+        email,
+        token,
+    };
 
     let surfaces = load_surface_reports(reports_dir, min_level)?;
     if surfaces.is_empty() {
@@ -49,11 +51,11 @@ pub async fn run_jira_command(
     }
 
     // Fetch existing issues once: build fp → key and surface → key maps.
-    let (fp_map, surface_issue_map) =
-        fetch_existing_issues(&client, &auth, project_key).await?;
+    let (fp_map, surface_issue_map) = fetch_existing_issues(&client, &auth, project_key).await?;
     eprintln!(
         "Found {} existing child issue(s) and {} surface issue(s) in Jira project {project_key}.",
-        fp_map.len(), surface_issue_map.len()
+        fp_map.len(),
+        surface_issue_map.len()
     );
 
     let (mut created, mut skipped, mut closed) = (0usize, 0usize, 0usize);
@@ -75,8 +77,15 @@ pub async fn run_jira_command(
                 surface.surface_name, surface.surface_name
             );
             let url = create_issue_with_type(
-                &client, &auth, project_key, &surface_title, &desc, "Story", None,
-            ).await?;
+                &client,
+                &auth,
+                project_key,
+                &surface_title,
+                &desc,
+                "Story",
+                None,
+            )
+            .await?;
             eprintln!("Created surface Story: {url}");
             // Extract key from URL: last path segment after /browse/
             let key = url.rsplit('/').next().unwrap_or("?").to_string();
@@ -90,7 +99,10 @@ pub async fn run_jira_command(
             if result.baseline_state.as_deref() == Some("absent") {
                 if let Some(issue_key) = fp.as_ref().and_then(|f| fp_map.get(f)) {
                     if dry_run {
-                        eprintln!("[dry-run] Would close {issue_key} (absent: {})", result.rule_id);
+                        eprintln!(
+                            "[dry-run] Would close {issue_key} (absent: {})",
+                            result.rule_id
+                        );
                     } else {
                         close_issue(&client, &auth, issue_key).await?;
                         eprintln!("Closed {issue_key} (resolved: {})", result.rule_id);
@@ -117,10 +129,21 @@ pub async fn run_jira_command(
             if dry_run {
                 eprintln!("[dry-run] Would create Sub-task: {title}");
             } else {
-                let parent = if parent_key.is_empty() { None } else { Some(parent_key.as_str()) };
+                let parent = if parent_key.is_empty() {
+                    None
+                } else {
+                    Some(parent_key.as_str())
+                };
                 let url = create_issue_with_type(
-                    &client, &auth, project_key, &title, &body, "Sub-task", parent,
-                ).await?;
+                    &client,
+                    &auth,
+                    project_key,
+                    &title,
+                    &body,
+                    "Sub-task",
+                    parent,
+                )
+                .await?;
                 eprintln!("Created: {url}");
                 if let Some(f) = fp {
                     let key = url.rsplit('/').next().unwrap_or("?").to_string();
@@ -267,7 +290,10 @@ async fn create_issue_with_type(
         .map_err(|e| anyhow!("Jira create issue failed: {e}"))?;
 
     let status = resp.status();
-    let body: Value = resp.json().await.map_err(|e| anyhow!("Jira response parse failed: {e}"))?;
+    let body: Value = resp
+        .json()
+        .await
+        .map_err(|e| anyhow!("Jira response parse failed: {e}"))?;
 
     if !status.is_success() {
         anyhow::bail!("Jira create issue failed ({}): {}", status, body);
@@ -282,7 +308,10 @@ async fn close_issue(client: &Client, auth: &JiraAuth, issue_key: &str) -> Resul
 
     // Fetch available transitions
     let transitions: Value = client
-        .get(format!("{}/rest/api/3/issue/{issue_key}/transitions", auth.base_url))
+        .get(format!(
+            "{}/rest/api/3/issue/{issue_key}/transitions",
+            auth.base_url
+        ))
         .basic_auth(&email, Some(&token))
         .send()
         .await
@@ -295,16 +324,18 @@ async fn close_issue(client: &Client, auth: &JiraAuth, issue_key: &str) -> Resul
     let transition_id = transitions["transitions"]
         .as_array()
         .and_then(|ts| {
-            ts.iter().find(|t| {
-                t["to"]["statusCategory"]["key"].as_str() == Some("done")
-            })
+            ts.iter()
+                .find(|t| t["to"]["statusCategory"]["key"].as_str() == Some("done"))
         })
         .and_then(|t| t["id"].as_str())
         .ok_or_else(|| anyhow!("No 'done' transition found for {issue_key}"))?
         .to_string();
 
     let status = client
-        .post(format!("{}/rest/api/3/issue/{issue_key}/transitions", auth.base_url))
+        .post(format!(
+            "{}/rest/api/3/issue/{issue_key}/transitions",
+            auth.base_url
+        ))
         .basic_auth(&email, Some(&token))
         .json(&json!({ "transition": { "id": transition_id } }))
         .send()

@@ -69,8 +69,13 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
             let path = e.path();
             if path.is_dir() {
                 let candidate = path.join("result.sarif.json");
-                if candidate.exists() { vec![candidate] } else { vec![] }
-            } else if path.file_name()
+                if candidate.exists() {
+                    vec![candidate]
+                } else {
+                    vec![]
+                }
+            } else if path
+                .file_name()
                 .map(|n| n.to_string_lossy().ends_with(".sarif.json"))
                 .unwrap_or(false)
             {
@@ -234,7 +239,8 @@ mod tests {
     }
 
     fn minimal_sarif(rule_id: &str, uri: &str, message: &str) -> String {
-        format!(r#"{{
+        format!(
+            r#"{{
             "$schema": "https://example.com/sarif",
             "version": "2.1.0",
             "runs": [{{
@@ -246,14 +252,23 @@ mod tests {
                     "locations": [{{"physicalLocation": {{"artifactLocation": {{"uri": "{uri}"}}}}}}]
                 }}]
             }}]
-        }}"#)
+        }}"#
+        )
     }
 
     #[test]
     fn merges_two_files_with_dedup() {
         let tmp = TempDir::new().unwrap();
-        write_sarif(tmp.path(), "S1.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli1"));
-        write_sarif(tmp.path(), "S2.sarif.json", &minimal_sarif("XSS", "web.py", "xss1"));
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli1"),
+        );
+        write_sarif(
+            tmp.path(),
+            "S2.sarif.json",
+            &minimal_sarif("XSS", "web.py", "xss1"),
+        );
 
         let merged = merge_sarif_dir(tmp.path(), None).unwrap();
         let run = &merged.runs[0];
@@ -269,14 +284,26 @@ mod tests {
         let baseline_dir = TempDir::new().unwrap();
 
         // Baseline has SQLI in app.py
-        write_sarif(baseline_dir.path(), "old.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli"));
+        write_sarif(
+            baseline_dir.path(),
+            "old.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli"),
+        );
         let baseline = merge_sarif_dir(baseline_dir.path(), None).unwrap();
         let baseline_path = tmp.path().join("baseline.sarif.json");
         std::fs::write(&baseline_path, serde_json::to_string(&baseline).unwrap()).unwrap();
 
         // Current scan has SQLI in app.py (unchanged) + XSS in web.py (new)
-        write_sarif(tmp.path(), "S1.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli"));
-        write_sarif(tmp.path(), "S2.sarif.json", &minimal_sarif("XSS", "web.py", "xss"));
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli"),
+        );
+        write_sarif(
+            tmp.path(),
+            "S2.sarif.json",
+            &minimal_sarif("XSS", "web.py", "xss"),
+        );
 
         let merged = merge_sarif_dir(tmp.path(), Some(&baseline_path)).unwrap();
         let results = &merged.runs[0].results;
@@ -294,14 +321,26 @@ mod tests {
         let baseline_dir = TempDir::new().unwrap();
 
         // Baseline has SQLI + XSS
-        write_sarif(baseline_dir.path(), "old1.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli"));
-        write_sarif(baseline_dir.path(), "old2.sarif.json", &minimal_sarif("XSS", "web.py", "xss"));
+        write_sarif(
+            baseline_dir.path(),
+            "old1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli"),
+        );
+        write_sarif(
+            baseline_dir.path(),
+            "old2.sarif.json",
+            &minimal_sarif("XSS", "web.py", "xss"),
+        );
         let baseline = merge_sarif_dir(baseline_dir.path(), None).unwrap();
         let baseline_path = tmp.path().join("baseline.sarif.json");
         std::fs::write(&baseline_path, serde_json::to_string(&baseline).unwrap()).unwrap();
 
         // Current scan only has SQLI (XSS was fixed)
-        write_sarif(tmp.path(), "S1.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli"));
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli"),
+        );
 
         let merged = merge_sarif_dir(tmp.path(), Some(&baseline_path)).unwrap();
         let results = &merged.runs[0].results;
@@ -333,7 +372,11 @@ mod tests {
         std::fs::write(&baseline_path, baseline_json).unwrap();
 
         // Current scan finds same issue (no suppression in new result)
-        write_sarif(tmp.path(), "S1.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli"));
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli"),
+        );
 
         let merged = merge_sarif_dir(tmp.path(), Some(&baseline_path)).unwrap();
         let result = &merged.runs[0].results[0];
@@ -342,15 +385,26 @@ mod tests {
         let suppressions = result.suppressions.as_ref().unwrap();
         assert_eq!(suppressions.len(), 1);
         assert_eq!(suppressions[0].status.as_deref(), Some("accepted"));
-        assert_eq!(suppressions[0].justification.as_deref(), Some("false positive"));
+        assert_eq!(
+            suppressions[0].justification.as_deref(),
+            Some("false positive")
+        );
     }
 
     #[test]
     fn fingerprint_deduplicates_same_result() {
         let tmp = TempDir::new().unwrap();
         // Two surfaces report the same SQLI in app.py
-        write_sarif(tmp.path(), "S1.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli found"));
-        write_sarif(tmp.path(), "S2.sarif.json", &minimal_sarif("SQLI", "app.py", "sqli found again"));
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli found"),
+        );
+        write_sarif(
+            tmp.path(),
+            "S2.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "sqli found again"),
+        );
 
         let merged = merge_sarif_dir(tmp.path(), None).unwrap();
         // Same ruleId + URI = same fingerprint = deduplicated

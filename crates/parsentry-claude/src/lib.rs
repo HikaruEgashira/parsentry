@@ -28,10 +28,7 @@ pub enum SessionEvent {
         timestamp: String,
     },
     /// Text output from assistant
-    Text {
-        content: String,
-        timestamp: String,
-    },
+    Text { content: String, timestamp: String },
     /// Session completed (last-prompt marker)
     Complete,
 }
@@ -95,8 +92,8 @@ pub fn list_active_sessions() -> Result<Vec<Session>> {
             continue;
         }
 
-        let data = fs::read_to_string(&path)
-            .with_context(|| format!("reading {}", path.display()))?;
+        let data =
+            fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         let sf: SessionFile = match serde_json::from_str(&data) {
             Ok(s) => s,
             Err(_) => continue,
@@ -199,8 +196,7 @@ pub fn list_subagents(project_dir: &Path, session_id: &str) -> Result<Vec<Subage
 /// Read new events from a JSONL file starting at `offset` bytes.
 /// Returns the events and the new offset for the next read.
 pub fn read_events_from(path: &Path, offset: u64) -> Result<(Vec<SessionEvent>, u64)> {
-    let file = fs::File::open(path)
-        .with_context(|| format!("opening {}", path.display()))?;
+    let file = fs::File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let file_len = file.metadata()?.len();
 
     if offset >= file_len {
@@ -376,24 +372,15 @@ fn summarize_tool_input(tool_name: &str, input: &serde_json::Value) -> String {
             short_path(path).to_string()
         }
         "Bash" => {
-            let cmd = input
-                .get("command")
-                .and_then(|c| c.as_str())
-                .unwrap_or("?");
+            let cmd = input.get("command").and_then(|c| c.as_str()).unwrap_or("?");
             truncate_chars(cmd, 60)
         }
         "Grep" => {
-            let pattern = input
-                .get("pattern")
-                .and_then(|p| p.as_str())
-                .unwrap_or("?");
+            let pattern = input.get("pattern").and_then(|p| p.as_str()).unwrap_or("?");
             format!("/{}/", pattern)
         }
         "Glob" => {
-            let pattern = input
-                .get("pattern")
-                .and_then(|p| p.as_str())
-                .unwrap_or("?");
+            let pattern = input.get("pattern").and_then(|p| p.as_str()).unwrap_or("?");
             pattern.to_string()
         }
         "Agent" => {
@@ -421,7 +408,11 @@ fn truncate_chars(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         return s.to_string();
     }
-    let end = s.char_indices().nth(max.saturating_sub(3)).map(|(i, _)| i).unwrap_or(s.len());
+    let end = s
+        .char_indices()
+        .nth(max.saturating_sub(3))
+        .map(|(i, _)| i)
+        .unwrap_or(s.len());
     format!("{}...", &s[..end])
 }
 

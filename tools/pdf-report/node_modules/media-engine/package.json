@@ -1,0 +1,24 @@
+{
+  "name": "media-engine",
+  "version": "1.0.3",
+  "description": "Media query calculator",
+  "main": "src/index.js",
+  "author": "Diego Muracciole <diegomuracciole@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^0.14.3",
+    "jest": "^22.4.2",
+    "lint-staged": "^7.0.0",
+    "prettier": "^1.11.0"
+  }
+}

@@ -1,8 +1,6 @@
 //! Re-exports from parsentry-core and extensions for the main crate.
 
-pub use parsentry_core::{
-    response_json_schema, Language as CoreLanguage, Response, VulnType,
-};
+pub use parsentry_core::{Language as CoreLanguage, Response, VulnType, response_json_schema};
 
 /// Extension trait for Response to add methods specific to the main parsentry crate.
 pub trait ResponseExt {

@@ -348,7 +348,10 @@ impl SarifReport {
                     "note" => "🟡",
                     _ => "⚪",
                 };
-                md.push_str(&format!("**Severity**: {} {}\n\n", level_emoji, result.level));
+                md.push_str(&format!(
+                    "**Severity**: {} {}\n\n",
+                    level_emoji, result.level
+                ));
 
                 if let Some(location) = result.locations.first() {
                     let uri = &location.physical_location.artifact_location.uri;
@@ -375,10 +378,7 @@ impl SarifReport {
 
                 if let Some(props) = &result.properties {
                     if let Some(confidence) = props.confidence {
-                        md.push_str(&format!(
-                            "**Confidence**: {:.0}%\n",
-                            confidence * 100.0
-                        ));
+                        md.push_str(&format!("**Confidence**: {:.0}%\n", confidence * 100.0));
                     }
                     if let Some(cwe) = &props.cwe {
                         if !cwe.is_empty() {
@@ -679,11 +679,7 @@ mod tests {
             ..Default::default()
         };
 
-        summary.add_result(
-            PathBuf::from("test.py"),
-            response,
-            "test.py.md".to_string(),
-        );
+        summary.add_result(PathBuf::from("test.py"), response, "test.py.md".to_string());
 
         let sarif = SarifReport::from_analysis_summary(&summary, "0.9.2");
 
@@ -763,7 +759,11 @@ mod tests {
             vulnerability_types: vec![VulnType::SQLI],
             ..Default::default()
         };
-        summary.add_result(PathBuf::from("vulnerable.py"), response, "vulnerable.py.md".to_string());
+        summary.add_result(
+            PathBuf::from("vulnerable.py"),
+            response,
+            "vulnerable.py.md".to_string(),
+        );
 
         let sarif = SarifReport::from_analysis_summary(&summary, "0.13.0");
         let markdown = sarif.to_markdown();
@@ -1223,72 +1223,114 @@ mod tests {
 
     #[test]
     fn test_guess_mime_type_js() {
-        assert_eq!(guess_mime_type(Path::new("a.js")), Some("application/javascript".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.js")),
+            Some("application/javascript".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_ts() {
-        assert_eq!(guess_mime_type(Path::new("a.ts")), Some("application/typescript".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.ts")),
+            Some("application/typescript".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_py() {
-        assert_eq!(guess_mime_type(Path::new("a.py")), Some("text/x-python".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.py")),
+            Some("text/x-python".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_go() {
-        assert_eq!(guess_mime_type(Path::new("a.go")), Some("text/x-go".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.go")),
+            Some("text/x-go".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_rs() {
-        assert_eq!(guess_mime_type(Path::new("a.rs")), Some("text/x-rust".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.rs")),
+            Some("text/x-rust".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_rb() {
-        assert_eq!(guess_mime_type(Path::new("a.rb")), Some("text/x-ruby".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.rb")),
+            Some("text/x-ruby".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_java() {
-        assert_eq!(guess_mime_type(Path::new("a.java")), Some("text/x-java".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.java")),
+            Some("text/x-java".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_c() {
-        assert_eq!(guess_mime_type(Path::new("a.c")), Some("text/x-c".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.c")),
+            Some("text/x-c".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_cpp() {
-        assert_eq!(guess_mime_type(Path::new("a.cpp")), Some("text/x-c++".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.cpp")),
+            Some("text/x-c++".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_cc() {
-        assert_eq!(guess_mime_type(Path::new("a.cc")), Some("text/x-c++".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.cc")),
+            Some("text/x-c++".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_cxx() {
-        assert_eq!(guess_mime_type(Path::new("a.cxx")), Some("text/x-c++".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.cxx")),
+            Some("text/x-c++".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_tf() {
-        assert_eq!(guess_mime_type(Path::new("a.tf")), Some("text/x-terraform".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.tf")),
+            Some("text/x-terraform".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_unknown() {
-        assert_eq!(guess_mime_type(Path::new("a.xyz")), Some("text/plain".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("a.xyz")),
+            Some("text/plain".to_string())
+        );
     }
 
     #[test]
     fn test_guess_mime_type_no_extension() {
-        assert_eq!(guess_mime_type(Path::new("Makefile")), Some("text/plain".to_string()));
+        assert_eq!(
+            guess_mime_type(Path::new("Makefile")),
+            Some("text/plain".to_string())
+        );
     }
 
     // --- parse_line_number_from_text tests ---
@@ -1332,7 +1374,10 @@ mod tests {
     #[test]
     fn test_parse_line_number_snippet_preserved() {
         let region = parse_line_number_from_text("line: 42 some context").unwrap();
-        assert_eq!(region.snippet.as_ref().unwrap().text, "line: 42 some context");
+        assert_eq!(
+            region.snippet.as_ref().unwrap().text,
+            "line: 42 some context"
+        );
     }
 
     // --- create_rule_for_vuln_type ---
@@ -1342,14 +1387,24 @@ mod tests {
         let rule = create_rule_for_vuln_type(&VulnType::SQLI);
         assert_eq!(rule.name.as_deref(), Some("SQL Injection"));
         assert_eq!(rule.default_configuration.as_ref().unwrap().level, "error");
-        assert_eq!(rule.properties.as_ref().unwrap().security_severity.as_deref(), Some("8.5"));
+        assert_eq!(
+            rule.properties
+                .as_ref()
+                .unwrap()
+                .security_severity
+                .as_deref(),
+            Some("8.5")
+        );
     }
 
     #[test]
     fn test_create_rule_xss() {
         let rule = create_rule_for_vuln_type(&VulnType::XSS);
         assert_eq!(rule.name.as_deref(), Some("Cross-Site Scripting"));
-        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+        assert_eq!(
+            rule.default_configuration.as_ref().unwrap().level,
+            "warning"
+        );
     }
 
     #[test]
@@ -1363,27 +1418,39 @@ mod tests {
     fn test_create_rule_lfi() {
         let rule = create_rule_for_vuln_type(&VulnType::LFI);
         assert_eq!(rule.name.as_deref(), Some("Local File Inclusion"));
-        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+        assert_eq!(
+            rule.default_configuration.as_ref().unwrap().level,
+            "warning"
+        );
     }
 
     #[test]
     fn test_create_rule_ssrf() {
         let rule = create_rule_for_vuln_type(&VulnType::SSRF);
         assert_eq!(rule.name.as_deref(), Some("Server-Side Request Forgery"));
-        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+        assert_eq!(
+            rule.default_configuration.as_ref().unwrap().level,
+            "warning"
+        );
     }
 
     #[test]
     fn test_create_rule_afo() {
         let rule = create_rule_for_vuln_type(&VulnType::AFO);
         assert_eq!(rule.name.as_deref(), Some("Arbitrary File Operation"));
-        assert_eq!(rule.default_configuration.as_ref().unwrap().level, "warning");
+        assert_eq!(
+            rule.default_configuration.as_ref().unwrap().level,
+            "warning"
+        );
     }
 
     #[test]
     fn test_create_rule_idor() {
         let rule = create_rule_for_vuln_type(&VulnType::IDOR);
-        assert_eq!(rule.name.as_deref(), Some("Insecure Direct Object Reference"));
+        assert_eq!(
+            rule.name.as_deref(),
+            Some("Insecure Direct Object Reference")
+        );
         assert_eq!(rule.default_configuration.as_ref().unwrap().level, "note");
     }
 
@@ -1410,7 +1477,11 @@ mod tests {
         let props = sarif.runs[0].results[0].properties.as_ref().unwrap();
         let confidence = props.confidence.unwrap();
         // 85 / 100.0 = 0.85 (correct), 85 % 100.0 = 85.0 (wrong), 85 * 100.0 = 8500.0 (wrong)
-        assert!((confidence - 0.85).abs() < 0.001, "confidence was {}", confidence);
+        assert!(
+            (confidence - 0.85).abs() < 0.001,
+            "confidence was {}",
+            confidence
+        );
     }
 
     #[test]
@@ -1420,7 +1491,10 @@ mod tests {
             rule_id: "SQLI".to_string(),
             rule_index: None,
             level: "error".to_string(),
-            message: SarifMessage { text: "t".to_string(), markdown: None },
+            message: SarifMessage {
+                text: "t".to_string(),
+                markdown: None,
+            },
             locations: vec![],
             fingerprints: None,
             baseline_state: None,
@@ -1430,17 +1504,27 @@ mod tests {
                 mitre_attack: Some(vec!["T1190".to_string()]),
                 cwe: None,
                 owasp: None,
-                principal: None, action: None, resource: None, data_flow: None,
+                principal: None,
+                action: None,
+                resource: None,
+                data_flow: None,
             }),
         };
         let report = SarifReport {
-            schema: "".to_string(), version: "2.1.0".to_string(),
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
             runs: vec![SarifRun {
-                tool: SarifTool { driver: SarifDriver {
-                    name: "P".to_string(), version: "1".to_string(),
-                    information_uri: None, rules: None,
-                }},
-                results: vec![result], artifacts: None, invocation: None,
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "P".to_string(),
+                        version: "1".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results: vec![result],
+                artifacts: None,
+                invocation: None,
             }],
         };
         let md = report.to_markdown();
@@ -1452,30 +1536,57 @@ mod tests {
         // Kills == → != on rule matching
         let rule1 = SarifRule {
             id: "SQLI".to_string(),
-            name: None, short_description: None, full_description: None,
-            help: Some(SarifMessage { text: "Use parameterized queries".to_string(), markdown: None }),
-            properties: None, default_configuration: None,
+            name: None,
+            short_description: None,
+            full_description: None,
+            help: Some(SarifMessage {
+                text: "Use parameterized queries".to_string(),
+                markdown: None,
+            }),
+            properties: None,
+            default_configuration: None,
         };
         let rule2 = SarifRule {
             id: "XSS".to_string(),
-            name: None, short_description: None, full_description: None,
-            help: Some(SarifMessage { text: "Sanitize output".to_string(), markdown: None }),
-            properties: None, default_configuration: None,
+            name: None,
+            short_description: None,
+            full_description: None,
+            help: Some(SarifMessage {
+                text: "Sanitize output".to_string(),
+                markdown: None,
+            }),
+            properties: None,
+            default_configuration: None,
         };
         let result = SarifResult {
             rule_id: "SQLI".to_string(),
-            rule_index: None, level: "error".to_string(),
-            message: SarifMessage { text: "t".to_string(), markdown: None },
-            locations: vec![], fingerprints: None, baseline_state: None, suppressions: None, properties: None,
+            rule_index: None,
+            level: "error".to_string(),
+            message: SarifMessage {
+                text: "t".to_string(),
+                markdown: None,
+            },
+            locations: vec![],
+            fingerprints: None,
+            baseline_state: None,
+            suppressions: None,
+            properties: None,
         };
         let report = SarifReport {
-            schema: "".to_string(), version: "2.1.0".to_string(),
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
             runs: vec![SarifRun {
-                tool: SarifTool { driver: SarifDriver {
-                    name: "P".to_string(), version: "1".to_string(),
-                    information_uri: None, rules: Some(vec![rule1, rule2]),
-                }},
-                results: vec![result], artifacts: None, invocation: None,
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "P".to_string(),
+                        version: "1".to_string(),
+                        information_uri: None,
+                        rules: Some(vec![rule1, rule2]),
+                    },
+                },
+                results: vec![result],
+                artifacts: None,
+                invocation: None,
             }],
         };
         let md = report.to_markdown();
@@ -1488,19 +1599,28 @@ mod tests {
     fn test_summary_markdown_no_error_row_when_zero_errors() {
         // Kills > → >= at error_count > 0
         let report = SarifReport {
-            schema: "".to_string(), version: "2.1.0".to_string(),
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
             runs: vec![SarifRun {
-                tool: SarifTool { driver: SarifDriver {
-                    name: "P".to_string(), version: "1".to_string(),
-                    information_uri: None, rules: None,
-                }},
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "P".to_string(),
+                        version: "1".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
                 results: vec![make_sarif_result("warning", "XSS")],
-                artifacts: None, invocation: None,
+                artifacts: None,
+                invocation: None,
             }],
         };
         let md = report.to_summary_markdown();
         // Only warning, no errors
-        assert!(!md.contains("🔴 Error"), "Should not show Error row when error_count=0");
+        assert!(
+            !md.contains("🔴 Error"),
+            "Should not show Error row when error_count=0"
+        );
         assert!(md.contains("🟠 Warning"));
     }
 }

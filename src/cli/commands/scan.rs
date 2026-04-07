@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::cli::ui::StatusPrinter;
-use crate::prompt::{build_all_surface_prompts, build_orchestrator_prompt, SurfacePrompt};
+use crate::prompt::{SurfacePrompt, build_all_surface_prompts, build_orchestrator_prompt};
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
@@ -54,23 +54,34 @@ pub async fn run_scan_command(
     // Phase 2: Load threat model from per-repo cache
     let project_cache = cache_dir_for(target);
     let threat_model_path = project_cache.join("model.json");
-    let json = std::fs::read_to_string(&threat_model_path)
-        .map_err(|e| anyhow::anyhow!("Failed to read threat model {}: {}. Run `parsentry model {}` first.", threat_model_path.display(), e, target))?;
-    let threat_model: ThreatModel = serde_json::from_str(&json)
-        .map_err(|e| anyhow::anyhow!("Invalid threat model JSON in {}: {}", threat_model_path.display(), e))?;
+    let json = std::fs::read_to_string(&threat_model_path).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to read threat model {}: {}. Run `parsentry model {}` first.",
+            threat_model_path.display(),
+            e,
+            target
+        )
+    })?;
+    let threat_model: ThreatModel = serde_json::from_str(&json).map_err(|e| {
+        anyhow::anyhow!(
+            "Invalid threat model JSON in {}: {}",
+            threat_model_path.display(),
+            e
+        )
+    })?;
     printer.status(
         "Loaded",
-        &format!("threat model with {} surfaces", threat_model.total_surfaces()),
+        &format!(
+            "threat model with {} surfaces",
+            threat_model.total_surfaces()
+        ),
     );
 
     // Phase 3: Generate per-surface prompts
     let output_dir = project_cache.join("reports");
     std::fs::create_dir_all(&output_dir)?;
 
-    let surface_prompts = build_all_surface_prompts(
-        &threat_model,
-        &root_dir,
-    );
+    let surface_prompts = build_all_surface_prompts(&threat_model, &root_dir);
 
     if surface_prompts.is_empty() {
         printer.warning("Scan", "no surfaces had readable source files");
@@ -131,7 +142,9 @@ pub async fn run_scan_command(
 
     // Phase 4: Generate orchestrator prompt only for pending surfaces
     let pending_owned: Vec<SurfacePrompt> = pending.iter().map(|s| (*s).clone()).collect();
-    let orchestrator_content = build_orchestrator_prompt(&pending_owned, &output_dir);
+    let parsentry_bin = std::env::current_exe()?;
+    let orchestrator_content =
+        build_orchestrator_prompt(&pending_owned, &output_dir, target, &parsentry_bin);
     let orchestrator_path = output_dir.join("orchestrator.prompt.md");
     std::fs::write(&orchestrator_path, &orchestrator_content)?;
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));

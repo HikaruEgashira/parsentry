@@ -14,11 +14,11 @@ pub use collector::{ManifestInfo, RepoMetadata};
 pub use file_classifier::FileClassifier;
 pub use file_discovery::FileDiscovery;
 pub use language::Language;
-pub use response::{response_json_schema, Response};
+pub use response::{Response, response_json_schema};
 pub use threat_model::{AttackSurface, ThreatModel};
 pub use threat_model_prompt::{
-    build_threat_model_prompt, parse_threat_model_response, threat_model_schema,
-    THREAT_MODEL_SYSTEM_PROMPT,
+    THREAT_MODEL_SYSTEM_PROMPT, build_threat_model_prompt, parse_threat_model_response,
+    threat_model_schema,
 };
 pub use threat_model_report::render_threat_model_md;
 pub use vuln_type::VulnType;

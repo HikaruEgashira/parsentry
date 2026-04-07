@@ -49,7 +49,10 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
                         .to_string();
                     if seen.insert(rel.clone()) {
                         if let Ok(contents) = std::fs::read_to_string(&full_path) {
-                            sources.push(SourceFile { rel_path: rel, contents });
+                            sources.push(SourceFile {
+                                rel_path: rel,
+                                contents,
+                            });
                         }
                     }
                 }
@@ -70,7 +73,10 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
                         .to_string();
                     if seen.insert(rel.clone()) {
                         if let Ok(contents) = std::fs::read_to_string(&file_path) {
-                            sources.push(SourceFile { rel_path: rel, contents });
+                            sources.push(SourceFile {
+                                rel_path: rel,
+                                contents,
+                            });
                         }
                     }
                 }
@@ -86,10 +92,7 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
 ///
 /// Returns `None` when no readable source files overlap with the surface's
 /// `locations`.
-pub fn build_surface_prompt(
-    surface: &AttackSurface,
-    root_dir: &Path,
-) -> Option<SurfacePrompt> {
+pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<SurfacePrompt> {
     let sources = resolve_source_files(surface, root_dir);
 
     if sources.is_empty() {
@@ -105,6 +108,9 @@ pub fn build_surface_prompt(
         cache_input.push('\0');
     }
     let cache_key = hex_sha256(&cache_input);
+    let repository_root = root_dir
+        .canonicalize()
+        .unwrap_or_else(|_| root_dir.to_path_buf());
 
     let mut prompt = String::new();
 
@@ -119,16 +125,32 @@ pub fn build_surface_prompt(
     prompt.push_str(&format!("- Identifier: {}\n", surface.identifier));
     prompt.push_str(&format!("- Description: {}\n", surface.description));
     prompt.push_str(&format!(
+        "- Repository Root: {}\n",
+        repository_root.display()
+    ));
+    prompt.push_str(&format!(
         "- Locations: {}\n\n",
         surface.locations.join(", ")
     ));
 
     prompt.push_str("Output Instructions\n\n");
-    prompt.push_str("Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.\n");
+    prompt.push_str(
+        "Resolve every relative path in Locations against Repository Root. \
+         Read the relevant files using your file-reading tool, then output valid \
+         SARIF v2.1.0 JSON that is compatible with `parsentry merge`.\n",
+    );
+    prompt.push_str("The SARIF MUST include:\n");
+    prompt.push_str("- top-level `$schema`\n");
+    prompt.push_str("- top-level `version` set to `2.1.0`\n");
+    prompt.push_str("- `runs[0].tool.driver.name`\n");
+    prompt.push_str("- `runs[0].tool.driver.version`\n");
     prompt.push_str("For each finding, provide:\n");
-    prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
-    prompt.push_str("- level: error/warning/note\n");
-    prompt.push_str("- confidence: 0.0-1.0\n");
+    prompt.push_str("- `ruleId`: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
+    prompt.push_str("- `level`: error/warning/note\n");
+    prompt.push_str("- `message.text`\n");
+    prompt.push_str("- `locations[].physicalLocation.artifactLocation.uri`\n");
+    prompt.push_str("- `locations[].physicalLocation.region.startLine` when known\n");
+    prompt.push_str("- `properties.confidence`: 0.0-1.0\n");
 
     Some(SurfacePrompt {
         surface_id: surface.id.clone(),
@@ -152,49 +174,88 @@ pub fn build_all_surface_prompts(
 }
 
 /// Build an orchestrator prompt that dispatches all surface analyses
-/// as parallel subagents within a single Claude process.
-///
-/// The orchestrator does NOT read prompt files itself — it passes each
-/// prompt file path to a subagent, which reads and executes the prompt.
+/// in an agent-neutral way.
 pub fn build_orchestrator_prompt(
     surface_prompts: &[SurfacePrompt],
     output_dir: &Path,
+    target: &str,
+    parsentry_bin: &Path,
 ) -> String {
     let mut prompt = String::new();
 
     prompt.push_str(
-        "Launch ALL of the following Agent tool calls in a SINGLE message for maximum parallelism. \
-         Do NOT use `run_in_background: true` — the orchestrator must wait for all agents to complete \
-         before running the post-analysis step. Use `mode: \"dontAsk\"`.\n\n",
+        "You are a security analysis orchestrator. Dispatch one worker per surface in \
+         parallel using your environment's built-in subagent or agent capability.\n\n",
     );
+    prompt.push_str("Rules\n\n");
+    prompt.push_str("1. Do NOT perform the per-surface analysis yourself unless a worker fails.\n");
+    prompt.push_str(
+        "2. Launch all workers in parallel. If your environment exposes an explicit \
+         Agent tool, use it. Otherwise use the environment's equivalent subagent capability.\n",
+    );
+    prompt.push_str(
+        "3. Give each worker exactly one prompt file and tell it to execute the \
+         instructions in that file.\n",
+    );
+    prompt.push_str(
+        "4. Each worker must write SARIF JSON to the output path specified inside \
+         its assigned prompt file.\n",
+    );
+    prompt.push_str("5. Wait for every worker to finish before starting post-processing.\n");
+    prompt.push_str("\nWorker Assignments\n\n");
 
     for sp in surface_prompts {
         let prompt_path = output_dir.join(&sp.surface_id).join("prompt.md");
         prompt.push_str(&format!(
-            "- Agent(description: \"Analyze {id}\", prompt: \"Read {path} and execute the instructions in it.\", \
-             mode: \"dontAsk\")\n",
+            "- Worker `{id}`: read `{path}` and execute the instructions in it.\n",
             id = sp.surface_id,
             path = prompt_path.display(),
         ));
     }
 
+    let target_q = shell_quote(target);
+    let parsentry_bin_q = shell_quote(&parsentry_bin.display().to_string());
+    let project_cache = output_dir
+        .parent()
+        .expect("reports dir must have a project cache parent");
+    let cache_base = project_cache
+        .parent()
+        .expect("project cache dir must have a cache base parent");
     let merged_sarif = output_dir.join("merged.sarif.json");
     let report_md = output_dir.join("report.md");
+    let cache_base_q = shell_quote(&cache_base.display().to_string());
+    let merged_q = shell_quote(&merged_sarif.display().to_string());
+    let report_q = shell_quote(&report_md.display().to_string());
     prompt.push_str(&format!(
-        "\nAfter ALL agents complete, run:\n\
+        "\nAfter ALL workers complete, run exactly:\n\
          ```bash\n\
-         parsentry merge {dir} -o {merged}\n\
+         tmp_merged=$(mktemp /tmp/parsentry-merged.XXXXXX.json)\n\
+         PARSENTRY_CACHE_DIR={cache_base} {parsentry_bin} merge {target} > \"$tmp_merged\"\n\
+         test -s \"$tmp_merged\"\n\
+         mv \"$tmp_merged\" {merged}\n\
          ```\n\
          Then read {merged} and write a security report to {report} with:\n\
          - Executive summary (finding counts by severity)\n\
          - Per-finding details (rule ID, severity, confidence, location, description)\n\
-         - Remediation recommendations\n",
-        dir = output_dir.display(),
-        merged = merged_sarif.display(),
+         - Remediation recommendations\n\
+         The task is not complete until `{report}` exists and is non-empty. \
+         Verify that with:\n\
+         ```bash\n\
+         test -s {report_q}\n\
+         ```\n",
+        cache_base = cache_base_q,
+        parsentry_bin = parsentry_bin_q,
+        target = target_q,
+        merged = merged_q,
         report = report_md.display(),
+        report_q = report_q,
     ));
 
     prompt
+}
+
+fn shell_quote(input: &str) -> String {
+    format!("'{}'", input.replace('\'', "'\"'\"'"))
 }
 
 fn hex_sha256(data: &str) -> String {
@@ -258,6 +319,50 @@ mod tests {
         // Source code not inlined, but prompt should exist
         assert!(sp.prompt.contains("S-1"));
         assert!(!sp.prompt.contains("os.system(cmd)"));
+    }
+
+    #[test]
+    fn surface_prompt_mentions_repository_root_and_merge_compatible_sarif() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        let src_dir = root.join("src");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("app.py"), "print('hi')\n").unwrap();
+
+        let surface = make_surface("S-1", vec!["src/app.py"]);
+        let sp = build_surface_prompt(&surface, root).unwrap();
+
+        assert!(sp.prompt.contains("Repository Root"));
+        assert!(sp.prompt.contains("parsentry merge"));
+        assert!(sp.prompt.contains("tool.driver.version"));
+        assert!(sp.prompt.contains("ruleId"));
+    }
+
+    #[test]
+    fn orchestrator_prompt_is_agent_neutral_and_uses_safe_merge_flow() {
+        let prompts = vec![SurfacePrompt {
+            surface_id: "SURFACE-001".to_string(),
+            prompt: "irrelevant".to_string(),
+            cache_key: "abc".to_string(),
+        }];
+        let temp = TempDir::new().unwrap();
+
+        let prompt = build_orchestrator_prompt(
+            &prompts,
+            temp.path(),
+            "/tmp/repo with spaces",
+            Path::new("/tmp/bin/parsentry"),
+        );
+
+        assert!(prompt.contains("subagent or agent capability"));
+        assert!(prompt.contains("Worker `SURFACE-001`"));
+        assert!(!prompt.contains("Agent("));
+        assert!(prompt.contains("PARSENTRY_CACHE_DIR="));
+        assert!(prompt.contains("'/tmp/bin/parsentry' merge '/tmp/repo with spaces'"));
+        assert!(prompt.contains("tmp_merged=$(mktemp"));
+        assert!(prompt.contains("test -s \"$tmp_merged\""));
+        assert!(prompt.contains("The task is not complete until"));
+        assert!(prompt.contains("test -s '"));
     }
 
     #[test]

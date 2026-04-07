@@ -26,12 +26,16 @@ pub mod colors {
 
 /// Check if colors should be enabled
 pub fn colors_enabled() -> bool {
-    // Respect NO_COLOR and TERM conventions
+    // Respect NO_COLOR env var (https://no-color.org/)
     if std::env::var("NO_COLOR").is_ok() {
         return false;
     }
     if std::env::var("TERM").map(|t| t == "dumb").unwrap_or(false) {
         return false;
+    }
+    // Respect FORCE_COLOR env var (like docker compose / chalk)
+    if std::env::var("FORCE_COLOR").is_ok() {
+        return true;
     }
     // Check if stderr is a terminal
     std::io::stderr().is_terminal()
@@ -266,7 +270,9 @@ impl SummaryTable {
             } else {
                 eprintln!(
                     "  {:file_width$}  {:>5}%  {}",
-                    file_display, row.confidence, vulns,
+                    file_display,
+                    row.confidence,
+                    vulns,
                     file_width = file_width
                 );
             }
@@ -291,7 +297,9 @@ pub mod progress {
         let pb = ProgressBar::new(total);
         pb.set_style(
             ProgressStyle::default_bar()
-                .template("{spinner:.cyan} [{elapsed_precise}] {bar:30.cyan/blue} {pos}/{len} {msg:.dim}")
+                .template(
+                    "{spinner:.cyan} [{elapsed_precise}] {bar:30.cyan/blue} {pos}/{len} {msg:.dim}",
+                )
                 .unwrap()
                 .progress_chars("━━╸")
                 .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),

@@ -56,7 +56,9 @@ pub fn to_markdown(response: &Response) -> String {
     // Source code sections
     if let Some(matched_code) = &response.matched_source_code {
         if !matched_code.trim().is_empty() {
-            let lang = response.file_path.as_ref()
+            let lang = response
+                .file_path
+                .as_ref()
                 .and_then(|p| p.split('.').last())
                 .map(|ext| match ext {
                     "rb" => "ruby",
@@ -137,9 +139,7 @@ mod tests {
     fn test_title_with_file_and_pattern() {
         let r = make_full_response();
         let md = to_markdown(&r);
-        assert!(
-            md.starts_with("# Security Analysis: routes.py - SQL query construction\n")
-        );
+        assert!(md.starts_with("# Security Analysis: routes.py - SQL query construction\n"));
     }
 
     #[test]

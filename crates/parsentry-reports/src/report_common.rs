@@ -56,7 +56,10 @@ pub fn load_surface_reports(reports_dir: &Path, min_level: &str) -> Result<Vec<S
             .filter(|r| level_passes(&r.level, min_level))
             .collect();
 
-        surfaces.push(SurfaceReport { surface_name, results });
+        surfaces.push(SurfaceReport {
+            surface_name,
+            results,
+        });
     }
 
     Ok(surfaces)
@@ -99,7 +102,12 @@ pub fn build_title(result: &SarifResult) -> String {
         .map(|l| l.physical_location.artifact_location.uri.as_str())
         .unwrap_or("unknown");
     let file = location.split('/').next_back().unwrap_or(location);
-    format!("[{}] {} in {}", result.level.to_uppercase(), result.rule_id, file)
+    format!(
+        "[{}] {} in {}",
+        result.level.to_uppercase(),
+        result.rule_id,
+        file
+    )
 }
 
 /// Markdown body shared by GitHub Issues, Jira, and Linear.

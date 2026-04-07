@@ -2,7 +2,9 @@ use anyhow::Result;
 
 use crate::cli::ui::StatusPrinter;
 
-use super::common::{build_threat_model_cli_prompt, cache_dir_for, locate_repository, repo_name_from_target};
+use super::common::{
+    build_threat_model_cli_prompt, cache_dir_for, locate_repository, repo_name_from_target,
+};
 
 use parsentry_core::RepoMetadata;
 
@@ -26,6 +28,12 @@ pub async fn run_model_command(target: &str) -> Result<()> {
     let prompt = build_threat_model_cli_prompt(&repo_metadata, &output);
     print!("{}", prompt);
 
-    printer.success("Prompt", &format!("threat model prompt emitted (output → {})", output.display()));
+    printer.success(
+        "Prompt",
+        &format!(
+            "threat model prompt emitted (output → {})",
+            output.display()
+        ),
+    );
     Ok(())
 }

@@ -6,8 +6,7 @@ use crate::cli::ui::StatusPrinter;
 use crate::github::clone_repo;
 
 use parsentry_core::{
-    RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT,
-    build_threat_model_prompt, threat_model_schema,
+    RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT, build_threat_model_prompt, threat_model_schema,
 };
 
 /// Base cache directory. Respects PARSENTRY_CACHE_DIR, falls back to XDG.

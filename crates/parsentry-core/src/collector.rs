@@ -1,7 +1,7 @@
-use anyhow::Result;
 use crate::file_classifier::FileClassifier;
 use crate::file_discovery::FileDiscovery;
 use crate::language::Language;
+use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -171,9 +171,7 @@ fn build_tree_recursive(
         return Ok(());
     }
 
-    let mut entries: Vec<_> = std::fs::read_dir(dir)?
-        .filter_map(|e| e.ok())
-        .collect();
+    let mut entries: Vec<_> = std::fs::read_dir(dir)?.filter_map(|e| e.ok()).collect();
     entries.sort_by_key(|e| e.file_name());
 
     for entry in entries {
@@ -254,7 +252,11 @@ mod tests {
         let root = tmp.path();
 
         fs::create_dir_all(root.join("src")).unwrap();
-        fs::write(root.join("src/main.py"), "import flask\napp = flask.Flask(__name__)").unwrap();
+        fs::write(
+            root.join("src/main.py"),
+            "import flask\napp = flask.Flask(__name__)",
+        )
+        .unwrap();
         fs::write(root.join("requirements.txt"), "flask==3.0\nsqlalchemy==2.0").unwrap();
 
         let meta = RepoMetadata::collect(root).unwrap();
@@ -286,7 +288,16 @@ mod tests {
     fn test_build_directory_tree_skips_hidden_and_special_dirs() {
         let tmp = TempDir::new().unwrap();
         let root = tmp.path();
-        for dir in &[".hidden_dir", "node_modules", "target", "__pycache__", "venv", "vendor", "dist", "build"] {
+        for dir in &[
+            ".hidden_dir",
+            "node_modules",
+            "target",
+            "__pycache__",
+            "venv",
+            "vendor",
+            "dist",
+            "build",
+        ] {
             fs::create_dir_all(root.join(dir)).unwrap();
             fs::write(root.join(format!("{}/f.txt", dir)), "x").unwrap();
         }
@@ -326,7 +337,10 @@ mod tests {
         let tree = build_directory_tree(root, 3).unwrap();
         assert!(tree.contains("top.txt"));
         assert!(tree.contains("level1.txt"));
-        assert!(!tree.contains("level2.txt"), "depth 2 file should be hidden");
+        assert!(
+            !tree.contains("level2.txt"),
+            "depth 2 file should be hidden"
+        );
     }
 
     #[test]
@@ -337,7 +351,11 @@ mod tests {
         fs::write(root.join("src/main.py"), "").unwrap();
         fs::write(root.join("src/helper.py"), "").unwrap();
         fs::write(root.join("main.tf"), "").unwrap();
-        let files = vec![root.join("src/main.py"), root.join("src/helper.py"), root.join("main.tf")];
+        let files = vec![
+            root.join("src/main.py"),
+            root.join("src/helper.py"),
+            root.join("main.tf"),
+        ];
         let eps = detect_entry_points(root, &files);
         assert!(eps.iter().any(|e| e.contains("main.py")));
         assert!(eps.iter().any(|e| e.contains("main.tf")));

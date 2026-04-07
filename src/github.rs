@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use octocrab::Octocrab;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -30,7 +30,9 @@ fn get_verified_git_path() -> Option<String> {
         .ok()
         .and_then(|o| {
             if o.status.success() {
-                String::from_utf8(o.stdout).ok().map(|s| s.trim().to_string())
+                String::from_utf8(o.stdout)
+                    .ok()
+                    .map(|s| s.trim().to_string())
             } else {
                 None
             }
@@ -86,15 +88,16 @@ impl GitHubSearchClient {
         let mut builder = Octocrab::builder();
 
         // Try to get token from git credential helper first, then fall back to env var
-        if let Some(token) = Self::get_token_from_credential_helper()
-            .or_else(|| env::var("GITHUB_TOKEN").ok())
+        if let Some(token) =
+            Self::get_token_from_credential_helper().or_else(|| env::var("GITHUB_TOKEN").ok())
         {
             if !token.is_empty() {
                 builder = builder.personal_token(token);
             }
         }
 
-        let client = builder.build()
+        let client = builder
+            .build()
             .map_err(|e| anyhow!("Failed to create GitHub client: {}", e))?;
 
         Ok(Self { client })
@@ -142,15 +145,27 @@ impl GitHubSearchClient {
     ///
     /// # Returns
     /// Vector of SearchResult containing repository information
-    pub async fn search_repositories(&self, query: &str, max_results: usize) -> Result<Vec<SearchResult>> {
+    pub async fn search_repositories(
+        &self,
+        query: &str,
+        max_results: usize,
+    ) -> Result<Vec<SearchResult>> {
         let mut results = Vec::new();
         let mut page = 1u32;
         let per_page = 100u8; // GitHub API max per page
 
         while results.len() < max_results {
-            let response: RepositorySearchResponse = self.client
-                .get(format!("/search/repositories?q={}&per_page={}&page={}",
-                    urlencoding::encode(query), per_page, page), None::<&()>)
+            let response: RepositorySearchResponse = self
+                .client
+                .get(
+                    format!(
+                        "/search/repositories?q={}&per_page={}&page={}",
+                        urlencoding::encode(query),
+                        per_page,
+                        page
+                    ),
+                    None::<&()>,
+                )
                 .await
                 .map_err(|e| anyhow!("GitHub API search failed: {}", e))?;
 
@@ -190,17 +205,26 @@ impl GitHubSearchClient {
     ///
     /// # Returns
     /// Vector of CodeSearchResult containing code match information
-    pub async fn search_code(&self, query: &str, max_results: usize) -> Result<Vec<CodeSearchResult>> {
+    pub async fn search_code(
+        &self,
+        query: &str,
+        max_results: usize,
+    ) -> Result<Vec<CodeSearchResult>> {
         let mut results = Vec::new();
         let mut page = 1u32;
         let per_page = 100u8;
 
         while results.len() < max_results {
-            let response = self.client
+            let response = self
+                .client
                 .get::<CodeSearchResponse, _, _>(
-                    format!("/search/code?q={}&per_page={}&page={}",
-                        urlencoding::encode(query), per_page, page),
-                    None::<&()>
+                    format!(
+                        "/search/code?q={}&per_page={}&page={}",
+                        urlencoding::encode(query),
+                        per_page,
+                        page
+                    ),
+                    None::<&()>,
                 )
                 .await
                 .map_err(|e| anyhow!("GitHub code search failed: {}", e))?;
@@ -310,9 +334,8 @@ pub async fn run_gh_issue_command(
     min_level: &str,
 ) -> Result<()> {
     use parsentry_reports::report_common::{
-        build_markdown_body, build_title, extract_fingerprint,
+        SURFACE_MARKER, build_markdown_body, build_title, extract_fingerprint,
         load_surface_reports, parse_fingerprint_from_body, parse_surface_from_body,
-        SURFACE_MARKER,
     };
 
     let parts: Vec<&str> = repo.splitn(2, '/').collect();
@@ -329,7 +352,9 @@ pub async fn run_gh_issue_command(
             builder = builder.personal_token(token);
         }
     }
-    let client = builder.build().map_err(|e| anyhow!("Failed to create GitHub client: {}", e))?;
+    let client = builder
+        .build()
+        .map_err(|e| anyhow!("Failed to create GitHub client: {}", e))?;
 
     let surfaces = load_surface_reports(reports_dir, min_level)?;
     if surfaces.is_empty() {
@@ -355,7 +380,9 @@ pub async fn run_gh_issue_command(
             .await
             .map_err(|e| anyhow!("Failed to list issues: {}", e))?;
         let items = issues.items;
-        if items.is_empty() { break; }
+        if items.is_empty() {
+            break;
+        }
         for issue in &items {
             if let Some(body) = &issue.body {
                 if let Some(fp) = parse_fingerprint_from_body(body) {
@@ -366,12 +393,15 @@ pub async fn run_gh_issue_command(
                 }
             }
         }
-        if items.len() < 100 { break; }
+        if items.len() < 100 {
+            break;
+        }
         page += 1;
     }
     eprintln!(
         "Found {} existing child issue(s) and {} surface issue(s) in {owner}/{repo_name}.",
-        fp_map.len(), surface_map.len()
+        fp_map.len(),
+        surface_map.len()
     );
 
     let (mut created, mut skipped, mut closed) = (0usize, 0usize, 0usize);
@@ -398,7 +428,10 @@ pub async fn run_gh_issue_command(
                 .send()
                 .await
                 .map_err(|e| anyhow!("Failed to create surface issue: {e}"))?;
-            eprintln!("Created surface issue #{}: {}", issue.number, issue.html_url);
+            eprintln!(
+                "Created surface issue #{}: {}",
+                issue.number, issue.html_url
+            );
             surface_map.insert(surface.surface_name.clone(), issue.number);
             issue.number
         };
@@ -412,7 +445,10 @@ pub async fn run_gh_issue_command(
             if result.baseline_state.as_deref() == Some("absent") {
                 if let Some(&num) = fp.as_ref().and_then(|f| fp_map.get(f)) {
                     if dry_run {
-                        eprintln!("[dry-run] Would close issue #{num} (absent: {})", result.rule_id);
+                        eprintln!(
+                            "[dry-run] Would close issue #{num} (absent: {})",
+                            result.rule_id
+                        );
                     } else {
                         client
                             .issues(owner, repo_name)
@@ -427,8 +463,16 @@ pub async fn run_gh_issue_command(
                         "[{}] {} in {}",
                         result.level.to_uppercase(),
                         result.rule_id,
-                        result.locations.first()
-                            .map(|l| l.physical_location.artifact_location.uri.split('/').next_back().unwrap_or("unknown"))
+                        result
+                            .locations
+                            .first()
+                            .map(|l| l
+                                .physical_location
+                                .artifact_location
+                                .uri
+                                .split('/')
+                                .next_back()
+                                .unwrap_or("unknown"))
                             .unwrap_or("unknown")
                     );
                     tasklist_items.push((num, label, true));
@@ -448,8 +492,16 @@ pub async fn run_gh_issue_command(
                         "[{}] {} in {}",
                         result.level.to_uppercase(),
                         result.rule_id,
-                        result.locations.first()
-                            .map(|l| l.physical_location.artifact_location.uri.split('/').next_back().unwrap_or("unknown"))
+                        result
+                            .locations
+                            .first()
+                            .map(|l| l
+                                .physical_location
+                                .artifact_location
+                                .uri
+                                .split('/')
+                                .next_back()
+                                .unwrap_or("unknown"))
                             .unwrap_or("unknown")
                     );
                     tasklist_items.push((num, label, false));
@@ -481,8 +533,16 @@ pub async fn run_gh_issue_command(
                     "[{}] {} in {}",
                     result.level.to_uppercase(),
                     result.rule_id,
-                    result.locations.first()
-                        .map(|l| l.physical_location.artifact_location.uri.split('/').next_back().unwrap_or("unknown"))
+                    result
+                        .locations
+                        .first()
+                        .map(|l| l
+                            .physical_location
+                            .artifact_location
+                            .uri
+                            .split('/')
+                            .next_back()
+                            .unwrap_or("unknown"))
                         .unwrap_or("unknown")
                 );
                 tasklist_items.push((issue.number, label, false));
@@ -527,7 +587,10 @@ mod tests {
     #[ignore] // Requires GITHUB_TOKEN and network access
     async fn test_search_repositories() {
         let client = GitHubSearchClient::new().unwrap();
-        let results = client.search_repositories("language:rust stars:>1000", 5).await.unwrap();
+        let results = client
+            .search_repositories("language:rust stars:>1000", 5)
+            .await
+            .unwrap();
 
         assert!(!results.is_empty());
         assert!(results.len() <= 5);
@@ -543,7 +606,10 @@ mod tests {
     #[ignore] // Requires GITHUB_TOKEN and network access
     async fn test_search_code() {
         let client = GitHubSearchClient::new().unwrap();
-        let results = client.search_code("language:python path:*.py flask", 5).await.unwrap();
+        let results = client
+            .search_code("language:python path:*.py flask", 5)
+            .await
+            .unwrap();
 
         // Code search might return no results depending on the query
         if !results.is_empty() {

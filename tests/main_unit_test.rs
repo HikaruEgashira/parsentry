@@ -74,8 +74,16 @@ fn test_analysis_summary_creation() {
     };
 
     // Add results to summary
-    summary.add_result(PathBuf::from("/test/file1.py"), response1, "file1.py.md".to_string());
-    summary.add_result(PathBuf::from("/test/file2.py"), response2, "file2.py.md".to_string());
+    summary.add_result(
+        PathBuf::from("/test/file1.py"),
+        response1,
+        "file1.py.md".to_string(),
+    );
+    summary.add_result(
+        PathBuf::from("/test/file2.py"),
+        response2,
+        "file2.py.md".to_string(),
+    );
 
     assert_eq!(summary.results.len(), 2);
     assert_eq!(summary.results[0].response.confidence_score, 8);
@@ -105,8 +113,16 @@ fn test_analysis_summary_filtering_by_confidence() {
         ..Default::default()
     };
 
-    summary.add_result(PathBuf::from("/test/high.py"), high_confidence, "high.py.md".to_string());
-    summary.add_result(PathBuf::from("/test/low.py"), low_confidence, "low.py.md".to_string());
+    summary.add_result(
+        PathBuf::from("/test/high.py"),
+        high_confidence,
+        "high.py.md".to_string(),
+    );
+    summary.add_result(
+        PathBuf::from("/test/low.py"),
+        low_confidence,
+        "low.py.md".to_string(),
+    );
 
     // Filter by minimum confidence 5
     let filtered = summary.filter_by_min_confidence(5);
@@ -146,9 +162,21 @@ fn test_analysis_summary_filtering_by_vuln_types() {
         ..Default::default()
     };
 
-    summary.add_result(PathBuf::from("/test/rce.py"), rce_response, "rce.py.md".to_string());
-    summary.add_result(PathBuf::from("/test/sqli.py"), sqli_response, "sqli.py.md".to_string());
-    summary.add_result(PathBuf::from("/test/xss.py"), xss_response, "xss.py.md".to_string());
+    summary.add_result(
+        PathBuf::from("/test/rce.py"),
+        rce_response,
+        "rce.py.md".to_string(),
+    );
+    summary.add_result(
+        PathBuf::from("/test/sqli.py"),
+        sqli_response,
+        "sqli.py.md".to_string(),
+    );
+    summary.add_result(
+        PathBuf::from("/test/xss.py"),
+        xss_response,
+        "xss.py.md".to_string(),
+    );
 
     // Filter by specific vulnerability types
     let filter_types = vec![VulnType::RCE, VulnType::SQLI];

@@ -7,7 +7,7 @@ use tempfile::tempdir;
 
 /// Spring Boot マイクロサービス パフォーマンスベンチマーク
 /// Issue #121: PERF: Create Java Spring Boot microservices performance benchmark
-/// 
+///
 /// Spring Boot マイクロサービス環境での脆弱性解析パフォーマンスを測定し、
 /// 大規模プロジェクト構造でのスケーラビリティと検出精度を検証する
 
@@ -752,41 +752,48 @@ public class WebConfig implements WebMvcConfigurer {
 
 async fn run_spring_boot_performance_benchmark(model: &str) -> Result<SpringBootBenchmarkResult> {
     let start_time = Instant::now();
-    
+
     // Generate Spring Boot microservices code
     let gateway_service = generate_spring_boot_gateway_service();
     let user_service = generate_spring_boot_user_service();
     let order_service = generate_spring_boot_order_service();
-    
+
     // Combine all microservices
-    let full_code = format!("{}\n\n{}\n\n{}", gateway_service, user_service, order_service);
+    let full_code = format!(
+        "{}\n\n{}\n\n{}",
+        gateway_service, user_service, order_service
+    );
     let lines_analyzed = full_code.lines().count();
-    
+
     // Count classes and services
-    let classes_count = full_code.matches("class ").count() + full_code.matches("interface ").count();
+    let classes_count =
+        full_code.matches("class ").count() + full_code.matches("interface ").count();
     let microservices_count = 3; // Gateway, User, Order services
-    
+
     // Create temporary file
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("spring_boot_microservices.java");
     std::fs::write(&test_file, &full_code)?;
-    
+
     println!("📊 Spring Boot Microservices Performance Benchmark");
     println!("   ├─ Generated code: {} lines", lines_analyzed);
     println!("   ├─ File size: {} KB", full_code.len() / 1024);
     println!("   ├─ Classes/Interfaces: {}", classes_count);
     println!("   ├─ Microservices: {}", microservices_count);
     println!("   └─ Analysis target: Spring Boot microservices architecture");
-    
+
     // Parse and build context
     let parse_start = Instant::now();
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let context = parser.build_context_from_file(&test_file)?;
     let parse_duration = parse_start.elapsed();
-    
-    println!("   ├─ Parsing time: {:.2} seconds", parse_duration.as_secs_f64());
-    
+
+    println!(
+        "   ├─ Parsing time: {:.2} seconds",
+        parse_duration.as_secs_f64()
+    );
+
     // Analyze file
     let analysis_start = Instant::now();
     let response = analyze_file(
@@ -800,14 +807,16 @@ async fn run_spring_boot_performance_benchmark(model: &str) -> Result<SpringBoot
         &None,
         None,
         &LocaleLanguage::Japanese,
-    ).await?;
+    )
+    .await?;
     let analysis_duration = analysis_start.elapsed();
-    
+
     let total_duration = start_time.elapsed();
     let analysis_speed = lines_analyzed as f64 / total_duration.as_secs_f64();
-    
+
     // Calculate scalability score based on complexity handling
-    let complexity_factor = (classes_count as f64 * microservices_count as f64) / lines_analyzed as f64;
+    let complexity_factor =
+        (classes_count as f64 * microservices_count as f64) / lines_analyzed as f64;
     let scalability_score = if analysis_speed > 40.0 && complexity_factor > 0.1 {
         100.0
     } else if analysis_speed > 30.0 {
@@ -817,25 +826,41 @@ async fn run_spring_boot_performance_benchmark(model: &str) -> Result<SpringBoot
     } else {
         40.0
     };
-    
+
     // Performance targets for Spring Boot microservices
     let target_max_time_ms = 360_000; // 6 minutes (complex enterprise code)
     let target_min_speed = 30.0; // 30 lines per second (lower due to complexity)
     let target_min_vulnerabilities = 30; // Should detect at least 30 vulnerabilities
     let target_min_scalability = 60.0; // Scalability score
-    
-    let performance_target_met = total_duration.as_millis() <= target_max_time_ms 
+
+    let performance_target_met = total_duration.as_millis() <= target_max_time_ms
         && analysis_speed >= target_min_speed
         && response.vulnerability_types.len() >= target_min_vulnerabilities
         && scalability_score >= target_min_scalability;
-    
-    println!("   ├─ Analysis time: {:.2} seconds", analysis_duration.as_secs_f64());
-    println!("   ├─ Total time: {:.2} seconds", total_duration.as_secs_f64());
+
+    println!(
+        "   ├─ Analysis time: {:.2} seconds",
+        analysis_duration.as_secs_f64()
+    );
+    println!(
+        "   ├─ Total time: {:.2} seconds",
+        total_duration.as_secs_f64()
+    );
     println!("   ├─ Analysis speed: {:.1} lines/second", analysis_speed);
-    println!("   ├─ Vulnerabilities detected: {}", response.vulnerability_types.len());
+    println!(
+        "   ├─ Vulnerabilities detected: {}",
+        response.vulnerability_types.len()
+    );
     println!("   ├─ Scalability score: {:.1}%", scalability_score);
-    println!("   └─ Performance target: {}", if performance_target_met { "✅ MET" } else { "❌ FAILED" });
-    
+    println!(
+        "   └─ Performance target: {}",
+        if performance_target_met {
+            "✅ MET"
+        } else {
+            "❌ FAILED"
+        }
+    );
+
     Ok(SpringBootBenchmarkResult {
         execution_time_ms: total_duration.as_millis(),
         lines_analyzed,
@@ -855,63 +880,85 @@ async fn test_spring_boot_microservices_performance() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping Spring Boot performance benchmark test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     println!("\n☕ Spring Boot Microservices Performance Benchmark");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Testing performance with Spring Boot microservices architecture");
     println!("Target: Analyze complex enterprise patterns in < 6 minutes with 30+ vulnerabilities");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let result = run_spring_boot_performance_benchmark(model).await?;
-    
+
     println!("\n📈 Performance Results:");
-    println!("   ├─ Execution Time: {:.2} seconds ({} ms)", 
-            result.execution_time_ms as f64 / 1000.0, result.execution_time_ms);
+    println!(
+        "   ├─ Execution Time: {:.2} seconds ({} ms)",
+        result.execution_time_ms as f64 / 1000.0,
+        result.execution_time_ms
+    );
     println!("   ├─ Lines Analyzed: {} lines", result.lines_analyzed);
-    println!("   ├─ Classes Analyzed: {} classes/interfaces", result.classes_analyzed);
-    println!("   ├─ Microservices: {} services", result.microservices_count);
-    println!("   ├─ Analysis Speed: {:.1} lines/second", result.analysis_speed);
-    println!("   ├─ Vulnerabilities: {} detected", result.vulnerabilities_detected);
+    println!(
+        "   ├─ Classes Analyzed: {} classes/interfaces",
+        result.classes_analyzed
+    );
+    println!(
+        "   ├─ Microservices: {} services",
+        result.microservices_count
+    );
+    println!(
+        "   ├─ Analysis Speed: {:.1} lines/second",
+        result.analysis_speed
+    );
+    println!(
+        "   ├─ Vulnerabilities: {} detected",
+        result.vulnerabilities_detected
+    );
     println!("   ├─ Scalability Score: {:.1}%", result.scalability_score);
-    println!("   └─ Overall Performance: {}", if result.performance_target_met { "✅ PASSED" } else { "❌ FAILED" });
-    
+    println!(
+        "   └─ Overall Performance: {}",
+        if result.performance_target_met {
+            "✅ PASSED"
+        } else {
+            "❌ FAILED"
+        }
+    );
+
     // Detailed performance assertions
     assert!(
         result.execution_time_ms <= 360_000,
         "Analysis took too long: {} ms (limit: 360,000 ms / 6 minutes)",
         result.execution_time_ms
     );
-    
+
     assert!(
         result.analysis_speed >= 30.0,
         "Analysis too slow: {:.1} lines/second (minimum: 30.0 lines/second)",
         result.analysis_speed
     );
-    
+
     assert!(
         result.vulnerabilities_detected >= 30,
         "Too few vulnerabilities detected: {} (minimum: 30)",
         result.vulnerabilities_detected
     );
-    
+
     assert!(
         result.scalability_score >= 60.0,
         "Scalability score too low: {:.1}% (minimum: 60%)",
         result.scalability_score
     );
-    
+
     assert!(
         result.classes_analyzed >= 10,
         "Should analyze multiple classes: {} (minimum: 10)",
         result.classes_analyzed
     );
-    
+
     println!("\n🎉 Spring Boot Microservices Performance Benchmark PASSED!");
     println!("   The scanner successfully analyzed complex microservices architecture");
     println!("   within performance targets while maintaining high detection accuracy.");
-    
+
     Ok(())
 }
 
@@ -919,10 +966,11 @@ async fn test_spring_boot_microservices_performance() -> Result<()> {
 async fn test_spring_boot_annotation_performance() -> Result<()> {
     println!("\n📝 Spring Boot Annotation Processing Performance Test (API-free)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Generate Spring Boot code with heavy annotation usage
     let mut annotation_code = String::new();
-    annotation_code.push_str(r#"
+    annotation_code.push_str(
+        r#"
 package com.example.annotations;
 
 import org.springframework.web.bind.annotation.*;
@@ -932,8 +980,9 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.validation.Valid;
 import javax.validation.constraints.*;
 
-"#);
-    
+"#,
+    );
+
     for i in 0..25 {
         annotation_code.push_str(&format!(r#"
 @RestController
@@ -1008,39 +1057,39 @@ public interface AnnotationRepository{} extends JpaRepository<AnnotationEntity{}
 
 "#, i, i, i, i, i, i, i, i, i));
     }
-    
+
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("spring_annotations.java");
     std::fs::write(&test_file, &annotation_code)?;
-    
+
     let start_time = Instant::now();
-    
+
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let _context = parser.build_context_from_file(&test_file)?;
-    
+
     let duration = start_time.elapsed();
     let lines = annotation_code.lines().count();
     let annotations_count = annotation_code.matches("@").count();
     let speed = lines as f64 / duration.as_secs_f64();
-    
+
     println!("   📊 Spring Boot Annotation Analysis:");
     println!("      ├─ Lines: {} lines", lines);
     println!("      ├─ Annotations: {} annotations", annotations_count);
     println!("      ├─ Controllers: 25");
     println!("      ├─ Time: {:.3} seconds", duration.as_secs_f64());
     println!("      └─ Speed: {:.1} lines/second", speed);
-    
+
     // Annotation processing should be efficient despite complexity
     assert!(
         speed > 80.0,
         "Spring annotation processing too slow: {:.1} lines/s (minimum: 80 lines/s)",
         speed
     );
-    
+
     println!("   ✅ Spring Boot annotation processing performance acceptable");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     Ok(())
 }
 
@@ -1048,10 +1097,11 @@ public interface AnnotationRepository{} extends JpaRepository<AnnotationEntity{}
 async fn test_spring_boot_jpa_repository_performance() -> Result<()> {
     println!("\n🗃️ Spring Boot JPA Repository Performance Test (API-free)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Generate JPA repository interfaces with vulnerabilities
     let mut jpa_code = String::new();
-    jpa_code.push_str(r#"
+    jpa_code.push_str(
+        r#"
 package com.example.jpa;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1059,8 +1109,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
-"#);
-    
+"#,
+    );
+
     for i in 0..30 {
         jpa_code.push_str(&format!(r#"
 public interface Repository{i} extends JpaRepository<Entity{i}, Long> {{
@@ -1103,39 +1154,39 @@ public class Entity{i} {{
 
 "#, i=i));
     }
-    
+
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("jpa_repositories.java");
     std::fs::write(&test_file, &jpa_code)?;
-    
+
     let start_time = Instant::now();
-    
+
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let _context = parser.build_context_from_file(&test_file)?;
-    
+
     let duration = start_time.elapsed();
     let lines = jpa_code.lines().count();
     let repositories_count = jpa_code.matches("interface Repository").count();
     let queries_count = jpa_code.matches("@Query").count();
     let speed = lines as f64 / duration.as_secs_f64();
-    
+
     println!("   📊 JPA Repository Analysis:");
     println!("      ├─ Lines: {} lines", lines);
     println!("      ├─ Repositories: {} interfaces", repositories_count);
     println!("      ├─ Queries: {} @Query annotations", queries_count);
     println!("      ├─ Time: {:.3} seconds", duration.as_secs_f64());
     println!("      └─ Speed: {:.1} lines/second", speed);
-    
+
     // JPA repository analysis should handle complex query patterns efficiently
     assert!(
         speed > 100.0,
         "JPA repository analysis too slow: {:.1} lines/s (minimum: 100 lines/s)",
         speed
     );
-    
+
     println!("   ✅ Spring Boot JPA repository analysis performance acceptable");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     Ok(())
 }

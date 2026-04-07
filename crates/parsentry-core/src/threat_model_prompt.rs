@@ -101,8 +101,13 @@ struct LlmSurface {
 }
 
 pub fn parse_threat_model_response(json_str: &str, repository: &str) -> Result<ThreatModel> {
-    let resp: LlmResponse = serde_json::from_str(json_str)
-        .map_err(|e| anyhow::anyhow!("Failed to parse threat model response: {}. Content: {}", e, json_str))?;
+    let resp: LlmResponse = serde_json::from_str(json_str).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to parse threat model response: {}. Content: {}",
+            e,
+            json_str
+        )
+    })?;
 
     let surfaces: Vec<AttackSurface> = resp
         .surfaces

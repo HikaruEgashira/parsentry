@@ -42,18 +42,18 @@ struct DataFlowExpectation {
 
 #[derive(Debug, Clone)]
 enum FlowType {
-    DirectCall,     // 直接関数呼び出し
-    DataPassing,    // データの受け渡し
-    Reference,      // 参照関係
+    DirectCall,  // 直接関数呼び出し
+    DataPassing, // データの受け渡し
+    Reference,   // 参照関係
 }
 
 fn get_context_quality_test_cases() -> Vec<ContextQualityTestCase> {
     vec![
-    // === Python テストケース ===
-    ContextQualityTestCase {
-        name: "Python basic function definitions",
-        language: Language::Python,
-        code: r#"
+        // === Python テストケース ===
+        ContextQualityTestCase {
+            name: "Python basic function definitions",
+            language: Language::Python,
+            code: r#"
 import os
 import subprocess
 
@@ -75,70 +75,69 @@ def main():
         output = process_command(user_input)
         print(output)
 "#,
-        expected_definitions: vec![
-            ExpectedDefinition {
-                name: "get_user_input",
-                should_be_found: true,
-                minimum_source_length: 20,
-            },
-            ExpectedDefinition {
-                name: "validate_input",
-                should_be_found: true,
-                minimum_source_length: 30,
-            },
-            ExpectedDefinition {
-                name: "process_command",
-                should_be_found: true,
-                minimum_source_length: 40,
-            },
-            ExpectedDefinition {
-                name: "main",
-                should_be_found: true,
-                minimum_source_length: 50,
-            },
-        ],
-        expected_references: vec![
-            ExpectedReference {
-                name: "get_user_input",
-                expected_count: 1, // main関数で1回呼び出し
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "validate_input",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "process_command",
-                expected_count: 1,
-                tolerance: 0,
-            },
-        ],
-        data_flow_expectations: vec![
-            DataFlowExpectation {
-                from_function: "get_user_input",
-                to_function: "validate_input",
-                flow_type: FlowType::DataPassing,
-            },
-            DataFlowExpectation {
-                from_function: "get_user_input",
-                to_function: "process_command",
-                flow_type: FlowType::DataPassing,
-            },
-            DataFlowExpectation {
-                from_function: "validate_input",
-                to_function: "process_command",
-                flow_type: FlowType::DirectCall,
-            },
-        ],
-        test_rationale: "基本的なPython関数定義と呼び出しの解析精度",
-    },
-
-    // === JavaScript テストケース ===
-    ContextQualityTestCase {
-        name: "JavaScript function expressions and arrow functions",
-        language: Language::JavaScript,
-        code: r#"
+            expected_definitions: vec![
+                ExpectedDefinition {
+                    name: "get_user_input",
+                    should_be_found: true,
+                    minimum_source_length: 20,
+                },
+                ExpectedDefinition {
+                    name: "validate_input",
+                    should_be_found: true,
+                    minimum_source_length: 30,
+                },
+                ExpectedDefinition {
+                    name: "process_command",
+                    should_be_found: true,
+                    minimum_source_length: 40,
+                },
+                ExpectedDefinition {
+                    name: "main",
+                    should_be_found: true,
+                    minimum_source_length: 50,
+                },
+            ],
+            expected_references: vec![
+                ExpectedReference {
+                    name: "get_user_input",
+                    expected_count: 1, // main関数で1回呼び出し
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "validate_input",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "process_command",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+            ],
+            data_flow_expectations: vec![
+                DataFlowExpectation {
+                    from_function: "get_user_input",
+                    to_function: "validate_input",
+                    flow_type: FlowType::DataPassing,
+                },
+                DataFlowExpectation {
+                    from_function: "get_user_input",
+                    to_function: "process_command",
+                    flow_type: FlowType::DataPassing,
+                },
+                DataFlowExpectation {
+                    from_function: "validate_input",
+                    to_function: "process_command",
+                    flow_type: FlowType::DirectCall,
+                },
+            ],
+            test_rationale: "基本的なPython関数定義と呼び出しの解析精度",
+        },
+        // === JavaScript テストケース ===
+        ContextQualityTestCase {
+            name: "JavaScript function expressions and arrow functions",
+            language: Language::JavaScript,
+            code: r#"
 const express = require('express');
 const app = express();
 
@@ -176,55 +175,52 @@ app.post('/login', (req, res) => {
     }
 });
 "#,
-        expected_definitions: vec![
-            ExpectedDefinition {
-                name: "authenticateUser",
-                should_be_found: true,
-                minimum_source_length: 30,
-            },
-            ExpectedDefinition {
-                name: "validateEmail",
-                should_be_found: true,
-                minimum_source_length: 25,
-            },
-            ExpectedDefinition {
-                name: "sanitizeInput",
-                should_be_found: true,
-                minimum_source_length: 20,
-            },
-        ],
-        expected_references: vec![
-            ExpectedReference {
-                name: "validateEmail",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "sanitizeInput",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "authenticateUser",
-                expected_count: 1,
-                tolerance: 0,
-            },
-        ],
-        data_flow_expectations: vec![
-            DataFlowExpectation {
+            expected_definitions: vec![
+                ExpectedDefinition {
+                    name: "authenticateUser",
+                    should_be_found: true,
+                    minimum_source_length: 30,
+                },
+                ExpectedDefinition {
+                    name: "validateEmail",
+                    should_be_found: true,
+                    minimum_source_length: 25,
+                },
+                ExpectedDefinition {
+                    name: "sanitizeInput",
+                    should_be_found: true,
+                    minimum_source_length: 20,
+                },
+            ],
+            expected_references: vec![
+                ExpectedReference {
+                    name: "validateEmail",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "sanitizeInput",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "authenticateUser",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+            ],
+            data_flow_expectations: vec![DataFlowExpectation {
                 from_function: "validateEmail",
                 to_function: "authenticateUser",
                 flow_type: FlowType::DataPassing,
-            },
-        ],
-        test_rationale: "JavaScript関数式、アロー関数、ルートハンドラーの解析精度",
-    },
-
-    // === Rust テストケース ===
-    ContextQualityTestCase {
-        name: "Rust function definitions with error handling",
-        language: Language::Rust,
-        code: r#"
+            }],
+            test_rationale: "JavaScript関数式、アロー関数、ルートハンドラーの解析精度",
+        },
+        // === Rust テストケース ===
+        ContextQualityTestCase {
+            name: "Rust function definitions with error handling",
+            language: Language::Rust,
+            code: r#"
 use std::fs;
 use std::process::Command;
 
@@ -256,65 +252,64 @@ fn process_user_request(config_path: &str, user_command: &str) -> Result<String,
     }
 }
 "#,
-        expected_definitions: vec![
-            ExpectedDefinition {
-                name: "read_config_file",
-                should_be_found: true,
-                minimum_source_length: 25,
-            },
-            ExpectedDefinition {
-                name: "parse_config",
-                should_be_found: true,
-                minimum_source_length: 30,
-            },
-            ExpectedDefinition {
-                name: "execute_shell_command",
-                should_be_found: true,
-                minimum_source_length: 50,
-            },
-            ExpectedDefinition {
-                name: "process_user_request",
-                should_be_found: true,
-                minimum_source_length: 80,
-            },
-        ],
-        expected_references: vec![
-            ExpectedReference {
-                name: "read_config_file",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "parse_config",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "execute_shell_command",
-                expected_count: 1,
-                tolerance: 0,
-            },
-        ],
-        data_flow_expectations: vec![
-            DataFlowExpectation {
-                from_function: "read_config_file",
-                to_function: "parse_config",
-                flow_type: FlowType::DataPassing,
-            },
-            DataFlowExpectation {
-                from_function: "parse_config",
-                to_function: "execute_shell_command",
-                flow_type: FlowType::DataPassing,
-            },
-        ],
-        test_rationale: "Rust関数定義、エラーハンドリング、型推論の解析精度",
-    },
-
-    // === 複雑なネストケース ===
-    ContextQualityTestCase {
-        name: "Complex nested functions with closures",
-        language: Language::JavaScript,
-        code: r#"
+            expected_definitions: vec![
+                ExpectedDefinition {
+                    name: "read_config_file",
+                    should_be_found: true,
+                    minimum_source_length: 25,
+                },
+                ExpectedDefinition {
+                    name: "parse_config",
+                    should_be_found: true,
+                    minimum_source_length: 30,
+                },
+                ExpectedDefinition {
+                    name: "execute_shell_command",
+                    should_be_found: true,
+                    minimum_source_length: 50,
+                },
+                ExpectedDefinition {
+                    name: "process_user_request",
+                    should_be_found: true,
+                    minimum_source_length: 80,
+                },
+            ],
+            expected_references: vec![
+                ExpectedReference {
+                    name: "read_config_file",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "parse_config",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "execute_shell_command",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+            ],
+            data_flow_expectations: vec![
+                DataFlowExpectation {
+                    from_function: "read_config_file",
+                    to_function: "parse_config",
+                    flow_type: FlowType::DataPassing,
+                },
+                DataFlowExpectation {
+                    from_function: "parse_config",
+                    to_function: "execute_shell_command",
+                    flow_type: FlowType::DataPassing,
+                },
+            ],
+            test_rationale: "Rust関数定義、エラーハンドリング、型推論の解析精度",
+        },
+        // === 複雑なネストケース ===
+        ContextQualityTestCase {
+            name: "Complex nested functions with closures",
+            language: Language::JavaScript,
+            code: r#"
 function createUserProcessor(config) {
     const validator = function(data) {
         return data && typeof data === 'object';
@@ -350,69 +345,69 @@ function createUserProcessor(config) {
 const processor = createUserProcessor({ strict: true });
 const result = processor({ username: 'test<script>', email: 'test@example.com' });
 "#,
-        expected_definitions: vec![
-            ExpectedDefinition {
-                name: "createUserProcessor",
-                should_be_found: true,
-                minimum_source_length: 100,
-            },
-            ExpectedDefinition {
-                name: "validator",
-                should_be_found: true,
-                minimum_source_length: 20,
-            },
-            ExpectedDefinition {
-                name: "sanitizer",
-                should_be_found: true,
-                minimum_source_length: 30,
-            },
-            ExpectedDefinition {
-                name: "processUser",
-                should_be_found: true,
-                minimum_source_length: 80,
-            },
-            ExpectedDefinition {
-                name: "logProcessing",
-                should_be_found: true,
-                minimum_source_length: 20,
-            },
-        ],
-        expected_references: vec![
-            ExpectedReference {
-                name: "validator",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "sanitizer",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "logProcessing",
-                expected_count: 1,
-                tolerance: 0,
-            },
-            ExpectedReference {
-                name: "createUserProcessor",
-                expected_count: 1,
-                tolerance: 0,
-            },
-        ],
-        data_flow_expectations: vec![
-            DataFlowExpectation {
-                from_function: "validator",
-                to_function: "processUser",
-                flow_type: FlowType::Reference,
-            },
-            DataFlowExpectation {
-                from_function: "sanitizer",
-                to_function: "processUser",
-                flow_type: FlowType::Reference,
-            },
-        ],
-        test_rationale: "複雑なネスト関数、クロージャ、スコープの解析精度",
-    },
+            expected_definitions: vec![
+                ExpectedDefinition {
+                    name: "createUserProcessor",
+                    should_be_found: true,
+                    minimum_source_length: 100,
+                },
+                ExpectedDefinition {
+                    name: "validator",
+                    should_be_found: true,
+                    minimum_source_length: 20,
+                },
+                ExpectedDefinition {
+                    name: "sanitizer",
+                    should_be_found: true,
+                    minimum_source_length: 30,
+                },
+                ExpectedDefinition {
+                    name: "processUser",
+                    should_be_found: true,
+                    minimum_source_length: 80,
+                },
+                ExpectedDefinition {
+                    name: "logProcessing",
+                    should_be_found: true,
+                    minimum_source_length: 20,
+                },
+            ],
+            expected_references: vec![
+                ExpectedReference {
+                    name: "validator",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "sanitizer",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "logProcessing",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+                ExpectedReference {
+                    name: "createUserProcessor",
+                    expected_count: 1,
+                    tolerance: 0,
+                },
+            ],
+            data_flow_expectations: vec![
+                DataFlowExpectation {
+                    from_function: "validator",
+                    to_function: "processUser",
+                    flow_type: FlowType::Reference,
+                },
+                DataFlowExpectation {
+                    from_function: "sanitizer",
+                    to_function: "processUser",
+                    flow_type: FlowType::Reference,
+                },
+            ],
+            test_rationale: "複雑なネスト関数、クロージャ、スコープの解析精度",
+        },
     ]
 }
 
@@ -434,7 +429,9 @@ fn analyze_context_quality(
     let total_definitions = test_case.expected_definitions.len();
 
     for expected_def in &test_case.expected_definitions {
-        let found_definition = context.definitions.iter()
+        let found_definition = context
+            .definitions
+            .iter()
             .find(|def| def.name == expected_def.name);
 
         match (found_definition, expected_def.should_be_found) {
@@ -444,23 +441,26 @@ fn analyze_context_quality(
                 } else {
                     result.failed_definitions.push(format!(
                         "{}: ソースが短すぎます ({}文字, 期待>={}文字)",
-                        expected_def.name, def.source.len(), expected_def.minimum_source_length
+                        expected_def.name,
+                        def.source.len(),
+                        expected_def.minimum_source_length
                     ));
                 }
-            },
+            }
             (None, true) => {
-                result.failed_definitions.push(format!(
-                    "{}: 定義が見つかりません", expected_def.name
-                ));
-            },
+                result
+                    .failed_definitions
+                    .push(format!("{}: 定義が見つかりません", expected_def.name));
+            }
             (Some(_), false) => {
                 result.failed_definitions.push(format!(
-                    "{}: 見つからないはずの定義が見つかりました", expected_def.name
+                    "{}: 見つからないはずの定義が見つかりました",
+                    expected_def.name
                 ));
-            },
+            }
             (None, false) => {
                 correct_definitions += 1; // 正しく見つからなかった
-            },
+            }
         }
     }
 
@@ -475,11 +475,15 @@ fn analyze_context_quality(
     let total_references = test_case.expected_references.len();
 
     for expected_ref in &test_case.expected_references {
-        let actual_count = context.references.iter()
+        let actual_count = context
+            .references
+            .iter()
             .filter(|ref_def| ref_def.name == expected_ref.name)
             .count();
 
-        let expected_min = expected_ref.expected_count.saturating_sub(expected_ref.tolerance);
+        let expected_min = expected_ref
+            .expected_count
+            .saturating_sub(expected_ref.tolerance);
         let expected_max = expected_ref.expected_count + expected_ref.tolerance;
 
         if actual_count >= expected_min && actual_count <= expected_max {
@@ -487,7 +491,10 @@ fn analyze_context_quality(
         } else {
             result.failed_references.push(format!(
                 "{}: 参照数不一致 (実際={}, 期待={}±{})",
-                expected_ref.name, actual_count, expected_ref.expected_count, expected_ref.tolerance
+                expected_ref.name,
+                actual_count,
+                expected_ref.expected_count,
+                expected_ref.tolerance
             ));
         }
     }
@@ -504,14 +511,20 @@ fn analyze_context_quality(
 
     for expected_flow in &test_case.data_flow_expectations {
         // 両方の関数が定義に存在するかチェック
-        let from_exists = context.definitions.iter()
+        let from_exists = context
+            .definitions
+            .iter()
             .any(|def| def.name == expected_flow.from_function);
-        let to_exists = context.definitions.iter()
+        let to_exists = context
+            .definitions
+            .iter()
             .any(|def| def.name == expected_flow.to_function);
 
         if from_exists && to_exists {
             // 簡易的なデータフロー検証：to_function内でfrom_functionが参照されているか
-            let flow_detected = context.definitions.iter()
+            let flow_detected = context
+                .definitions
+                .iter()
                 .filter(|def| def.name == expected_flow.to_function)
                 .any(|def| def.source.contains(expected_flow.from_function));
 
@@ -567,7 +580,7 @@ async fn test_context_quality_for_case(
         Language::Cpp => "cpp",
         _ => "txt",
     };
-    
+
     let test_file = temp_dir.path().join(format!("test.{}", file_extension));
     std::fs::write(&test_file, test_case.code)?;
 
@@ -589,10 +602,13 @@ async fn test_definition_extraction_accuracy() -> Result<()> {
 
     let test_cases = get_context_quality_test_cases();
     for test_case in &test_cases {
-        println!("  テスト中: {} ({:?}) - {}", test_case.name, test_case.language, test_case.test_rationale);
-        
+        println!(
+            "  テスト中: {} ({:?}) - {}",
+            test_case.name, test_case.language, test_case.test_rationale
+        );
+
         let result = test_context_quality_for_case(test_case).await?;
-        
+
         // 言語別統計更新
         let language_key = format!("{:?}", test_case.language);
         let entry = language_stats.entry(language_key).or_insert((0.0, 0));
@@ -613,10 +629,10 @@ async fn test_definition_extraction_accuracy() -> Result<()> {
     }
 
     let overall_accuracy = total_accuracy / total_tests as f64;
-    
+
     println!("\n📊 関数定義抽出結果:");
     println!("  全体精度: {:.1}%", overall_accuracy);
-    
+
     println!("\n言語別精度:");
     for (language, (accuracy_sum, count)) in language_stats {
         let avg_accuracy = accuracy_sum / count as f64;
@@ -647,10 +663,13 @@ async fn test_reference_tracking_accuracy() -> Result<()> {
             continue; // 参照期待値がないケースはスキップ
         }
 
-        println!("  テスト中: {} - {}", test_case.name, test_case.test_rationale);
-        
+        println!(
+            "  テスト中: {} - {}",
+            test_case.name, test_case.test_rationale
+        );
+
         let result = test_context_quality_for_case(test_case).await?;
-        
+
         total_accuracy += result.reference_accuracy;
         total_tests += 1;
 
@@ -669,7 +688,7 @@ async fn test_reference_tracking_accuracy() -> Result<()> {
     } else {
         100.0
     };
-    
+
     println!("\n📊 参照追跡結果:");
     println!("  全体精度: {:.1}%", overall_accuracy);
 
@@ -697,17 +716,23 @@ async fn test_data_flow_tracking_accuracy() -> Result<()> {
             continue; // データフロー期待値がないケースはスキップ
         }
 
-        println!("  テスト中: {} - {}", test_case.name, test_case.test_rationale);
-        
+        println!(
+            "  テスト中: {} - {}",
+            test_case.name, test_case.test_rationale
+        );
+
         let result = test_context_quality_for_case(test_case).await?;
-        
+
         total_accuracy += result.data_flow_accuracy;
         total_tests += 1;
 
         if result.data_flow_accuracy >= 75.0 {
             println!("    ✅ データフロー精度: {:.1}%", result.data_flow_accuracy);
         } else {
-            println!("    ⚠️  データフロー精度: {:.1}%", result.data_flow_accuracy);
+            println!(
+                "    ⚠️  データフロー精度: {:.1}%",
+                result.data_flow_accuracy
+            );
             for failure in &result.failed_data_flows {
                 println!("       - {}", failure);
             }
@@ -719,7 +744,7 @@ async fn test_data_flow_tracking_accuracy() -> Result<()> {
     } else {
         100.0
     };
-    
+
     println!("\n📊 データフロー追跡結果:");
     println!("  全体精度: {:.1}%", overall_accuracy);
 
@@ -761,15 +786,18 @@ async fn test_comprehensive_context_quality() -> Result<()> {
         total_tests += 1;
 
         // 総合スコア計算
-        let comprehensive_score = (result.definition_accuracy * 0.5) + 
-                                 (result.reference_accuracy * 0.3) + 
-                                 (result.data_flow_accuracy * 0.2);
+        let comprehensive_score = (result.definition_accuracy * 0.5)
+            + (result.reference_accuracy * 0.3)
+            + (result.data_flow_accuracy * 0.2);
 
         if comprehensive_score < 85.0 {
             failed_cases.push(format!(
                 "{}: {:.1}% (定義={:.1}%, 参照={:.1}%, フロー={:.1}%)",
-                test_case.name, comprehensive_score, 
-                result.definition_accuracy, result.reference_accuracy, result.data_flow_accuracy
+                test_case.name,
+                comprehensive_score,
+                result.definition_accuracy,
+                result.reference_accuracy,
+                result.data_flow_accuracy
             ));
         }
     }
@@ -777,7 +805,8 @@ async fn test_comprehensive_context_quality() -> Result<()> {
     let avg_definition = definition_total / total_tests as f64;
     let avg_reference = reference_total / total_tests as f64;
     let avg_data_flow = data_flow_total / total_tests as f64;
-    let comprehensive_average = (avg_definition * 0.5) + (avg_reference * 0.3) + (avg_data_flow * 0.2);
+    let comprehensive_average =
+        (avg_definition * 0.5) + (avg_reference * 0.3) + (avg_data_flow * 0.2);
 
     println!("\n📊 コンテキスト品質包括結果:");
     println!("  定義抽出精度: {:.1}%", avg_definition);

@@ -45,12 +45,11 @@ struct PipelineExpectation {
 
 fn get_end_to_end_test_cases() -> Vec<EndToEndTestCase> {
     vec![
-    // === 単一ファイルシナリオ ===
-    EndToEndTestCase {
-        name: "Single file SQL injection detection",
-        language: Language::Python,
-        files: vec![
-            FileSpec {
+        // === 単一ファイルシナリオ ===
+        EndToEndTestCase {
+            name: "Single file SQL injection detection",
+            language: Language::Python,
+            files: vec![FileSpec {
                 name: "database.py",
                 content: r#"
 import sqlite3
@@ -87,33 +86,29 @@ def safe_get_user(user_id):
     conn.close()
     return result
 "#,
-            },
-        ],
-        expected_findings: vec![
-            ExpectedFinding {
+            }],
+            expected_findings: vec![ExpectedFinding {
                 file_name: "database.py",
                 vulnerability_types: vec![VulnType::SQLI],
                 minimum_confidence: 8,
                 should_be_detected: true,
+            }],
+            pipeline_expectations: PipelineExpectation {
+                pattern_matching_should_trigger: true,
+                context_building_quality_min: 90.0,
+                llm_analysis_should_succeed: true,
+                expected_total_findings: 1,
             },
-        ],
-        pipeline_expectations: PipelineExpectation {
-            pattern_matching_should_trigger: true,
-            context_building_quality_min: 90.0,
-            llm_analysis_should_succeed: true,
-            expected_total_findings: 1,
+            test_scenario: "単一ファイルでの典型的なSQLインジェクション検出",
         },
-        test_scenario: "単一ファイルでの典型的なSQLインジェクション検出",
-    },
-
-    // === マルチファイルシナリオ ===
-    EndToEndTestCase {
-        name: "Multi-file cross-reference vulnerability",
-        language: Language::Python,
-        files: vec![
-            FileSpec {
-                name: "web_handler.py",
-                content: r#"
+        // === マルチファイルシナリオ ===
+        EndToEndTestCase {
+            name: "Multi-file cross-reference vulnerability",
+            language: Language::Python,
+            files: vec![
+                FileSpec {
+                    name: "web_handler.py",
+                    content: r#"
 from flask import Flask, request
 from utils import process_user_input
 from database import store_user_data
@@ -143,10 +138,10 @@ def search_users():
     results = process_search_query(search_term)
     return {"results": results}
 "#,
-            },
-            FileSpec {
-                name: "utils.py",
-                content: r#"
+                },
+                FileSpec {
+                    name: "utils.py",
+                    content: r#"
 import re
 import subprocess
 
@@ -182,10 +177,10 @@ def process_search_query(query):
     # 実際の検索処理は省略
     return []
 "#,
-            },
-            FileSpec {
-                name: "database.py",
-                content: r#"
+                },
+                FileSpec {
+                    name: "database.py",
+                    content: r#"
 import sqlite3
 import os
 
@@ -217,39 +212,38 @@ def get_user_files(user_id, file_type):
             return f.read()
     return None
 "#,
+                },
+            ],
+            expected_findings: vec![
+                ExpectedFinding {
+                    file_name: "utils.py",
+                    vulnerability_types: vec![VulnType::RCE],
+                    minimum_confidence: 8,
+                    should_be_detected: true,
+                },
+                ExpectedFinding {
+                    file_name: "database.py",
+                    vulnerability_types: vec![VulnType::SQLI, VulnType::LFI],
+                    minimum_confidence: 7,
+                    should_be_detected: true,
+                },
+            ],
+            pipeline_expectations: PipelineExpectation {
+                pattern_matching_should_trigger: true,
+                context_building_quality_min: 85.0,
+                llm_analysis_should_succeed: true,
+                expected_total_findings: 2,
             },
-        ],
-        expected_findings: vec![
-            ExpectedFinding {
-                file_name: "utils.py",
-                vulnerability_types: vec![VulnType::RCE],
-                minimum_confidence: 8,
-                should_be_detected: true,
-            },
-            ExpectedFinding {
-                file_name: "database.py",
-                vulnerability_types: vec![VulnType::SQLI, VulnType::LFI],
-                minimum_confidence: 7,
-                should_be_detected: true,
-            },
-        ],
-        pipeline_expectations: PipelineExpectation {
-            pattern_matching_should_trigger: true,
-            context_building_quality_min: 85.0,
-            llm_analysis_should_succeed: true,
-            expected_total_findings: 2,
+            test_scenario: "マルチファイル間の関数呼び出しと複数脆弱性の検出",
         },
-        test_scenario: "マルチファイル間の関数呼び出しと複数脆弱性の検出",
-    },
-
-    // === JavaScript/Node.js Webアプリケーション ===
-    EndToEndTestCase {
-        name: "Node.js Express application vulnerabilities",
-        language: Language::JavaScript,
-        files: vec![
-            FileSpec {
-                name: "app.js",
-                content: r#"
+        // === JavaScript/Node.js Webアプリケーション ===
+        EndToEndTestCase {
+            name: "Node.js Express application vulnerabilities",
+            language: Language::JavaScript,
+            files: vec![
+                FileSpec {
+                    name: "app.js",
+                    content: r#"
 const express = require('express');
 const userController = require('./controllers/user');
 const authMiddleware = require('./middleware/auth');
@@ -276,10 +270,10 @@ app.listen(3000, () => {
     console.log('Server running on port 3000');
 });
 "#,
-            },
-            FileSpec {
-                name: "controllers/user.js",
-                content: r#"
+                },
+                FileSpec {
+                    name: "controllers/user.js",
+                    content: r#"
 const db = require('../database/connection');
 const fs = require('fs');
 const { exec } = require('child_process');
@@ -343,10 +337,10 @@ exports.deleteUser = async (req, res) => {
     res.json({ success: true });
 };
 "#,
-            },
-            FileSpec {
-                name: "middleware/auth.js",
-                content: r#"
+                },
+                FileSpec {
+                    name: "middleware/auth.js",
+                    content: r#"
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
@@ -366,31 +360,27 @@ module.exports = (req, res, next) => {
     }
 };
 "#,
-            },
-        ],
-        expected_findings: vec![
-            ExpectedFinding {
+                },
+            ],
+            expected_findings: vec![ExpectedFinding {
                 file_name: "controllers/user.js",
                 vulnerability_types: vec![VulnType::SQLI, VulnType::IDOR, VulnType::RCE],
                 minimum_confidence: 7,
                 should_be_detected: true,
+            }],
+            pipeline_expectations: PipelineExpectation {
+                pattern_matching_should_trigger: true,
+                context_building_quality_min: 80.0,
+                llm_analysis_should_succeed: true,
+                expected_total_findings: 1,
             },
-        ],
-        pipeline_expectations: PipelineExpectation {
-            pattern_matching_should_trigger: true,
-            context_building_quality_min: 80.0,
-            llm_analysis_should_succeed: true,
-            expected_total_findings: 1,
+            test_scenario: "Express.jsアプリケーションでの複合的な認証・認可・インジェクション脆弱性",
         },
-        test_scenario: "Express.jsアプリケーションでの複合的な認証・認可・インジェクション脆弱性",
-    },
-
-    // === パターンマッチングエッジケース ===
-    EndToEndTestCase {
-        name: "Pattern matching edge cases",
-        language: Language::Python,
-        files: vec![
-            FileSpec {
+        // === パターンマッチングエッジケース ===
+        EndToEndTestCase {
+            name: "Pattern matching edge cases",
+            language: Language::Python,
+            files: vec![FileSpec {
                 name: "edge_cases.py",
                 content: r#"
 import math
@@ -439,24 +429,21 @@ def complex_file_operation(base_path, user_dir, filename):
     
     return None
 "#,
-            },
-        ],
-        expected_findings: vec![
-            ExpectedFinding {
+            }],
+            expected_findings: vec![ExpectedFinding {
                 file_name: "edge_cases.py",
                 vulnerability_types: vec![VulnType::RCE, VulnType::LFI],
                 minimum_confidence: 6,
                 should_be_detected: true,
+            }],
+            pipeline_expectations: PipelineExpectation {
+                pattern_matching_should_trigger: false, // 微妙な脆弱性はパターンで検出困難
+                context_building_quality_min: 85.0,
+                llm_analysis_should_succeed: true, // LLMは文脈で検出すべき
+                expected_total_findings: 1,
             },
-        ],
-        pipeline_expectations: PipelineExpectation {
-            pattern_matching_should_trigger: false,  // 微妙な脆弱性はパターンで検出困難
-            context_building_quality_min: 85.0,
-            llm_analysis_should_succeed: true,  // LLMは文脈で検出すべき
-            expected_total_findings: 1,
+            test_scenario: "パターンマッチングでは検出困難だがLLMで検出すべき微妙な脆弱性",
         },
-        test_scenario: "パターンマッチングでは検出困難だがLLMで検出すべき微妙な脆弱性",
-    },
     ]
 }
 
@@ -485,10 +472,7 @@ struct PipelinePerformance {
     overall_accuracy: f64,
 }
 
-async fn test_end_to_end_case(
-    test_case: &EndToEndTestCase,
-    model: &str,
-) -> Result<EndToEndResult> {
+async fn test_end_to_end_case(test_case: &EndToEndTestCase, model: &str) -> Result<EndToEndResult> {
     // テンポラリディレクトリ作成
     let temp_dir = tempdir()?;
     let project_path = temp_dir.path();
@@ -507,8 +491,11 @@ async fn test_end_to_end_case(
     };
 
     // テストシナリオの詳細をログ出力
-    println!("  テスト中: {} - {}", test_case.name, test_case.test_scenario);
-    
+    println!(
+        "  テスト中: {} - {}",
+        test_case.name, test_case.test_scenario
+    );
+
     // ファイル作成
     let mut created_files = Vec::new();
     for file_spec in &test_case.files {
@@ -520,9 +507,15 @@ async fn test_end_to_end_case(
             }
             full_path
         } else {
-            project_path.join(format!("{}.{}", file_spec.name.trim_end_matches(&format!(".{}", file_extension)), file_extension))
+            project_path.join(format!(
+                "{}.{}",
+                file_spec
+                    .name
+                    .trim_end_matches(&format!(".{}", file_extension)),
+                file_extension
+            ))
         };
-        
+
         std::fs::write(&file_path, file_spec.content)?;
         created_files.push(file_path);
     }
@@ -530,7 +523,7 @@ async fn test_end_to_end_case(
     // === Stage 1: パターンマッチング ===
     let security_patterns = SecurityRiskPatterns::new(test_case.language);
     let mut pattern_triggered_files = Vec::new();
-    
+
     for file_path in &created_files {
         let content = std::fs::read_to_string(file_path)?;
         if security_patterns.matches(&content) {
@@ -548,17 +541,24 @@ async fn test_end_to_end_case(
         let mut parser = CodeParser::new()?;
         parser.add_file(file_path)?;
         let context = parser.build_context_from_file(file_path)?;
-        
+
         // コンテキスト品質評価。定義数、参照数、平均長さから簡易評価
         let definition_count = context.definitions.len() as f64;
         let reference_count = context.references.len() as f64;
         let avg_definition_length = if definition_count > 0.0 {
-            context.definitions.iter().map(|d| d.source.len()).sum::<usize>() as f64 / definition_count
+            context
+                .definitions
+                .iter()
+                .map(|d| d.source.len())
+                .sum::<usize>() as f64
+                / definition_count
         } else {
             0.0
         };
 
-        let quality_score = ((definition_count * 20.0) + (reference_count * 10.0) + (avg_definition_length / 10.0)).min(100.0);
+        let quality_score =
+            ((definition_count * 20.0) + (reference_count * 10.0) + (avg_definition_length / 10.0))
+                .min(100.0);
         context_quality_scores.push(quality_score);
         all_contexts.insert(file_path.clone(), context);
     }
@@ -586,7 +586,9 @@ async fn test_end_to_end_case(
                 &None,
                 None,
                 &LocaleLanguage::Japanese,
-            ).await {
+            )
+            .await
+            {
                 Ok(response) => {
                     if !response.vulnerability_types.is_empty() {
                         let analysis_quality = if response.analysis.len() > 100 {
@@ -598,7 +600,8 @@ async fn test_end_to_end_case(
                         };
 
                         detected_findings.push(DetectedFinding {
-                            file_name: file_path.file_name()
+                            file_name: file_path
+                                .file_name()
                                 .unwrap_or_default()
                                 .to_string_lossy()
                                 .to_string(),
@@ -607,7 +610,7 @@ async fn test_end_to_end_case(
                             analysis_quality,
                         });
                     }
-                },
+                }
                 Err(_) => {
                     llm_analysis_success = false;
                 }
@@ -616,20 +619,35 @@ async fn test_end_to_end_case(
     }
 
     // === パイプライン性能評価 ===
-    let pattern_stage_accuracy = if test_case.pipeline_expectations.pattern_matching_should_trigger {
-        if pattern_matching_triggered { 100.0 } else { 0.0 }
+    let pattern_stage_accuracy = if test_case
+        .pipeline_expectations
+        .pattern_matching_should_trigger
+    {
+        if pattern_matching_triggered {
+            100.0
+        } else {
+            0.0
+        }
     } else {
-        if !pattern_matching_triggered { 100.0 } else { 50.0 } // パターンで検出されなくても部分点
+        if !pattern_matching_triggered {
+            100.0
+        } else {
+            50.0
+        } // パターンで検出されなくても部分点
     };
 
-    let context_stage_accuracy = if context_quality_score >= test_case.pipeline_expectations.context_building_quality_min {
-        100.0
-    } else {
-        (context_quality_score / test_case.pipeline_expectations.context_building_quality_min) * 100.0
-    };
+    let context_stage_accuracy =
+        if context_quality_score >= test_case.pipeline_expectations.context_building_quality_min {
+            100.0
+        } else {
+            (context_quality_score / test_case.pipeline_expectations.context_building_quality_min)
+                * 100.0
+        };
 
     let llm_stage_accuracy = if test_case.pipeline_expectations.llm_analysis_should_succeed {
-        if llm_analysis_success && detected_findings.len() >= test_case.pipeline_expectations.expected_total_findings {
+        if llm_analysis_success
+            && detected_findings.len() >= test_case.pipeline_expectations.expected_total_findings
+        {
             100.0
         } else {
             50.0
@@ -640,50 +658,68 @@ async fn test_end_to_end_case(
 
     // === 期待される検出結果の検証 ===
     for expected in &test_case.expected_findings {
-        let found_in_file = detected_findings.iter().any(|finding| 
-            finding.file_name.contains(expected.file_name)
-        );
-        
+        let found_in_file = detected_findings
+            .iter()
+            .any(|finding| finding.file_name.contains(expected.file_name));
+
         // should_be_detected フィールドを使用した検証
         match (expected.should_be_detected, found_in_file) {
             (true, false) => {
-                println!("    ❌ 検出されるべき脆弱性が未検出: {} (期待タイプ: {:?}, 最小信頼度: {})", 
-                    expected.file_name, expected.vulnerability_types, expected.minimum_confidence);
-            },
+                println!(
+                    "    ❌ 検出されるべき脆弱性が未検出: {} (期待タイプ: {:?}, 最小信頼度: {})",
+                    expected.file_name, expected.vulnerability_types, expected.minimum_confidence
+                );
+            }
             (false, true) => {
                 println!("    ⚠️  偽陽性検出: {}", expected.file_name);
-            },
+            }
             (true, true) => {
                 // 脆弱性タイプと信頼度の詳細チェック
-                if let Some(detected) = detected_findings.iter().find(|f| f.file_name.contains(expected.file_name)) {
-                    let type_match = expected.vulnerability_types.iter()
+                if let Some(detected) = detected_findings
+                    .iter()
+                    .find(|f| f.file_name.contains(expected.file_name))
+                {
+                    let type_match = expected
+                        .vulnerability_types
+                        .iter()
                         .any(|expected_type| detected.vulnerability_types.contains(expected_type));
                     let confidence_ok = detected.confidence_score >= expected.minimum_confidence;
-                    
+
                     if !type_match {
-                        println!("    ⚠️  期待された脆弱性タイプが検出されませんでした: {:?}", expected.vulnerability_types);
+                        println!(
+                            "    ⚠️  期待された脆弱性タイプが検出されませんでした: {:?}",
+                            expected.vulnerability_types
+                        );
                     }
                     if !confidence_ok {
-                        println!("    ⚠️  信頼度が基準を下回っています: {} < {}", 
-                            detected.confidence_score, expected.minimum_confidence);
+                        println!(
+                            "    ⚠️  信頼度が基準を下回っています: {} < {}",
+                            detected.confidence_score, expected.minimum_confidence
+                        );
                     }
                     if type_match && confidence_ok {
-                        println!("    ✅ 正常検出: {} (分析品質: {:.1}%)", expected.file_name, detected.analysis_quality);
+                        println!(
+                            "    ✅ 正常検出: {} (分析品質: {:.1}%)",
+                            expected.file_name, detected.analysis_quality
+                        );
                     }
                 }
-            },
+            }
             (false, false) => {
                 println!("    ✅ 正常非検出: {}", expected.file_name);
             }
         }
     }
 
-    let overall_accuracy = (pattern_stage_accuracy * 0.2) + 
-                          (context_stage_accuracy * 0.3) + 
-                          (llm_stage_accuracy * 0.5);
+    let overall_accuracy = (pattern_stage_accuracy * 0.2)
+        + (context_stage_accuracy * 0.3)
+        + (llm_stage_accuracy * 0.5);
 
     // context_quality_scoreをログ出力
-    println!("    📊 コンテキスト品質スコア: {:.1}%", context_quality_score);
+    println!(
+        "    📊 コンテキスト品質スコア: {:.1}%",
+        context_quality_score
+    );
 
     Ok(EndToEndResult {
         pattern_matching_triggered,
@@ -716,26 +752,33 @@ async fn test_single_file_end_to_end() -> Result<()> {
         .filter(|case| case.files.len() == 1)
         .collect();
 
-    println!("📄 単一ファイル E2E テスト: {}ケース", single_file_cases.len());
+    println!(
+        "📄 単一ファイル E2E テスト: {}ケース",
+        single_file_cases.len()
+    );
 
     let mut total_accuracy = 0.0;
     let mut total_tests = 0;
 
     for test_case in single_file_cases {
         println!("  テスト中: {}", test_case.name);
-        
+
         let result = test_end_to_end_case(test_case, model).await?;
-        
+
         total_accuracy += result.pipeline_performance.overall_accuracy;
         total_tests += 1;
 
-        println!("    パイプライン精度: {:.1}% (コンテキスト品質: {:.1}%)", 
-                result.pipeline_performance.overall_accuracy, result.context_quality_score);
-        println!("      パターン: {:.1}%, コンテキスト: {:.1}%, LLM: {:.1}%",
-                result.pipeline_performance.pattern_stage_accuracy,
-                result.pipeline_performance.context_stage_accuracy,
-                result.pipeline_performance.llm_stage_accuracy);
-        
+        println!(
+            "    パイプライン精度: {:.1}% (コンテキスト品質: {:.1}%)",
+            result.pipeline_performance.overall_accuracy, result.context_quality_score
+        );
+        println!(
+            "      パターン: {:.1}%, コンテキスト: {:.1}%, LLM: {:.1}%",
+            result.pipeline_performance.pattern_stage_accuracy,
+            result.pipeline_performance.context_stage_accuracy,
+            result.pipeline_performance.llm_stage_accuracy
+        );
+
         if result.pipeline_performance.overall_accuracy >= 85.0 {
             println!("    ✅ 合格");
         } else {
@@ -744,7 +787,7 @@ async fn test_single_file_end_to_end() -> Result<()> {
     }
 
     let avg_accuracy = total_accuracy / total_tests as f64;
-    
+
     println!("\n📊 単一ファイル E2E 結果:");
     println!("  平均精度: {:.1}%", avg_accuracy);
 
@@ -776,27 +819,41 @@ async fn test_multi_file_end_to_end() -> Result<()> {
         .filter(|case| case.files.len() > 1)
         .collect();
 
-    println!("📁 マルチファイル E2E テスト: {}ケース", multi_file_cases.len());
+    println!(
+        "📁 マルチファイル E2E テスト: {}ケース",
+        multi_file_cases.len()
+    );
 
     let mut total_accuracy = 0.0;
     let mut total_tests = 0;
 
     for test_case in multi_file_cases {
-        println!("  テスト中: {} ({}ファイル)", test_case.name, test_case.files.len());
-        
+        println!(
+            "  テスト中: {} ({}ファイル)",
+            test_case.name,
+            test_case.files.len()
+        );
+
         let result = test_end_to_end_case(test_case, model).await?;
-        
+
         total_accuracy += result.pipeline_performance.overall_accuracy;
         total_tests += 1;
 
-        println!("    パイプライン精度: {:.1}% (コンテキスト品質: {:.1}%)", 
-                result.pipeline_performance.overall_accuracy, result.context_quality_score);
-        println!("      検出ファイル数: {}/{}", 
-                result.detected_findings.len(), test_case.expected_findings.len());
-        
+        println!(
+            "    パイプライン精度: {:.1}% (コンテキスト品質: {:.1}%)",
+            result.pipeline_performance.overall_accuracy, result.context_quality_score
+        );
+        println!(
+            "      検出ファイル数: {}/{}",
+            result.detected_findings.len(),
+            test_case.expected_findings.len()
+        );
+
         for finding in &result.detected_findings {
-            println!("        {}: {:?} (信頼度={})",
-                    finding.file_name, finding.vulnerability_types, finding.confidence_score);
+            println!(
+                "        {}: {:?} (信頼度={})",
+                finding.file_name, finding.vulnerability_types, finding.confidence_score
+            );
         }
 
         if result.pipeline_performance.overall_accuracy >= 80.0 {
@@ -807,7 +864,7 @@ async fn test_multi_file_end_to_end() -> Result<()> {
     }
 
     let avg_accuracy = total_accuracy / total_tests as f64;
-    
+
     println!("\n📊 マルチファイル E2E 結果:");
     println!("  平均精度: {:.1}%", avg_accuracy);
 
@@ -839,21 +896,26 @@ async fn test_pattern_matching_edge_cases() -> Result<()> {
         .filter(|case| !case.pipeline_expectations.pattern_matching_should_trigger)
         .collect();
 
-    println!("🔍 パターンマッチングエッジケーステスト: {}ケース", edge_cases.len());
+    println!(
+        "🔍 パターンマッチングエッジケーステスト: {}ケース",
+        edge_cases.len()
+    );
 
     let mut llm_compensated = 0;
     let mut total_tests = 0;
 
     for test_case in edge_cases {
         println!("  テスト中: {}", test_case.name);
-        
+
         let result = test_end_to_end_case(test_case, model).await?;
-        
+
         total_tests += 1;
 
         // パターンマッチングで検出されなくてもLLMで検出できたかチェック
-        if !result.pattern_matching_triggered && result.llm_analysis_success 
-           && !result.detected_findings.is_empty() {
+        if !result.pattern_matching_triggered
+            && result.llm_analysis_success
+            && !result.detected_findings.is_empty()
+        {
             llm_compensated += 1;
             println!("    ✅ LLMが補完: パターン未検出でも脆弱性発見");
         } else if result.pattern_matching_triggered {
@@ -868,9 +930,12 @@ async fn test_pattern_matching_edge_cases() -> Result<()> {
     } else {
         0.0
     };
-    
+
     println!("\n📊 パターンエッジケース結果:");
-    println!("  LLM補完率: {:.1}% ({}/{})", compensation_rate, llm_compensated, total_tests);
+    println!(
+        "  LLM補完率: {:.1}% ({}/{})",
+        compensation_rate, llm_compensated, total_tests
+    );
 
     // エッジケースではLLMが80%以上補完することを期待
     assert!(

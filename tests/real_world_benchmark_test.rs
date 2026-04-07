@@ -26,19 +26,19 @@ struct RealWorldBenchmark {
 
 #[derive(Debug, Clone)]
 enum BenchmarkSeverity {
-    Critical,  // CVSS 9.0-10.0
-    High,      // CVSS 7.0-8.9  
-    Medium,    // CVSS 4.0-6.9
+    Critical, // CVSS 9.0-10.0
+    High,     // CVSS 7.0-8.9
+    Medium,   // CVSS 4.0-6.9
 }
 
 fn get_real_world_benchmarks() -> Vec<RealWorldBenchmark> {
     vec![
-    // === Critical Severity Benchmarks ===
-    RealWorldBenchmark {
-        name: "CVE-2021-44228 Log4j类似 - Command Injection",
-        cve_id: Some("CVE-2021-44228"),
-        language: Language::Python,
-        code: r#"
+        // === Critical Severity Benchmarks ===
+        RealWorldBenchmark {
+            name: "CVE-2021-44228 Log4j类似 - Command Injection",
+            cve_id: Some("CVE-2021-44228"),
+            language: Language::Python,
+            code: r#"
 import logging
 import subprocess
 
@@ -58,18 +58,17 @@ def log_user_activity(user_input, action):
 # 悪用例:
 # log_user_activity("exec:rm -rf /tmp/*", "file_cleanup")
 "#,
-        expected_vulnerabilities: vec![VulnType::RCE],
-        expected_confidence_min: 8,
-        severity: BenchmarkSeverity::Critical,
-        _description: "Log4j様のJNDIインジェクション類似パターン - コマンドインジェクション",
-        _real_world_context: "Log4jのJNDI lookup脆弱性を模倣。実際のアプリケーションでユーザー入力がログに記録され、特殊な文字列がコマンド実行につながる",
-    },
-
-    RealWorldBenchmark {
-        name: "SQL Injection - Union-based attack vector",
-        cve_id: None,
-        language: Language::Python,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::RCE],
+            expected_confidence_min: 8,
+            severity: BenchmarkSeverity::Critical,
+            _description: "Log4j様のJNDIインジェクション類似パターン - コマンドインジェクション",
+            _real_world_context: "Log4jのJNDI lookup脆弱性を模倣。実際のアプリケーションでユーザー入力がログに記録され、特殊な文字列がコマンド実行につながる",
+        },
+        RealWorldBenchmark {
+            name: "SQL Injection - Union-based attack vector",
+            cve_id: None,
+            language: Language::Python,
+            code: r#"
 import sqlite3
 
 def get_user_profile(user_id, db_connection):
@@ -96,18 +95,17 @@ def get_user_by_email(email, db_connection):
 # get_user_profile("1 UNION SELECT password,secret,admin FROM admin_users--", conn)
 # get_user_by_email("admin@test.com' OR '1'='1' --", conn)
 "#,
-        expected_vulnerabilities: vec![VulnType::SQLI],
-        expected_confidence_min: 9,
-        severity: BenchmarkSeverity::Critical,
-        _description: "典型的なSQLインジェクション - UNIONベース攻撃",
-        _real_world_context: "実際のWebアプリケーションでよく見られるSQLインジェクション。攻撃者がUNION文で管理者情報を窃取可能",
-    },
-
-    RealWorldBenchmark {
-        name: "Deserialization RCE - pickle unsafe loading",
-        cve_id: None,
-        language: Language::Python,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::SQLI],
+            expected_confidence_min: 9,
+            severity: BenchmarkSeverity::Critical,
+            _description: "典型的なSQLインジェクション - UNIONベース攻撃",
+            _real_world_context: "実際のWebアプリケーションでよく見られるSQLインジェクション。攻撃者がUNION文で管理者情報を窃取可能",
+        },
+        RealWorldBenchmark {
+            name: "Deserialization RCE - pickle unsafe loading",
+            cve_id: None,
+            language: Language::Python,
+            code: r#"
 import pickle
 import base64
 
@@ -132,19 +130,18 @@ def restore_user_state(user_id, session_cookie):
 # 攻撃者は悪意のあるpickleデータをbase64エンコードしてCookieに設定
 # import os; os.system('rm -rf /')  のようなコードが実行される
 "#,
-        expected_vulnerabilities: vec![VulnType::RCE],
-        expected_confidence_min: 9,
-        severity: BenchmarkSeverity::Critical,
-        _description: "Pythonデシリアライゼーション脆弱性 - pickle RCE",
-        _real_world_context: "実際のWebアプリでセッション管理にpickleを使用している場合の典型的な脆弱性。攻撃者が任意コード実行可能",
-    },
-
-    // === High Severity Benchmarks ===
-    RealWorldBenchmark {
-        name: "DOM-based XSS - innerHTML injection",
-        cve_id: None,
-        language: Language::JavaScript,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::RCE],
+            expected_confidence_min: 9,
+            severity: BenchmarkSeverity::Critical,
+            _description: "Pythonデシリアライゼーション脆弱性 - pickle RCE",
+            _real_world_context: "実際のWebアプリでセッション管理にpickleを使用している場合の典型的な脆弱性。攻撃者が任意コード実行可能",
+        },
+        // === High Severity Benchmarks ===
+        RealWorldBenchmark {
+            name: "DOM-based XSS - innerHTML injection",
+            cve_id: None,
+            language: Language::JavaScript,
+            code: r#"
 function displayUserMessage(messageId) {
     // URLパラメータから直接値を取得
     const urlParams = new URLSearchParams(window.location.search);
@@ -171,18 +168,17 @@ function updateUserProfile(userData) {
 // ?message=<script>alert('XSS')</script>
 // userData.name = "<img src=x onerror=alert('XSS')>"
 "#,
-        expected_vulnerabilities: vec![VulnType::XSS],
-        expected_confidence_min: 8,
-        severity: BenchmarkSeverity::High,
-        _description: "DOM-based XSS - innerHTML による直接注入",
-        _real_world_context: "SPAアプリケーションでよく見られるDOM-based XSS。URLパラメータやユーザーデータが直接DOM操作に使用",
-    },
-
-    RealWorldBenchmark {
-        name: "Path Traversal - File include vulnerability",
-        cve_id: None,
-        language: Language::Python,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::XSS],
+            expected_confidence_min: 8,
+            severity: BenchmarkSeverity::High,
+            _description: "DOM-based XSS - innerHTML による直接注入",
+            _real_world_context: "SPAアプリケーションでよく見られるDOM-based XSS。URLパラメータやユーザーデータが直接DOM操作に使用",
+        },
+        RealWorldBenchmark {
+            name: "Path Traversal - File include vulnerability",
+            cve_id: None,
+            language: Language::Python,
+            code: r#"
 import os
 
 def serve_static_file(filename):
@@ -218,18 +214,17 @@ def include_user_file(user_id, file_type):
 # load_template("../../../../etc/shadow")
 # include_user_file("../admin", "../../../etc/passwd")
 "#,
-        expected_vulnerabilities: vec![VulnType::LFI],
-        expected_confidence_min: 8,
-        severity: BenchmarkSeverity::High,
-        _description: "パストラバーサル攻撃 - ディレクトリトラバーサル",
-        _real_world_context: "Webアプリケーションでのファイル提供機能における典型的な脆弱性。攻撃者がシステムファイルにアクセス可能",
-    },
-
-    RealWorldBenchmark {
-        name: "SSRF - Internal service access",
-        cve_id: None,
-        language: Language::Python,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::LFI],
+            expected_confidence_min: 8,
+            severity: BenchmarkSeverity::High,
+            _description: "パストラバーサル攻撃 - ディレクトリトラバーサル",
+            _real_world_context: "Webアプリケーションでのファイル提供機能における典型的な脆弱性。攻撃者がシステムファイルにアクセス可能",
+        },
+        RealWorldBenchmark {
+            name: "SSRF - Internal service access",
+            cve_id: None,
+            language: Language::Python,
+            code: r#"
 import requests
 
 def fetch_external_image(image_url):
@@ -266,19 +261,18 @@ def health_check_service(service_name):
 # proxy_api_request("../../admin/users", "attacker_token")  
 # health_check_service("localhost:22")  # ポートスキャン
 "#,
-        expected_vulnerabilities: vec![VulnType::SSRF],
-        expected_confidence_min: 8,
-        severity: BenchmarkSeverity::High,
-        _description: "SSRF攻撃 - 内部サービスアクセス",
-        _real_world_context: "マイクロサービス環境での典型的なSSRF脆弱性。攻撃者が内部ネットワークスキャンやメタデータ窃取可能",
-    },
-
-    // === Medium Severity Benchmarks ===
-    RealWorldBenchmark {
-        name: "IDOR - Direct object reference",
-        cve_id: None,
-        language: Language::JavaScript,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::SSRF],
+            expected_confidence_min: 8,
+            severity: BenchmarkSeverity::High,
+            _description: "SSRF攻撃 - 内部サービスアクセス",
+            _real_world_context: "マイクロサービス環境での典型的なSSRF脆弱性。攻撃者が内部ネットワークスキャンやメタデータ窃取可能",
+        },
+        // === Medium Severity Benchmarks ===
+        RealWorldBenchmark {
+            name: "IDOR - Direct object reference",
+            cve_id: None,
+            language: Language::JavaScript,
+            code: r#"
 // Express.js route handlers
 
 app.get('/api/documents/:docId', (req, res) => {
@@ -320,18 +314,17 @@ app.put('/api/profiles/:profileId', (req, res) => {
 // DELETE /api/users/victim/files/important.pdf (他人のファイル削除)
 // PUT /api/profiles/admin_profile_id {"role": "admin"} (権限昇格)
 "#,
-        expected_vulnerabilities: vec![VulnType::IDOR],
-        expected_confidence_min: 7,
-        severity: BenchmarkSeverity::Medium,
-        _description: "IDOR攻撃 - 認可チェック不備",
-        _real_world_context: "REST APIでの典型的なIDOR脆弱性。攻撃者が他ユーザーのリソースに直接アクセス可能",
-    },
-
-    RealWorldBenchmark {
-        name: "Weak file upload validation",
-        cve_id: None,
-        language: Language::Python,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::IDOR],
+            expected_confidence_min: 7,
+            severity: BenchmarkSeverity::Medium,
+            _description: "IDOR攻撃 - 認可チェック不備",
+            _real_world_context: "REST APIでの典型的なIDOR脆弱性。攻撃者が他ユーザーのリソースに直接アクセス可能",
+        },
+        RealWorldBenchmark {
+            name: "Weak file upload validation",
+            cve_id: None,
+            language: Language::Python,
+            code: r#"
 import os
 from werkzeug.utils import secure_filename
 
@@ -370,19 +363,18 @@ def process_document_upload(file, document_type):
 # avatar.php.jpg (二重拡張子)
 # document.pdf (実際はPHPスクリプト、Content-Type偽装)
 "#,
-        expected_vulnerabilities: vec![VulnType::AFO],
-        expected_confidence_min: 6,
-        severity: BenchmarkSeverity::Medium,
-        _description: "ファイルアップロード検証不備",
-        _real_world_context: "Webアプリでのファイルアップロード機能における典型的な検証不備。攻撃者が悪意のあるファイル実行可能",
-    },
-
-    // === Complex Multi-vulnerability Cases ===
-    RealWorldBenchmark {
-        name: "E-commerce checkout - Multiple vulnerabilities",
-        cve_id: None,
-        language: Language::Python,
-        code: r#"
+            expected_vulnerabilities: vec![VulnType::AFO],
+            expected_confidence_min: 6,
+            severity: BenchmarkSeverity::Medium,
+            _description: "ファイルアップロード検証不備",
+            _real_world_context: "Webアプリでのファイルアップロード機能における典型的な検証不備。攻撃者が悪意のあるファイル実行可能",
+        },
+        // === Complex Multi-vulnerability Cases ===
+        RealWorldBenchmark {
+            name: "E-commerce checkout - Multiple vulnerabilities",
+            cve_id: None,
+            language: Language::Python,
+            code: r#"
 import json
 import subprocess
 import sqlite3
@@ -420,12 +412,17 @@ def process_payment(user_id, payment_data, order_details):
 
 # この一つの関数に複数の深刻な脆弱性が含まれている
 "#,
-        expected_vulnerabilities: vec![VulnType::SQLI, VulnType::RCE, VulnType::LFI, VulnType::SSRF],
-        expected_confidence_min: 8,
-        severity: BenchmarkSeverity::Critical,
-        _description: "複合脆弱性 - 実際のEコマース決済処理",
-        _real_world_context: "実際のEコマースサイトの決済処理に見られる複数脆弱性の組み合わせ。単一関数に多数の攻撃ベクターが存在",
-    },
+            expected_vulnerabilities: vec![
+                VulnType::SQLI,
+                VulnType::RCE,
+                VulnType::LFI,
+                VulnType::SSRF,
+            ],
+            expected_confidence_min: 8,
+            severity: BenchmarkSeverity::Critical,
+            _description: "複合脆弱性 - 実際のEコマース決済処理",
+            _real_world_context: "実際のEコマースサイトの決済処理に見られる複数脆弱性の組み合わせ。単一関数に多数の攻撃ベクターが存在",
+        },
     ]
 }
 
@@ -452,11 +449,11 @@ async fn test_benchmark_case(
         Language::Java => "java",
         Language::Go => "go",
         Language::Ruby => "rb",
-        Language::C => "c", 
+        Language::C => "c",
         Language::Cpp => "cpp",
         _ => "txt",
     };
-    
+
     let test_file = temp_dir.path().join(format!("test.{}", file_extension));
     std::fs::write(&test_file, benchmark.code)?;
 
@@ -477,32 +474,34 @@ async fn test_benchmark_case(
         &None,
         None,
         &LocaleLanguage::Japanese,
-    ).await?;
+    )
+    .await?;
 
     // 結果分析
     let detected_vulnerabilities = response.vulnerability_types;
     let confidence_score = response.confidence_score;
 
     // 検出精度計算
-    let expected_set: std::collections::HashSet<_> = benchmark.expected_vulnerabilities.iter().collect();
+    let expected_set: std::collections::HashSet<_> =
+        benchmark.expected_vulnerabilities.iter().collect();
     let detected_set: std::collections::HashSet<_> = detected_vulnerabilities.iter().collect();
-    
+
     let true_positives = expected_set.intersection(&detected_set).count();
     let _false_positives = detected_set.difference(&expected_set).count();
     let _false_negatives = expected_set.difference(&detected_set).count();
-    
+
     let precision = if detected_set.len() > 0 {
         true_positives as f64 / detected_set.len() as f64
     } else {
         if expected_set.is_empty() { 1.0 } else { 0.0 }
     };
-    
+
     let recall = if expected_set.len() > 0 {
         true_positives as f64 / expected_set.len() as f64
     } else {
         1.0
     };
-    
+
     let f1_score = if precision + recall > 0.0 {
         2.0 * (precision * recall) / (precision + recall)
     } else {
@@ -510,22 +509,23 @@ async fn test_benchmark_case(
     };
 
     // 解析品質評価
-    let analysis_quality = if response.analysis.len() > 100 && 
-                             response.analysis.to_lowercase().contains("脆弱") {
-        85.0
-    } else if response.analysis.len() > 50 {
-        70.0
-    } else {
-        40.0
-    };
+    let analysis_quality =
+        if response.analysis.len() > 100 && response.analysis.to_lowercase().contains("脆弱") {
+            85.0
+        } else if response.analysis.len() > 50 {
+            70.0
+        } else {
+            40.0
+        };
 
     // PoC品質評価
-    let poc_quality = if response.poc.len() > 50 &&
-                        (response.poc.contains("curl") || 
-                         response.poc.contains("SELECT") ||
-                         response.poc.contains("<script>") ||
-                         response.poc.contains("../") ||
-                         response.poc.contains("http://")) {
+    let poc_quality = if response.poc.len() > 50
+        && (response.poc.contains("curl")
+            || response.poc.contains("SELECT")
+            || response.poc.contains("<script>")
+            || response.poc.contains("../")
+            || response.poc.contains("http://"))
+    {
         80.0
     } else if response.poc.len() > 20 {
         60.0
@@ -558,28 +558,47 @@ async fn test_critical_severity_benchmarks() -> Result<()> {
         .filter(|b| matches!(b.severity, BenchmarkSeverity::Critical))
         .collect();
 
-    println!("🔥 クリティカル脆弱性ベンチマークテスト: {}ケース", critical_benchmarks.len());
+    println!(
+        "🔥 クリティカル脆弱性ベンチマークテスト: {}ケース",
+        critical_benchmarks.len()
+    );
 
     let mut detection_scores = Vec::new();
     let mut confidence_scores = Vec::new();
     let mut failed_cases = Vec::new();
 
     for benchmark in critical_benchmarks {
-        println!("  テスト中: {} - {}", benchmark.name, 
-                if let Some(cve) = benchmark.cve_id { cve } else { "No CVE" });
-        
+        println!(
+            "  テスト中: {} - {}",
+            benchmark.name,
+            if let Some(cve) = benchmark.cve_id {
+                cve
+            } else {
+                "No CVE"
+            }
+        );
+
         let result = test_benchmark_case(benchmark, model).await?;
-        
+
         detection_scores.push(result.detection_accuracy);
         confidence_scores.push(result.confidence_score as f64);
 
-        if result.detection_accuracy >= 90.0 && result.confidence_score >= benchmark.expected_confidence_min {
-            println!("    ✅ 検出成功: {:.1}% (信頼度={})", 
-                    result.detection_accuracy, result.confidence_score);
-            println!("       検出された脆弱性: {:?}", result.detected_vulnerabilities);
+        if result.detection_accuracy >= 90.0
+            && result.confidence_score >= benchmark.expected_confidence_min
+        {
+            println!(
+                "    ✅ 検出成功: {:.1}% (信頼度={})",
+                result.detection_accuracy, result.confidence_score
+            );
+            println!(
+                "       検出された脆弱性: {:?}",
+                result.detected_vulnerabilities
+            );
         } else {
-            println!("    ❌ 検出失敗: {:.1}% (信頼度={})", 
-                    result.detection_accuracy, result.confidence_score);
+            println!(
+                "    ❌ 検出失敗: {:.1}% (信頼度={})",
+                result.detection_accuracy, result.confidence_score
+            );
             println!("       期待: {:?}", benchmark.expected_vulnerabilities);
             println!("       実際: {:?}", result.detected_vulnerabilities);
             failed_cases.push(benchmark.name);
@@ -642,7 +661,9 @@ async fn test_comprehensive_benchmark_suite() -> Result<()> {
 
         // 統計更新
         let severity_key = format!("{:?}", benchmark.severity);
-        let entry = severity_stats.entry(severity_key).or_insert((0.0, 0.0, 0.0, 0));
+        let entry = severity_stats
+            .entry(severity_key)
+            .or_insert((0.0, 0.0, 0.0, 0));
         entry.0 += result.detection_accuracy;
         entry.1 += result.analysis_quality;
         entry.2 += result.poc_quality;
@@ -665,12 +686,14 @@ async fn test_comprehensive_benchmark_suite() -> Result<()> {
 
     println!("\n深刻度別結果:");
     for (severity, (detection_sum, analysis_sum, poc_sum, count)) in severity_stats {
-        println!("  {}: 検出={:.1}%, 解析={:.1}%, PoC={:.1}% ({}ケース)",
-                severity,
-                detection_sum / count as f64,
-                analysis_sum / count as f64,
-                poc_sum / count as f64,
-                count);
+        println!(
+            "  {}: 検出={:.1}%, 解析={:.1}%, PoC={:.1}% ({}ケース)",
+            severity,
+            detection_sum / count as f64,
+            analysis_sum / count as f64,
+            poc_sum / count as f64,
+            count
+        );
     }
 
     // 総合スコア計算
@@ -713,24 +736,29 @@ async fn test_multi_vulnerability_detection() -> Result<()> {
     let mut total_tests = 0;
 
     for benchmark in multi_vuln_cases {
-        println!("  テスト中: {} (期待脆弱性数: {})", 
-                benchmark.name, benchmark.expected_vulnerabilities.len());
-        
+        println!(
+            "  テスト中: {} (期待脆弱性数: {})",
+            benchmark.name,
+            benchmark.expected_vulnerabilities.len()
+        );
+
         let result = test_benchmark_case(benchmark, model).await?;
 
-        let expected_set: std::collections::HashSet<_> = benchmark.expected_vulnerabilities.iter().collect();
-        let detected_set: std::collections::HashSet<_> = result.detected_vulnerabilities.iter().collect();
-        
+        let expected_set: std::collections::HashSet<_> =
+            benchmark.expected_vulnerabilities.iter().collect();
+        let detected_set: std::collections::HashSet<_> =
+            result.detected_vulnerabilities.iter().collect();
+
         let true_positives = expected_set.intersection(&detected_set).count();
         let false_positives = detected_set.difference(&expected_set).count();
         let false_negatives = expected_set.difference(&detected_set).count();
-        
+
         let precision = if detected_set.len() > 0 {
             true_positives as f64 / detected_set.len() as f64
         } else {
             0.0
         };
-        
+
         let recall = if expected_set.len() > 0 {
             true_positives as f64 / expected_set.len() as f64
         } else {
@@ -741,8 +769,14 @@ async fn test_multi_vulnerability_detection() -> Result<()> {
         total_precision += precision;
         total_tests += 1;
 
-        println!("    再現率: {:.1}%, 適合率: {:.1}% (TP={}, FP={}, FN={})",
-                recall * 100.0, precision * 100.0, true_positives, false_positives, false_negatives);
+        println!(
+            "    再現率: {:.1}%, 適合率: {:.1}% (TP={}, FP={}, FN={})",
+            recall * 100.0,
+            precision * 100.0,
+            true_positives,
+            false_positives,
+            false_negatives
+        );
     }
 
     let avg_recall = (total_recall / total_tests as f64) * 100.0;

@@ -7,7 +7,7 @@ use tempfile::tempdir;
 
 /// Node.js大規模コードベース解析のパフォーマンスベンチマーク
 /// Issue #119: PERF: Create Node.js performance benchmark for large codebase analysis
-/// 
+///
 /// 大規模なNode.jsアプリケーションでの脆弱性検出性能を測定し、
 /// 実世界のプロジェクトで実用的な性能を維持できているかを検証する
 
@@ -23,9 +23,10 @@ struct NodejsBenchmarkResult {
 
 fn generate_large_nodejs_express_app() -> String {
     let mut code = String::new();
-    
+
     // Main Express application setup
-    code.push_str(r#"
+    code.push_str(
+        r#"
 const express = require('express');
 const mysql = require('mysql2');
 const multer = require('multer');
@@ -58,7 +59,8 @@ const JWT_SECRET = 'super-secret-key-123';
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
-"#);
+"#,
+    );
 
     // Generate authentication routes with vulnerabilities
     for i in 0..10 {
@@ -121,7 +123,8 @@ app.get('/api/v{}/users/:userId', (req, res) => {{
 
     // Generate file handling routes with vulnerabilities
     for i in 0..8 {
-        code.push_str(&format!(r#"
+        code.push_str(&format!(
+            r#"
 // File upload route {}
 app.post('/api/v{}/upload', upload.single('file'), (req, res) => {{
     const fileName = req.body.filename || req.file.originalname;
@@ -163,12 +166,15 @@ app.get('/api/v{}/download/:filename', (req, res) => {{
     }});
 }});
 
-"#, i, i, i, i));
+"#,
+            i, i, i, i
+        ));
     }
 
     // Generate API routes with injection vulnerabilities
     for i in 0..15 {
-        code.push_str(&format!(r#"
+        code.push_str(&format!(
+            r#"
 // Search API {} with multiple vulnerabilities
 app.get('/api/v{}/search', (req, res) => {{
     const {{ query, category, sort, limit }} = req.query;
@@ -225,12 +231,15 @@ app.post('/api/v{}/admin/data', (req, res) => {{
     }});
 }});
 
-"#, i, i, i, i));
+"#,
+            i, i, i, i
+        ));
     }
 
     // Generate webhook and SSRF routes
     for i in 0..5 {
-        code.push_str(&format!(r#"
+        code.push_str(&format!(
+            r#"
 // Webhook route {} with SSRF
 app.post('/api/v{}/webhook', (req, res) => {{
     const {{ url, method, payload, headers }} = req.body;
@@ -279,11 +288,14 @@ app.get('/api/v{}/proxy', (req, res) => {{
     res.redirect(targetUrl);
 }});
 
-"#, i, i, i, i));
+"#,
+            i, i, i, i
+        ));
     }
 
     // Add WebSocket functionality with vulnerabilities
-    code.push_str(r#"
+    code.push_str(
+        r#"
 // WebSocket server with authentication bypass
 const wss = new WebSocket.Server({ port: 8080 });
 
@@ -369,14 +381,15 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
-"#);
+"#,
+    );
 
     code
 }
 
 fn generate_nodejs_microservice_code() -> String {
     let mut code = String::new();
-    
+
     // Generate multiple microservice-style modules
     for service_id in 0..5 {
         code.push_str(&format!(r#"
@@ -563,40 +576,44 @@ const RateLimiter = {
 };
 
 module.exports = { SecurityUtils, RateLimiter };
-"#.to_string()
+"#
+    .to_string()
 }
 
 async fn run_nodejs_performance_benchmark(model: &str) -> Result<NodejsBenchmarkResult> {
     let start_time = Instant::now();
-    
+
     // Generate large Node.js application code
     let main_app = generate_large_nodejs_express_app();
     let microservices = generate_nodejs_microservice_code();
     let security_code = generate_nodejs_security_code();
-    
+
     // Combine all code
     let full_code = format!("{}\n\n{}\n\n{}", main_app, microservices, security_code);
     let lines_analyzed = full_code.lines().count();
-    
+
     // Create temporary file
     let temp_dir = tempdir()?;
     let test_file = temp_dir.path().join("large_nodejs_app.js");
     std::fs::write(&test_file, &full_code)?;
-    
+
     println!("📊 Node.js Performance Benchmark");
     println!("   ├─ Generated code: {} lines", lines_analyzed);
     println!("   ├─ File size: {} KB", full_code.len() / 1024);
     println!("   └─ Analysis target: Large Express.js application");
-    
+
     // Parse and build context
     let parse_start = Instant::now();
     let mut parser = CodeParser::new()?;
     parser.add_file(&test_file)?;
     let context = parser.build_context_from_file(&test_file)?;
     let parse_duration = parse_start.elapsed();
-    
-    println!("   ├─ Parsing time: {:.2} seconds", parse_duration.as_secs_f64());
-    
+
+    println!(
+        "   ├─ Parsing time: {:.2} seconds",
+        parse_duration.as_secs_f64()
+    );
+
     // Analyze file
     let analysis_start = Instant::now();
     let response = analyze_file(
@@ -610,29 +627,46 @@ async fn run_nodejs_performance_benchmark(model: &str) -> Result<NodejsBenchmark
         &None,
         None,
         &LocaleLanguage::Japanese,
-    ).await?;
+    )
+    .await?;
     let analysis_duration = analysis_start.elapsed();
-    
+
     let total_duration = start_time.elapsed();
     let analysis_speed = lines_analyzed as f64 / total_duration.as_secs_f64();
-    
+
     // Performance targets
     let target_max_time_ms = 300_000; // 5 minutes
     let target_min_speed = 50.0; // 50 lines per second
     let target_min_vulnerabilities = 50; // Should detect at least 50 vulnerabilities
-    
-    let performance_target_met = total_duration.as_millis() <= target_max_time_ms 
+
+    let performance_target_met = total_duration.as_millis() <= target_max_time_ms
         && analysis_speed >= target_min_speed
         && response.vulnerability_types.len() >= target_min_vulnerabilities;
-    
+
     let memory_efficient = true; // Assume memory efficiency for now
-    
-    println!("   ├─ Analysis time: {:.2} seconds", analysis_duration.as_secs_f64());
-    println!("   ├─ Total time: {:.2} seconds", total_duration.as_secs_f64());
+
+    println!(
+        "   ├─ Analysis time: {:.2} seconds",
+        analysis_duration.as_secs_f64()
+    );
+    println!(
+        "   ├─ Total time: {:.2} seconds",
+        total_duration.as_secs_f64()
+    );
     println!("   ├─ Analysis speed: {:.1} lines/second", analysis_speed);
-    println!("   ├─ Vulnerabilities detected: {}", response.vulnerability_types.len());
-    println!("   └─ Performance target: {}", if performance_target_met { "✅ MET" } else { "❌ FAILED" });
-    
+    println!(
+        "   ├─ Vulnerabilities detected: {}",
+        response.vulnerability_types.len()
+    );
+    println!(
+        "   └─ Performance target: {}",
+        if performance_target_met {
+            "✅ MET"
+        } else {
+            "❌ FAILED"
+        }
+    );
+
     Ok(NodejsBenchmarkResult {
         execution_time_ms: total_duration.as_millis(),
         lines_analyzed,
@@ -650,55 +684,78 @@ async fn test_nodejs_large_codebase_performance() -> Result<()> {
         println!("OPENAI_API_KEY not set, skipping Node.js performance benchmark test");
         return Ok(());
     }
-    
+
     let model = "gpt-4.1-mini";
-    
+
     println!("\n🚀 Node.js Large Codebase Performance Benchmark");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Testing performance with large-scale Node.js Express application");
     println!("Target: Analyze 1000+ lines in < 5 minutes with 50+ vulnerabilities detected");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let result = run_nodejs_performance_benchmark(model).await?;
-    
+
     println!("\n📈 Performance Results:");
-    println!("   ├─ Execution Time: {:.2} seconds ({} ms)", 
-            result.execution_time_ms as f64 / 1000.0, result.execution_time_ms);
+    println!(
+        "   ├─ Execution Time: {:.2} seconds ({} ms)",
+        result.execution_time_ms as f64 / 1000.0,
+        result.execution_time_ms
+    );
     println!("   ├─ Lines Analyzed: {} lines", result.lines_analyzed);
-    println!("   ├─ Analysis Speed: {:.1} lines/second", result.analysis_speed);
-    println!("   ├─ Vulnerabilities: {} detected", result.vulnerabilities_detected);
-    println!("   ├─ Memory Efficient: {}", if result.memory_efficient { "✅ Yes" } else { "❌ No" });
-    println!("   └─ Overall Performance: {}", if result.performance_target_met { "✅ PASSED" } else { "❌ FAILED" });
-    
+    println!(
+        "   ├─ Analysis Speed: {:.1} lines/second",
+        result.analysis_speed
+    );
+    println!(
+        "   ├─ Vulnerabilities: {} detected",
+        result.vulnerabilities_detected
+    );
+    println!(
+        "   ├─ Memory Efficient: {}",
+        if result.memory_efficient {
+            "✅ Yes"
+        } else {
+            "❌ No"
+        }
+    );
+    println!(
+        "   └─ Overall Performance: {}",
+        if result.performance_target_met {
+            "✅ PASSED"
+        } else {
+            "❌ FAILED"
+        }
+    );
+
     // Detailed performance assertions
     assert!(
         result.execution_time_ms <= 300_000,
         "Analysis took too long: {} ms (limit: 300,000 ms / 5 minutes)",
         result.execution_time_ms
     );
-    
+
     assert!(
         result.analysis_speed >= 50.0,
         "Analysis too slow: {:.1} lines/second (minimum: 50.0 lines/second)",
         result.analysis_speed
     );
-    
+
     assert!(
         result.vulnerabilities_detected >= 50,
         "Too few vulnerabilities detected: {} (minimum: 50)",
         result.vulnerabilities_detected
     );
-    
+
     assert!(
         result.lines_analyzed >= 1000,
         "Test should analyze at least 1000 lines, got: {}",
         result.lines_analyzed
     );
-    
+
     println!("\n🎉 Node.js Large Codebase Performance Benchmark PASSED!");
     println!("   The scanner successfully analyzed a large Node.js application");
     println!("   within performance targets while detecting numerous vulnerabilities.");
-    
+
     Ok(())
 }
 
@@ -706,19 +763,20 @@ async fn test_nodejs_large_codebase_performance() -> Result<()> {
 async fn test_nodejs_memory_performance() -> Result<()> {
     println!("\n💾 Node.js Memory Performance Test (API-free)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Test memory usage with progressively larger files
     let sizes = vec![500, 1000, 2000, 5000];
-    
+
     for &size in &sizes {
         let start_time = Instant::now();
-        
+
         // Generate code of specific size
         let mut code = String::new();
         code.push_str("const express = require('express');\nconst app = express();\n\n");
-        
-        for i in 0..size/10 {
-            code.push_str(&format!(r#"
+
+        for i in 0..size / 10 {
+            code.push_str(&format!(
+                r#"
 app.get('/route_{}', (req, res) => {{
     const userInput = req.query.data;
     const query = `SELECT * FROM table WHERE id = '${{userInput}}'`;
@@ -726,49 +784,58 @@ app.get('/route_{}', (req, res) => {{
         res.json(results);
     }});
 }});
-"#, i));
+"#,
+                i
+            ));
         }
-        
+
         let temp_dir = tempdir()?;
         let test_file = temp_dir.path().join(format!("memory_test_{}.js", size));
         std::fs::write(&test_file, &code)?;
-        
+
         // Test parsing memory usage
         let mut parser = CodeParser::new()?;
         parser.add_file(&test_file)?;
         let _context = parser.build_context_from_file(&test_file)?;
-        
+
         let duration = start_time.elapsed();
         let lines = code.lines().count();
         let speed = lines as f64 / duration.as_secs_f64();
-        
-        println!("   📊 {} lines: {:.3}s, {:.1} lines/s", lines, duration.as_secs_f64(), speed);
-        
+
+        println!(
+            "   📊 {} lines: {:.3}s, {:.1} lines/s",
+            lines,
+            duration.as_secs_f64(),
+            speed
+        );
+
         // Memory performance should scale linearly
         assert!(
             speed > 100.0,
             "Parsing too slow for {} lines: {:.1} lines/s (minimum: 100 lines/s)",
-            lines, speed
+            lines,
+            speed
         );
     }
-    
+
     println!("   ✅ Memory performance scaling is acceptable");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     Ok(())
 }
 
-#[tokio::test] 
+#[tokio::test]
 async fn test_nodejs_concurrent_file_analysis() -> Result<()> {
     println!("\n🔄 Node.js Concurrent File Analysis Test (API-free)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let temp_dir = tempdir()?;
     let mut test_files = Vec::new();
-    
+
     // Create multiple Node.js files
     for i in 0..5 {
-        let code = format!(r#"
+        let code = format!(
+            r#"
 // Node.js file {}
 const express = require('express');
 const mysql = require('mysql2');
@@ -794,42 +861,48 @@ app.post('/api/process_{}', (req, res) => {{
 }});
 
 module.exports = app;
-"#, i, i, i, i);
-        
+"#,
+            i, i, i, i
+        );
+
         let file_path = temp_dir.path().join(format!("concurrent_test_{}.js", i));
         std::fs::write(&file_path, &code)?;
         test_files.push(file_path);
     }
-    
+
     // Test concurrent parsing
     let start_time = Instant::now();
     let mut total_lines = 0;
-    
+
     for file in &test_files {
         let mut parser = CodeParser::new()?;
         parser.add_file(file)?;
         let _context = parser.build_context_from_file(file)?;
-        
+
         let content = std::fs::read_to_string(file)?;
         total_lines += content.lines().count();
     }
-    
+
     let duration = start_time.elapsed();
     let avg_speed = total_lines as f64 / duration.as_secs_f64();
-    
-    println!("   📊 Processed {} files ({} lines) in {:.3}s", 
-            test_files.len(), total_lines, duration.as_secs_f64());
+
+    println!(
+        "   📊 Processed {} files ({} lines) in {:.3}s",
+        test_files.len(),
+        total_lines,
+        duration.as_secs_f64()
+    );
     println!("   📊 Average speed: {:.1} lines/second", avg_speed);
-    
+
     // Should handle multiple files efficiently
     assert!(
         avg_speed > 200.0,
         "Concurrent processing too slow: {:.1} lines/s (minimum: 200 lines/s)",
         avg_speed
     );
-    
+
     println!("   ✅ Concurrent file analysis performance acceptable");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     Ok(())
 }

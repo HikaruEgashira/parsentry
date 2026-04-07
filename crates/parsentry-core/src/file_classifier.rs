@@ -225,12 +225,17 @@ spec:
     fn test_kubernetes_requires_both_required_and_spec() {
         // has spec patterns but missing required (no apiVersion/kind/metadata) → not k8s
         let no_required = "spec:\n  containers:\n  - name: x\n";
-        assert!(!FileClassifier::is_kubernetes_manifest("pod.yaml", no_required));
+        assert!(!FileClassifier::is_kubernetes_manifest(
+            "pod.yaml",
+            no_required
+        ));
 
         // has required but no spec/data/stringData → not k8s
         // Note: "metadata:" contains "data:" substring, so we test without metadata-like patterns
         let only_kind = "apiVersion: v1\nkind: Pod\n";
-        assert!(!FileClassifier::is_kubernetes_manifest("pod.yaml", only_kind));
+        assert!(!FileClassifier::is_kubernetes_manifest(
+            "pod.yaml", only_kind
+        ));
 
         // Non-yaml extension → not k8s even with valid content
         let full = "apiVersion: v1\nkind: Pod\nmetadata:\n  name: x\nspec:\n  c: d\n";
@@ -261,9 +266,15 @@ services:
         // Each || branch must independently trigger true (kills || → && mutants)
         assert!(FileClassifier::is_docker_compose("docker-compose.yml", ""));
         assert!(FileClassifier::is_docker_compose("docker-compose.yaml", ""));
-        assert!(FileClassifier::is_docker_compose("compose.override.yml", ""));
+        assert!(FileClassifier::is_docker_compose(
+            "compose.override.yml",
+            ""
+        ));
         // Non-matching filename with non-matching content
-        assert!(!FileClassifier::is_docker_compose("other.yml", "random: stuff"));
+        assert!(!FileClassifier::is_docker_compose(
+            "other.yml",
+            "random: stuff"
+        ));
     }
 
     #[test]
@@ -273,7 +284,10 @@ services:
         // Actually "docker-compose.yaml" contains "compose." so this is inherently unkillable
         // via the third branch. Instead, test that "docker-compose.yaml" returns true
         // even when the first condition is false.
-        assert!(FileClassifier::is_docker_compose("path/docker-compose.yaml", ""));
+        assert!(FileClassifier::is_docker_compose(
+            "path/docker-compose.yaml",
+            ""
+        ));
     }
 
     #[test]
@@ -341,7 +355,10 @@ pipeline {
 }
         "#;
         assert!(FileClassifier::is_jenkinsfile("Jenkinsfile", content));
-        assert!(FileClassifier::is_jenkinsfile("awesome_app.groovy", content));
+        assert!(FileClassifier::is_jenkinsfile(
+            "awesome_app.groovy",
+            content
+        ));
 
         // Should not match non-Jenkins files
         assert!(!FileClassifier::is_jenkinsfile("script.sh", content));
@@ -350,13 +367,22 @@ pipeline {
     #[test]
     fn test_terraform_extension_gating_and_patterns() {
         // .tf with terraform content → true
-        assert!(FileClassifier::is_terraform("main.tf", "resource \"aws_s3\""));
+        assert!(FileClassifier::is_terraform(
+            "main.tf",
+            "resource \"aws_s3\""
+        ));
         // .hcl with terraform content → true
         assert!(FileClassifier::is_terraform("main.hcl", "provider \"aws\""));
         // non .tf/.hcl → false even with content (kills ! deletion)
-        assert!(!FileClassifier::is_terraform("main.py", "resource \"aws_s3\""));
+        assert!(!FileClassifier::is_terraform(
+            "main.py",
+            "resource \"aws_s3\""
+        ));
         // .tf without any terraform pattern → false (kills return false → true)
-        assert!(!FileClassifier::is_terraform("main.tf", "no terraform here"));
+        assert!(!FileClassifier::is_terraform(
+            "main.tf",
+            "no terraform here"
+        ));
         // .tf with only one pattern → true (|| means any match)
         assert!(FileClassifier::is_terraform("main.tf", "variable \"name\""));
         assert!(FileClassifier::is_terraform("main.tf", "module \"vpc\""));

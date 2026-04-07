@@ -12,10 +12,7 @@
 ///
 /// # Returns
 /// A unique filename string suitable for filesystem use
-pub fn generate_output_filename(
-    file_path: &std::path::Path,
-    root_dir: &std::path::Path,
-) -> String {
+pub fn generate_output_filename(file_path: &std::path::Path, root_dir: &std::path::Path) -> String {
     // Strip the root directory prefix to get relative path
     let relative_path = match file_path.strip_prefix(root_dir) {
         Ok(rel_path) => rel_path,
