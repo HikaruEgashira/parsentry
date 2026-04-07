@@ -60,22 +60,31 @@ fn ensure_fingerprint(result: &mut SarifResult) {
 ///   - `"unchanged"`: same ruleId + fingerprint exists in baseline
 ///   - `"absent"`: in baseline but not in current scan (appended with absent state)
 pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifReport> {
-    let mut sarif_files: Vec<_> = std::fs::read_dir(dir)
+    // Collect result.sarif.json from surface subdirectories, falling back to
+    // flat *.sarif.json files in dir for backward compatibility.
+    let mut sarif_files: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
         .with_context(|| format!("cannot read directory: {}", dir.display()))?
         .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .file_name()
+        .flat_map(|e| {
+            let path = e.path();
+            if path.is_dir() {
+                let candidate = path.join("result.sarif.json");
+                if candidate.exists() { vec![candidate] } else { vec![] }
+            } else if path.file_name()
                 .map(|n| n.to_string_lossy().ends_with(".sarif.json"))
                 .unwrap_or(false)
+            {
+                vec![path]
+            } else {
+                vec![]
+            }
         })
-        .map(|e| e.path())
         .collect();
 
     sarif_files.sort();
 
     if sarif_files.is_empty() {
-        anyhow::bail!("no *.sarif.json files found in {}", dir.display());
+        anyhow::bail!("no sarif files found in {}", dir.display());
     }
 
     // Load baseline results indexed by fingerprint

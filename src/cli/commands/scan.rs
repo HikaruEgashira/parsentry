@@ -10,8 +10,9 @@ use super::common::{cache_dir_for, locate_repository, repo_name_from_target};
 
 /// Check if a surface has a cached SARIF result with a matching cache key.
 fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
-    let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
-    let cache_key_path = output_dir.join(format!("{}.cache_key", sp.surface_id));
+    let surface_dir = output_dir.join(&sp.surface_id);
+    let sarif_path = surface_dir.join("result.sarif.json");
+    let cache_key_path = surface_dir.join(".cache_key");
 
     if !sarif_path.exists() || !cache_key_path.exists() {
         return false;
@@ -25,7 +26,7 @@ fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
 
 /// Write the cache key sidecar file for a surface.
 fn write_cache_key(output_dir: &Path, sp: &SurfacePrompt) -> Result<()> {
-    let cache_key_path = output_dir.join(format!("{}.cache_key", sp.surface_id));
+    let cache_key_path = output_dir.join(&sp.surface_id).join(".cache_key");
     std::fs::write(&cache_key_path, &sp.cache_key)?;
     Ok(())
 }
@@ -110,8 +111,11 @@ pub async fn run_scan_command(
     // Write prompts only for pending (non-cached) surfaces
     printer.section("Prompts");
     for sp in &pending {
-        let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
-        let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
+        let surface_dir = output_dir.join(&sp.surface_id);
+        std::fs::create_dir_all(&surface_dir)?;
+
+        let prompt_path = surface_dir.join("prompt.md");
+        let sarif_path = surface_dir.join("result.sarif.json");
 
         let full_prompt = format!(
             "{}\n\nWrite the SARIF JSON output to: {}\n\

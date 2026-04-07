@@ -169,7 +169,7 @@ pub fn build_orchestrator_prompt(
     );
 
     for sp in surface_prompts {
-        let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
+        let prompt_path = output_dir.join(&sp.surface_id).join("prompt.md");
         prompt.push_str(&format!(
             "- Agent(description: \"Analyze {id}\", prompt: \"Read {path} and execute the instructions in it.\", \
              mode: \"dontAsk\")\n",

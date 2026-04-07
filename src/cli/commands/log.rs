@@ -58,11 +58,16 @@ pub async fn run_log_command(
             return Ok(());
         }
         for (name, reports_dir) in &all {
+            // Surface directories contain prompt.md; orchestrator is a flat file
             let prompt_count = std::fs::read_dir(reports_dir)
-                .map(|e| e.flatten().filter(|f| f.file_name().to_string_lossy().ends_with(".prompt.md")).count())
+                .map(|e| e.flatten().filter(|f| {
+                    f.path().is_dir() && f.path().join("prompt.md").exists()
+                }).count())
                 .unwrap_or(0);
             let sarif_count = std::fs::read_dir(reports_dir)
-                .map(|e| e.flatten().filter(|f| f.file_name().to_string_lossy().ends_with(".sarif.json")).count())
+                .map(|e| e.flatten().filter(|f| {
+                    f.path().is_dir() && f.path().join("result.sarif.json").exists()
+                }).count())
                 .unwrap_or(0);
             let status = if sarif_count >= prompt_count && prompt_count > 0 {
                 "complete"
@@ -343,8 +348,9 @@ fn discover_new_surfaces(
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
 
-        if name_str.ends_with(".prompt.md") && name_str != "orchestrator.prompt.md" {
-            let surface_id = name_str.trim_end_matches(".prompt.md").to_string();
+        // Surface directories contain prompt.md
+        if entry.path().is_dir() && entry.path().join("prompt.md").exists() {
+            let surface_id = name_str.to_string();
             if !known_set.contains(surface_id.as_str()) {
                 new_surfaces.push(surface_id);
             }
@@ -380,11 +386,11 @@ fn check_completed_surfaces(
 }
 
 fn sarif_exists(output_dir: &Path, surface_id: &str) -> bool {
-    output_dir.join(format!("{}.sarif.json", surface_id)).exists()
+    output_dir.join(surface_id).join("result.sarif.json").exists()
 }
 
 fn count_sarif_findings(output_dir: &Path, surface_id: &str) -> usize {
-    let path = output_dir.join(format!("{}.sarif.json", surface_id));
+    let path = output_dir.join(surface_id).join("result.sarif.json");
     let data = match std::fs::read_to_string(&path) {
         Ok(d) => d,
         Err(_) => return 0,
