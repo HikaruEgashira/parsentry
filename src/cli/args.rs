@@ -1,4 +1,3 @@
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -72,6 +71,43 @@ pub enum Commands {
         /// Path to threat model JSON file
         #[arg(long)]
         threat_model: Option<PathBuf>,
+    },
+    /// Monitor scan progress (docker compose logs -f style)
+    Watch {
+        /// Output directory containing prompt and SARIF files
+        output_dir: PathBuf,
+
+        /// Follow log output
+        #[arg(short, long, default_value_t = true, action = clap::ArgAction::SetTrue)]
+        follow: bool,
+
+        /// Disable follow mode
+        #[arg(long = "no-follow", action = clap::ArgAction::SetTrue)]
+        no_follow: bool,
+
+        /// Number of recent events to show initially
+        #[arg(long)]
+        tail: Option<usize>,
+
+        /// Show timestamps
+        #[arg(short, long, default_value_t = true, action = clap::ArgAction::SetTrue)]
+        timestamps: bool,
+
+        /// Disable timestamps
+        #[arg(long = "no-timestamps", action = clap::ArgAction::SetTrue)]
+        no_timestamps: bool,
+
+        /// Polling interval in seconds
+        #[arg(long, default_value = "5")]
+        interval: u64,
+
+        /// Timeout in seconds
+        #[arg(long)]
+        timeout: Option<u64>,
+
+        /// Disable color output
+        #[arg(long)]
+        no_color: bool,
     },
     /// Manage result cache
     Cache {

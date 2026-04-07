@@ -15,6 +15,8 @@ tokio.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
 parsentry-reports = { path = "crates/parsentry-reports" }
 parsentry-cache = { path = "crates/parsentry-cache" }
+parsentry-claude = { path = "crates/parsentry-claude" }
+notify = { version = "7", default-features = false, features = ["macos_fsevent"] }
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true
 serde_json.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "parsentry-claude"
+version.workspace = true
+edition.workspace = true
+description = "Claude Code session reader for parsentry"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+libc = "0.2"
+dirs-next = "2.0"

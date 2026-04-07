@@ -6,7 +6,7 @@
 
 use std::path::Path;
 
-use parsentry_core::{AttackSurface, FileDiscovery, RepoMetadata, ThreatModel};
+use parsentry_core::{AttackSurface, FileDiscovery, ThreatModel};
 use sha2::{Digest, Sha256};
 
 /// Maximum file size (in bytes) to include in a prompt.
@@ -88,7 +88,6 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
 /// `locations`.
 pub fn build_surface_prompt(
     surface: &AttackSurface,
-    repo_metadata: &RepoMetadata,
     root_dir: &Path,
 ) -> Option<SurfacePrompt> {
     let sources = resolve_source_files(surface, root_dir);
@@ -96,8 +95,6 @@ pub fn build_surface_prompt(
     if sources.is_empty() {
         return None;
     }
-
-    let repo_context = repo_metadata.to_prompt_context();
 
     // Cache key: SHA-256 of concatenated (relative_path + "\0" + file_contents)
     let mut cache_input = String::new();
@@ -127,10 +124,7 @@ pub fn build_surface_prompt(
         surface.locations.join(", ")
     ));
 
-    // Repository context
-    prompt.push_str("## Repository Context\n\n");
-    prompt.push_str(&repo_context);
-    prompt.push_str("\n\n## Source Code\n\n");
+    prompt.push_str("## Source Code\n\n");
 
     for src in &sources {
         // Infer language hint from extension
@@ -163,13 +157,12 @@ pub fn build_surface_prompt(
 /// Surfaces that have no readable source files are silently skipped.
 pub fn build_all_surface_prompts(
     threat_model: &ThreatModel,
-    repo_metadata: &RepoMetadata,
     root_dir: &Path,
 ) -> Vec<SurfacePrompt> {
     threat_model
         .surfaces
         .iter()
-        .filter_map(|s| build_surface_prompt(s, repo_metadata, root_dir))
+        .filter_map(|s| build_surface_prompt(s, root_dir))
         .collect()
 }
 
@@ -266,20 +259,8 @@ fn hex_sha256(data: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use std::fs;
     use tempfile::TempDir;
-
-    fn make_metadata(root: &Path) -> RepoMetadata {
-        RepoMetadata {
-            root_dir: root.to_path_buf(),
-            directory_tree: "src/\n".to_string(),
-            languages: HashMap::new(),
-            dependency_manifests: vec![],
-            entry_points: vec![],
-            total_files: 1,
-        }
-    }
 
     fn make_surface(id: &str, locations: Vec<&str>) -> AttackSurface {
         AttackSurface {
@@ -296,8 +277,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
         let surface = make_surface("S-1", vec!["src/nonexistent.py"]);
-        let meta = make_metadata(root);
-        assert!(build_surface_prompt(&surface, &meta, root).is_none());
+        assert!(build_surface_prompt(&surface, root).is_none());
     }
 
     #[test]
@@ -309,9 +289,7 @@ mod tests {
         fs::write(src_dir.join("auth.py"), "password = input()\n").unwrap();
 
         let surface = make_surface("S-1", vec!["src/auth.py"]);
-        let meta = make_metadata(root);
-
-        let sp = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp = build_surface_prompt(&surface, root).unwrap();
         assert_eq!(sp.surface_id, "S-1");
         assert!(sp.prompt.contains("password = input()"));
         assert!(sp.prompt.contains("src/auth.py"));
@@ -329,9 +307,7 @@ mod tests {
         fs::write(src_dir.join("utils.py"), "def helper(): pass\n").unwrap();
 
         let surface = make_surface("S-1", vec!["src"]);
-        let meta = make_metadata(root);
-
-        let sp = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp = build_surface_prompt(&surface, root).unwrap();
         assert!(sp.prompt.contains("os.system(cmd)"));
         assert!(sp.prompt.contains("def helper(): pass"));
     }
@@ -345,8 +321,7 @@ mod tests {
         fs::write(src_dir.join("big.py"), &"x".repeat(60 * 1024)).unwrap();
 
         let surface = make_surface("S-1", vec!["src/big.py"]);
-        let meta = make_metadata(root);
-        assert!(build_surface_prompt(&surface, &meta, root).is_none());
+        assert!(build_surface_prompt(&surface, root).is_none());
     }
 
     #[test]
@@ -358,10 +333,8 @@ mod tests {
         fs::write(src_dir.join("app.py"), "os.system(cmd)\n").unwrap();
 
         let surface = make_surface("S-1", vec!["src/app.py"]);
-        let meta = make_metadata(root);
-
-        let sp1 = build_surface_prompt(&surface, &meta, root).unwrap();
-        let sp2 = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp1 = build_surface_prompt(&surface, root).unwrap();
+        let sp2 = build_surface_prompt(&surface, root).unwrap();
         assert_eq!(sp1.cache_key, sp2.cache_key);
     }
 
@@ -374,11 +347,10 @@ mod tests {
         fs::write(src_dir.join("app.py"), "version_1\n").unwrap();
 
         let surface = make_surface("S-1", vec!["src/app.py"]);
-        let meta = make_metadata(root);
-        let sp1 = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp1 = build_surface_prompt(&surface, root).unwrap();
 
         fs::write(src_dir.join("app.py"), "version_2\n").unwrap();
-        let sp2 = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp2 = build_surface_prompt(&surface, root).unwrap();
         assert_ne!(sp1.cache_key, sp2.cache_key);
     }
 
@@ -391,9 +363,7 @@ mod tests {
         fs::write(src_dir.join("app.py"), "eval(x)\n").unwrap();
 
         let surface = make_surface("S-1", vec!["src/app.py", "src/app.py"]);
-        let meta = make_metadata(root);
-
-        let sp = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp = build_surface_prompt(&surface, root).unwrap();
         assert_eq!(sp.prompt.matches("eval(x)").count(), 1);
     }
 }

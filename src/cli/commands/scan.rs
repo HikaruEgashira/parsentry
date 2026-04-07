@@ -48,7 +48,6 @@ pub async fn run_scan_command(
     // Phase 3: Generate per-surface prompts and write to files
     let surface_prompts = build_all_surface_prompts(
         &threat_model,
-        &repo_metadata,
         &root_dir,
     );
 
