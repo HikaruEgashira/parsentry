@@ -49,7 +49,7 @@ Parsentry generates prompts. You need a CLI agent to execute them:
 npm install -g @anthropic-ai/claude-code
 ```
 
-Any CLI agent works: `claude`, `codex`, `aider`, etc.
+Any CLI agent works: `claude`, `codex`, `pi`, etc.
 
 ### Commands
 
