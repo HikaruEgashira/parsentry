@@ -1,28 +1,23 @@
 use anyhow::Result;
-use std::io::Read as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use crate::cli::args::ScanArgs;
 use crate::cli::ui::StatusPrinter;
-use crate::config::ParsentryConfig;
 use crate::prompt::build_all_surface_prompts;
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
 use super::common::{locate_repository, resolve_output_dir};
 
-pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
+pub async fn run_scan_command(
+    threat_model_path: &Path,
+    target: &str,
+    output_dir: Option<&Path>,
+    _diff_base: Option<&str>,
+    _filter_lang: Option<&str>,
+) -> Result<()> {
     let printer = StatusPrinter::new();
 
-    let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
-    let _config = ParsentryConfig::load_with_precedence(
-        args.config.clone(),
-        &args,
-        &env_vars,
-    )?;
-
-    let target = args.target.clone().unwrap_or_else(|| ".".to_string());
-    let (root_dir, repo_name) = locate_repository(&target, &printer)?;
+    let (root_dir, repo_name) = locate_repository(target, &printer)?;
 
     // Phase 1: Collect repository metadata
     let repo_metadata = RepoMetadata::collect(&root_dir)?;
@@ -36,10 +31,17 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     );
 
     // Phase 2: Load threat model
-    let threat_model = load_threat_model(&args, &printer)?;
+    let json = std::fs::read_to_string(threat_model_path)?;
+    let threat_model: ThreatModel = serde_json::from_str(&json)?;
+    printer.status(
+        "Loaded",
+        &format!("threat model with {} surfaces", threat_model.total_surfaces()),
+    );
 
     // Resolve output directory
-    let output_dir = resolve_output_dir(&args.output_dir, &repo_name)
+    let output_dir = output_dir
+        .map(|p| p.to_path_buf())
+        .or_else(|| resolve_output_dir(&None, &repo_name))
         .unwrap_or_else(|| PathBuf::from("parsentry-output"));
     std::fs::create_dir_all(&output_dir)?;
 
@@ -58,23 +60,21 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     printer.section("Prompts");
     for sp in &surface_prompts {
         let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
-        let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
+        let abs_sarif = std::fs::canonicalize(&output_dir)
+            .unwrap_or(output_dir.clone())
+            .join(format!("{}.sarif.json", sp.surface_id));
 
         // Append output instruction with the concrete SARIF file path
         let full_prompt = format!(
             "{}\n\nWrite the SARIF JSON output to: {}\n\
              Write ONLY valid JSON. No markdown, no code fences, no explanation.\n",
             sp.prompt,
-            sarif_path.canonicalize().unwrap_or(std::fs::canonicalize(&output_dir)
-                .unwrap_or(output_dir.clone()).join(format!("{}.sarif.json", sp.surface_id)))
-                .display()
+            abs_sarif.display()
         );
 
         std::fs::write(&prompt_path, &full_prompt)?;
 
         printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
-
-        // Output prompt file path to stdout for piping
         println!("{}", prompt_path.display());
     }
 
@@ -88,36 +88,4 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     );
 
     Ok(())
-}
-
-/// Load threat model from --threat-model file or stdin.
-fn load_threat_model(args: &ScanArgs, printer: &StatusPrinter) -> Result<ThreatModel> {
-    let json = match args.threat_model.as_deref() {
-        Some(path) if path.to_string_lossy() != "-" => {
-            std::fs::read_to_string(path)?
-        }
-        _ => {
-            // Read from stdin
-            if atty::is(atty::Stream::Stdin) {
-                anyhow::bail!(
-                    "Threat model required. Pipe from stdin or use --threat-model:\n  \
-                     parsentry model <target> | claude -p | parsentry <target>\n  \
-                     parsentry --threat-model model.json <target>"
-                );
-            }
-            let mut buf = String::new();
-            std::io::stdin().read_to_string(&mut buf)?;
-            if buf.trim().is_empty() {
-                anyhow::bail!("Empty input on stdin");
-            }
-            buf
-        }
-    };
-
-    let model: ThreatModel = serde_json::from_str(&json)?;
-    printer.status(
-        "Loaded",
-        &format!("threat model with {} surfaces", model.total_surfaces()),
-    );
-    Ok(model)
 }

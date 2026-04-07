@@ -13,23 +13,27 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 ### How it works
 
 ```
-parsentry model <repo>    →  threat model prompt   →  pipe to agent
-parsentry <repo>          →  per-surface prompts   →  pipe to agent (parallel)
+parsentry model <repo>              →  threat model prompt  →  pipe to agent
+parsentry scan model.json <repo>    →  per-surface prompts  →  pipe to agent (parallel)
+parsentry merge results/            →  merged SARIF report
 ```
 
-1. **Threat Model** — Collect repo metadata (structure, languages, dependencies), generate a prompt for attack surface enumeration
-2. **Source Resolution** — For each surface, resolve file locations and read actual source code
-3. **Prompt Generation** — Output focused analysis prompts (one per surface) for piping to any CLI agent
+1. **Threat Model** — Collect repo metadata, generate a prompt for attack surface enumeration
+2. **Scan** — Read source code for each surface, generate focused analysis prompts
+3. **Merge** — Combine per-surface SARIF results into a single report
 
 ```bash
 # Step 1: Generate threat model
 parsentry model owner/repo | claude -p > model.json
 
 # Step 2: Generate per-surface prompts
-parsentry --threat-model model.json --output-dir prompts/ owner/repo
+parsentry scan model.json owner/repo --output-dir results/
 
 # Step 3: Run in parallel with any CLI agent
-ls prompts/*.prompt.md | parallel -j10 'claude -p "$(cat {})" > {.}.sarif.json'
+ls results/*.prompt.md | parallel -j10 'claude -p "$(cat {})"'
+
+# Step 4: Merge results
+parsentry merge results/ -o results/merged.sarif.json
 ```
 
 ### Prerequisites
@@ -58,37 +62,28 @@ cargo install parsentry
 ### Quick Start
 
 ```bash
-# Scan a GitHub repo (generates threat model prompt to stdout)
+# Scan a GitHub repo
 parsentry model owner/repo | claude -p > model.json
+parsentry scan model.json owner/repo --output-dir results/
+ls results/*.prompt.md | parallel 'claude -p "$(cat {})"'
+parsentry merge results/ -o results/merged.sarif.json
 
-# Generate per-surface analysis prompts
-parsentry --threat-model model.json --output-dir results/ owner/repo
-
-# Only scan changed files (great for PR reviews)
-parsentry model . --diff-base origin/main | claude -p > model.json
-parsentry --threat-model model.json --diff-base origin/main --output-dir results/ .
+# Scan a local project
+parsentry model . | claude -p > model.json
+parsentry scan model.json . --output-dir results/
 ```
 
 ### Command Line Options
 
 ```
-Usage: parsentry [OPTIONS] [TARGET] [COMMAND]
+Usage: parsentry <COMMAND>
 
 Commands:
   model  Generate threat model prompt from repo metadata
+  scan   Generate per-surface analysis prompts from a threat model
+  merge  Merge per-surface SARIF files into a single report
   query  Show surface locations and resolved source files
   cache  Manage result cache
-
-Arguments:
-  [TARGET]  Local path or GitHub repository (owner/repo)
-
-Options:
-  --threat-model <PATH>          Path to threat model JSON
-  --output-dir <DIR>             Output directory for prompt files
-  --diff-base <REF>              Git ref to diff against (only changed files)
-  --filter-lang <LANG>           Filter by language (comma-separated)
-  -v, --verbosity                Increase verbosity
-  --generate-config              Print default config
 ```
 
 ### Architecture

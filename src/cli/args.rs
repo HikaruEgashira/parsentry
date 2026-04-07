@@ -6,16 +6,12 @@ use std::path::PathBuf;
 #[command(
     author,
     version,
-    about = "Parallel CLI agent execution platform with caching",
+    about = "Security prompt orchestrator for CLI agents",
     long_about = None
 )]
 pub struct Args {
-    /// Target to analyze: local path or GitHub repository (owner/repo).
-    /// Defaults to current directory.
-    pub target: Option<String>,
-
     #[command(subcommand)]
-    pub command: Option<Commands>,
+    pub command: Commands,
 
     #[arg(short, long, action = clap::ArgAction::Count, global = true)]
     pub verbosity: u8,
@@ -25,39 +21,36 @@ pub struct Args {
 
     #[arg(short, long, global = true)]
     pub config: Option<PathBuf>,
-
-    #[arg(long)]
-    pub generate_config: bool,
-
-    /// Filter files by programming language (comma-separated)
-    #[arg(long, global = true)]
-    pub filter_lang: Option<String>,
-
-    /// Git ref to diff against (e.g., "origin/main"). Only scans changed files.
-    #[arg(long, global = true)]
-    pub diff_base: Option<String>,
-
-    /// Path to threat model JSON file (for query subcommand).
-    /// Use "-" for stdin: `parsentry model repo | parsentry query repo`
-    #[arg(long, global = true)]
-    pub threat_model: Option<PathBuf>,
-
-    /// Output directory for analysis results.
-    #[arg(long, global = true)]
-    pub output_dir: Option<PathBuf>,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Generate analysis prompt from repo metadata. Outputs to stdout for piping to an agent.
+    /// Generate threat model prompt from repo metadata
     Model {
         /// Target to analyze: local path or GitHub repository (owner/repo)
-        target: Option<String>,
+        #[arg(default_value = ".")]
+        target: String,
     },
-    /// Show surface locations and resolved source files. Outputs JSON to stdout.
-    Query {
+    /// Generate per-surface analysis prompts from a threat model
+    Scan {
+        /// Path to threat model JSON file
+        threat_model: PathBuf,
+
         /// Target to analyze: local path or GitHub repository (owner/repo)
-        target: Option<String>,
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Output directory for prompt files
+        #[arg(long)]
+        output_dir: Option<PathBuf>,
+
+        /// Git ref to diff against (only changed files)
+        #[arg(long)]
+        diff_base: Option<String>,
+
+        /// Filter by language (comma-separated)
+        #[arg(long)]
+        filter_lang: Option<String>,
     },
     /// Merge per-surface SARIF files into a single report
     Merge {
@@ -66,6 +59,16 @@ pub enum Commands {
         /// Output file (default: stdout)
         #[arg(short, long)]
         output: Option<PathBuf>,
+    },
+    /// Show surface locations and resolved source files
+    Query {
+        /// Target to analyze: local path or GitHub repository (owner/repo)
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Path to threat model JSON file
+        #[arg(long)]
+        threat_model: Option<PathBuf>,
     },
     /// Manage result cache
     Cache {
@@ -94,46 +97,4 @@ pub enum CacheAction {
         #[arg(short, long)]
         yes: bool,
     },
-}
-
-#[derive(Debug, Clone)]
-pub struct ScanArgs {
-    pub target: Option<String>,
-    pub verbosity: u8,
-    pub debug: bool,
-    pub config: Option<PathBuf>,
-    pub generate_config: bool,
-    pub filter_lang: Option<String>,
-    pub diff_base: Option<String>,
-    pub threat_model: Option<PathBuf>,
-    pub output_dir: Option<PathBuf>,
-}
-
-impl From<&Args> for ScanArgs {
-    fn from(args: &Args) -> Self {
-        ScanArgs {
-            target: args.target.clone(),
-            verbosity: args.verbosity,
-            debug: args.debug,
-            config: args.config.clone(),
-            generate_config: args.generate_config,
-            filter_lang: args.filter_lang.clone(),
-            diff_base: args.diff_base.clone(),
-            threat_model: args.threat_model.clone(),
-            output_dir: args.output_dir.clone(),
-        }
-    }
-}
-
-impl ScanArgs {
-    pub fn with_target(mut self, target: Option<String>) -> Self {
-        if target.is_some() {
-            self.target = target;
-        }
-        self
-    }
-}
-
-pub fn validate_scan_args(_args: &ScanArgs) -> Result<()> {
-    Ok(())
 }

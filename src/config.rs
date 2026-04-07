@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::cli::args::ScanArgs;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ParsentryConfig {
@@ -366,25 +365,9 @@ directory = ".parsentry/cache"
         Ok(())
     }
 
-    pub fn apply_scan_args(&mut self, args: &ScanArgs) -> Result<()> {
-        if args.debug && self.verbosity < 2 {
-            self.verbosity = 2;
-        }
-        if args.verbosity > 0 {
-            self.verbosity = args.verbosity;
-        }
-
-        if let Some(ref target) = args.target {
-            self.paths.target = Some(target.clone());
-        }
-
-        Ok(())
-    }
-
     /// Load configuration with full precedence chain
     pub fn load_with_precedence(
         config_path: Option<PathBuf>,
-        cli_args: &ScanArgs,
         env_vars: &HashMap<String, String>
     ) -> Result<Self> {
         if let Err(e) = Self::ensure_user_config_exists() {
@@ -401,7 +384,6 @@ directory = ".parsentry/cache"
         }
 
         config.apply_env_vars(env_vars)?;
-        config.apply_scan_args(cli_args)?;
         config.validate()?;
 
         Ok(config)
@@ -430,19 +412,6 @@ directory = ".parsentry/cache"
         Ok(())
     }
 
-    pub fn to_args(&self) -> ScanArgs {
-        ScanArgs {
-            target: self.paths.target.clone(),
-            verbosity: self.verbosity,
-            debug: self.verbosity >= 2,
-            config: None,
-            generate_config: false,
-            filter_lang: None,
-            diff_base: None,
-            threat_model: None,
-            output_dir: self.paths.output_dir.clone(),
-        }
-    }
 }
 
 #[cfg(test)]
