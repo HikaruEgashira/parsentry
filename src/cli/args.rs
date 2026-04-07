@@ -6,7 +6,20 @@ use std::path::PathBuf;
     author,
     version,
     about = "Security prompt orchestrator for CLI agents",
-    long_about = None
+    long_about = None,
+    before_help = r#"
+            ▲
+           ╱ ╲
+          ╱   ╲
+         ╱ ░░░ ╲
+        ╱ ░▓▓▓░ ╲
+       ╱ ░▓███▓░ ╲
+      ╱ ░▓█████▓░ ╲
+     ╱_░▓███████▓░_╲
+       ─────┬─────
+            │
+    P A R S E N T R Y
+"#
 )]
 pub struct Args {
     #[command(subcommand)]

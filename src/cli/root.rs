@@ -9,25 +9,6 @@ pub struct RootCommand;
 
 impl RootCommand {
     pub async fn execute() -> Result<()> {
-        eprintln!(
-            r#"
-                ▲
-               ╱ ╲
-              ╱   ╲
-             ╱ ░░░ ╲
-            ╱ ░▓▓▓░ ╲
-           ╱ ░▓███▓░ ╲
-          ╱ ░▓█████▓░ ╲
-         ╱_░▓███████▓░_╲
-           ─────┬─────
-                │
-        P A R S E N T R Y
-                │
-             v{}
-"#,
-            env!("CARGO_PKG_VERSION")
-        );
-
         let args = Args::parse();
 
         match args.command {
