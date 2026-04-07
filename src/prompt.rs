@@ -164,14 +164,15 @@ pub fn build_orchestrator_prompt(
 
     prompt.push_str(
         "Launch ALL of the following Agent tool calls in a SINGLE message for maximum parallelism. \
-         Each agent must use `run_in_background: true` and `mode: \"bypassPermissions\"`.\n\n",
+         Do NOT use `run_in_background: true` — the orchestrator must wait for all agents to complete \
+         before running the post-analysis step. Use `mode: \"dontAsk\"`.\n\n",
     );
 
     for sp in surface_prompts {
         let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
         prompt.push_str(&format!(
             "- Agent(description: \"Analyze {id}\", prompt: \"Read {path} and execute the instructions in it.\", \
-             run_in_background: true, mode: \"bypassPermissions\")\n",
+             mode: \"dontAsk\")\n",
             id = sp.surface_id,
             path = prompt_path.display(),
         ));
