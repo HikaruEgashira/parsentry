@@ -76,14 +76,14 @@ pub struct SarifConfiguration {
     pub level: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifMessage {
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub markdown: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifResult {
     #[serde(rename = "ruleId")]
     pub rule_id: String,
@@ -95,11 +95,28 @@ pub struct SarifResult {
     pub locations: Vec<SarifLocation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fingerprints: Option<HashMap<String, String>>,
+    /// SARIF §3.34.24: new | unchanged | updated | absent
+    #[serde(rename = "baselineState", skip_serializing_if = "Option::is_none")]
+    pub baseline_state: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suppressions: Option<Vec<SarifSuppression>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub properties: Option<SarifResultProperties>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+/// SARIF §3.35: A suppression applied to a result (triage decision).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SarifSuppression {
+    /// "inSource" or "external"
+    pub kind: String,
+    /// "accepted" | "underReview" | "rejected"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub justification: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifResultProperties {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<f64>,
@@ -120,13 +137,13 @@ pub struct SarifResultProperties {
     pub data_flow: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifLocation {
     #[serde(rename = "physicalLocation")]
     pub physical_location: SarifPhysicalLocation,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifPhysicalLocation {
     #[serde(rename = "artifactLocation")]
     pub artifact_location: SarifArtifactLocation,
@@ -134,14 +151,14 @@ pub struct SarifPhysicalLocation {
     pub region: Option<SarifRegion>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifArtifactLocation {
     pub uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub index: Option<usize>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifRegion {
     #[serde(rename = "startLine")]
     pub start_line: i32,
@@ -155,7 +172,7 @@ pub struct SarifRegion {
     pub snippet: Option<SarifArtifactContent>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifArtifactContent {
     pub text: String,
 }
@@ -239,6 +256,8 @@ impl SarifReport {
                         },
                     }],
                     fingerprints: Some(generate_fingerprints(file_path, response)),
+                    baseline_state: None,
+                    suppressions: None,
                     properties: Some(SarifResultProperties {
                         confidence: Some(response.confidence_score as f64 / 100.0),
                         mitre_attack: Some(vuln_type.mitre_attack_ids()),
@@ -827,6 +846,8 @@ mod tests {
                 },
             }],
             fingerprints: None,
+            baseline_state: None,
+            suppressions: None,
             properties: Some(SarifResultProperties {
                 confidence: Some(0.85),
                 mitre_attack: None,
@@ -1032,6 +1053,8 @@ mod tests {
                 },
             }],
             fingerprints: None,
+            baseline_state: None,
+            suppressions: None,
             properties: None,
         };
         let report = SarifReport {
@@ -1400,6 +1423,8 @@ mod tests {
             message: SarifMessage { text: "t".to_string(), markdown: None },
             locations: vec![],
             fingerprints: None,
+            baseline_state: None,
+            suppressions: None,
             properties: Some(SarifResultProperties {
                 confidence: None,
                 mitre_attack: Some(vec!["T1190".to_string()]),
@@ -1441,7 +1466,7 @@ mod tests {
             rule_id: "SQLI".to_string(),
             rule_index: None, level: "error".to_string(),
             message: SarifMessage { text: "t".to_string(), markdown: None },
-            locations: vec![], fingerprints: None, properties: None,
+            locations: vec![], fingerprints: None, baseline_state: None, suppressions: None, properties: None,
         };
         let report = SarifReport {
             schema: "".to_string(), version: "2.1.0".to_string(),

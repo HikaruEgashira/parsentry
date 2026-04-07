@@ -37,9 +37,9 @@ impl RootCommand {
             Commands::Scan { threat_model, target, output_dir, diff_base, filter_lang } => {
                 run_scan_command(&threat_model, &target, output_dir.as_deref(), diff_base.as_deref(), filter_lang.as_deref()).await
             },
-            Commands::Merge { dir, output } => {
+            Commands::Merge { dir, output, baseline } => {
                 use parsentry_reports::merge_sarif_dir;
-                let merged = merge_sarif_dir(&dir)?;
+                let merged = merge_sarif_dir(&dir, baseline.as_deref())?;
                 let json = serde_json::to_string_pretty(&merged)?;
                 if let Some(out_path) = output {
                     if let Some(parent) = out_path.parent() {

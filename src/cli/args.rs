@@ -59,6 +59,9 @@ pub enum Commands {
         /// Output file (default: stdout)
         #[arg(short, long)]
         output: Option<PathBuf>,
+        /// Baseline SARIF for comparison (preserves triage state)
+        #[arg(short, long)]
+        baseline: Option<PathBuf>,
     },
     /// Show surface locations and resolved source files
     Query {
