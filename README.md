@@ -109,8 +109,8 @@ Each report contains a `threat-model.json`, per-surface `SURFACE-*.prompt.md` fi
 
 | Repository | Type | Surfaces |
 |-----------|------|----------|
-| [langgenius/dify](docs/reports/dify/dify/) | LLM application platform | 24 |
-| [OWASP/NodeGoat](docs/reports/NodeGoat/NodeGoat/) | Vulnerable Node.js app | 21 |
+| [langgenius/dify](docs/reports/dify/) | LLM application platform | 25 |
+| [OWASP/NodeGoat](docs/reports/NodeGoat/) | Vulnerable Node.js app | 19 |
 | [HikaruEgashira/hikae-vulnerable-python](docs/reports/hikae-vulnerable/) | Vulnerable Flask app | 25 |
 
 ### Security

@@ -2,11 +2,33 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use crate::cli::ui::StatusPrinter;
-use crate::prompt::{build_all_surface_prompts, build_orchestrator_prompt};
+use crate::prompt::{build_all_surface_prompts, build_orchestrator_prompt, SurfacePrompt};
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
 use super::common::{locate_repository, resolve_output_dir};
+
+/// Check if a surface has a cached SARIF result with a matching cache key.
+fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
+    let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
+    let cache_key_path = output_dir.join(format!("{}.cache_key", sp.surface_id));
+
+    if !sarif_path.exists() || !cache_key_path.exists() {
+        return false;
+    }
+
+    match std::fs::read_to_string(&cache_key_path) {
+        Ok(stored_key) => stored_key.trim() == sp.cache_key,
+        Err(_) => false,
+    }
+}
+
+/// Write the cache key sidecar file for a surface.
+fn write_cache_key(output_dir: &Path, sp: &SurfacePrompt) -> Result<()> {
+    let cache_key_path = output_dir.join(format!("{}.cache_key", sp.surface_id));
+    std::fs::write(&cache_key_path, &sp.cache_key)?;
+    Ok(())
+}
 
 pub async fn run_scan_command(
     threat_model_path: &Path,
@@ -45,7 +67,7 @@ pub async fn run_scan_command(
         .unwrap_or_else(|| PathBuf::from("parsentry-output"));
     std::fs::create_dir_all(&output_dir)?;
 
-    // Phase 3: Generate per-surface prompts and write to files
+    // Phase 3: Generate per-surface prompts and check cache
     let surface_prompts = build_all_surface_prompts(
         &threat_model,
         &root_dir,
@@ -56,8 +78,39 @@ pub async fn run_scan_command(
         return Ok(());
     }
 
-    printer.section("Prompts");
+    // Partition into cached and new surfaces
+    let mut cached: Vec<&SurfacePrompt> = Vec::new();
+    let mut pending: Vec<&SurfacePrompt> = Vec::new();
     for sp in &surface_prompts {
+        if is_cached(&output_dir, sp) {
+            cached.push(sp);
+        } else {
+            pending.push(sp);
+        }
+    }
+
+    if !cached.is_empty() {
+        printer.status(
+            "Cached",
+            &format!("{} surfaces unchanged (SARIF results reused)", cached.len()),
+        );
+    }
+
+    if pending.is_empty() {
+        printer.success(
+            "Complete",
+            &format!(
+                "all {} surfaces cached, no analysis needed ({})",
+                surface_prompts.len(),
+                output_dir.display()
+            ),
+        );
+        return Ok(());
+    }
+
+    // Write prompts only for pending (non-cached) surfaces
+    printer.section("Prompts");
+    for sp in &pending {
         let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
         let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
 
@@ -69,13 +122,15 @@ pub async fn run_scan_command(
         );
 
         std::fs::write(&prompt_path, &full_prompt)?;
+        write_cache_key(&output_dir, sp)?;
 
         printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
         println!("{}", prompt_path.display());
     }
 
-    // Phase 4: Generate orchestrator prompt for single-process parallel execution
-    let orchestrator_content = build_orchestrator_prompt(&surface_prompts, &output_dir);
+    // Phase 4: Generate orchestrator prompt only for pending surfaces
+    let pending_owned: Vec<SurfacePrompt> = pending.iter().map(|s| (*s).clone()).collect();
+    let orchestrator_content = build_orchestrator_prompt(&pending_owned, &output_dir);
     let orchestrator_path = output_dir.join("orchestrator.prompt.md");
     std::fs::write(&orchestrator_path, &orchestrator_content)?;
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
@@ -83,8 +138,9 @@ pub async fn run_scan_command(
     printer.success(
         "Complete",
         &format!(
-            "{} prompts + orchestrator written to {}",
-            surface_prompts.len(),
+            "{} prompts written ({} cached) to {}",
+            pending.len(),
+            cached.len(),
             output_dir.display()
         ),
     );
