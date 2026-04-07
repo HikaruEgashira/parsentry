@@ -11,31 +11,26 @@ impl RootCommand {
         let args = Args::parse();
 
         match args.command {
-            Commands::Model { target, output } => {
-                run_model_command(&target, output.as_deref()).await
+            Commands::Model { target } => {
+                run_model_command(&target).await
             },
-            Commands::Scan { target, threat_model, output_dir, diff_base, filter_lang } => {
-                run_scan_command(threat_model.as_deref(), &target, output_dir.as_deref(), diff_base.as_deref(), filter_lang.as_deref()).await
+            Commands::Scan { target, diff_base, filter_lang } => {
+                run_scan_command(&target, diff_base.as_deref(), filter_lang.as_deref()).await
             },
-            Commands::Merge { dir, output, baseline } => {
+            Commands::Merge { target } => {
+                use crate::cli::commands::common::cache_dir_for;
                 use parsentry_reports::merge_sarif_dir;
-                let merged = merge_sarif_dir(&dir, baseline.as_deref())?;
+                let reports_dir = cache_dir_for(&target).join("reports");
+                let merged = merge_sarif_dir(&reports_dir, None)?;
                 let json = serde_json::to_string_pretty(&merged)?;
-                if let Some(out_path) = output {
-                    if let Some(parent) = out_path.parent() {
-                        std::fs::create_dir_all(parent)?;
-                    }
-                    std::fs::write(&out_path, &json)?;
-                    eprintln!("Wrote merged SARIF to {}", out_path.display());
-                } else {
-                    println!("{}", json);
-                }
+                println!("{}", json);
                 Ok(())
             },
-            Commands::Log { output_dir, follow: _, no_follow, tail, timestamps: _, no_timestamps, interval, timeout, no_color } => {
+            Commands::Log { target, no_follow, tail, no_timestamps, interval, timeout, no_color } => {
+                let reports_dir = crate::cli::commands::common::cache_dir_for(&target).join("reports");
                 let follow = !no_follow;
                 let timestamps = !no_timestamps;
-                run_watch_command(&output_dir, follow, tail, timestamps, interval, timeout, no_color).await
+                run_watch_command(&reports_dir, follow, tail, timestamps, interval, timeout, no_color).await
             },
         }
     }

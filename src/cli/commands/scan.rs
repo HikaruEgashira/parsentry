@@ -1,12 +1,12 @@
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::cli::ui::StatusPrinter;
 use crate::prompt::{build_all_surface_prompts, build_orchestrator_prompt, SurfacePrompt};
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
-use super::common::{locate_repository, resolve_output_dir};
+use super::common::{cache_dir_for, locate_repository};
 
 /// Check if a surface has a cached SARIF result with a matching cache key.
 fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
@@ -31,15 +31,13 @@ fn write_cache_key(output_dir: &Path, sp: &SurfacePrompt) -> Result<()> {
 }
 
 pub async fn run_scan_command(
-    threat_model_path: Option<&Path>,
     target: &str,
-    output_dir: Option<&Path>,
     _diff_base: Option<&str>,
     _filter_lang: Option<&str>,
 ) -> Result<()> {
     let printer = StatusPrinter::new();
 
-    let (root_dir, repo_name) = locate_repository(target, &printer)?;
+    let (root_dir, _repo_name) = locate_repository(target, &printer)?;
 
     // Phase 1: Collect repository metadata
     let repo_metadata = RepoMetadata::collect(&root_dir)?;
@@ -52,14 +50,11 @@ pub async fn run_scan_command(
         ),
     );
 
-    // Phase 2: Load threat model from file (default: XDG cache)
-    let default_path = dirs::cache_dir()
-        .expect("failed to resolve XDG cache directory")
-        .join("parsentry")
-        .join("model.json");
-    let threat_model_path = threat_model_path.unwrap_or(&default_path);
-    let json = std::fs::read_to_string(threat_model_path)
-        .map_err(|e| anyhow::anyhow!("Failed to read threat model {}: {}", threat_model_path.display(), e))?;
+    // Phase 2: Load threat model from per-repo cache
+    let project_cache = cache_dir_for(target);
+    let threat_model_path = project_cache.join("model.json");
+    let json = std::fs::read_to_string(&threat_model_path)
+        .map_err(|e| anyhow::anyhow!("Failed to read threat model {}: {}. Run `parsentry model {}` first.", threat_model_path.display(), e, target))?;
     let threat_model: ThreatModel = serde_json::from_str(&json)
         .map_err(|e| anyhow::anyhow!("Invalid threat model JSON in {}: {}", threat_model_path.display(), e))?;
     printer.status(
@@ -67,14 +62,10 @@ pub async fn run_scan_command(
         &format!("threat model with {} surfaces", threat_model.total_surfaces()),
     );
 
-    // Resolve output directory
-    let output_dir = output_dir
-        .map(|p| p.to_path_buf())
-        .or_else(|| resolve_output_dir(&None, &repo_name))
-        .unwrap_or_else(|| PathBuf::from("parsentry-output"));
+    // Phase 3: Generate per-surface prompts
+    let output_dir = project_cache.join("reports");
     std::fs::create_dir_all(&output_dir)?;
 
-    // Phase 3: Generate per-surface prompts and check cache
     let surface_prompts = build_all_surface_prompts(
         &threat_model,
         &root_dir,

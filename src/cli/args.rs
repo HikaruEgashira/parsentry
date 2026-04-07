@@ -1,6 +1,4 @@
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
-
 
 #[derive(Parser, Debug)]
 #[command(
@@ -34,24 +32,12 @@ pub enum Commands {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         #[arg(default_value = ".")]
         target: String,
-
-        /// Output path for threat model JSON (embedded in prompt)
-        #[arg(short, long)]
-        output: Option<PathBuf>,
     },
     /// Generate per-surface analysis prompts from a threat model
     Scan {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         #[arg(default_value = ".")]
         target: String,
-
-        /// Path to threat model JSON file (default: XDG cache)
-        #[arg(short, long)]
-        threat_model: Option<PathBuf>,
-
-        /// Output directory for prompt files
-        #[arg(long)]
-        output_dir: Option<PathBuf>,
 
         /// Git ref to diff against (only changed files)
         #[arg(long)]
@@ -64,24 +50,16 @@ pub enum Commands {
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
     Merge {
-        /// Directory containing *.sarif.json files
-        dir: PathBuf,
-        /// Output file (default: stdout)
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-        /// Baseline SARIF for comparison (preserves triage state)
-        #[arg(short, long)]
-        baseline: Option<PathBuf>,
+        /// Target to resolve report directory (default: .)
+        #[arg(default_value = ".")]
+        target: String,
     },
     /// Monitor scan progress (docker compose logs -f style)
     #[command(alias = "logs", alias = "watch")]
     Log {
-        /// Output directory containing prompt and SARIF files
-        output_dir: PathBuf,
-
-        /// Follow log output
-        #[arg(short, long, default_value_t = true, action = clap::ArgAction::SetTrue)]
-        follow: bool,
+        /// Target to resolve report directory (default: .)
+        #[arg(default_value = ".")]
+        target: String,
 
         /// Disable follow mode
         #[arg(long = "no-follow", action = clap::ArgAction::SetTrue)]
@@ -90,10 +68,6 @@ pub enum Commands {
         /// Number of recent events to show initially
         #[arg(long)]
         tail: Option<usize>,
-
-        /// Show timestamps
-        #[arg(short, long, default_value_t = true, action = clap::ArgAction::SetTrue)]
-        timestamps: bool,
 
         /// Disable timestamps
         #[arg(long = "no-timestamps", action = clap::ArgAction::SetTrue)]

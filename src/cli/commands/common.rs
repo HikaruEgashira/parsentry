@@ -10,6 +10,23 @@ use parsentry_core::{
     build_threat_model_prompt, threat_model_schema,
 };
 
+/// Base cache directory. Respects PARSENTRY_CACHE_DIR, falls back to XDG.
+fn cache_base() -> PathBuf {
+    if let Ok(dir) = std::env::var("PARSENTRY_CACHE_DIR") {
+        PathBuf::from(dir)
+    } else {
+        dirs::cache_dir()
+            .expect("failed to resolve XDG cache directory")
+            .join("parsentry")
+    }
+}
+
+/// Per-repository cache directory.
+/// e.g. ~/Library/Caches/parsentry/langgenius__dify/
+pub fn cache_dir_for(target: &str) -> PathBuf {
+    cache_base().join(target.replace('/', "__"))
+}
+
 /// Phase 0: Locate and optionally clone the repository.
 /// Returns (root_dir, repo_name).
 pub fn locate_repository(
@@ -17,11 +34,8 @@ pub fn locate_repository(
     printer: &StatusPrinter,
 ) -> Result<(PathBuf, Option<String>)> {
     if target.contains('/') && !Path::new(target).exists() {
-        let cache_base = dirs::cache_dir()
-            .expect("failed to resolve XDG cache directory")
-            .join("parsentry")
-            .join("repos");
-        let dest = cache_base.join(target.replace('/', "__"));
+        let project_cache = cache_dir_for(target);
+        let dest = project_cache.join("repo");
         let repo_name = target
             .split('/')
             .last()
@@ -34,7 +48,7 @@ pub fn locate_repository(
             if dest.exists() {
                 std::fs::remove_dir_all(&dest)?;
             }
-            std::fs::create_dir_all(&cache_base)?;
+            std::fs::create_dir_all(&project_cache)?;
             printer.status("Cloning", &format!("{} → {}", target, dest.display()));
             clone_repo(target, &dest)?;
         }
@@ -43,17 +57,6 @@ pub fn locate_repository(
     } else {
         Ok((PathBuf::from(target), None))
     }
-}
-
-/// Resolve output directory from base path and optional repo name.
-pub fn resolve_output_dir(base: &Option<PathBuf>, repo_name: &Option<String>) -> Option<PathBuf> {
-    base.as_ref().map(|dir| {
-        if let Some(name) = repo_name {
-            dir.join(name)
-        } else {
-            dir.clone()
-        }
-    })
 }
 
 /// Get files changed relative to a diff base ref.

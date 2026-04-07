@@ -1,13 +1,12 @@
 use anyhow::Result;
-use std::path::Path;
 
 use crate::cli::ui::StatusPrinter;
 
-use super::common::{build_threat_model_cli_prompt, locate_repository};
+use super::common::{build_threat_model_cli_prompt, cache_dir_for, locate_repository};
 
 use parsentry_core::RepoMetadata;
 
-pub async fn run_model_command(target: &str, output: Option<&Path>) -> Result<()> {
+pub async fn run_model_command(target: &str) -> Result<()> {
     let printer = StatusPrinter::new();
 
     let (root_dir, _repo_name) = locate_repository(target, &printer)?;
@@ -23,13 +22,8 @@ pub async fn run_model_command(target: &str, output: Option<&Path>) -> Result<()
         ),
     );
 
-    let default_output = dirs::cache_dir()
-        .expect("failed to resolve XDG cache directory")
-        .join("parsentry")
-        .join("model.json");
-    let output = output.unwrap_or(&default_output);
-
-    let prompt = build_threat_model_cli_prompt(&repo_metadata, output);
+    let output = cache_dir_for(target).join("model.json");
+    let prompt = build_threat_model_cli_prompt(&repo_metadata, &output);
     print!("{}", prompt);
 
     printer.success("Prompt", &format!("threat model prompt emitted (output → {})", output.display()));
