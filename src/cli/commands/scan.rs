@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 use crate::cli::args::ScanArgs;
@@ -10,7 +10,7 @@ use crate::prompt::build_all_surface_prompts;
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
-use super::common::{locate_repository, resolve_output_dir};
+use super::common::{build_threat_model_cli_prompt, locate_repository, resolve_output_dir};
 use super::query::run_pattern_matching;
 
 pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
@@ -26,6 +26,15 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     let target = args.target.clone().unwrap_or_else(|| ".".to_string());
     let (root_dir, repo_name) = locate_repository(&target, &printer)?;
 
+    let pipeline = Pipeline::new(&config)?;
+    pipeline.maybe_cleanup();
+
+    let executor = AgentExecutor::new(
+        config.agent.path.clone(),
+        config.agent.max_concurrent,
+        config.agent.timeout_secs,
+    );
+
     // Phase 1: Collect repository metadata
     let repo_metadata = RepoMetadata::collect(&root_dir)?;
     printer.status(
@@ -37,8 +46,14 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
         ),
     );
 
-    // Phase 2: Load or require threat model
-    let threat_model = load_threat_model_for_scan(&args, &printer)?;
+    // Phase 2: Generate threat model (auto, with cache)
+    let threat_model = generate_threat_model(
+        &repo_metadata,
+        &executor,
+        &pipeline,
+        &printer,
+    )
+    .await?;
 
     // Phase 3: Tree-sitter pattern matching (filtered by threat model surfaces)
     printer.status("Scanning", "tree-sitter pattern matching");
@@ -85,16 +100,12 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     }
 
     // Phase 5: Cache check + parallel agent execution
-    let pipeline = Pipeline::new(&config)?;
-    pipeline.maybe_cleanup();
-
     let mut cached_results: Vec<ExecutionResult> = Vec::new();
     let mut tasks_to_execute: Vec<(String, String, PathBuf)> = Vec::new();
 
     for sp in &surface_prompts {
         if let Some(cached) = pipeline.cache_get(&sp.cache_key) {
             printer.info("Cache hit", &sp.surface_id);
-            // Write cached result to output file
             std::fs::write(&sp.output_path, &cached)?;
             cached_results.push(ExecutionResult {
                 surface_id: sp.surface_id.clone(),
@@ -121,11 +132,6 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     // Execute uncached tasks in parallel
     let mut execution_results = if !tasks_to_execute.is_empty() {
-        let executor = AgentExecutor::new(
-            config.agent.path.clone(),
-            config.agent.max_concurrent,
-            config.agent.timeout_secs,
-        );
         executor.execute_all(tasks_to_execute).await
     } else {
         vec![]
@@ -175,31 +181,121 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
     Ok(())
 }
 
-/// Load threat model from --threat-model flag.
-/// When running the full scan, threat model is required.
-fn load_threat_model_for_scan(args: &ScanArgs, printer: &StatusPrinter) -> Result<ThreatModel> {
-    let path = args.threat_model.as_deref().ok_or_else(|| {
-        anyhow::anyhow!(
-            "Threat model required for full scan.\n\
-             Generate one first:\n  \
-             parsentry model <target> | claude -p > threat-model.json\n  \
-             parsentry --threat-model threat-model.json <target>"
-        )
-    })?;
+/// Generate threat model automatically via agent, with cache.
+///
+/// Cache key is based on repo metadata (file structure, languages, deps).
+/// If the repo hasn't changed structurally, the same threat model is reused.
+async fn generate_threat_model(
+    metadata: &RepoMetadata,
+    executor: &AgentExecutor,
+    pipeline: &Pipeline,
+    printer: &StatusPrinter,
+) -> Result<ThreatModel> {
+    use sha2::{Digest, Sha256};
 
-    let json = if path.to_string_lossy() == "-" {
-        use std::io::Read;
-        let mut buf = String::new();
-        std::io::stdin().read_to_string(&mut buf)?;
-        buf
-    } else {
-        std::fs::read_to_string(path)?
-    };
+    let prompt = build_threat_model_cli_prompt(metadata);
 
-    let model: ThreatModel = serde_json::from_str(&json)?;
-    printer.status(
-        "Loaded",
-        &format!("threat model with {} surfaces", model.total_surfaces()),
+    // Cache key = hash of the prompt (repo structure, languages, deps)
+    let mut hasher = Sha256::new();
+    hasher.update(prompt.as_bytes());
+    let cache_key = format!("{:x}", hasher.finalize());
+
+    // Check cache (namespace = "threat-model")
+    if let Some(cached) = pipeline.cache_get_ns("threat-model", &cache_key) {
+        let model: ThreatModel = serde_json::from_str(&cached)
+            .context("cached threat model is invalid JSON")?;
+        printer.success(
+            "Threat model",
+            &format!("{} surfaces (cached)", model.total_surfaces()),
+        );
+        return Ok(model);
+    }
+
+    printer.status("Generating", "threat model via agent");
+
+    // Use a temp file for agent output
+    let tmp_dir = tempfile::tempdir()?;
+    let output_path = tmp_dir.path().join("threat-model.json");
+
+    // Build a prompt that instructs the agent to write JSON to the file
+    let full_prompt = format!(
+        "{}\n\nWrite the JSON output to: {}\nDo NOT output to stdout. Write to the file only.",
+        prompt,
+        output_path.display()
     );
+
+    let result = executor
+        .execute_one("threat-model", &full_prompt, &output_path)
+        .await
+        .context("failed to generate threat model")?;
+
+    if !result.success || result.output.is_empty() {
+        anyhow::bail!(
+            "Agent failed to generate threat model. \
+             Ensure '{}' is installed and accessible.",
+            executor.agent_path().display()
+        );
+    }
+
+    // Parse the JSON (may be wrapped in ```json ... ```)
+    let model = parse_threat_model_response(&result.output, metadata)?;
+
+    printer.success(
+        "Threat model",
+        &format!("{} surfaces", model.total_surfaces()),
+    );
+
+    // Cache the parsed model
+    let model_json = serde_json::to_string(&model)?;
+    pipeline.cache_set_ns("threat-model", &cache_key, &model_json, prompt.len());
+
     Ok(model)
+}
+
+/// Parse a threat model from agent response, handling markdown code blocks.
+fn parse_threat_model_response(
+    raw: &str,
+    metadata: &RepoMetadata,
+) -> Result<ThreatModel> {
+    let json_str = extract_json_block(raw);
+
+    let mut model: ThreatModel = serde_json::from_str(json_str)
+        .context("failed to parse threat model JSON from agent response")?;
+
+    // Fill in missing fields that the agent may not provide
+    if model.repository.is_empty() {
+        model.repository = metadata.root_dir.display().to_string();
+    }
+    if model.generated_at.is_empty() {
+        model.generated_at = chrono::Utc::now().to_rfc3339();
+    }
+
+    Ok(model)
+}
+
+/// Extract JSON from a response that may be wrapped in ```json ... ```
+fn extract_json_block(text: &str) -> &str {
+    // Try to find ```json ... ``` block
+    if let Some(start) = text.find("```json") {
+        let json_start = start + "```json".len();
+        let rest = &text[json_start..];
+        // Skip whitespace/newline after ```json
+        let rest = rest.trim_start();
+        if let Some(end) = rest.find("```") {
+            return rest[..end].trim();
+        }
+    }
+
+    // Try to find ``` ... ``` block
+    if let Some(start) = text.find("```") {
+        let json_start = start + "```".len();
+        let rest = &text[json_start..];
+        let rest = rest.trim_start();
+        if let Some(end) = rest.find("```") {
+            return rest[..end].trim();
+        }
+    }
+
+    // Assume the whole thing is JSON
+    text.trim()
 }

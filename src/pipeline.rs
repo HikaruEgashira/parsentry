@@ -42,15 +42,25 @@ impl Pipeline {
 
     /// Look up a cached analysis result. Returns `None` on miss or when caching is disabled.
     pub fn cache_get(&self, cache_key: &str) -> Option<String> {
-        self.cache
-            .as_ref()
-            .and_then(|c| c.get(&self.namespace, cache_key).ok().flatten())
+        self.cache_get_ns(&self.namespace, cache_key)
     }
 
     /// Store an analysis result in cache. No-op when caching is disabled.
     pub fn cache_set(&self, cache_key: &str, response: &str, input_size: usize) {
+        self.cache_set_ns(&self.namespace, cache_key, response, input_size);
+    }
+
+    /// Look up a cached value in a specific namespace.
+    pub fn cache_get_ns(&self, namespace: &str, cache_key: &str) -> Option<String> {
+        self.cache
+            .as_ref()
+            .and_then(|c| c.get(namespace, cache_key).ok().flatten())
+    }
+
+    /// Store a value in a specific namespace. No-op when caching is disabled.
+    pub fn cache_set_ns(&self, namespace: &str, cache_key: &str, response: &str, input_size: usize) {
         if let Some(ref cache) = self.cache {
-            let _ = cache.set(&self.namespace, cache_key, response, input_size);
+            let _ = cache.set(namespace, cache_key, response, input_size);
         }
     }
 

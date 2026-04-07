@@ -51,6 +51,11 @@ impl AgentExecutor {
         }
     }
 
+    /// Get the agent binary path.
+    pub fn agent_path(&self) -> &std::path::Path {
+        &self.agent_path
+    }
+
     /// Execute a single prompt by passing it to the agent CLI via `-p` flag.
     ///
     /// The agent is expected to write its output to `output_path` (specified
