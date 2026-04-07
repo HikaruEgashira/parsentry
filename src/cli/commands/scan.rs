@@ -35,7 +35,6 @@ pub async fn run_scan_command(
     target: &str,
     _diff_base: Option<&str>,
     _filter_lang: Option<&str>,
-    detach: bool,
 ) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
 
@@ -137,36 +136,16 @@ pub async fn run_scan_command(
     std::fs::write(&orchestrator_path, &orchestrator_content)?;
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
 
-    if detach {
-        // Spawn `claude -p` with orchestrator content piped via stdin, detached from terminal
-        let child = std::process::Command::new("claude")
-            .arg("-p")
-            .stdin(std::fs::File::open(&orchestrator_path)?)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .map_err(|e| anyhow::anyhow!("Failed to spawn claude: {}. Is `claude` CLI installed?", e))?;
-        println!("{}", output_dir.display());
-        printer.success(
-            "Detached",
-            &format!(
-                "pid {} — monitor with: parsentry log {}",
-                child.id(),
-                target
-            ),
-        );
-    } else {
-        println!("{}", orchestrator_content);
-        printer.success(
-            "Complete",
-            &format!(
-                "{} prompts written ({} cached) to {}",
-                pending.len(),
-                cached.len(),
-                output_dir.display()
-            ),
-        );
-    }
+    println!("{}", orchestrator_content);
+    printer.success(
+        "Complete",
+        &format!(
+            "{} prompts written ({} cached) to {}",
+            pending.len(),
+            cached.len(),
+            output_dir.display()
+        ),
+    );
 
     Ok(())
 }
