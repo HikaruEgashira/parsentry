@@ -217,9 +217,10 @@ async fn generate_threat_model(
     let tmp_dir = tempfile::tempdir()?;
     let output_path = tmp_dir.path().join("threat-model.json");
 
-    // Build a prompt that instructs the agent to write JSON to the file
+    // Prompt instructs the agent to write raw JSON (no markdown) to the file
     let full_prompt = format!(
-        "{}\n\nWrite the JSON output to: {}\nDo NOT output to stdout. Write to the file only.",
+        "{}\n\nWrite ONLY valid JSON to the file: {}\n\
+         No markdown, no code fences, no explanation — raw JSON only.",
         prompt,
         output_path.display()
     );
@@ -237,8 +238,16 @@ async fn generate_threat_model(
         );
     }
 
-    // Parse the JSON (may be wrapped in ```json ... ```)
-    let model = parse_threat_model_response(&result.output, metadata)?;
+    let mut model: ThreatModel = serde_json::from_str(&result.output)
+        .context("agent wrote invalid JSON to threat model file")?;
+
+    // Fill in fields the agent may omit
+    if model.repository.is_empty() {
+        model.repository = metadata.root_dir.display().to_string();
+    }
+    if model.generated_at.is_empty() {
+        model.generated_at = chrono::Utc::now().to_rfc3339();
+    }
 
     printer.success(
         "Threat model",
@@ -250,52 +259,4 @@ async fn generate_threat_model(
     pipeline.cache_set_ns("threat-model", &cache_key, &model_json, prompt.len());
 
     Ok(model)
-}
-
-/// Parse a threat model from agent response, handling markdown code blocks.
-fn parse_threat_model_response(
-    raw: &str,
-    metadata: &RepoMetadata,
-) -> Result<ThreatModel> {
-    let json_str = extract_json_block(raw);
-
-    let mut model: ThreatModel = serde_json::from_str(json_str)
-        .context("failed to parse threat model JSON from agent response")?;
-
-    // Fill in missing fields that the agent may not provide
-    if model.repository.is_empty() {
-        model.repository = metadata.root_dir.display().to_string();
-    }
-    if model.generated_at.is_empty() {
-        model.generated_at = chrono::Utc::now().to_rfc3339();
-    }
-
-    Ok(model)
-}
-
-/// Extract JSON from a response that may be wrapped in ```json ... ```
-fn extract_json_block(text: &str) -> &str {
-    // Try to find ```json ... ``` block
-    if let Some(start) = text.find("```json") {
-        let json_start = start + "```json".len();
-        let rest = &text[json_start..];
-        // Skip whitespace/newline after ```json
-        let rest = rest.trim_start();
-        if let Some(end) = rest.find("```") {
-            return rest[..end].trim();
-        }
-    }
-
-    // Try to find ``` ... ``` block
-    if let Some(start) = text.find("```") {
-        let json_start = start + "```".len();
-        let rest = &text[json_start..];
-        let rest = rest.trim_start();
-        if let Some(end) = rest.find("```") {
-            return rest[..end].trim();
-        }
-    }
-
-    // Assume the whole thing is JSON
-    text.trim()
 }
