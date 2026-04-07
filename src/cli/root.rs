@@ -2,8 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use crate::cli::args::{Args, Commands};
-use crate::cli::commands::{run_scan_command, run_model_command, run_query_command, run_watch_command, handle_cache_command};
-use crate::config::ParsentryConfig;
+use crate::cli::commands::{run_scan_command, run_model_command, run_watch_command};
 
 pub struct RootCommand;
 
@@ -33,21 +32,10 @@ impl RootCommand {
                 }
                 Ok(())
             },
-            Commands::Watch { output_dir, follow: _, no_follow, tail, timestamps: _, no_timestamps, interval, timeout, no_color } => {
+            Commands::Log { output_dir, follow: _, no_follow, tail, timestamps: _, no_timestamps, interval, timeout, no_color } => {
                 let follow = !no_follow;
                 let timestamps = !no_timestamps;
                 run_watch_command(&output_dir, follow, tail, timestamps, interval, timeout, no_color).await
-            },
-            Commands::Query { target, threat_model } => {
-                run_query_command(&target, threat_model.as_deref()).await
-            },
-            Commands::Cache { action } => {
-                let config = if let Some(config_path) = &args.config {
-                    ParsentryConfig::load_from_file(config_path)?
-                } else {
-                    ParsentryConfig::load_with_merged_configs()?
-                };
-                handle_cache_command(&action, &config).await
             },
         }
     }

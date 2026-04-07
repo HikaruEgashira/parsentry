@@ -1,7 +1,6 @@
 //! Parsentry - PAR-based security scanner.
 
 pub mod cli;
-pub mod config;
 pub mod github;
 pub mod prompt;
 pub mod repo;

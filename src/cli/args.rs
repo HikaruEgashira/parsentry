@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+
 #[derive(Parser, Debug)]
 #[command(
     author,
@@ -24,15 +25,6 @@ use std::path::PathBuf;
 pub struct Args {
     #[command(subcommand)]
     pub command: Commands,
-
-    #[arg(short, long, action = clap::ArgAction::Count, global = true)]
-    pub verbosity: u8,
-
-    #[arg(long, global = true)]
-    pub debug: bool,
-
-    #[arg(short, long, global = true)]
-    pub config: Option<PathBuf>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -65,6 +57,7 @@ pub enum Commands {
         filter_lang: Option<String>,
     },
     /// Merge per-surface SARIF files into a single report
+    #[command(hide = true)]
     Merge {
         /// Directory containing *.sarif.json files
         dir: PathBuf,
@@ -75,19 +68,9 @@ pub enum Commands {
         #[arg(short, long)]
         baseline: Option<PathBuf>,
     },
-    /// Show surface locations and resolved source files
-    Query {
-        /// Target to analyze: local path or GitHub repository (owner/repo)
-        #[arg(default_value = ".")]
-        target: String,
-
-        /// Path to threat model JSON file
-        #[arg(long)]
-        threat_model: Option<PathBuf>,
-    },
     /// Monitor scan progress (docker compose logs -f style)
-    #[command(alias = "log", alias = "logs")]
-    Watch {
+    #[command(alias = "logs", alias = "watch")]
+    Log {
         /// Output directory containing prompt and SARIF files
         output_dir: PathBuf,
 
@@ -122,32 +105,5 @@ pub enum Commands {
         /// Disable color output
         #[arg(long)]
         no_color: bool,
-    },
-    /// Manage result cache
-    Cache {
-        #[command(subcommand)]
-        action: CacheAction,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-pub enum CacheAction {
-    /// Clean up stale cache entries
-    Clean {
-        #[arg(long)]
-        all: bool,
-        #[arg(long)]
-        max_age: Option<usize>,
-        #[arg(long)]
-        max_idle: Option<usize>,
-        #[arg(long)]
-        dry_run: bool,
-    },
-    /// Show cache statistics
-    Stats,
-    /// Clear all cache entries
-    Clear {
-        #[arg(short, long)]
-        yes: bool,
     },
 }

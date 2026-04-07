@@ -5,7 +5,6 @@ use parsentry::cli::RootCommand;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
     dotenv().ok();
 
     // Handle Ctrl+C gracefully

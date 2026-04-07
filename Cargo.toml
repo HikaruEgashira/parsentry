@@ -14,25 +14,20 @@ benchmark = []
 tokio.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
 parsentry-reports = { path = "crates/parsentry-reports" }
-parsentry-cache = { path = "crates/parsentry-cache" }
 parsentry-claude = { path = "crates/parsentry-claude" }
 notify = { version = "7", default-features = false, features = ["macos_fsevent"] }
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true
 serde_json.workspace = true
 regex = "1.10"
-toml = "0.8"
-dirs = "5.0"
 thiserror.workspace = true
 log = "0.4"
-env_logger = "0.11"
 anyhow.workspace = true
 dotenvy = "0.15"
 indicatif = "0.17"
 terminal_size = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3.10"
 octocrab = "0.41"
 reqwest = { version = "0.12", features = ["json"] }

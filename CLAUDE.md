@@ -15,7 +15,6 @@ Phase 3: プロンプトファイル出力 → ユーザーが外部agentにpipe
 | Crate | Role |
 |-------|------|
 | `parsentry-core` | Language, RepoMetadata, ThreatModel, AttackSurface types |
-| `parsentry-cache` | Content-addressable file cache (SHA2 hash key, file-based storage) |
 | `parsentry-reports` | SARIF/Markdown report generation |
 
 ### Key types
