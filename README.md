@@ -107,11 +107,11 @@ Phase 4: parsentry merge   →  SARIF files + baseline  →  merged report (with
 
 Each report contains a `threat-model.json`, per-surface `SURFACE-*.prompt.md` files, and an `orchestrator.prompt.md`.
 
-| Repository | Type | Files | Surfaces |
-|-----------|------|-------|----------|
-| [langgenius/dify](docs/reports/dify/dify/) | LLM application platform | 8531 | 25 |
-| [OWASP/NodeGoat](docs/reports/NodeGoat/NodeGoat/) | Vulnerable Node.js app | 76 | 21 |
-| [HikaruEgashira/hikae-vulnerable-python](docs/reports/hikae-vulnerable/hikae-vulnerable-python/) | Vulnerable Flask app | 3 | 7 |
+| Repository | Type | Surfaces |
+|-----------|------|----------|
+| [langgenius/dify](docs/reports/dify/dify/) | LLM application platform | 24 |
+| [OWASP/NodeGoat](docs/reports/NodeGoat/NodeGoat/) | Vulnerable Node.js app | 21 |
+| [HikaruEgashira/hikae-vulnerable-python](docs/reports/hikae-vulnerable/) | Vulnerable Flask app | 25 |
 
 ### Security
 
