@@ -59,6 +59,14 @@ pub enum Commands {
         /// Target to analyze: local path or GitHub repository (owner/repo)
         target: Option<String>,
     },
+    /// Merge per-surface SARIF files into a single report
+    Merge {
+        /// Directory containing *.sarif.json files
+        dir: PathBuf,
+        /// Output file (default: stdout)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
     /// Manage result cache
     Cache {
         #[command(subcommand)]

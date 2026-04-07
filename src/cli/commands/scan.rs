@@ -57,9 +57,20 @@ pub async fn run_scan_command(args: ScanArgs) -> Result<()> {
 
     printer.section("Prompts");
     for sp in &surface_prompts {
-        // Write prompt file (e.g., SURFACE-001.prompt.md)
         let prompt_path = output_dir.join(format!("{}.prompt.md", sp.surface_id));
-        std::fs::write(&prompt_path, &sp.prompt)?;
+        let sarif_path = output_dir.join(format!("{}.sarif.json", sp.surface_id));
+
+        // Append output instruction with the concrete SARIF file path
+        let full_prompt = format!(
+            "{}\n\nWrite the SARIF JSON output to: {}\n\
+             Write ONLY valid JSON. No markdown, no code fences, no explanation.\n",
+            sp.prompt,
+            sarif_path.canonicalize().unwrap_or(std::fs::canonicalize(&output_dir)
+                .unwrap_or(output_dir.clone()).join(format!("{}.sarif.json", sp.surface_id)))
+                .display()
+        );
+
+        std::fs::write(&prompt_path, &full_prompt)?;
 
         printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
 

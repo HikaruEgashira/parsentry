@@ -39,6 +39,21 @@ impl RootCommand {
                 let scan_args = ScanArgs::from(&args).with_target(target.clone());
                 run_query_command(scan_args).await
             },
+            Some(Commands::Merge { dir, output }) => {
+                use parsentry_reports::merge_sarif_dir;
+                let merged = merge_sarif_dir(dir)?;
+                let json = serde_json::to_string_pretty(&merged)?;
+                if let Some(out_path) = output {
+                    if let Some(parent) = out_path.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                    std::fs::write(out_path, &json)?;
+                    eprintln!("Wrote merged SARIF to {}", out_path.display());
+                } else {
+                    println!("{}", json);
+                }
+                Ok(())
+            },
             Some(Commands::Cache { action }) => {
                 let config = if let Some(config_path) = &args.config {
                     ParsentryConfig::load_from_file(config_path)?
