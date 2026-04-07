@@ -22,17 +22,23 @@ pub fn locate_repository(
             .join("parsentry")
             .join("repos");
         let dest = cache_base.join(target.replace('/', "__"));
-        if dest.exists() {
-            std::fs::remove_dir_all(&dest)?;
-        }
-        std::fs::create_dir_all(cache_base)?;
-        printer.status("Cloning", &format!("{} → {}", target, dest.display()));
-        clone_repo(target, &dest)?;
         let repo_name = target
             .split('/')
             .last()
             .unwrap_or("unknown-repo")
             .replace(".git", "");
+
+        if dest.join(".git").exists() {
+            printer.status("Cached", &format!("{} → {}", target, dest.display()));
+        } else {
+            if dest.exists() {
+                std::fs::remove_dir_all(&dest)?;
+            }
+            std::fs::create_dir_all(&cache_base)?;
+            printer.status("Cloning", &format!("{} → {}", target, dest.display()));
+            clone_repo(target, &dest)?;
+        }
+
         Ok((dest, Some(repo_name)))
     } else {
         Ok((PathBuf::from(target), None))
