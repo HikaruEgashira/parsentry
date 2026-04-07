@@ -73,6 +73,7 @@ pub enum Commands {
         threat_model: Option<PathBuf>,
     },
     /// Monitor scan progress (docker compose logs -f style)
+    #[command(alias = "log", alias = "logs")]
     Watch {
         /// Output directory containing prompt and SARIF files
         output_dir: PathBuf,

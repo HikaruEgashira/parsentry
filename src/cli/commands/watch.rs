@@ -362,15 +362,31 @@ fn print_log(service: &str, message: &str, use_colors: bool, show_timestamps: bo
         String::new()
     };
 
-    if use_colors {
-        eprintln!(
-            "{}{}{:<14}{} {} {}",
-            color, colors::BOLD, service, colors::RESET,
-            format!("{}|{}", colors::DIM, colors::RESET),
-            format!("{}{}", ts, message),
-        );
-    } else {
-        eprintln!("{:<14} | {}{}", service, ts, message);
+    for line in message.lines() {
+        if use_colors {
+            eprintln!(
+                "{}{}{:<14}{} {} {}",
+                color, colors::BOLD, service, colors::RESET,
+                format!("{}|{}", colors::DIM, colors::RESET),
+                format!("{}{}", ts, line),
+            );
+        } else {
+            eprintln!("{:<14} | {}{}", service, ts, line);
+        }
+    }
+
+    // Empty message still prints one line
+    if message.is_empty() {
+        if use_colors {
+            eprintln!(
+                "{}{}{:<14}{} {} {}",
+                color, colors::BOLD, service, colors::RESET,
+                format!("{}|{}", colors::DIM, colors::RESET),
+                ts.trim_end(),
+            );
+        } else {
+            eprintln!("{:<14} | {}", service, ts.trim_end());
+        }
     }
 }
 
