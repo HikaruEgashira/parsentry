@@ -113,17 +113,17 @@ pub fn build_surface_prompt(
          and analyze them for vulnerabilities.\n\n",
     );
 
-    prompt.push_str("## Surface Under Analysis\n\n");
-    prompt.push_str(&format!("- **ID**: {}\n", surface.id));
-    prompt.push_str(&format!("- **Kind**: {}\n", surface.kind));
-    prompt.push_str(&format!("- **Identifier**: {}\n", surface.identifier));
-    prompt.push_str(&format!("- **Description**: {}\n", surface.description));
+    prompt.push_str("Surface Under Analysis\n\n");
+    prompt.push_str(&format!("- ID: {}\n", surface.id));
+    prompt.push_str(&format!("- Kind: {}\n", surface.kind));
+    prompt.push_str(&format!("- Identifier: {}\n", surface.identifier));
+    prompt.push_str(&format!("- Description: {}\n", surface.description));
     prompt.push_str(&format!(
-        "- **Locations**: {}\n\n",
+        "- Locations: {}\n\n",
         surface.locations.join(", ")
     ));
 
-    prompt.push_str("## Output Instructions\n\n");
+    prompt.push_str("Output Instructions\n\n");
     prompt.push_str("Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.\n");
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
