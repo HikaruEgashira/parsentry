@@ -51,6 +51,38 @@ fn ensure_fingerprint(result: &mut SarifResult) {
     map.entry("parsentry/v1".to_string()).or_insert(fp);
 }
 
+/// Collect SARIF files from `dir`: flat `*.sarif.json` files and
+/// `result.sarif.json` inside Agent Skills subdirectories (one level deep).
+fn collect_sarif_files(dir: &Path) -> std::io::Result<Vec<std::path::PathBuf>> {
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(dir)?.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if path
+                .file_name()
+                .map(|n| n.to_string_lossy().ends_with(".sarif.json"))
+                .unwrap_or(false)
+            {
+                files.push(path);
+            }
+        } else if path.is_dir() {
+            // Agent Skills layout: {skill_name}/result.sarif.json
+            for inner in std::fs::read_dir(&path)?.flatten() {
+                let inner_path = inner.path();
+                if inner_path.is_file()
+                    && inner_path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().ends_with(".sarif.json"))
+                        .unwrap_or(false)
+                {
+                    files.push(inner_path);
+                }
+            }
+        }
+    }
+    Ok(files)
+}
+
 /// Merge all `*.sarif.json` files in `dir` into a single [`SarifReport`].
 ///
 /// When `baseline` is provided:
@@ -60,17 +92,8 @@ fn ensure_fingerprint(result: &mut SarifResult) {
 ///   - `"unchanged"`: same ruleId + fingerprint exists in baseline
 ///   - `"absent"`: in baseline but not in current scan (appended with absent state)
 pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifReport> {
-    let mut sarif_files: Vec<_> = std::fs::read_dir(dir)
-        .with_context(|| format!("cannot read directory: {}", dir.display()))?
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .file_name()
-                .map(|n| n.to_string_lossy().ends_with(".sarif.json"))
-                .unwrap_or(false)
-        })
-        .map(|e| e.path())
-        .collect();
+    let mut sarif_files = collect_sarif_files(dir)
+        .with_context(|| format!("cannot read directory: {}", dir.display()))?;
 
     sarif_files.sort();
 

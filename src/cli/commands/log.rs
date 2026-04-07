@@ -356,10 +356,14 @@ fn discover_new_surfaces(
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
 
-        if name_str.ends_with(".prompt.md") && name_str != "orchestrator.prompt.md" {
-            let surface_id = name_str.trim_end_matches(".prompt.md").to_string();
-            if !known_set.contains(surface_id.as_str()) {
-                new_surfaces.push(surface_id);
+        // Skill directories: subdirs with SKILL.md, exclude orchestrator
+        if entry.path().is_dir()
+            && name_str != "orchestrator"
+            && entry.path().join("SKILL.md").exists()
+        {
+            let skill_name = name_str.to_string();
+            if !known_set.contains(skill_name.as_str()) {
+                new_surfaces.push(skill_name);
             }
         }
     }
@@ -393,12 +397,12 @@ fn check_completed_surfaces(
     }
 }
 
-fn sarif_exists(output_dir: &Path, surface_id: &str) -> bool {
-    output_dir.join(format!("{}.sarif.json", surface_id)).exists()
+fn sarif_exists(output_dir: &Path, skill_name: &str) -> bool {
+    output_dir.join(skill_name).join("result.sarif.json").exists()
 }
 
-fn count_sarif_findings(output_dir: &Path, surface_id: &str) -> usize {
-    let path = output_dir.join(format!("{}.sarif.json", surface_id));
+fn count_sarif_findings(output_dir: &Path, skill_name: &str) -> usize {
+    let path = output_dir.join(skill_name).join("result.sarif.json");
     let data = match std::fs::read_to_string(&path) {
         Ok(d) => d,
         Err(_) => return 0,
