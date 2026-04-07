@@ -47,8 +47,8 @@ cargo run -- model HikaruEgashira/hikae-vulnerable-python | claude -p > /tmp/mod
 # Step 2: per-surface prompt生成
 cargo run -- scan /tmp/model.json HikaruEgashira/hikae-vulnerable-python --output-dir docs/reports/hikae-vulnerable
 
-# Step 3: agent実行（ユーザーが外部で）
-ls docs/reports/hikae-vulnerable/**/*.prompt.md | parallel 'claude -p "$(cat {})"'
+# Step 3: agent実行（1プロセスでparallel実行）
+claude -p "$(cat docs/reports/hikae-vulnerable/hikae-vulnerable-python/orchestrator.prompt.md)"
 
 # Step 4: 結果集約
 cargo run -- merge docs/reports/hikae-vulnerable/hikae-vulnerable-python -o merged.sarif.json

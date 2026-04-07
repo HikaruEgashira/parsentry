@@ -173,6 +173,90 @@ pub fn build_all_surface_prompts(
         .collect()
 }
 
+/// Build an orchestrator prompt that dispatches all surface analyses
+/// as parallel subagents within a single Claude process.
+///
+/// The orchestrator reads individual `.prompt.md` files and launches
+/// Agent tool calls with `run_in_background: true` for each surface.
+pub fn build_orchestrator_prompt(
+    surface_prompts: &[SurfacePrompt],
+    output_dir: &Path,
+) -> String {
+    let abs_output_dir = std::fs::canonicalize(output_dir)
+        .unwrap_or_else(|_| output_dir.to_path_buf());
+
+    let mut prompt = String::new();
+
+    prompt.push_str(
+        "You are a security analysis orchestrator. Your task is to analyze multiple \
+         attack surfaces in parallel by dispatching subagents.\n\n",
+    );
+
+    prompt.push_str("## Instructions\n\n");
+    prompt.push_str(
+        "1. Read each prompt file listed below using the Read tool\n\
+         2. Launch ALL subagents in a SINGLE message using the Agent tool for maximum parallelism\n\
+         3. Each agent must run with `run_in_background: true`\n\
+         4. Each agent's prompt must include the content from the prompt file AND \
+            the instruction to write SARIF output to the specified path\n\
+         5. After all agents complete, provide a summary of total findings\n\n",
+    );
+
+    prompt.push_str("## Surfaces to Analyze\n\n");
+    prompt.push_str("| Surface ID | Prompt File | SARIF Output |\n");
+    prompt.push_str("|------------|-------------|-------------|\n");
+
+    for sp in surface_prompts {
+        let prompt_path = abs_output_dir.join(format!("{}.prompt.md", sp.surface_id));
+        let sarif_path = abs_output_dir.join(format!("{}.sarif.json", sp.surface_id));
+        prompt.push_str(&format!(
+            "| {} | {} | {} |\n",
+            sp.surface_id,
+            prompt_path.display(),
+            sarif_path.display(),
+        ));
+    }
+
+    prompt.push_str("\n## Agent Launch Template\n\n");
+    prompt.push_str(
+        "For each surface, use the Agent tool like this:\n\n\
+         ```\n\
+         Agent(\n\
+           description: \"Analyze {SURFACE_ID}\",\n\
+           prompt: \"<content from prompt file>\\n\\n\
+             Write the SARIF JSON output to: {SARIF_OUTPUT_PATH}\\n\
+             Write ONLY valid JSON. No markdown, no code fences, no explanation.\",\n\
+           run_in_background: true,\n\
+           mode: \"bypassPermissions\"\n\
+         )\n\
+         ```\n\n",
+    );
+
+    prompt.push_str(
+        "IMPORTANT: Launch ALL agents in a single message. Do NOT wait for one to finish \
+         before launching the next.\n\n",
+    );
+
+    // Merge step
+    let merged_sarif = abs_output_dir.join("merged.sarif.json");
+    prompt.push_str("## Post-Analysis: Merge Results\n\n");
+    prompt.push_str(
+        "After ALL subagents have completed, run the following command to merge \
+         the per-surface SARIF files into a single report:\n\n",
+    );
+    prompt.push_str(&format!(
+        "```bash\nparsentry merge {} -o {}\n```\n\n",
+        abs_output_dir.display(),
+        merged_sarif.display(),
+    ));
+    prompt.push_str(
+        "Then report the total number of findings by severity (error/warning/note) \
+         from the merged SARIF output.\n",
+    );
+
+    prompt
+}
+
 fn hex_sha256(data: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data.as_bytes());

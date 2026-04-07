@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use crate::cli::ui::StatusPrinter;
-use crate::prompt::build_all_surface_prompts;
+use crate::prompt::{build_all_surface_prompts, build_orchestrator_prompt};
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
@@ -78,10 +78,16 @@ pub async fn run_scan_command(
         println!("{}", prompt_path.display());
     }
 
+    // Phase 4: Generate orchestrator prompt for single-process parallel execution
+    let orchestrator_content = build_orchestrator_prompt(&surface_prompts, &output_dir);
+    let orchestrator_path = output_dir.join("orchestrator.prompt.md");
+    std::fs::write(&orchestrator_path, &orchestrator_content)?;
+    printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
+
     printer.success(
         "Complete",
         &format!(
-            "{} prompts written to {}",
+            "{} prompts + orchestrator written to {}",
             surface_prompts.len(),
             output_dir.display()
         ),
