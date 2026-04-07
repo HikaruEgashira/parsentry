@@ -46,6 +46,10 @@ pub enum Commands {
         /// Filter by language (comma-separated)
         #[arg(long)]
         filter_lang: Option<String>,
+
+        /// Run agent in background (detached); print output directory and exit
+        #[arg(short = 'd', long = "detach", action = clap::ArgAction::SetTrue)]
+        detach: bool,
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]

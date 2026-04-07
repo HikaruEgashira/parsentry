@@ -14,8 +14,8 @@ impl RootCommand {
             Commands::Model { target } => {
                 run_model_command(&target).await
             },
-            Commands::Scan { target, diff_base, filter_lang } => {
-                run_scan_command(&target, diff_base.as_deref(), filter_lang.as_deref()).await
+            Commands::Scan { target, diff_base, filter_lang, detach } => {
+                run_scan_command(&target, diff_base.as_deref(), filter_lang.as_deref(), detach).await
             },
             Commands::Merge { target } => {
                 use crate::cli::commands::common::cache_dir_for;

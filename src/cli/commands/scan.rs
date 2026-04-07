@@ -140,9 +140,9 @@ pub async fn run_scan_command(
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
 
     if detach {
-        // Spawn claude -p <orchestrator_path> in background and return immediately
+        // Spawn `claude -p` with orchestrator content piped via stdin, detached from terminal
         let child = std::process::Command::new("claude")
-            .args(["-p", &format!("$(cat {})", orchestrator_path.display())])
+            .arg("-p")
             .stdin(std::fs::File::open(&orchestrator_path)?)
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())

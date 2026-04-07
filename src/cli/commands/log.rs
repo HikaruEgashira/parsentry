@@ -60,22 +60,29 @@ pub async fn run_log_command(
         }
         for (name, reports_dir) in &all {
             let repo = repo_name_from_target(name);
-            let prompt_count = std::fs::read_dir(reports_dir)
-                .map(|e| e.flatten().filter(|f| f.file_name().to_string_lossy().ends_with(".prompt.md")).count())
+            // Count skill directories (subdirs with SKILL.md), exclude orchestrator
+            let skill_count = std::fs::read_dir(reports_dir)
+                .map(|e| e.flatten().filter(|f| {
+                    f.path().is_dir()
+                        && f.file_name().to_string_lossy() != "orchestrator"
+                        && f.path().join("SKILL.md").exists()
+                }).count())
                 .unwrap_or(0);
             let sarif_count = std::fs::read_dir(reports_dir)
-                .map(|e| e.flatten().filter(|f| f.file_name().to_string_lossy().ends_with(".sarif.json")).count())
+                .map(|e| e.flatten().filter(|f| {
+                    f.path().is_dir() && f.path().join("result.sarif.json").exists()
+                }).count())
                 .unwrap_or(0);
-            let status = if sarif_count >= prompt_count && prompt_count > 0 {
+            let status = if sarif_count >= skill_count && skill_count > 0 {
                 "complete"
             } else if sarif_count > 0 {
                 "in progress"
-            } else if prompt_count > 0 {
+            } else if skill_count > 0 {
                 "waiting"
             } else {
                 "empty"
             };
-            print_log(&repo, &format!("{} surfaces, {} results ({})", prompt_count, sarif_count, status), use_colors, timestamps, colors::CYAN);
+            print_log(&repo, &format!("{} surfaces, {} results ({})", skill_count, sarif_count, status), use_colors, timestamps, colors::CYAN);
         }
         return Ok(());
     }
@@ -131,9 +138,9 @@ pub async fn run_log_command(
     let (fs_tx, fs_rx) = mpsc::channel::<notify::Result<Event>>();
     let mut watcher = notify::recommended_watcher(fs_tx)?;
 
-    // Watch output directory (for prompt.md and sarif.json)
+    // Watch output directory recursively (skill subdirs contain SKILL.md and result.sarif.json)
     if dir_existed {
-        watcher.watch(&output_dir, RecursiveMode::NonRecursive)?;
+        watcher.watch(&output_dir, RecursiveMode::Recursive)?;
     }
     // Watch project sessions directory (for JSONL changes)
     if project_dir.exists() {
@@ -174,7 +181,7 @@ pub async fn run_log_command(
                     // If output dir just appeared, start watching it
                     if !dir_existed && output_dir.exists() {
                         dir_existed = true;
-                        let _ = watcher.watch(&output_dir, RecursiveMode::NonRecursive);
+                        let _ = watcher.watch(&output_dir, RecursiveMode::Recursive);
                         print_log(&repo_name, &format!("directory appeared: {}", output_dir.display()), use_colors, timestamps, colors::BRIGHT_GREEN);
                     }
                     // If project dir appeared, watch it
