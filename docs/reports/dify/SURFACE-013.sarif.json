@@ -1,0 +1,364 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection vulnerability"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "SSRF",
+              "name": "InsecureSSLConfiguration",
+              "shortDescription": {
+                "text": "Insecure SSL/TLS configuration disabling certificate verification"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/295.html"
+            },
+            {
+              "id": "TENANT-ISOLATION",
+              "name": "TenantIsolationBypass",
+              "shortDescription": {
+                "text": "Potential cross-tenant data access due to insufficient isolation enforcement"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in PGVector.search_by_vector: document_ids_filter values are directly interpolated into SQL WHERE clause via f-string formatting without parameterized queries. An attacker who controls document_ids_filter can inject arbitrary SQL. The pattern `document_ids = \", \".join(f\"'{id}'\" for id in document_ids_filter)` followed by f-string interpolation into the query is exploitable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py"
+                },
+                "region": {
+                  "startLine": 228,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in PGVector.search_by_full_text: document_ids_filter values are directly interpolated into WHERE clause via f-string. Same vulnerable pattern as search_by_vector - IDs are formatted with single quotes and concatenated into SQL without parameterization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/pgvector/pgvector.py"
+                },
+                "region": {
+                  "startLine": 256,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in BaiduVector.delete_by_ids: Document IDs are formatted into a filter string using f-string interpolation with single-quote wrapping (`f\"'{id}'\"`) and joined directly into a filter expression. An attacker controlling document IDs can break out of the quotes and inject arbitrary filter expressions."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
+                },
+                "region": {
+                  "startLine": 162,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in BaiduVector.search_by_vector: document_ids_filter values are interpolated into filter string via f-string formatting (`f\"'{id}'\"`) without proper escaping. The constructed filter is passed directly to the vector search API."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
+                },
+                "region": {
+                  "startLine": 174,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in BaiduVector.search_by_full_text: Same vulnerable pattern as search_by_vector - document_ids_filter values interpolated into filter string for BM25 search without parameterization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
+                },
+                "region": {
+                  "startLine": 196,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in IRIS IrisConnectionPool.ensure_schema_exists: The schema name is directly interpolated into a CREATE SCHEMA DDL statement via f-string (`f\"CREATE SCHEMA {schema}\"`). While the schema name currently originates from configuration, if an attacker can influence the IRIS_SCHEMA config value, they can execute arbitrary SQL DDL commands."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/iris/iris_vector.py"
+                },
+                "region": {
+                  "startLine": 84,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in IrisVector SQL queries: Multiple methods (add_texts, text_exists, delete_by_ids, delete_by_metadata_field, search_by_vector, search_by_full_text, delete, _create_collection) use f-string interpolation of self.schema and self.table_name into SQL. While these values derive from configuration and dataset IDs, the schema/table names are not validated against SQL identifier rules, and the pattern is dangerous if any upstream control is possible."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/iris/iris_vector.py"
+                },
+                "region": {
+                  "startLine": 158,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in OracleVector.delete_by_metadata_field: The metadata key parameter is directly concatenated into the SQL query string via string concatenation (`f\"...JSON_VALUE(meta, '$.\" + key + \"') = :1\"`). If an attacker controls the key parameter, they can inject arbitrary SQL by breaking out of the JSON_VALUE function call."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/oracle/oraclevector.py"
+                },
+                "region": {
+                  "startLine": 163,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.88
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "warning",
+          "message": {
+            "text": "SQL Injection in ClickzettaVector.delete_by_metadata_field_impl: The metadata key is interpolated into a JSON path expression via f-string (`f\"...json_extract_string({Field.METADATA_KEY}, '$.{key}') = ?\"`). While the value uses parameterized query, the key itself is unescaped and directly embedded in the SQL string."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py"
+                },
+                "region": {
+                  "startLine": 130,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "warning",
+          "message": {
+            "text": "Insufficient SQL escaping in ClickzettaVector.search_by_full_text: User search query is escaped only by replacing single quotes with doubled quotes (`query.replace(\"'\", \"''\")`), then interpolated into a MATCH_ALL function call. This escaping may be insufficient depending on the SQL dialect and could be bypassed with backslash sequences or multi-byte character attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/clickzetta/clickzetta_vector.py"
+                },
+                "region": {
+                  "startLine": 254,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "Insecure SSL configuration in HuaweiCloudVector: The create_ssl_context function explicitly disables certificate hostname checking (`check_hostname = False`) and certificate verification (`verify_mode = ssl.CERT_NONE`). This makes the connection vulnerable to man-in-the-middle attacks, allowing an attacker to intercept or modify data in transit between Dify and the Huawei Cloud Elasticsearch backend."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/huawei/huawei_cloud_vector.py"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "TENANT-ISOLATION",
+          "level": "warning",
+          "message": {
+            "text": "Potential cross-tenant data leakage in vector search: Multiple VDB implementations (PGVector, OpenGauss, Vastbase, etc.) construct table names from dataset IDs via `Dataset.gen_collection_name_by_id()`. The vector search methods accept document_ids_filter as an opaque list without validating that the requested document IDs belong to the same tenant. If a user can manipulate the document_ids_filter parameter, they may query documents from other tenants' datasets that happen to share the same vector store infrastructure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/vector_factory.py"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "warning",
+          "message": {
+            "text": "SQL Injection via table name in OpenGauss: Multiple methods use f-string interpolation of self.table_name into SQL queries (e.g., `f\"INSERT INTO {self.table_name}\"`, `f\"DELETE FROM {self.table_name}\"`, `f\"DROP TABLE IF EXISTS {self.table_name}\"`). The table_name is derived from collection_name which comes from dataset.index_struct_dict['vector_store']['class_prefix']. If this stored value is tampered with (e.g., via database manipulation), it could lead to SQL injection across DDL and DML operations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/opengauss/opengauss.py"
+                },
+                "region": {
+                  "startLine": 104,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "warning",
+          "message": {
+            "text": "SQL Injection in BaiduVector.delete_by_metadata_field: While the value is escaped by replacing double quotes, the key parameter is directly interpolated into a filter expression via f-string (`f'metadata[\"{key}\"] = \"{escaped_value}\"'`). An attacker controlling the key can inject arbitrary filter expressions by breaking out of the metadata accessor syntax."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/datasource/vdb/baidu/baidu_vector.py"
+                },
+                "region": {
+                  "startLine": 167,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        }
+      ]
+    }
+  ]
+}

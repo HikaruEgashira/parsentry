@@ -1,0 +1,354 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "PRIVESC",
+              "shortDescription": {
+                "text": "Privilege Escalation via Missing Authorization"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "SSRF",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "AUTHZ-BYPASS",
+              "shortDescription": {
+                "text": "Missing Authentication or Authorization"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "IDOR",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PRIVESC",
+          "level": "error",
+          "message": {
+            "text": "MemberUpdateRoleApi.put is missing the is_admin_or_owner_required decorator. Any authenticated workspace member can update another member's role, including escalating to admin. The endpoint only validates that the role string is valid via TenantAccountRole.is_valid_role, but does not verify the caller has admin/owner privileges at the decorator level. The service-layer TenantService.update_member_role may enforce checks, but the inconsistency with other mutating endpoints (which use the decorator) suggests this is an oversight."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/members.py"
+                },
+                "region": {
+                  "startLine": 3034
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PRIVESC",
+          "level": "warning",
+          "message": {
+            "text": "MemberCancelInviteApi.delete is missing the is_admin_or_owner_required decorator. Any authenticated workspace member can remove other members from the workspace. Authorization is partially handled in the service layer (TenantService.remove_member_from_tenant raises NoPermissionError), but the missing decorator is inconsistent with the security pattern used on other destructive endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/members.py"
+                },
+                "region": {
+                  "startLine": 2999
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "PRIVESC",
+          "level": "warning",
+          "message": {
+            "text": "ToolBuiltinProviderAddApi.post is missing the is_admin_or_owner_required decorator, unlike the corresponding delete and update endpoints for builtin tool providers. Any authenticated member can add tool provider credentials to the workspace, potentially configuring malicious external tool providers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 1048
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "PRIVESC",
+          "level": "warning",
+          "message": {
+            "text": "ToolBuiltinProviderSetDefaultApi.post is missing the is_admin_or_owner_required decorator. Any authenticated member can set the default credential for a tool provider, potentially directing workspace tool usage to attacker-controlled credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 1601
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "ToolApiProviderGetRemoteSchemaApi.get accepts a user-supplied URL via the 'url' query parameter and passes it to ApiToolManageService.get_api_tool_provider_remote_schema, which fetches the URL server-side. Although Pydantic HttpUrl validation restricts format, it does not prevent SSRF against internal services (e.g., http://169.254.169.254 for cloud metadata, internal microservices). An attacker can probe internal network topology and exfiltrate data from internal endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 1155
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "MCP provider creation (ToolProviderMCPApi.post) takes a user-supplied server_url and immediately attempts to connect to it via MCPToolManageService.reconnect_with_url. This allows an attacker to force the server to make requests to arbitrary internal or external URLs. The server_url is not validated against an allowlist or blocked from accessing internal network ranges."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 1713
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "ModelProviderIconApi.get has no authentication decorators (@login_required, @account_initialization_required). It takes tenant_id directly from the URL path parameter, allowing any unauthenticated user to enumerate tenant IDs and retrieve model provider icon data. While the impact of icon exposure is low, the missing auth is a pattern violation that could be leveraged for tenant enumeration."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/model_providers.py"
+                },
+                "region": {
+                  "startLine": 2188
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "ToolMCPCallbackApi.get (route /mcp/oauth/callback) has no authentication decorators. It processes OAuth callback parameters (code, state) and saves OAuth tokens to the database. While the state parameter provides some CSRF protection, the lack of authentication means any party who can craft the callback URL can trigger token storage. Combined with state prediction or interception, this could lead to unauthorized MCP provider access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 1907
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "PRIVESC",
+          "level": "warning",
+          "message": {
+            "text": "WorkspaceInfoApi.post (route /workspaces/info) is missing the is_admin_or_owner_required decorator. Any authenticated member can rename the workspace, which is typically an admin-level operation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/workspace.py"
+                },
+                "region": {
+                  "startLine": 4897
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "note",
+          "message": {
+            "text": "AccountDeleteUpdateFeedbackApi.post (route /account/delete/feedback) has no @login_required decorator. Any unauthenticated user can submit deletion feedback with an arbitrary email address to BillingService.update_account_deletion_feedback, potentially polluting deletion records or triggering unintended billing service side effects."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/account.py"
+                },
+                "region": {
+                  "startLine": 6062
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PRIVESC",
+          "level": "warning",
+          "message": {
+            "text": "MCP provider CRUD operations (create, update, delete at ToolProviderMCPApi) are missing the is_admin_or_owner_required decorator. Any authenticated member can create, modify, or delete MCP tool providers for the workspace. This allows a low-privilege member to add a malicious MCP server that could intercept tool invocations or inject malicious tool responses."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/tool_providers.py"
+                },
+                "region": {
+                  "startLine": 1680
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "PluginIconApi.get (route /workspaces/current/plugin/icon) takes tenant_id from the query parameter instead of deriving it from the authenticated session. Although @setup_required is present, there is no @login_required, allowing unauthenticated access. An attacker can supply an arbitrary tenant_id to access plugin icons from other tenants."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/plugin.py"
+                },
+                "region": {
+                  "startLine": 4024
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PRIVESC",
+          "level": "warning",
+          "message": {
+            "text": "ModelProviderModelEnableApi.patch and ModelProviderModelDisableApi.patch are missing the is_admin_or_owner_required decorator. Any authenticated member can enable or disable models for the entire workspace, potentially disrupting service for all workspace users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/models.py"
+                },
+                "region": {
+                  "startLine": 2718
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "note",
+          "message": {
+            "text": "CheckEmailUnique endpoint (route /account/change-email/check-email-unique) has no @login_required decorator. Any unauthenticated user can check whether an email is registered in the system, enabling user enumeration attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/workspace/account.py"
+                },
+                "region": {
+                  "startLine": 6288
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        }
+      ]
+    }
+  ]
+}

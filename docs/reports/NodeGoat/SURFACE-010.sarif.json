@@ -1,0 +1,133 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "MISSING-FUNCTION-LEVEL-ACCESS-CONTROL",
+              "name": "MissingFunctionLevelAccessControl",
+              "shortDescription": {
+                "text": "Admin-only endpoint accessible to any authenticated user"
+              },
+              "fullDescription": {
+                "text": "The GET /benefits route requires only isLoggedIn middleware but omits the isAdmin check. The isAdmin middleware is present in a comment but not applied, allowing any authenticated user to access the admin-only benefits management page. This is a broken access control vulnerability (OWASP A01:2021)."
+              },
+              "helpUri": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+              "properties": {
+                "tags": ["security", "access-control", "CWE-285", "A01:2021"]
+              }
+            },
+            {
+              "id": "MASS-DATA-EXPOSURE",
+              "name": "MassDataExposure",
+              "shortDescription": {
+                "text": "All non-admin users' benefit data exposed without authorization"
+              },
+              "fullDescription": {
+                "text": "The displayBenefits handler calls benefitDAO.getAllNonAdminUsers(), which returns benefit details for every non-admin user in the system. Combined with the missing access control, any authenticated user can enumerate all other users' benefit information. This constitutes an information disclosure / excessive data exposure vulnerability."
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/04-Authentication_Testing/04-Testing_for_Bypassing_Authorization_Schema",
+              "properties": {
+                "tags": ["security", "information-disclosure", "CWE-200", "CWE-862", "A01:2021"]
+              }
+            },
+            {
+              "id": "HARDCODED-ADMIN-FLAG",
+              "name": "HardcodedAdminFlag",
+              "shortDescription": {
+                "text": "Response hardcodes isAdmin: true regardless of actual user role"
+              },
+              "fullDescription": {
+                "text": "The benefits route handler passes { isAdmin: true } in the template render data regardless of the requesting user's actual role. This misleads the client-side into rendering admin UI elements for non-admin users, which combined with the missing server-side access control creates a complete authorization bypass for the benefits page."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/642.html",
+              "properties": {
+                "tags": ["security", "access-control", "CWE-642", "A01:2021"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "MISSING-FUNCTION-LEVEL-ACCESS-CONTROL",
+          "level": "error",
+          "message": {
+            "text": "The GET /benefits route is registered with only isLoggedIn middleware: app.get('/benefits', isLoggedIn, benefitsHandler.displayBenefits). The isAdmin middleware is commented out and not enforced, allowing any authenticated user to access admin-only benefits management. Fix: add the isAdmin middleware to the route chain: app.get('/benefits', isLoggedIn, isAdmin, benefitsHandler.displayBenefits)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 30
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MASS-DATA-EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "The displayBenefits handler invokes benefitDAO.getAllNonAdminUsers() which returns benefit data for every non-admin user in the system. Because the route lacks admin authorization, any logged-in user can retrieve all other users' benefit details (start dates, salary, tax information). Fix: enforce isAdmin middleware on the route and consider returning only the requesting user's data for non-admin users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/benefits-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 30
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "HARDCODED-ADMIN-FLAG",
+          "level": "warning",
+          "message": {
+            "text": "The benefits route handler passes hardcoded { isAdmin: true } in the response template data regardless of the actual user's role. This causes the client-side template to render admin controls for all users, and masks the missing server-side authorization check. Fix: derive the isAdmin flag from the authenticated user's session or database record: { isAdmin: req.session.isAdmin || false }."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 25
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ]
+    }
+  ]
+}

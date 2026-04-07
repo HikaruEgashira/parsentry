@@ -1,0 +1,312 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "TMPL-INJECT",
+              "name": "TemplateInjection",
+              "shortDescription": {
+                "text": "Variable template injection via user-controlled input in VariableTemplateParser"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html"
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakage",
+              "shortDescription": {
+                "text": "Internal error details leaked to user through exception messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "Insufficient authorization check on object access"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-side request forgery via user-controlled URL in webhook or file operations"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "PROMPT-INJECT",
+              "name": "PromptInjection",
+              "shortDescription": {
+                "text": "User-controlled input interpolated into LLM prompts without sanitization"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/77.html"
+            },
+            {
+              "id": "DESER",
+              "name": "InsecureDeserialization",
+              "shortDescription": {
+                "text": "Unsafe deserialization of user-controlled data into complex objects"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+            },
+            {
+              "id": "AUTHZ-BYPASS",
+              "name": "AuthorizationBypass",
+              "shortDescription": {
+                "text": "Missing or weak authorization check allows access to resources"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "TMPL-INJECT",
+          "level": "error",
+          "message": {
+            "text": "VariableTemplateParser is used on user-supplied 'mixed' type input values in AgentNode._extract_variable_selector_to_variable_mapping and AgentRuntimeSupport.build_parameters. The 'constant' case also passes str(input.value) through VariableTemplateParser, which may allow template injection if the constant value contains template syntax like {{variable_name}}. An attacker who controls agent_parameters can inject template directives to read arbitrary variables from the variable pool, including system variables containing tenant_id, user_id, and conversation data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/agent/agent_node.py"
+                },
+                "region": {
+                  "startLine": 1600
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/agent/runtime_support.py"
+                },
+                "region": {
+                  "startLine": 2266
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "TMPL-INJECT",
+          "level": "error",
+          "message": {
+            "text": "In DatasourceNode._extract_variable_selector_to_variable_mapping, user-provided datasource_parameters of type 'mixed' are passed to VariableTemplateParser(input.value).extract_variable_selectors(). If an attacker can control datasource parameter values, they can craft template expressions to extract variable selectors pointing to sensitive data in the variable pool."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/datasource/datasource_node.py"
+                },
+                "region": {
+                  "startLine": 998
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "Multiple workflow nodes expose internal error details in NodeRunResult error messages via f-string formatting of exception objects. For example, DatasourceNode yields error='Failed to transform datasource message: {str(e)}' and AgentNode yields error='Failed to invoke agent: {str(e)}'. These error messages may contain internal stack traces, file paths, database connection strings, or plugin configuration details that could be returned to the end user through the workflow execution API."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/datasource/datasource_node.py"
+                },
+                "region": {
+                  "startLine": 960
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/agent/agent_node.py"
+                },
+                "region": {
+                  "startLine": 1545
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECT",
+          "level": "error",
+          "message": {
+            "text": "In template_prompts.py, METADATA_FILTER_COMPLETION_PROMPT and METADATA_FILTER_USER_PROMPT_3 interpolate user-controlled {input_text} and {metadata_fields} directly into LLM prompt strings using Python format strings. An attacker supplying a crafted query to the knowledge retrieval node can inject arbitrary instructions into the LLM prompt, potentially causing the model to ignore filtering constraints, exfiltrate data from the prompt context, or return manipulated metadata filter results."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/knowledge_retrieval/template_prompts.py"
+                },
+                "region": {
+                  "startLine": 3134
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/knowledge_retrieval/template_prompts.py"
+                },
+                "region": {
+                  "startLine": 3156
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "In TriggerWebhookNode._extract_configured_outputs, raw webhook data including all headers, query parameters, and body content is exposed as outputs['_webhook_raw'] = webhook_data. This raw data is stored in workflow execution outputs and accessible through the workflow run detail API. If a webhook receives requests from multiple tenants or contains authentication tokens in headers, these are persisted and exposed without filtering."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/trigger_webhook/node.py"
+                },
+                "region": {
+                  "startLine": 3379
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "DESER",
+          "level": "warning",
+          "message": {
+            "text": "DatasourceNodeData.DatasourceInput and TriggerEventNodeData.TriggerEventInput accept value: Union[Any, list[str]] with type validation only for specific type cases. When type is None (allowed in DatasourceInput), no validation is performed on the value at all, allowing arbitrary data structures to be passed through. AgentNodeData.AgentInput similarly accepts value: Union[list[str], list[ToolSelector], Any]. These loosely-typed inputs flow into variable_pool operations and plugin invocations, potentially allowing injection of unexpected object types that could trigger deserialization issues in downstream components."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/datasource/entities.py"
+                },
+                "region": {
+                  "startLine": 1042
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/agent/entities.py"
+                },
+                "region": {
+                  "startLine": 2168
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "DifyWorkflowFileRuntime.http_get delegates to ssrf_proxy.get(url) where the url is derived from file.remote_url. While the ssrf_proxy is expected to filter internal addresses, the file URL resolution chain (resolve_file_url -> remote_url) depends on File objects that may be constructed from user-controlled webhook data or plugin responses. If the ssrf_proxy configuration is misconfigured or bypassed (e.g., DNS rebinding), an attacker could use workflow file references to probe internal network services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/workflow/file_runtime.py"
+                },
+                "region": {
+                  "startLine": 4755
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "In DifyWorkflowFileRuntime, the _assert_upload_file_access and _assert_tool_file_access methods skip authorization checks entirely when current_scope() returns None (line: 'if self._file_access_controller.current_scope() is None: return'). During background workflow execution (Celery tasks) or internal API calls where no user scope is established, any file ID is accessible without ownership verification. An attacker who knows or can guess file IDs could reference them in workflow node configurations to access files belonging to other tenants."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/app/workflow/file_runtime.py"
+                },
+                "region": {
+                  "startLine": 4873
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "TMPL-INJECT",
+          "level": "warning",
+          "message": {
+            "text": "In KnowledgeRetrievalNode._resolve_metadata_filtering_conditions, user-provided condition values are passed through variable_pool.convert_template(value). If a user crafts metadata filtering condition values containing template syntax (e.g., '{{sys.conversation_id}}'), the variable pool template engine will resolve them, potentially leaking system variable values into the metadata filter query sent to the vector database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/workflow/nodes/knowledge_retrieval/knowledge_retrieval_node.py"
+                },
+                "region": {
+                  "startLine": 2780
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

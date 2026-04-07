@@ -1,0 +1,320 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "PROMPT-INJECTION",
+              "shortDescription": {
+                "text": "Prompt Injection via unsanitized user input to LLM"
+              },
+              "helpUri": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+            },
+            {
+              "id": "IDOR",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference allowing unauthorized resource access"
+              },
+              "helpUri": "https://owasp.org/www-project-web-security-testing-guide/"
+            },
+            {
+              "id": "INFO-LEAK",
+              "shortDescription": {
+                "text": "Information leakage through error messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "MISSING-AUTH",
+              "shortDescription": {
+                "text": "Missing or insufficient authorization check"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "INPUT-VALIDATION",
+              "shortDescription": {
+                "text": "Insufficient input validation on untrusted data"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "SQLI",
+              "shortDescription": {
+                "text": "SQL Injection via bypassable blocklist validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "DOS",
+              "shortDescription": {
+                "text": "Denial of Service through missing rate limiting or resource control"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "User-supplied 'inputs' and 'query' fields from CompletionRequestPayload are passed directly to AppGenerateService.generate() without any sanitization or prompt injection defenses. An attacker with a valid API key can craft malicious prompts to manipulate LLM behavior, extract system prompts, or bypass content policies."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/completion.py"
+                },
+                "region": {
+                  "startLine": 1336,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "ChatRequestPayload passes user-controlled 'inputs' and 'query' to AppGenerateService.generate() without sanitization. The chat endpoint is especially dangerous because conversation context can be manipulated over multiple turns to build increasingly effective prompt injection attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/completion.py"
+                },
+                "region": {
+                  "startLine": 1431,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "error",
+          "message": {
+            "text": "WorkflowRunPayload passes user-controlled 'inputs' directly to AppGenerateService.generate(). Workflow inputs may be used in code execution nodes, HTTP request nodes, or LLM nodes, potentially enabling prompt injection or indirect code execution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 2538,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "The 'files' field in CompletionRequestPayload, ChatRequestPayload, and WorkflowRunPayload is typed as list[dict[str, Any]] with no schema validation. Arbitrary dict structures are passed through to AppGenerateService, which could lead to unexpected behavior or type confusion if the downstream service does not enforce strict schemas."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/completion.py"
+                },
+                "region": {
+                  "startLine": 1267,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "MISSING-AUTH",
+          "level": "error",
+          "message": {
+            "text": "WorkflowTaskStopApi calls AppQueueManager.set_stop_flag_no_user_check(task_id) which explicitly bypasses user authorization checks. Any authenticated API user can stop any workflow task by guessing or enumerating task IDs, enabling denial of service against other users' workflows."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 2647,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "FilePreviewApi raises FileNotFoundError with the internal exception message: f\"Failed to load file content: {str(e)}\". This can leak storage backend details (e.g., S3 bucket names, file paths, permission errors) to the API consumer."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/file_preview.py"
+                },
+                "region": {
+                  "startLine": 795,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "AnnotationUpdateDeleteApi and AnnotationReplyActionApi use @validate_app_token but do not verify that the annotation_id belongs to the requesting app's tenant. An attacker with a valid API key for one app could potentially update or delete annotations belonging to another app in the same tenant if annotation IDs can be enumerated."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/annotation.py"
+                },
+                "region": {
+                  "startLine": 1091,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "warning",
+          "message": {
+            "text": "ConversationVariablesQuery.validate_variable_name uses a blocklist approach for SQL injection prevention (checking for ', \", ;, --, etc.). Blocklist-based validation is inherently bypassable through encoding tricks, unicode normalization, or novel injection patterns. The isalnum() check with allowed characters provides a stronger first line of defense, but the redundant blocklist creates a false sense of security and the variable_name is later passed to ConversationService without parameterized query guarantee at this layer."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/conversation.py"
+                },
+                "region": {
+                  "startLine": 1553,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "warning",
+          "message": {
+            "text": "AudioApi.post accesses request.files['file'] directly without first checking if 'file' key exists in request.files, unlike FileApi which properly checks. This will raise an unhandled KeyError (500 Internal Server Error) if no file is provided, potentially exposing stack trace information in debug mode."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/audio.py"
+                },
+                "region": {
+                  "startLine": 2264,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "DOS",
+          "level": "warning",
+          "message": {
+            "text": "The AnnotationReplyActionApi 'enable' action triggers embedding operations (AppAnnotationService.enable_app_annotation) that could be computationally expensive. There is no rate limiting on this endpoint, allowing an attacker to repeatedly enable/disable annotation reply to exhaust server resources or incur excessive embedding API costs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/annotation.py"
+                },
+                "region": {
+                  "startLine": 978,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "level": "note",
+          "message": {
+            "text": "WorkflowLogQuery accepts 'keyword' as a free-form string with no length or character restrictions. While SQLAlchemy likely parameterizes queries, the keyword is passed to workflow_app_service.get_paginate_workflow_app_logs without validation, which could be problematic if any downstream code constructs queries unsafely."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/service_api/app/workflow.py"
+                },
+                "region": {
+                  "startLine": 2420,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.4
+          }
+        }
+      ]
+    }
+  ]
+}

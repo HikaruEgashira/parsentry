@@ -1,0 +1,270 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF-001",
+              "name": "SSRFViaOnlineDocumentDatasource",
+              "shortDescription": {
+                "text": "SSRF via unvalidated datasource_parameters in OnlineDocumentDatasourcePlugin"
+              },
+              "fullDescription": {
+                "text": "OnlineDocumentDatasourcePlugin.create passes user-supplied datasource_parameters directly to PluginDatasourceManager without URL validation. An attacker can supply internal network URLs (e.g., http://169.254.169.254/latest/meta-data/) to reach cloud metadata endpoints or internal services."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.85
+              }
+            },
+            {
+              "id": "SSRF-002",
+              "name": "SSRFViaOnlineDriveBrowseFiles",
+              "shortDescription": {
+                "text": "SSRF via unvalidated request in online_drive_browse_files"
+              },
+              "fullDescription": {
+                "text": "OnlineDriveDatasourcePlugin.online_drive_browse_files accepts a user-controlled request object and forwards it to the plugin manager. The request may contain attacker-controlled URLs or path traversal payloads that are not validated before being passed to the backend drive provider."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.8
+              }
+            },
+            {
+              "id": "SSRF-003",
+              "name": "SSRFViaOnlineDriveDownloadFile",
+              "shortDescription": {
+                "text": "SSRF via unvalidated request in online_drive_download_file"
+              },
+              "fullDescription": {
+                "text": "OnlineDriveDatasourcePlugin.online_drive_download_file accepts user-controlled request data and passes it to the plugin manager without validating the target URL. An attacker can craft a download request targeting internal endpoints, enabling SSRF attacks against internal infrastructure."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.85
+              }
+            },
+            {
+              "id": "CRED-001",
+              "name": "CredentialPassthroughWithoutValidation",
+              "shortDescription": {
+                "text": "DatasourceRuntime credentials passed through without validation"
+              },
+              "fullDescription": {
+                "text": "DatasourceRuntime credentials (OAuth tokens, API keys) are passed through to the plugin system without validation or scope checking. A malicious or compromised plugin can exfiltrate these credentials. Additionally, credentials are not scoped to specific operations, violating the principle of least privilege."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/522.html",
+              "properties": {
+                "tags": ["security", "credentials", "cwe-522"],
+                "confidence": 0.75
+              }
+            },
+            {
+              "id": "AUTH-001",
+              "name": "OAuthTokenTheftViaDriveIntegration",
+              "shortDescription": {
+                "text": "OAuth token theft through malicious drive integration callbacks"
+              },
+              "fullDescription": {
+                "text": "Drive integrations handle OAuth tokens for cloud providers (Google Drive, OneDrive, etc.). The plugin intermediary receives and forwards these tokens without enforcing token binding or audience validation. An attacker who compromises the plugin layer or performs a man-in-the-middle attack can steal OAuth tokens and gain persistent access to victim cloud drive accounts."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html",
+              "properties": {
+                "tags": ["security", "oauth", "cwe-384"],
+                "confidence": 0.7
+              }
+            },
+            {
+              "id": "EXFIL-001",
+              "name": "DataExfiltrationViaMaliciousDocumentLinks",
+              "shortDescription": {
+                "text": "Data exfiltration through attacker-controlled document URLs"
+              },
+              "fullDescription": {
+                "text": "Online document datasource fetches content from user-provided URLs without an allowlist. An attacker can supply a URL pointing to an attacker-controlled server that returns crafted content designed to exfiltrate application data through subsequent processing steps (e.g., prompt injection in document content). The lack of URL allowlisting also permits fetching from file:// or other dangerous schemes."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "properties": {
+                "tags": ["security", "data-exfiltration", "cwe-200"],
+                "confidence": 0.75
+              }
+            },
+            {
+              "id": "INPUT-001",
+              "name": "MissingURLAllowlistOnPluginDatasource",
+              "shortDescription": {
+                "text": "No URL allowlist enforcement on plugin datasource operations"
+              },
+              "fullDescription": {
+                "text": "The plugin system acts as an intermediary for all datasource operations but does not enforce any URL allowlist or blocklist. All datasource operations (create, browse, download) pass user-controlled parameters to plugins without restricting which external hosts or schemes may be contacted. This is the root cause enabling SSRF, data exfiltration, and credential theft across all datasource operations."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "input-validation", "cwe-20"],
+                "confidence": 0.9
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF-001",
+          "level": "error",
+          "message": {
+            "text": "OnlineDocumentDatasourcePlugin.create passes user-supplied datasource_parameters to PluginDatasourceManager without URL validation, enabling SSRF attacks against internal services and cloud metadata endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_document/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF-002",
+          "level": "error",
+          "message": {
+            "text": "OnlineDriveDatasourcePlugin.online_drive_browse_files forwards user-controlled request objects to the plugin manager without URL validation, allowing SSRF via crafted browse requests."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_drive/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "SSRF-003",
+          "level": "error",
+          "message": {
+            "text": "OnlineDriveDatasourcePlugin.online_drive_download_file accepts user-controlled download targets without URL validation, enabling SSRF attacks via crafted download requests."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_drive/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "CRED-001",
+          "level": "warning",
+          "message": {
+            "text": "DatasourceRuntime credentials are passed through to the plugin system without validation or scope restrictions. A compromised plugin can exfiltrate OAuth tokens and API keys."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_document/__init__.py"
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_drive/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "AUTH-001",
+          "level": "warning",
+          "message": {
+            "text": "OAuth tokens for cloud drive providers are forwarded through the plugin intermediary without token binding or audience validation, enabling token theft by compromised plugins or MITM attackers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_drive/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "EXFIL-001",
+          "level": "error",
+          "message": {
+            "text": "Online document datasource fetches content from user-provided URLs without an allowlist, permitting data exfiltration through attacker-controlled servers and access via dangerous URI schemes (file://, gopher://)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_document/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INPUT-001",
+          "level": "error",
+          "message": {
+            "text": "The plugin datasource system does not enforce any URL allowlist or blocklist on datasource operations. All user-controlled parameters flow unchecked to plugins, serving as the root cause for SSRF, exfiltration, and credential theft across both online_document and online_drive modules."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_document/__init__.py"
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/online_drive/__init__.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,258 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "DESER-001",
+              "name": "UnsafeJsonDeserialization",
+              "shortDescription": {
+                "text": "Unsafe JSON deserialization of task payloads from message broker without schema validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+            },
+            {
+              "id": "SSTI-001",
+              "name": "ServerSideTemplateInjection",
+              "shortDescription": {
+                "text": "Unsafe Jinja2 template rendering in UNSAFE mode allows server-side template injection"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1336.html"
+            },
+            {
+              "id": "DOS-001",
+              "name": "UnboundedThreadPoolExhaustion",
+              "shortDescription": {
+                "text": "Unbounded task processing in thread pool without payload size limits enables resource exhaustion"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html"
+            },
+            {
+              "id": "DOS-002",
+              "name": "UnboundedRecursiveTaskSpawning",
+              "shortDescription": {
+                "text": "Recursive task re-queuing in finally blocks without depth limits can cause infinite task loops"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/674.html"
+            },
+            {
+              "id": "PATH-001",
+              "name": "PathTraversal",
+              "shortDescription": {
+                "text": "Unsanitized file path construction from user-controlled app_id allows path traversal"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "INFO-001",
+              "name": "SensitiveDataInLogs",
+              "shortDescription": {
+                "text": "Logging of tenant IDs, user IDs, and error details may leak sensitive information"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html"
+            },
+            {
+              "id": "PRIV-001",
+              "name": "InsufficientTenantIsolation",
+              "shortDescription": {
+                "text": "Task parameters (tenant_id, user_id) accepted from broker without re-validation enables cross-tenant access"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html"
+            },
+            {
+              "id": "DESER-002",
+              "name": "UnsafeEnvelopeDeserialization",
+              "shortDescription": {
+                "text": "Telemetry envelope deserialized from JSON string without integrity verification"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSTI-001",
+          "level": "error",
+          "message": {
+            "text": "When MAIL_TEMPLATING_MODE is set to UNSAFE, the _render_template_with_strategy function calls Flask's render_template_string with user-controlled substitutions, enabling full Jinja2 SSTI. An attacker who can control the 'body' parameter of send_inner_email_task can execute arbitrary code on the worker. Even in SANDBOX mode, the timeout-based sandboxing has race conditions."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/mail_inner_task.py"
+                },
+                "region": {
+                  "startLine": 107
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "DESER-001",
+          "level": "error",
+          "message": {
+            "text": "The rag_pipeline_run_task and priority_rag_pipeline_run_task functions retrieve a file by ID from FileService, then call json.loads() on its contents and iterate over the result to construct RagPipelineInvokeEntity objects via model_validate(). If an attacker can manipulate the stored file content (e.g., via a race condition or compromised storage), they can inject arbitrary data into the pipeline execution context, potentially leading to code execution through the PipelineGenerator."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                },
+                "region": {
+                  "startLine": 71
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "DOS-002",
+          "level": "warning",
+          "message": {
+            "text": "Both rag_pipeline_run_task and priority_rag_pipeline_run_task contain finally blocks that pull next tasks from a TenantIsolatedTaskQueue and re-enqueue themselves via .delay() or group().apply_async(). There is no maximum recursion depth or circuit breaker. If the queue continuously has items (e.g., due to a bug or malicious flooding), this creates an unbounded chain of task spawning that can exhaust Celery worker resources and the Redis-backed queue."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                },
+                "region": {
+                  "startLine": 1001
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "DOS-001",
+          "level": "warning",
+          "message": {
+            "text": "The rag_pipeline_run_task spawns a ThreadPoolExecutor(max_workers=10) and processes all entities from the deserialized JSON file without any limit on the number of entities. An attacker who can control the content of the stored file could provide millions of entities, exhausting worker memory and thread resources. The same pattern exists in priority_rag_pipeline_run_task."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/priority_rag_pipeline_run_task.py"
+                },
+                "region": {
+                  "startLine": 78
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "PRIV-001",
+          "level": "warning",
+          "message": {
+            "text": "Multiple Celery tasks accept tenant_id, user_id, and dataset_id as plain string parameters from the message broker without re-validating that the caller has authorization to act on behalf of that tenant/user. If the Celery broker (Redis/RabbitMQ) is compromised or an attacker can inject messages, they can impersonate any tenant or user. This affects rag_pipeline_run_task, document_indexing_task, delete_account_task, workflow_based_app_execution_task, and many others."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/rag_pipeline/rag_pipeline_run_task.py"
+                },
+                "region": {
+                  "startLine": 54
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "PATH-001",
+          "level": "warning",
+          "message": {
+            "text": "In process_trace_tasks, the file_path is constructed as f'{OPS_FILE_PATH}{app_id}/{file_id}.json' where app_id and file_id come from the task payload (file_info dict). If an attacker can control these values via the Celery broker, they could use path traversal sequences (e.g., '../') to read or delete arbitrary files from object storage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/ops_trace_task.py"
+                },
+                "region": {
+                  "startLine": 93
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "DESER-002",
+          "level": "note",
+          "message": {
+            "text": "The process_enterprise_telemetry task deserializes a JSON string into a TelemetryEnvelope via model_validate without verifying the integrity or origin of the envelope. While the best-effort error handling prevents crashes, a compromised broker could inject crafted telemetry envelopes to poison metrics or trigger unexpected behavior in EnterpriseMetricHandler."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/enterprise_telemetry_task.py"
+                },
+                "region": {
+                  "startLine": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.55
+          }
+        },
+        {
+          "ruleId": "INFO-001",
+          "level": "note",
+          "message": {
+            "text": "Throughout the task modules, tenant_id, user_id, document_id, dataset_id, email addresses, and full exception stack traces are logged at INFO and ERROR levels. In a multi-tenant SaaS environment, this sensitive data in logs could be exposed to operators or log aggregation systems, potentially violating data isolation requirements. For example, send_email_register_mail_task logs the recipient email address."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/tasks/mail_register_task.py"
+                },
+                "region": {
+                  "startLine": 99
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        }
+      ]
+    }
+  ]
+}

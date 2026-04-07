@@ -1,0 +1,298 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "INFO-DISCLOSURE",
+              "shortDescription": {
+                "text": "Internal error details leaked in JSON-RPC error responses"
+              },
+              "fullDescription": {
+                "text": "Exception messages are included verbatim in JSON-RPC error responses via 'Internal server error: ' + str(e). This leaks internal implementation details such as stack traces, database errors, and file paths to unauthenticated callers."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "AUTH-BYPASS",
+              "shortDescription": {
+                "text": "MCP endpoint lacks authentication - server_code is sole access control"
+              },
+              "fullDescription": {
+                "text": "The /mcp/server/<server_code>/mcp endpoint requires only a server_code path parameter for access. There is no authentication header, API key, or session token validation. If server_code values are predictable or leaked, any unauthenticated attacker can invoke MCP tools and trigger app generation."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "INJECTION",
+              "shortDescription": {
+                "text": "Unvalidated tool arguments passed directly to app generation service"
+              },
+              "fullDescription": {
+                "text": "In handle_call_tool(), user-supplied arguments from the MCP CallToolRequest are passed directly to AppGenerateService.generate() via prepare_tool_arguments() without sanitization or validation against the declared schema. An attacker can inject arbitrary key-value pairs into the inputs dict, potentially manipulating app behavior or triggering unexpected code paths."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-HIJACK",
+              "shortDescription": {
+                "text": "End user identity tied to server ID without client authentication"
+              },
+              "fullDescription": {
+                "text": "EndUser lookup uses only tenant_id, mcp_server_id, and type='mcp'. On InitializeRequest, a new EndUser is created with client-supplied clientInfo.name without verifying the caller's identity. Subsequent requests reuse this EndUser for all callers sharing the same server_code, enabling session hijacking where one client's conversation context is accessible to another."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SSRF",
+              "shortDescription": {
+                "text": "OAuth metadata discovery URLs constructed from attacker-influenced input"
+              },
+              "fullDescription": {
+                "text": "In build_protected_resource_metadata_discovery_urls(), the www_auth_resource_metadata_url parameter (originating from a WWW-Authenticate header returned by an external MCP server) is used to construct discovery URLs. While ssrf_proxy is used for the HTTP requests, the URL normalization logic allows path-based URLs to be joined with the base URL, potentially enabling SSRF to internal services if the MCP server URL or WWW-Authenticate header is attacker-controlled."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "OPEN-REDIRECT",
+              "shortDescription": {
+                "text": "OAuth redirect_url used without validation in authorization flow"
+              },
+              "fullDescription": {
+                "text": "In start_authorization(), the redirect_url parameter is included in the OAuth authorization request without validating it against a whitelist. If an attacker can influence the redirect_url (e.g., via provider configuration manipulation), they can redirect the OAuth callback to a malicious domain, capturing authorization codes."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "SENSITIVE-DATA-EXPOSURE",
+              "shortDescription": {
+                "text": "OAuth secrets stored in Redis without encryption"
+              },
+              "fullDescription": {
+                "text": "The _create_secure_redis_state function stores sensitive OAuth state data including code_verifier, client_information (with client_secret), and full OAuth metadata in Redis as plaintext JSON. If Redis is compromised or misconfigured (e.g., no auth, exposed to network), an attacker can extract these secrets and complete the OAuth flow to obtain access tokens."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "VALIDATION-BYPASS",
+              "shortDescription": {
+                "text": "Variable type extraction uses first dict key as fallback"
+              },
+              "fullDescription": {
+                "text": "In _create_variable_entity(), the variable type is determined by 'item.get(\"type\", \"\") or list(item.keys())[0]'. If the 'type' field is empty or missing, the first key of the dict is used as the type. An attacker who can influence the user input form structure could inject an unexpected type, bypassing type-based validation in convert_input_form_to_parameters."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Exception message is leaked to the client in the JSON-RPC error response. The pattern 'Internal server error: ' + str(e) exposes internal details that could aid an attacker in crafting further attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/server/streamable_http.py"
+                },
+                "region": {
+                  "startLine": 819,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The MCP endpoint at /mcp/server/<server_code>/mcp has no authentication mechanism. Access is controlled solely by knowledge of the server_code. The endpoint directly processes tool invocations (including CallToolRequest) which trigger app generation, making this a high-impact unauthenticated endpoint."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 561,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INJECTION",
+          "level": "error",
+          "message": {
+            "text": "User-supplied arguments from CallToolRequest.params.arguments are passed through prepare_tool_arguments() to AppGenerateService.generate() without validation against the declared parameter schema. The arguments dict is used directly as 'inputs', allowing injection of arbitrary parameters that the app may process unsafely."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/server/streamable_http.py"
+                },
+                "region": {
+                  "startLine": 870,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "SESSION-HIJACK",
+          "level": "error",
+          "message": {
+            "text": "All MCP clients connecting to the same server_code share a single EndUser identity (looked up by tenant_id + mcp_server_id + type='mcp'). There is no per-client session isolation. A second client connecting to the same MCP server inherits the conversation context of the first client, enabling cross-client data leakage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 737,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The www_auth_resource_metadata_url parameter from an external WWW-Authenticate header is used to construct discovery URLs in build_protected_resource_metadata_discovery_urls(). A malicious MCP server could return a crafted WWW-Authenticate header pointing to internal services. Although ssrf_proxy provides some protection, the URL normalization logic may allow bypass via path-based URLs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/auth/auth_flow.py"
+                },
+                "region": {
+                  "startLine": 2012,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "warning",
+          "message": {
+            "text": "The redirect_url parameter in start_authorization() is passed directly into the OAuth authorization URL without validation against an allowed-list of redirect URIs. If an attacker can manipulate the provider's redirect_url configuration, they can redirect OAuth callbacks to a malicious domain and capture authorization codes."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/auth/auth_flow.py"
+                },
+                "region": {
+                  "startLine": 2313,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "OAuth state data containing code_verifier, client_information (potentially including client_secret), redirect_uri, and full OAuth metadata is stored in Redis as plaintext JSON via model_dump_json(). If Redis access is compromised, an attacker can extract these secrets to complete OAuth flows and obtain access tokens for MCP servers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/mcp/auth/auth_flow.py"
+                },
+                "region": {
+                  "startLine": 2157,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "VALIDATION-BYPASS",
+          "level": "note",
+          "message": {
+            "text": "In _create_variable_entity(), when item.get('type') is falsy, list(item.keys())[0] is used as the variable type. This fallback logic relies on dict key ordering and could produce unexpected types if the input form structure is manipulated, potentially bypassing type-based filtering in convert_input_form_to_parameters (e.g., skipping FILE/FILE_LIST type exclusion)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/mcp/mcp.py"
+                },
+                "region": {
+                  "startLine": 676,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        }
+      ]
+    }
+  ]
+}

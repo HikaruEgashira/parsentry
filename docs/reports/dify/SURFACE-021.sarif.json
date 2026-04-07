@@ -1,0 +1,188 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SETUP-REPLAY",
+              "name": "SetupPageReaccessRace",
+              "shortDescription": {
+                "text": "Race condition in setup status check allows re-initialization"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/362.html",
+              "properties": {
+                "tags": ["security", "CWE-362"]
+              }
+            },
+            {
+              "id": "PLAINTEXT-PASSWORD",
+              "name": "PlaintextPasswordInSetupRequest",
+              "shortDescription": {
+                "text": "Admin password sent in plaintext to setup endpoint"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/319.html",
+              "properties": {
+                "tags": ["security", "CWE-319"]
+              }
+            },
+            {
+              "id": "CLIENT-SIDE-GUARD",
+              "name": "ClientSideOnlySetupGuard",
+              "shortDescription": {
+                "text": "Setup completion guard relies on client-side check with localStorage"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/602.html",
+              "properties": {
+                "tags": ["security", "CWE-602"]
+              }
+            },
+            {
+              "id": "SQLI",
+              "name": "RawSQLInjection",
+              "shortDescription": {
+                "text": "Raw SQL queries constructed via string concatenation or f-strings"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "properties": {
+                "tags": ["security", "CWE-89"]
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "ExceptionMessageExposure",
+              "shortDescription": {
+                "text": "Exception class name and message exposed in CLI output"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "properties": {
+                "tags": ["security", "CWE-209"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SETUP-REPLAY",
+          "level": "error",
+          "message": {
+            "text": "The install form checks setup status via fetchSetupStatus() and redirects if 'finished', but this check is purely client-side and asynchronous. An attacker can race between the status check and setup submission, or directly POST to the /install API endpoint bypassing the frontend guard, to re-initialize the admin account and take over the instance. The server-side setup endpoint must enforce idempotency by rejecting requests after initial setup is complete."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/install/installForm.tsx"
+                },
+                "region": {
+                  "startLine": 776,
+                  "endLine": 803
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "PLAINTEXT-PASSWORD",
+          "level": "warning",
+          "message": {
+            "text": "In the setup request (line 778-783), the admin password is sent as plaintext in the request body to the setup endpoint. While the subsequent login call uses encodePassword() to encrypt the password, the initial setup call transmits the raw password. If TLS is not enforced or if an intermediary logs request bodies, the admin password is exposed. The setup endpoint should receive the password with the same encryption applied as the login endpoint."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/install/installForm.tsx"
+                },
+                "region": {
+                  "startLine": 778,
+                  "endLine": 783
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "CLIENT-SIDE-GUARD",
+          "level": "warning",
+          "message": {
+            "text": "The setup completion state is stored in localStorage ('setup_status' = 'finished') and used as a guard. This is a client-side only check that can be trivially bypassed by clearing localStorage or using a different browser. If the server-side /install endpoint does not independently enforce that setup has already been completed, an attacker can access the setup page and re-run initialization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/install/installForm.tsx"
+                },
+                "region": {
+                  "startLine": 811,
+                  "endLine": 824
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "warning",
+          "message": {
+            "text": "The convert_to_agent_apps command uses a raw SQL query string passed to sa.text(). While this particular query does not incorporate user input directly, the pattern of using raw SQL strings in CLI commands establishes a dangerous precedent. The f-string pattern used in storage.py (lines 2945-2946, 2966, 2980-2981, 2999, 3032) dynamically constructs SQL from dictionary values in files_tables and ids_tables. Although these values are currently hardcoded, if the pattern is extended with external input it becomes exploitable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/commands/storage.py"
+                },
+                "region": {
+                  "startLine": 2945,
+                  "endLine": 2946
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.45
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "Multiple CLI commands expose exception class names and messages via click.echo (e.g., convert_to_agent_apps line 1286, storage cleanup). While these are CLI-only commands, in containerized environments CLI output may be captured in logging systems accessible to broader audiences. Exception details can reveal internal class structure, database schema, or connection strings."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/commands/system.py"
+                },
+                "region": {
+                  "startLine": 1286,
+                  "endLine": 1286
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.4
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,395 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SESSION-001",
+              "name": "HardcodedSessionSecret",
+              "shortDescription": {
+                "text": "Hardcoded session secret in configuration"
+              },
+              "fullDescription": {
+                "text": "The session secret is hardcoded as 'session_cookie_secret_key_here' in config/config.js. An attacker who obtains the source code can forge arbitrary session cookies, impersonating any user. Session secrets must be loaded from environment variables or a secrets manager and rotated periodically."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-798"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-002",
+              "name": "MissingSecureCookieFlag",
+              "shortDescription": {
+                "text": "Session cookie missing 'secure' flag"
+              },
+              "fullDescription": {
+                "text": "The express-session configuration does not set cookie.secure = true. Session cookies are transmitted over unencrypted HTTP connections, allowing network-level attackers to intercept session tokens via passive eavesdropping or ARP spoofing."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookie-attributes",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-614"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-003",
+              "name": "SessionFixation",
+              "shortDescription": {
+                "text": "No session regeneration on authentication"
+              },
+              "fullDescription": {
+                "text": "The login handler does not call req.session.regenerate() after successful authentication. An attacker can set a known session ID in the victim's browser (via XSS or subdomain cookie injection), wait for the victim to log in, and then hijack the authenticated session using the pre-set session ID."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/Session_fixation",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-384"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-004",
+              "name": "DisabledCSRFProtection",
+              "shortDescription": {
+                "text": "CSRF middleware (csurf) is commented out"
+              },
+              "fullDescription": {
+                "text": "The csurf CSRF protection middleware is present in the codebase but commented out. State-changing endpoints (POST, PUT, DELETE) are unprotected against cross-site request forgery attacks, allowing a malicious site to perform actions on behalf of authenticated users."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "csrf",
+                  "CWE-352"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-005",
+              "name": "NoTLSTransport",
+              "shortDescription": {
+                "text": "Application served over HTTP without TLS"
+              },
+              "fullDescription": {
+                "text": "The application is configured to serve over plain HTTP without TLS. All traffic including session cookies, credentials, and sensitive data is transmitted in cleartext, making it vulnerable to man-in-the-middle attacks and passive network eavesdropping."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "transport",
+                  "CWE-319"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-006",
+              "name": "HardcodedCryptoKey",
+              "shortDescription": {
+                "text": "Hardcoded cryptographic key in configuration"
+              },
+              "fullDescription": {
+                "text": "The cryptographic key is hardcoded as 'a_secure_key_for_crypto_here' in config/config.js. This key is used for encrypting sensitive data. An attacker with source code access can decrypt all protected data. Crypto keys must be stored in environment variables or a dedicated key management service."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "crypto",
+                  "CWE-321"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "SESSION-007",
+              "name": "SaveUninitializedSession",
+              "shortDescription": {
+                "text": "saveUninitialized set to true creates unnecessary sessions"
+              },
+              "fullDescription": {
+                "text": "The express-session option saveUninitialized is set to true, causing a session to be stored for every visitor regardless of authentication status. This wastes server resources, enables session fixation by pre-assigning session IDs, and may violate privacy regulations requiring consent before setting cookies."
+              },
+              "helpUri": "https://github.com/expressjs/session#saveuninitialized",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-400"
+                ],
+                "precision": "medium",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "SESSION-008",
+              "name": "MissingSessionMaxAge",
+              "shortDescription": {
+                "text": "No maxAge set on session cookie"
+              },
+              "fullDescription": {
+                "text": "The session cookie does not define a maxAge, resulting in a browser-session-scoped cookie. While this means the cookie is deleted when the browser closes, it provides no server-side expiration guarantee. Long-lived browser sessions or session restore features can keep the cookie alive indefinitely, increasing the window for session hijacking."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-expiration",
+              "properties": {
+                "tags": [
+                  "security",
+                  "session",
+                  "CWE-613"
+                ],
+                "precision": "medium",
+                "confidence": "medium"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SESSION-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Session secret is hardcoded as 'session_cookie_secret_key_here'. An attacker with source access can forge arbitrary session cookies and impersonate any user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-002",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Session cookie does not set secure flag. Cookies are transmitted over HTTP in cleartext, allowing interception by network attackers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-003",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "No session regeneration (req.session.regenerate) on login. Allows session fixation: attacker pre-sets session ID, victim authenticates, attacker hijacks the now-authenticated session."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-004",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "CSRF protection middleware (csurf) is commented out. All state-changing endpoints are vulnerable to cross-site request forgery."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-005",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "Application served over plain HTTP. All traffic including session tokens and credentials is transmitted in cleartext, vulnerable to man-in-the-middle attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-006",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "Cryptographic key is hardcoded as 'a_secure_key_for_crypto_here'. Attacker with source access can decrypt all protected data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-007",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "saveUninitialized is true, creating sessions for all visitors. Enables session fixation pre-conditions and wastes resources."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SESSION-008",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "Session cookie has no maxAge. Sessions may persist indefinitely through browser session restore, expanding the hijack window."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

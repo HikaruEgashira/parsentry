@@ -1,0 +1,292 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "STORED-XSS-001",
+              "name": "StoredCrossSiteScripting",
+              "shortDescription": {
+                "text": "Stored XSS via unsanitized memo content"
+              },
+              "fullDescription": {
+                "text": "User-supplied memo content from req.body.memo is inserted directly into MongoDB via addMemos/memosDAO.insert without any input sanitization. When displayMemos renders all stored memos and swig autoescape is disabled, arbitrary JavaScript executes in the context of other users' browsers."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "VULN-DEPENDENCY-001",
+              "name": "VulnerableMarkdownParser",
+              "shortDescription": {
+                "text": "Vulnerable marked 0.3.5 dependency with known XSS bypasses"
+              },
+              "fullDescription": {
+                "text": "The application uses marked version 0.3.5, which has multiple known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427, CVE-2017-17461). The sanitize option in this version is deprecated and provides incomplete protection, allowing crafted markdown input to execute arbitrary JavaScript."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1395.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "dependency",
+                  "xss",
+                  "CWE-1395"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "INPUT-VALIDATION-001",
+              "name": "MissingInputValidation",
+              "shortDescription": {
+                "text": "No input validation on memo content"
+              },
+              "fullDescription": {
+                "text": "The POST /memos endpoint accepts arbitrary memo content from req.body.memo without any validation of length, format, or allowed characters. This enables injection of malicious payloads including script tags, event handlers, and markdown-based XSS vectors."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "input-validation",
+                  "CWE-20"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "CSRF-001",
+              "name": "MissingCSRFProtection",
+              "shortDescription": {
+                "text": "CSRF middleware is commented out on memo creation endpoint"
+              },
+              "fullDescription": {
+                "text": "The CSRF protection middleware is commented out, allowing cross-site request forgery attacks against the POST /memos endpoint. An attacker can craft a malicious page that submits memo content on behalf of an authenticated user, enabling stored XSS delivery without direct interaction."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "csrf",
+                  "CWE-352"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "NOSQL-INJECTION-001",
+              "name": "NoSQLInjectionViaMemoInsert",
+              "shortDescription": {
+                "text": "Unsanitized user input passed directly to MongoDB insert"
+              },
+              "fullDescription": {
+                "text": "The req.body.memo value is passed directly to memosDAO.insert without type checking or sanitization. If req.body.memo is an object (e.g., via JSON content-type), MongoDB operator injection is possible, potentially allowing data exfiltration or manipulation of stored documents."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "nosql-injection",
+                  "mongodb",
+                  "CWE-943"
+                ],
+                "precision": "medium",
+                "confidence": "medium"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "STORED-XSS-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Stored XSS: req.body.memo is inserted into MongoDB without sanitization via addMemos(). When displayMemos renders stored memos with swig autoescape disabled, injected scripts execute in victim browsers. Insert DOMPurify.sanitize() or equivalent before storage, and enable swig autoescape."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "addMemos",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/memos-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "memosDAO.insert stores unsanitized memo content to MongoDB"
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-DEPENDENCY-001",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Vulnerable dependency: marked 0.3.5 has multiple known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427). The sanitize option is deprecated and does not prevent all XSS vectors. Upgrade to marked >=4.0.0 and use DOMPurify for output sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION-001",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Missing input validation: POST /memos accepts arbitrary content in req.body.memo with no length limit, format validation, or character filtering. Apply allowlist-based validation and enforce a maximum length to limit abuse surface."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "addMemos",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CSRF-001",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "Missing CSRF protection: the csrf middleware on POST /memos is commented out. An attacker can forge cross-origin requests to create memos containing XSS payloads on behalf of authenticated users. Re-enable csurf middleware or implement SameSite cookie + custom header validation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "POST /memos",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NOSQL-INJECTION-001",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Potential NoSQL injection: req.body.memo is passed directly to memosDAO.insert without type checking. If the application parses JSON request bodies, an attacker can send an object with MongoDB operators (e.g., {\"$gt\": \"\"}) instead of a string. Validate that memo is a string before insertion."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/memos-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "insert",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

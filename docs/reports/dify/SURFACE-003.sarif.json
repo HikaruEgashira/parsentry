@@ -1,0 +1,327 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via user-controlled URL in remote file endpoint"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "AUTH-BYPASS",
+              "name": "AuthenticationBypass",
+              "shortDescription": {
+                "text": "Unauthenticated endpoint allowing anonymous form access and submission"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "PROMPT-INJECTION",
+              "name": "PromptInjection",
+              "shortDescription": {
+                "text": "User-supplied input passed to LLM without sanitization"
+              },
+              "helpUri": "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+            },
+            {
+              "id": "IDOR",
+              "name": "InsecureDirectObjectReference",
+              "shortDescription": {
+                "text": "User-controlled session ID allows session hijacking via passport endpoint"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "AUTHZ-BYPASS",
+              "name": "AuthorizationBypass",
+              "shortDescription": {
+                "text": "Missing authorization check allows stopping other users' workflow tasks"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Internal identifiers leaked in error messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "RESOURCE-ABUSE",
+              "name": "ResourceAbuse",
+              "shortDescription": {
+                "text": "Missing rate limiting on resource-intensive LLM generation endpoints"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/770.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "The RemoteFileInfoApi endpoint at /remote-files/<path:url> accepts a user-controlled URL via path parameter, decodes it with urllib.parse.unquote(), and passes it directly to ssrf_proxy.head() and ssrf_proxy.get(). While an SSRF proxy is used, the URL arrives via a Flask <path:> route parameter which may allow encoding tricks to bypass proxy allowlist/blocklist protections (e.g., DNS rebinding, IPv6 notation, URL encoding of internal hostnames). An attacker could probe internal services or cloud metadata endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/remote_files.py"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The RemoteFileUploadApi endpoint at /remote-files/upload accepts a URL via JSON body (validated as HttpUrl by Pydantic), then fetches content using ssrf_proxy.head() and ssrf_proxy.get(). While Pydantic validates URL format and ssrf_proxy provides some protection, an attacker could still attempt SSRF via DNS rebinding, redirects (follow_redirects=True is used), or cloud metadata endpoints. The fetched content is then stored on the server."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/remote_files.py"
+                },
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The HumanInputFormApi GET and POST endpoints at /form/human_input/<form_token> are explicitly unauthenticated (comment: 'this endpoint is unauthenticated on purpose'). The POST handler submits form data with submission_end_user_id=None, meaning form submissions are completely anonymous. An attacker who obtains or brute-forces a form_token can view form definitions and submit arbitrary form data. The form_token appears to be the sole access control mechanism, and tokens that are predictable or leaked would expose the forms. While rate limiting exists, it only limits by IP."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/human_input_form.py"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "The CompletionApi and ChatApi endpoints accept user-provided 'inputs' (dict[str, Any]) and 'query' (str) fields that are passed directly to AppGenerateService.generate() without any input sanitization or prompt injection detection. An attacker can craft malicious queries designed to manipulate the underlying LLM's behavior, extract system prompts, bypass content filters, or cause the application to perform unintended actions. The 'inputs' field accepts arbitrary key-value pairs of Any type, increasing the injection surface."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/completion.py"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "The ChatApi endpoint accepts user-provided 'query' and 'inputs' fields that flow into AppGenerateService.generate() for chat-mode apps. Since chat apps maintain conversation context, an attacker can use multi-turn prompt injection to gradually manipulate the LLM's behavior across conversation turns. The conversation_id parameter allows continuing injected conversations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/completion.py"
+                },
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "The PassportResource.get() endpoint accepts a 'user_id' query parameter from the client and uses it as session_id to look up existing EndUser records. If a matching EndUser is found (line: EndUser.session_id == user_id), the endpoint reuses that EndUser and issues a JWT token for it. An attacker who knows or guesses another user's session_id can obtain a valid passport token for that user's session, enabling session hijacking. The user_id is not validated against any authentication context before lookup."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/passport.py"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "The WorkflowTaskStopApi endpoint calls AppQueueManager.set_stop_flag_no_user_check(task_id), which explicitly bypasses user ownership verification (as indicated by the method name 'no_user_check'). Any authenticated end_user of the same app can stop any other user's running workflow task by guessing or enumerating task_ids. This is a denial-of-service vector against other users' in-progress workflows."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/workflow.py"
+                },
+                "region": {
+                  "startLine": 97,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "The CompletionStopApi endpoint at /completion-messages/<task_id>/stop passes the task_id directly to AppTaskService.stop_task() with only the current end_user.id. However, the task_id comes from the URL path and is a string (not UUID-validated). If the stop_task service does not strictly verify ownership, an attacker could stop other users' completion tasks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/completion.py"
+                },
+                "region": {
+                  "startLine": 93,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "The WorkflowEventsApi endpoint includes internal workflow_run_id values in error messages (e.g., 'WorkflowRun not found, id={workflow_run_id}'). This leaks internal identifiers to end users and can aid attackers in enumeration or correlation attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/workflow_events.py"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "RESOURCE-ABUSE",
+          "level": "warning",
+          "message": {
+            "text": "The /completion-messages, /chat-messages, and /workflows/run endpoints invoke LLM generation (AppGenerateService.generate()) without any visible rate limiting. Unlike the human_input_form endpoints which have explicit RateLimiter instances, these resource-intensive endpoints have no per-user or per-IP rate limiting. An attacker with a valid passport token could send rapid requests to exhaust LLM API quotas, increase costs, or cause denial of service."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/completion.py"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        },
+        {
+          "ruleId": "PROMPT-INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "The WorkflowRunApi accepts an 'inputs' dict[str, Any] that is passed to AppGenerateService.generate(). Workflow inputs may be used in prompt templates or tool invocations. Malicious input values could manipulate workflow node behavior, especially if inputs are interpolated into prompts or code execution nodes without sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/web/workflow.py"
+                },
+                "region": {
+                  "startLine": 64,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        }
+      ]
+    }
+  ]
+}

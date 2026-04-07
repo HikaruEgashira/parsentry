@@ -1,0 +1,324 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "User-controlled URLs passed to HTTP clients without validation, enabling SSRF attacks."
+              }
+            },
+            {
+              "id": "CREDENTIAL-LEAK-ENV",
+              "name": "CredentialLeakageViaEnvironment",
+              "shortDescription": {
+                "text": "Secrets written to process-global os.environ, risking cross-thread credential leakage."
+              }
+            },
+            {
+              "id": "PII-EXPOSURE",
+              "name": "PIIExposureInTracePayload",
+              "shortDescription": {
+                "text": "User prompts, responses, and file URLs sent to external tracing services without sanitization."
+              }
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosureViaErrorMessage",
+              "shortDescription": {
+                "text": "Internal error details including potential connection strings or credentials exposed in exception messages."
+              }
+            },
+            {
+              "id": "WEAK-HASH",
+              "name": "WeakHashForIdentifier",
+              "shortDescription": {
+                "text": "Use of MD5 for identifier generation, which is cryptographically weak."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "The Langfuse client is instantiated with a user-configured 'host' parameter passed directly to the Langfuse SDK without URL validation or allowlist checks. An attacker who controls the tracing configuration can direct requests to internal services (e.g., cloud metadata endpoints, internal APIs)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/langfuse_trace/langfuse_trace.py"
+                },
+                "region": {
+                  "startLine": 783,
+                  "endLine": 788
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "The LangSmith client is instantiated with a user-configured 'api_url' (from langsmith_config.endpoint) without URL validation. An attacker who controls the tracing configuration can redirect trace data to arbitrary internal endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/langsmith_trace/langsmith_trace.py"
+                },
+                "region": {
+                  "startLine": 1615
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "MLflow tracking URI is set from user-provided config.tracking_uri via mlflow.set_tracking_uri() without validation. This can be exploited to send trace data to attacker-controlled or internal endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
+                },
+                "region": {
+                  "startLine": 2332
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "Opik client is instantiated with user-configured 'host' (opik_config.url) without URL allowlist validation, enabling SSRF to internal services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/opik_trace/opik_trace.py"
+                },
+                "region": {
+                  "startLine": 2888,
+                  "endLine": 2893
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "Databricks host is set from user-provided config directly into os.environ['DATABRICKS_HOST'] and used as the MLflow tracking URI. No URL validation or allowlist restricts the target, enabling SSRF."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
+                },
+                "region": {
+                  "startLine": 2308,
+                  "endLine": 2323
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-LEAK-ENV",
+          "level": "error",
+          "message": {
+            "text": "Databricks credentials (DATABRICKS_TOKEN, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET) are written to process-global os.environ. In a multi-tenant server, other request handlers or threads can read these environment variables, leading to cross-tenant credential leakage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
+                },
+                "region": {
+                  "startLine": 2308,
+                  "endLine": 2323
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "CREDENTIAL-LEAK-ENV",
+          "level": "error",
+          "message": {
+            "text": "MLflow tracking credentials (MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD) are written to process-global os.environ. In a multi-tenant deployment, concurrent requests from different tenants can overwrite or read each other's credentials."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/mlflow_trace/mlflow_trace.py"
+                },
+                "region": {
+                  "startLine": 2336,
+                  "endLine": 2338
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "PII-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "All tracing integrations (Langfuse, LangSmith, MLflow, Opik) send full user prompts, LLM responses, file URLs, user IDs, session IDs, and error messages to external third-party services without any PII scrubbing or data minimization. This risks exposing sensitive user data, credentials embedded in prompts, and internal system details to external observability platforms."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/langfuse_trace/langfuse_trace.py"
+                },
+                "region": {
+                  "startLine": 790,
+                  "endLine": 805
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "PII-EXPOSURE",
+          "level": "warning",
+          "message": {
+            "text": "LangSmith message_trace sends complete user inputs, LLM outputs, file URLs (constructed from user-controlled message_file_data.url), and account metadata to the external LangSmith service without sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/langsmith_trace/langsmith_trace.py"
+                },
+                "region": {
+                  "startLine": 1814,
+                  "endLine": 1861
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "Multiple error handlers use str(e) to construct ValueError messages (e.g., 'LangFuse Failed to create trace: {str(e)}'). The original exception may contain connection strings, partial API keys, or internal hostnames that get exposed to the caller."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/langfuse_trace/langfuse_trace.py"
+                },
+                "region": {
+                  "startLine": 1167
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "LangSmith and Opik error handlers propagate raw exception messages via str(e) in ValueError, potentially leaking internal API URLs, authentication details, or infrastructure topology to end users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/langsmith_trace/langsmith_trace.py"
+                },
+                "region": {
+                  "startLine": 2053
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "WEAK-HASH",
+          "level": "note",
+          "message": {
+            "text": "The _seed_to_uuid4 function in the Opik trace integration uses MD5 (hashlib.md5) for deterministic UUID generation. While this is used for identifier derivation rather than security, MD5 is considered cryptographically broken and could lead to collision-based identifier conflicts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/ops/opik_trace/opik_trace.py"
+                },
+                "region": {
+                  "startLine": 2858
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        }
+      ]
+    }
+  ]
+}

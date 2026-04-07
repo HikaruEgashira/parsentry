@@ -1,0 +1,237 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "OPEN-REDIRECT",
+              "shortDescription": {
+                "text": "Open Redirect via unvalidated redirect_url parameter"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
+            },
+            {
+              "id": "ACCOUNT-ENUM",
+              "shortDescription": {
+                "text": "Account enumeration via differentiated error responses"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/204.html"
+            },
+            {
+              "id": "BRUTE-FORCE",
+              "shortDescription": {
+                "text": "Insufficient brute-force protection on verification code"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/307.html"
+            },
+            {
+              "id": "INFO-LEAK",
+              "shortDescription": {
+                "text": "Sensitive token exposed in URL query parameters"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/598.html"
+            },
+            {
+              "id": "SSRF",
+              "shortDescription": {
+                "text": "SSO redirect URL passed without origin validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "error",
+          "message": {
+            "text": "The redirect_url query parameter is decoded and used directly in router.replace() after successful login without validating that the URL belongs to the same origin. An attacker can craft a webapp-signin link with a malicious redirect_url (e.g., an attacker-controlled phishing domain) to redirect authenticated users after they log in, enabling credential theft or session hijacking."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-signin/components/mail-and-password-auth.tsx"
+                },
+                "region": {
+                  "startLine": 1264,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "error",
+          "message": {
+            "text": "In the email verification code flow, after successful code verification the user is redirected via router.replace(decodeURIComponent(redirectUrl)) where redirectUrl comes from an unvalidated query parameter. This allows post-authentication open redirect attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-signin/check-code/page.tsx"
+                },
+                "region": {
+                  "startLine": 1011,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "ACCOUNT-ENUM",
+          "level": "warning",
+          "message": {
+            "text": "The password reset flow returns a distinct 'account_not_found' error code when an email does not exist in the system (res.code === 'account_not_found'). This differentiated response allows an attacker to enumerate valid email addresses by observing whether the reset request succeeds or returns this specific error."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-reset-password/page.tsx"
+                },
+                "region": {
+                  "startLine": 2023,
+                  "startColumn": 12
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "BRUTE-FORCE",
+          "level": "warning",
+          "message": {
+            "text": "The 6-digit verification code check for password reset has no client-side rate limiting or lockout mechanism. The regex validation /\\d{6}/ lacks anchors (should be /^\\d{6}$/) allowing codes like '123456abc' to pass. While server-side rate limiting may exist, the client does not enforce any cooldown between verify attempts, facilitating automated brute-force attacks against the 6-digit code space (1 million combinations)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-reset-password/check-code/page.tsx"
+                },
+                "region": {
+                  "startLine": 1660,
+                  "startColumn": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "BRUTE-FORCE",
+          "level": "warning",
+          "message": {
+            "text": "The 6-digit email login verification code check has the same weak regex validation (/\\d{6}/ without anchors) and no client-side rate limiting. The verify function can be called repeatedly without cooldown, enabling brute-force attacks against the verification code."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-signin/check-code/page.tsx"
+                },
+                "region": {
+                  "startLine": 994,
+                  "startColumn": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "Authentication-related tokens (verification tokens, password reset tokens) are passed in URL query parameters throughout the signin and password reset flows. URL parameters are logged in browser history, server access logs, and can leak via the Referer header to third-party resources. The token parameter is visible in the URL during the check-code and set-password steps."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-signin/components/mail-and-code-auth.tsx"
+                },
+                "region": {
+                  "startLine": 1393,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The SSO authentication components pass the redirect_url query parameter directly to backend SSO URL fetch functions (fetchWebSAMLSSOUrl, fetchWebOIDCSSOUrl, fetchWebOAuth2SSOUrl, fetchMembersSAMLSSOUrl, etc.) without validating the URL origin or scheme on the client side. If the server also fails to validate, this could lead to SSRF or redirect manipulation attacks where the SSO callback is directed to an attacker-controlled endpoint."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-signin/components/sso-auth.tsx"
+                },
+                "region": {
+                  "startLine": 1469,
+                  "startColumn": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "warning",
+          "message": {
+            "text": "In the password reset set-password page, after successful password change the getSignInUrl() function constructs a redirect URL using the raw redirect_url search parameter without validation: `/webapp-signin?redirect_url=${searchParams.get('redirect_url') || ''}`. This passes the unvalidated redirect_url forward to the signin page, perpetuating the open redirect chain."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "web/app/(shareLayout)/webapp-reset-password/set-password/page.tsx"
+                },
+                "region": {
+                  "startLine": 1805,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        }
+      ]
+    }
+  ]
+}

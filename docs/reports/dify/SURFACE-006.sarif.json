@@ -1,0 +1,528 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF-001",
+              "name": "SSRFViaUserControlledBaseUrl",
+              "shortDescription": {
+                "text": "SSRF via user-configurable base_url in FirecrawlApp"
+              },
+              "fullDescription": {
+                "text": "FirecrawlApp accepts an arbitrary base_url with no validation. An attacker who controls this value can redirect all API calls (scrape_url, crawl_url, map, search, check_crawl_status) to internal services, cloud metadata endpoints (http://169.254.169.254), or arbitrary hosts. The _build_url method performs only slash normalization, not URL scheme or host validation."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "SSRF-002",
+              "name": "SSRFViaUserControlledBaseUrlWaterCrawl",
+              "shortDescription": {
+                "text": "SSRF via user-configurable base_url in WatercrawlAuth and WaterCrawlAPIClient"
+              },
+              "fullDescription": {
+                "text": "WatercrawlAuth and WaterCrawlAPIClient accept a user-configurable base_url. urljoin is used to construct request URLs, but urljoin does not validate schemes or hosts. An attacker can set base_url to an internal IP (e.g., http://169.254.169.254) to reach cloud metadata or internal services. The httpx client is created with timeout=None, allowing indefinitely hanging connections to internal targets."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "SSRF-003",
+              "name": "SSRFViaUserControlledBaseUrlFirecrawlAuth",
+              "shortDescription": {
+                "text": "SSRF via user-configurable base_url in FirecrawlAuth credential validation"
+              },
+              "fullDescription": {
+                "text": "FirecrawlAuth.validate_credentials() constructs a URL from user-supplied base_url and sends an HTTP POST with the API key in the Authorization header. An attacker can set base_url to a server they control to steal the Bearer token during credential validation."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "credential-leak", "cwe-918", "cwe-200"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "SSRF-004",
+              "name": "SSRFViaPaginationNextUrl",
+              "shortDescription": {
+                "text": "SSRF via server-controlled pagination 'next' URL in FirecrawlApp"
+              },
+              "fullDescription": {
+                "text": "FirecrawlApp._collect_all_crawl_pages() follows the 'next' URL from the server response without validating that it points back to the expected base_url. A compromised or malicious Firecrawl server can return a 'next' URL pointing to internal services, causing the Dify backend to make requests to arbitrary internal endpoints with the Bearer API key attached."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.90
+              }
+            },
+            {
+              "id": "CRED-001",
+              "name": "CredentialLeakViaBaseUrlRedirection",
+              "shortDescription": {
+                "text": "API key leakage via attacker-controlled base_url in Firecrawl"
+              },
+              "fullDescription": {
+                "text": "FirecrawlApp sends the Bearer API key in the Authorization header to whatever URL is constructed from the user-supplied base_url. If an attacker sets base_url to their own server, every API call (scrape, crawl, map, search, status checks) will send the Firecrawl API key to the attacker. This enables token theft."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "credential-leak", "cwe-200", "cwe-522"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "CRED-002",
+              "name": "CredentialLeakViaBaseUrlRedirectionWaterCrawl",
+              "shortDescription": {
+                "text": "API key leakage via attacker-controlled base_url in WaterCrawl"
+              },
+              "fullDescription": {
+                "text": "WaterCrawlAPIClient sends the X-API-Key header on every request to the user-supplied base_url. An attacker who controls the base_url can capture the API key by pointing it to a server they control."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "credential-leak", "cwe-200", "cwe-522"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "SSRF-005",
+              "name": "SSRFViaDownloadResultUrl",
+              "shortDescription": {
+                "text": "SSRF via unvalidated URL in WaterCrawlAPIClient.download_result"
+              },
+              "fullDescription": {
+                "text": "WaterCrawlAPIClient.download_result() calls httpx.get(result_object['result'], timeout=None) where the URL comes from server response data. No validation is performed on this URL before fetching. A malicious server response can direct the client to fetch from internal endpoints. The timeout=None also creates a denial-of-service risk."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.90
+              }
+            },
+            {
+              "id": "DOS-001",
+              "name": "UnboundedTimeoutInWaterCrawlClient",
+              "shortDescription": {
+                "text": "Denial of service via timeout=None in WaterCrawl HTTP client"
+              },
+              "fullDescription": {
+                "text": "WaterCrawlAPIClient initializes its httpx.Client with timeout=None, meaning requests can hang indefinitely. Combined with SSRF, an attacker could cause the server to hold open connections to slow-responding internal services, exhausting connection pools and threads."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "denial-of-service", "cwe-400"],
+                "confidence": 0.85
+              }
+            },
+            {
+              "id": "INJECT-001",
+              "name": "UnsanitizedDatasourceParametersPassthrough",
+              "shortDescription": {
+                "text": "Unsanitized user parameters passed through to plugin datasource manager"
+              },
+              "fullDescription": {
+                "text": "WebsiteCrawlDatasourcePlugin.get_website_crawl() passes user-supplied datasource_parameters directly to PluginDatasourceManager without validation or sanitization. Depending on the plugin implementation, this could allow injection of unexpected parameters that alter crawl behavior, target internal URLs, or bypass access controls."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "injection", "cwe-20"],
+                "confidence": 0.75
+              }
+            },
+            {
+              "id": "ERRH-001",
+              "name": "VerboseErrorDisclosure",
+              "shortDescription": {
+                "text": "Verbose error messages may leak internal information"
+              },
+              "fullDescription": {
+                "text": "Error handlers in FirecrawlAuth, JinaAuth, and WatercrawlAuth include raw response body text in exception messages. When base_url points to internal services, error responses may contain internal network topology, service banners, or stack traces that are then propagated to the user."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "information-disclosure", "cwe-209"],
+                "confidence": 0.80
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF-001",
+          "level": "error",
+          "message": {
+            "text": "FirecrawlApp accepts user-controlled base_url without validation. _build_url() only normalizes slashes. All HTTP methods (scrape_url, crawl_url, map, search, check_crawl_status) send requests to the attacker-controlled URL. An attacker can set base_url to http://169.254.169.254/latest/meta-data/ or any internal service to perform SSRF."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/firecrawl/firecrawl_app.py"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 38
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/firecrawl/firecrawl_app.py"
+                },
+                "region": {
+                  "startLine": 172,
+                  "endLine": 174
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSRF-002",
+          "level": "error",
+          "message": {
+            "text": "WatercrawlAuth and WaterCrawlAPIClient use user-configurable base_url with urljoin(), which does not validate scheme or host. An attacker can set base_url to target internal services or cloud metadata endpoints. The httpx.Client is initialized with timeout=None, amplifying the impact."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/watercrawl/client.py"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 51
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/watercrawl/client.py"
+                },
+                "region": {
+                  "startLine": 62,
+                  "endLine": 62
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSRF-003",
+          "level": "error",
+          "message": {
+            "text": "FirecrawlAuth.validate_credentials() sends an HTTP POST with the API key as Bearer token to a URL derived from user-supplied base_url. Setting base_url to an attacker-controlled server causes the API key to be sent to the attacker during credential validation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/firecrawl/firecrawl.py"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/firecrawl/firecrawl.py"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 33
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSRF-004",
+          "level": "error",
+          "message": {
+            "text": "FirecrawlApp._collect_all_crawl_pages() follows the 'next' URL from server responses without verifying it belongs to the expected base_url domain. A compromised or attacker-controlled Firecrawl server can redirect pagination requests to internal services. The Bearer API key is sent with each redirected request."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/firecrawl/firecrawl_app.py"
+                },
+                "region": {
+                  "startLine": 138,
+                  "endLine": 145
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "CRED-001",
+          "level": "error",
+          "message": {
+            "text": "FirecrawlApp sends 'Authorization: Bearer <api_key>' header to every URL constructed from user-supplied base_url. Methods affected: scrape_url (line 53), crawl_url (line 68), map (line 84), search (line 220), check_crawl_status (line 93). An attacker sets base_url to their server and captures the token on any of these calls."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/firecrawl/firecrawl_app.py"
+                },
+                "region": {
+                  "startLine": 169,
+                  "endLine": 170
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/firecrawl/firecrawl_app.py"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CRED-002",
+          "level": "error",
+          "message": {
+            "text": "WaterCrawlAPIClient sends 'X-API-Key' header on every request to the user-supplied base_url. The session is initialized with the key in default headers (line 45-46), so all HTTP methods (_get, _post, _put, _delete, _patch) leak the key if base_url is attacker-controlled."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/watercrawl/client.py"
+                },
+                "region": {
+                  "startLine": 43,
+                  "endLine": 51
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 31,
+                  "endLine": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSRF-005",
+          "level": "error",
+          "message": {
+            "text": "WaterCrawlAPIClient.download_result() fetches a URL from result_object['result'] without any validation. This URL comes from the WaterCrawl server response and is fetched with httpx.get() with timeout=None. A malicious server can return an internal URL (e.g., http://169.254.169.254/) to perform SSRF from the Dify backend."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/watercrawl/client.py"
+                },
+                "region": {
+                  "startLine": 213,
+                  "endLine": 220
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "DOS-001",
+          "level": "warning",
+          "message": {
+            "text": "WaterCrawlAPIClient creates an httpx.Client with timeout=None (line 51) and also calls httpx.get with timeout=None in download_result (line 214). Requests to slow or unresponsive internal targets will hang indefinitely, exhausting server resources."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/watercrawl/client.py"
+                },
+                "region": {
+                  "startLine": 51,
+                  "endLine": 51
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/watercrawl/client.py"
+                },
+                "region": {
+                  "startLine": 214,
+                  "endLine": 214
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "INJECT-001",
+          "level": "warning",
+          "message": {
+            "text": "WebsiteCrawlDatasourcePlugin.get_website_crawl() passes user-supplied datasource_parameters (Mapping[str, Any]) directly to PluginDatasourceManager.get_website_crawl() without any schema validation or sanitization. Malicious parameters could manipulate crawl targets or plugin behavior."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/datasource/website_crawl/website_crawl_plugin.py"
+                },
+                "region": {
+                  "startLine": 32,
+                  "endLine": 48
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "ERRH-001",
+          "level": "warning",
+          "message": {
+            "text": "Error handlers in FirecrawlAuth (line 50-51), FirecrawlApp (line 197-200), JinaAuth (line 43-50), and WatercrawlAuth (line 37-43) include raw response body text in exception messages. When SSRF redirects requests to internal services, the error responses may expose internal network topology, service versions, or sensitive data through these verbose error messages."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/firecrawl/firecrawl.py"
+                },
+                "region": {
+                  "startLine": 45,
+                  "endLine": 51
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/rag/extractor/firecrawl/firecrawl_app.py"
+                },
+                "region": {
+                  "startLine": 194,
+                  "endLine": 200
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/jina/jina.py"
+                },
+                "region": {
+                  "startLine": 42,
+                  "endLine": 50
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/services/auth/watercrawl/watercrawl.py"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 44
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        }
+      ]
+    }
+  ]
+}

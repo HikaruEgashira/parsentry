@@ -1,0 +1,233 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSJS-001",
+              "name": "ServerSideJavaScriptInjectionViaEval",
+              "shortDescription": {
+                "text": "Server-Side JavaScript Injection via eval() on user-controlled input"
+              },
+              "fullDescription": {
+                "text": "The handleContributionsUpdate function calls eval() directly on req.body.preTax, req.body.afterTax, and req.body.roth without any sanitization. An attacker can submit arbitrary JavaScript code in these form fields, achieving Remote Code Execution (RCE) on the server. For example, submitting preTax=process.exit() crashes the server, while preTax=require('child_process').execSync('id') executes OS commands."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-95",
+                  "RCE",
+                  "eval-injection",
+                  "OWASP-A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "SSJS-002",
+              "name": "ServerSideJavaScriptInjectionViaEvalAfterTax",
+              "shortDescription": {
+                "text": "Server-Side JavaScript Injection via eval() on afterTax parameter"
+              },
+              "fullDescription": {
+                "text": "eval(req.body.afterTax) executes arbitrary JavaScript from user input. This is the same class of vulnerability as SSJS-001 but on the afterTax parameter."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-95",
+                  "RCE",
+                  "eval-injection"
+                ]
+              }
+            },
+            {
+              "id": "SSJS-003",
+              "name": "ServerSideJavaScriptInjectionViaEvalRoth",
+              "shortDescription": {
+                "text": "Server-Side JavaScript Injection via eval() on roth parameter"
+              },
+              "fullDescription": {
+                "text": "eval(req.body.roth) executes arbitrary JavaScript from user input. This is the same class of vulnerability as SSJS-001 but on the roth parameter."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-95",
+                  "RCE",
+                  "eval-injection"
+                ]
+              }
+            },
+            {
+              "id": "VALIDATE-AFTER-EXEC-001",
+              "name": "ValidationAfterCodeExecution",
+              "shortDescription": {
+                "text": "Input validation occurs after eval() has already executed attacker-controlled code"
+              },
+              "fullDescription": {
+                "text": "The isNaN() and range checks on lines 47-55 occur after eval() has already executed on lines 32-34. By the time validation rejects malicious input, the attacker's code has already run on the server. Validation must occur before any interpretation of user input."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-20",
+                  "defense-in-depth"
+                ]
+              }
+            },
+            {
+              "id": "CSRF-001",
+              "name": "MissingCSRFProtection",
+              "shortDescription": {
+                "text": "Contributions update endpoint lacks CSRF token validation"
+              },
+              "fullDescription": {
+                "text": "The handleContributionsUpdate handler processes POST requests that modify server-side state (updating contribution percentages in the database) without requiring or validating a CSRF token. An attacker can craft a malicious page that submits a form to this endpoint on behalf of an authenticated user."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-352",
+                  "CSRF",
+                  "OWASP-A01:2021"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSJS-001",
+          "level": "error",
+          "message": {
+            "text": "eval(req.body.preTax) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. An attacker can execute arbitrary OS commands (e.g., require('child_process').execSync('cat /etc/passwd')). Replace eval() with parseInt() or Number()."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 26,
+                  "endColumn": 48
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSJS-002",
+          "level": "error",
+          "message": {
+            "text": "eval(req.body.afterTax) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. Replace eval() with parseInt() or Number()."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 27,
+                  "endColumn": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "SSJS-003",
+          "level": "error",
+          "message": {
+            "text": "eval(req.body.roth) executes user-controlled input as JavaScript on the server, enabling Remote Code Execution. Replace eval() with parseInt() or Number()."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 22,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VALIDATE-AFTER-EXEC-001",
+          "level": "warning",
+          "message": {
+            "text": "Validation via isNaN() and range checks on line 47 occurs after eval() has already executed attacker code on lines 32-34. The validation provides no security benefit because malicious payloads execute before any check runs. Move validation (and switch to parseInt/Number) before processing input."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 9,
+                  "endLine": 48
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "CSRF-001",
+          "level": "warning",
+          "message": {
+            "text": "The handleContributionsUpdate handler modifies contribution data in MongoDB without CSRF token validation. Combined with the eval() vulnerability, this allows a drive-by attack where visiting a malicious page triggers RCE on the server under the victim's session."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 5,
+                  "endLine": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

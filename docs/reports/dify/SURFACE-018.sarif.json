@@ -1,0 +1,282 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery allows attackers to make the server issue requests to arbitrary destinations."
+              }
+            },
+            {
+              "id": "RCE",
+              "name": "RemoteCodeExecution",
+              "shortDescription": {
+                "text": "Remote Code Execution allows attackers to execute arbitrary code on the server."
+              }
+            },
+            {
+              "id": "INJECTION",
+              "name": "ParameterInjection",
+              "shortDescription": {
+                "text": "Unsanitized user input injected into security-sensitive operations."
+              }
+            },
+            {
+              "id": "INFO-LEAK",
+              "name": "InformationLeakage",
+              "shortDescription": {
+                "text": "Sensitive information disclosed through error messages or responses."
+              }
+            },
+            {
+              "id": "HEADER-INJECTION",
+              "name": "HeaderInjection",
+              "shortDescription": {
+                "text": "User-controlled header name or value allows HTTP header injection."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "WebscraperTool._invoke passes user-controlled 'url' parameter directly to get_url() without URL validation or allowlist checking. An attacker controlling tool parameters (e.g., through LLM prompt injection) can force the server to make requests to internal services (e.g., http://169.254.169.254/ for cloud metadata, internal APIs). The 'user_agent' parameter is also user-controlled, enabling request spoofing."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/builtin_tool/providers/webscraper/tools/webscraper.py"
+                },
+                "region": {
+                  "startLine": 1100,
+                  "endLine": 1107
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "RCE",
+          "level": "error",
+          "message": {
+            "text": "SimpleCode._invoke executes user-supplied code via CodeExecutor.execute_code(language, '', code). The 'code' parameter is taken directly from tool_parameters with no sanitization. While language is restricted to python3/javascript, the code content itself is unrestricted. If the CodeExecutor sandbox has any escape vulnerability, or if network/IO restrictions are bypassable, this provides direct remote code execution. Even with sandboxing, this is a critical attack surface as sandbox escapes are a well-known class of vulnerabilities."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/builtin_tool/providers/code/tools/simple_code.py"
+                },
+                "region": {
+                  "startLine": 1179,
+                  "endLine": 1189
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "ApiTool.do_http_request makes HTTP requests to a configurable server_url. While ssrf_proxy is used, the URL can be configured by users who create custom API tools. Path parameters are interpolated into the URL via simple string replacement (url.replace('{name}', value)) without URL encoding, potentially allowing URL manipulation. Additionally, query parameters, headers, and cookies are populated from user-controlled tool parameters with minimal validation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 2710,
+                  "endLine": 2841
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "ApiTool.do_http_request performs path parameter substitution using url.replace(f'{{{name}}}', f'{value}') without URL-encoding the value. A malicious path parameter value containing '/', '?', '#', or other URL-special characters can alter the request path, inject query parameters, or change the target host. For example, a value like '../../admin' could traverse to unintended API endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 2798,
+                  "endLine": 2799
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "HEADER-INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "ApiTool.assembling_request allows the 'api_key_header' credential field to be set to an arbitrary header name. A malicious user configuring a custom API tool can set api_key_header to security-sensitive headers like 'Host', 'X-Forwarded-For', or 'Content-Type', potentially overriding existing headers and causing request smuggling or authentication bypass against the target server. The header name is not validated against a denylist."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 2631,
+                  "endLine": 2651
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "MCPTool.invoke_remote_mcp_tool connects to a user-configured MCP server URL. While the server_url is decrypted from database storage, it was originally user-provided when configuring the MCP tool provider. A malicious workspace member can register an MCP server pointing to internal infrastructure (cloud metadata endpoints, internal APIs, Redis, etc.) and use the tool to exfiltrate data from internal services. The headers are also user-configured, providing additional control over the outbound request."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/mcp_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 3362,
+                  "endLine": 3401
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "Multiple tool implementations catch broad exceptions and pass the full exception message to ToolInvokeError(str(e)), which is then returned to the user. This can leak internal implementation details, file paths, database connection strings, or stack traces. Affected locations include: WebscraperTool, SimpleCode, TimestampToLocaltimeTool, LocaltimeToTimestampTool, TimezoneConversionTool, and MCPTool. Error messages should be sanitized before returning to users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/builtin_tool/providers/webscraper/tools/webscraper.py"
+                },
+                "region": {
+                  "startLine": 1115,
+                  "endLine": 1116
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/builtin_tool/providers/code/tools/simple_code.py"
+                },
+                "region": {
+                  "startLine": 1188,
+                  "endLine": 1189
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/mcp_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 3398,
+                  "endLine": 3401
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INJECTION",
+          "level": "warning",
+          "message": {
+            "text": "PluginTool._invoke passes tool_parameters through convert_parameters_to_plugin_format and then directly to manager.invoke, delegating execution to an external plugin. The plugin_unique_identifier and tool parameters are not validated for injection attacks. If the plugin execution environment does not properly sandbox parameters, this could lead to command injection or data exfiltration depending on the plugin implementation. The credential_type and credentials are also forwarded directly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/plugin_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 3516,
+                  "endLine": 3539
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.60
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "ApiTool.do_http_request includes follow_redirects=True, which means the ssrf_proxy protections may be bypassed if the initial URL passes validation but redirects to an internal/restricted address. An attacker could set up an external server that responds with a 302 redirect to http://169.254.169.254/ or other internal endpoints, bypassing SSRF filters that only check the initial URL."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/tools/custom_tool/tool.py"
+                },
+                "region": {
+                  "startLine": 2839,
+                  "endLine": 2840
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        }
+      ]
+    }
+  ]
+}

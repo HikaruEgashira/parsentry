@@ -1,0 +1,211 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "STORED-XSS-001",
+              "name": "StoredXSSViaDisabledAutoescape",
+              "shortDescription": {
+                "text": "Stored XSS via disabled Swig autoescape on user-generated memo content"
+              },
+              "fullDescription": {
+                "text": "The Swig template engine has autoescape disabled, allowing stored HTML/JavaScript in memo content to execute in victims' browsers. An attacker can inject a memo containing malicious script tags or event handlers, which will be rendered unescaped to all users viewing the memos page."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "VULN-DEPENDENCY-001",
+              "name": "VulnerableMarkedLibrary",
+              "shortDescription": {
+                "text": "Vulnerable marked 0.3.5 library enables XSS through crafted markdown"
+              },
+              "fullDescription": {
+                "text": "The marked library version 0.3.5 contains known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427). Attackers can craft markdown input that, when parsed by marked, produces HTML containing executable JavaScript. Combined with disabled autoescape, this creates a reliable XSS vector even without direct HTML injection."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1395.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "dependency",
+                  "xss",
+                  "CWE-1395"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "BROKEN-ACCESS-CONTROL-001",
+              "name": "MissingPerUserMemoFiltering",
+              "shortDescription": {
+                "text": "No access control on memo listing exposes all users' memos"
+              },
+              "fullDescription": {
+                "text": "The displayMemos function fetches all memos from the database without filtering by the authenticated user's ID. Every authenticated user can see every other user's memo content. This is an information disclosure vulnerability that violates the principle of least privilege and breaks horizontal access control."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "access-control",
+                  "information-disclosure",
+                  "CWE-284"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "OUTPUT-ENCODING-001",
+              "name": "MissingOutputEncoding",
+              "shortDescription": {
+                "text": "Memo content passed to template without output encoding"
+              },
+              "fullDescription": {
+                "text": "The memosList array from the database is passed directly to the Swig template without any output encoding or sanitization. With autoescape disabled, this means raw HTML and JavaScript in memo content is rendered directly into the page, enabling stored XSS attacks."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/116.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "output-encoding",
+                  "CWE-116"
+                ],
+                "precision": "high",
+                "confidence": "high"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "STORED-XSS-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Swig template engine autoescape is disabled. User-generated memo content containing HTML or JavaScript will be rendered without escaping, enabling stored XSS. Any user can inject persistent scripts that execute in all other users' browsers when viewing the /memos page."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-DEPENDENCY-001",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "The marked library version 0.3.5 is used to parse user-submitted markdown into HTML. This version has known XSS vulnerabilities (CVE-2016-10531, CVE-2017-1000427) that allow crafted markdown to produce malicious HTML. Combined with disabled autoescape in Swig, parsed markdown output is rendered without sanitization."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "BROKEN-ACCESS-CONTROL-001",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "The displayMemos function in memos-dao.js retrieves all memos from the database without filtering by the current user's ID. All authenticated users can view all memos regardless of ownership, constituting horizontal privilege escalation and information disclosure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/memos-dao.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "OUTPUT-ENCODING-001",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "The memosList fetched from the database is passed directly to the Swig template rendering call without any HTML encoding, sanitization, or content security filtering. This is the root cause enabling stored XSS through memo content."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}

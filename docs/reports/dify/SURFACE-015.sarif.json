@@ -1,0 +1,361 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "HARDCODED-CREDS",
+              "shortDescription": {
+                "text": "Hardcoded default credentials in infrastructure configuration"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html"
+            },
+            {
+              "id": "EXPOSED-PORT",
+              "shortDescription": {
+                "text": "Sensitive service port exposed to host network without access restriction"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/284.html"
+            },
+            {
+              "id": "WEAK-API-KEY",
+              "shortDescription": {
+                "text": "Weak or default API key used for service authentication"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1391.html"
+            },
+            {
+              "id": "SSRF",
+              "shortDescription": {
+                "text": "SSRF proxy misconfiguration allowing potential bypass"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "MISCONFIG",
+              "shortDescription": {
+                "text": "Security-relevant misconfiguration in infrastructure"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/16.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "HARDCODED-CREDS",
+          "level": "error",
+          "message": {
+            "text": "Default PostgreSQL password 'difyai123456' is hardcoded in docker-compose and env example. Attackers who gain network access to the exposed port can authenticate with this well-known default credential. The password appears in multiple locations: POSTGRES_PASSWORD default, DB_PASSWORD env var, and middleware.env.example."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 735
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED-CREDS",
+          "level": "error",
+          "message": {
+            "text": "Default Redis password 'difyai123456' is hardcoded in docker-compose configuration and env example. Redis is exposed on port 6379 to the host by default. Combined with the default password, this allows unauthorized access to cached data, session tokens, and potential command execution via Redis."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 806
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "HARDCODED-CREDS",
+          "level": "error",
+          "message": {
+            "text": "Default MySQL root password 'difyai123456' is hardcoded via MYSQL_ROOT_PASSWORD. The MySQL health check also embeds the password in the command line arguments (-p${DB_PASSWORD:-difyai123456}), which can leak the password via process listing (ps aux) on the host."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 774
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "WEAK-API-KEY",
+          "level": "error",
+          "message": {
+            "text": "Plugin daemon uses a hardcoded default SERVER_KEY ('lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi') and DIFY_INNER_API_KEY ('QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1'). These keys authenticate inter-service communication and are publicly known from the source repository. An attacker can use these to invoke the inner API and execute privileged operations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 863
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "WEAK-API-KEY",
+          "level": "error",
+          "message": {
+            "text": "Sandbox API key defaults to the trivially guessable value 'dify-sandbox'. The sandbox service executes arbitrary code and is protected only by this API key. If the sandbox port is reachable, an attacker can submit code for execution."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 831
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "WEAK-API-KEY",
+          "level": "warning",
+          "message": {
+            "text": "Weaviate vector store uses a hardcoded API key ('WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih') and is exposed on port 8080. This allows unauthorized access to stored embeddings and vector data. The env example also sets WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true, further weakening access controls."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 963
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "EXPOSED-PORT",
+          "level": "error",
+          "message": {
+            "text": "PostgreSQL port 5432 is exposed to the host network by default (EXPOSE_POSTGRES_PORT:-5432). Combined with the default password, this allows direct database access from outside the container network. Database ports should not be exposed in production, or should be bound to 127.0.0.1."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 749
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "EXPOSED-PORT",
+          "level": "error",
+          "message": {
+            "text": "Redis port 6379 is exposed to the host network with a default password. Redis should not be directly accessible from the host in production. An attacker with host network access can connect and extract cached secrets, session data, or inject commands."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 813
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "EXPOSED-PORT",
+          "level": "warning",
+          "message": {
+            "text": "Plugin daemon exposes ports 5002 and 5003 to the host, and PLUGIN_REMOTE_INSTALLING_HOST is set to 0.0.0.0, meaning it accepts connections from any interface. Port 5003 (debugging port) is particularly dangerous as it allows remote plugin installation/debugging."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 906
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "level": "warning",
+          "message": {
+            "text": "The SSRF proxy (Squid) is configured as a reverse proxy for the sandbox on port 8194 and also exposed on the host. The ssrf_proxy_network is marked 'internal: true' which is correct, but the ssrf_proxy container is also on the 'default' network, meaning it can route requests from the sandbox to any service on the default network. If the Squid ACLs in squid.conf.template are not restrictive enough, the sandbox could use the proxy to reach internal services (database, Redis, plugin daemon) that should be isolated."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 914
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "MISCONFIG",
+          "level": "error",
+          "message": {
+            "text": "Plugin daemon has FORCE_VERIFYING_SIGNATURE set to 'false' in docker-compose.middleware.yaml, while the env example sets it to 'true'. With signature verification disabled, malicious or tampered plugins can be installed and executed, leading to arbitrary code execution within the plugin daemon context."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 904
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "MISCONFIG",
+          "level": "warning",
+          "message": {
+            "text": "The sandbox has SANDBOX_ENABLE_NETWORK set to 'true' by default. This allows code executed in the sandbox to make outbound network requests (proxied through the SSRF proxy). If the Squid ACLs are insufficient, sandbox code could exfiltrate data or access internal services. The default should be 'false' for defense in depth."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/docker-compose.middleware.yaml"
+                },
+                "region": {
+                  "startLine": 834
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "MISCONFIG",
+          "level": "warning",
+          "message": {
+            "text": "The squid entrypoint script uses environment variable substitution via awk to generate squid.conf from a template. If any environment variable contains Squid configuration directives or special characters, it could inject arbitrary Squid configuration, potentially disabling ACLs or opening the proxy. The substitution does not sanitize values."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/ssrf_proxy/docker-entrypoint.sh"
+                },
+                "region": {
+                  "startLine": 1012
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.60
+          }
+        },
+        {
+          "ruleId": "MISCONFIG",
+          "level": "note",
+          "message": {
+            "text": "Weaviate anonymous access is enabled in middleware.env.example (WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true) while docker-compose sets it to 'false'. Users copying from the env example will inadvertently enable anonymous access, allowing unauthenticated queries to the vector store."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker/middleware.env.example"
+                },
+                "region": {
+                  "startLine": 1149
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        }
+      ]
+    }
+  ]
+}

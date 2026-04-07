@@ -1,0 +1,224 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF-001",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via user-configured API endpoint"
+              },
+              "fullDescription": {
+                "text": "ApiExternalDataTool.query() retrieves api_based_extension from the database, which contains a user-configured api_endpoint. This endpoint is passed directly to APIBasedExtensionRequestor without URL validation or allowlist enforcement. An attacker with workspace access can configure an internal URL (e.g., http://169.254.169.254/latest/meta-data/, http://localhost:6379/) to reach internal services, cloud metadata endpoints, or other infrastructure not intended to be publicly accessible."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "ssrf", "cwe-918"],
+                "confidence": 0.85
+              }
+            },
+            {
+              "id": "CRED-LEAK-001",
+              "shortDescription": {
+                "text": "Decrypted API key passed to outbound request without scope restriction"
+              },
+              "fullDescription": {
+                "text": "The API key stored in APIBasedExtension is decrypted via encrypter.decrypt_token() and passed to APIBasedExtensionRequestor. If the api_endpoint has been manipulated via SSRF (SSRF-001), the decrypted API key is sent as an authorization header to an attacker-controlled server, resulting in credential theft. There is no check that the destination endpoint matches the original configured endpoint or belongs to a trusted domain."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "credential-leak", "cwe-522"],
+                "confidence": 0.8
+              }
+            },
+            {
+              "id": "INJECT-001",
+              "shortDescription": {
+                "text": "Untrusted external response data used without sanitization"
+              },
+              "fullDescription": {
+                "text": "The response from the external API is parsed as JSON and response_json['result'] is returned directly as a string. This value is then merged into the app's variable inputs via ExternalDataFetch.fetch(). If the external API is compromised or returns malicious content, the unsanitized string may flow into downstream LLM prompts (prompt injection), template rendering (XSS if displayed in web UI), or other processing contexts. Only a type check (isinstance str) is performed, with no content validation or sanitization."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "injection", "cwe-74"],
+                "confidence": 0.75
+              }
+            },
+            {
+              "id": "DOS-001",
+              "shortDescription": {
+                "text": "Unbounded thread pool with no per-request timeout for external API calls"
+              },
+              "fullDescription": {
+                "text": "ExternalDataFetch.fetch() uses ThreadPoolExecutor() without max_workers limit and submits requests to external APIs without configuring individual request timeouts. A slow or non-responsive external endpoint can cause thread exhaustion and block the application indefinitely. Since multiple external data tools can be configured per app, an attacker can configure multiple slow endpoints to amplify the denial-of-service impact."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": ["security", "denial-of-service", "cwe-400"],
+                "confidence": 0.7
+              }
+            },
+            {
+              "id": "INFO-LEAK-001",
+              "shortDescription": {
+                "text": "Internal variable name leaked in error messages"
+              },
+              "fullDescription": {
+                "text": "Multiple error paths in ApiExternalDataTool.query() include self.variable in exception messages (e.g., 'API query failed, variable: {self.variable}'). Additionally, the config dict is included in one error message. If these exceptions propagate to the API response, they disclose internal tool variable names and configuration details to end users, aiding reconnaissance."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tags": ["security", "information-disclosure", "cwe-209"],
+                "confidence": 0.65
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF-001",
+          "level": "error",
+          "message": {
+            "text": "The api_endpoint from APIBasedExtension (user-configured, stored in DB) is passed directly to APIBasedExtensionRequestor without URL validation, allowlisting, or blocking of internal/metadata IP ranges. This enables Server-Side Request Forgery against internal infrastructure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/external_data_tool/api/api.py"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "CRED-LEAK-001",
+          "level": "error",
+          "message": {
+            "text": "Decrypted API key from encrypter.decrypt_token() is passed to APIBasedExtensionRequestor alongside a user-controlled api_endpoint. If the endpoint is pointed at an attacker-controlled server (via SSRF-001), the API key is exfiltrated in the outbound request headers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/external_data_tool/api/api.py"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "INJECT-001",
+          "level": "warning",
+          "message": {
+            "text": "response_json['result'] from the external API is returned without sanitization and merged into app variable inputs. Malicious content from a compromised or attacker-controlled external endpoint can inject into downstream LLM prompts or UI rendering contexts."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/external_data_tool/api/api.py"
+                },
+                "region": {
+                  "startLine": 82,
+                  "endLine": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "DOS-001",
+          "level": "warning",
+          "message": {
+            "text": "ThreadPoolExecutor() is used without max_workers limit, and external API requests submitted via executor.submit() have no per-request timeout. Slow or unresponsive external endpoints can cause thread exhaustion and block application execution indefinitely."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/external_data_tool/external_data_fetch.py"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-LEAK-001",
+          "level": "note",
+          "message": {
+            "text": "Error messages include self.variable and self.config values (lines 40, 50, 53, 63, 66). If exceptions propagate to API responses, internal tool variable names and configuration details are disclosed to end users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/external_data_tool/api/api.py"
+                },
+                "region": {
+                  "startLine": 40,
+                  "endLine": 40
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/external_data_tool/api/api.py"
+                },
+                "region": {
+                  "startLine": 63,
+                  "endLine": 63
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.65
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,230 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "AUTH-BYPASS",
+              "shortDescription": {
+                "text": "Weak internal API authentication allowing tenant/user impersonation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/287.html"
+            },
+            {
+              "id": "IDOR",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference - missing authorization checks on resource access"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "shortDescription": {
+                "text": "Sensitive information disclosure through API responses or error messages"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "PRIV-ESCALATION",
+              "shortDescription": {
+                "text": "Privilege escalation through automatic account/resource creation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/269.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "error",
+          "message": {
+            "text": "The get_user_tenant decorator extracts tenant_id and user_id directly from the JSON request body without server-side validation of the caller's relationship to those identities. If the plugin_inner_api_only decorator only checks a shared static API key, any service or plugin holding that key can impersonate any tenant and user by supplying arbitrary tenant_id/user_id values. This enables cross-tenant data access across all plugin invoke endpoints."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                },
+                "region": {
+                  "startLine": 1369,
+                  "endLine": 1398
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PRIV-ESCALATION",
+          "level": "warning",
+          "message": {
+            "text": "The get_user function automatically creates a new EndUser record when the supplied user_id is not found in the database (lines 1352-1359). An attacker with inner API access can create arbitrary end-user records in any tenant by supplying non-existent user_id values. This can pollute user tables, bypass user count limits, or create phantom users for later exploitation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/wraps.py"
+                },
+                "region": {
+                  "startLine": 1326,
+                  "endLine": 1366
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "error",
+          "message": {
+            "text": "The PluginInvokeAppApi endpoint takes app_id from the request payload and passes it directly to PluginAppBackwardsInvocation.invoke_app without verifying that the resolved tenant_model has authorization to access that specific application. A plugin can invoke any app across tenants by supplying an arbitrary app_id along with its own tenant_id."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 1184,
+                  "endLine": 1196
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "The DSL export endpoint accepts an include_secret query parameter that, when set to 'true', exports application secrets in the DSL YAML output. If inner API authentication is compromised (e.g., via SSRF or leaked API key), an attacker can exfiltrate all application secrets by iterating over app_ids with include_secret=true."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/app/dsl.py"
+                },
+                "region": {
+                  "startLine": 810,
+                  "endLine": 823
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "In the DSL import endpoint, account.set_tenant_id(workspace_id) uses the workspace_id from the URL path without server-side verification that the resolved account actually belongs to that workspace. The comment states 'workspace/membership validation is done by the Go admin-api caller', but if this inner API is reachable via SSRF or a compromised internal service, the trust boundary is violated, enabling cross-workspace DSL imports."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/app/dsl.py"
+                },
+                "region": {
+                  "startLine": 771,
+                  "endLine": 796
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "Multiple plugin invoke endpoints (text-embedding, rerank, speech2text, moderation, parameter-extractor, question-classifier, encrypt, summary) catch generic Exception and return str(e) in the response. This can leak internal stack traces, file paths, database connection details, or other sensitive implementation details to the caller."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 962,
+                  "endLine": 963
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "note",
+          "message": {
+            "text": "The ownerless workspace creation endpoint returns encrypt_public_key in its response body. While this is a public key, exposing cryptographic material in API responses increases the attack surface for protocol-level attacks and may leak information about the encryption scheme in use."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/workspace/workspace.py"
+                },
+                "region": {
+                  "startLine": 1531,
+                  "endLine": 1542
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "ruleId": "IDOR",
+          "level": "warning",
+          "message": {
+            "text": "The PluginFetchAppInfoApi endpoint accepts an app_id from the request payload and fetches app information without verifying that the requesting tenant has access to that application. This allows cross-tenant information gathering by enumerating app_ids."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/inner_api/plugin/plugin.py"
+                },
+                "region": {
+                  "startLine": 1297,
+                  "endLine": 1300
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

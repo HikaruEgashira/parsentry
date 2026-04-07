@@ -1,0 +1,342 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "OPEN-REDIRECT",
+              "name": "OpenRedirect",
+              "shortDescription": {
+                "text": "User-controlled input used in HTTP redirect without validation"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html"
+            },
+            {
+              "id": "INFO-DISCLOSURE",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Sensitive information leaked through error messages or responses"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html"
+            },
+            {
+              "id": "TOKEN-LEAK",
+              "name": "TokenLeakage",
+              "shortDescription": {
+                "text": "Security token exposed in HTTP response body"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html"
+            },
+            {
+              "id": "CSRF",
+              "name": "CrossSiteRequestForgery",
+              "shortDescription": {
+                "text": "Missing or misused CSRF protection in state-changing endpoint"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html"
+            },
+            {
+              "id": "AUTH-BYPASS",
+              "name": "AuthenticationBypass",
+              "shortDescription": {
+                "text": "Missing authentication or authorization check on sensitive endpoint"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "ACCOUNT-ENUM",
+              "name": "AccountEnumeration",
+              "shortDescription": {
+                "text": "Different responses for valid vs invalid accounts enable user enumeration"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/204.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "error",
+          "message": {
+            "text": "User-controlled query parameter 'code' is directly interpolated into a redirect URL without sanitization. An attacker can craft a malicious 'code' value to redirect users to an arbitrary site (e.g., code=//evil.com). The redirect_uri is built as f\"{dify_config.CONSOLE_WEB_URL}?type=notion&code={code}\" with no URL encoding or validation of the code parameter."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/data_source_oauth.py"
+                },
+                "region": {
+                  "startLine": 56,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "OPEN-REDIRECT",
+          "level": "error",
+          "message": {
+            "text": "User-controlled query parameter 'error' is directly interpolated into a redirect URL without sanitization. An attacker can inject arbitrary content into the redirect target via the error parameter. The redirect is built as f\"{dify_config.CONSOLE_WEB_URL}?type=notion&error={error}\" without URL-encoding."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/data_source_oauth.py"
+                },
+                "region": {
+                  "startLine": 59,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "TOKEN-LEAK",
+          "level": "error",
+          "message": {
+            "text": "Password reset token is returned directly in the HTTP response body (return {\"result\": \"success\", \"data\": token}). This token should only be delivered via email. Returning it in the API response allows any caller to obtain the reset token without access to the victim's email, enabling account takeover. An attacker who knows a target's email can request a password reset and immediately obtain the token from the response."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/forgot_password.py"
+                },
+                "region": {
+                  "startLine": 87,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "TOKEN-LEAK",
+          "level": "error",
+          "message": {
+            "text": "Email registration token is returned directly in the HTTP response body (return {\"result\": \"success\", \"data\": token}). This token, combined with the email verification code, is used to complete registration. Returning the token in the response weakens the email-based verification, as an attacker needs only to guess or brute-force the short verification code."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/email_register.py"
+                },
+                "region": {
+                  "startLine": 52,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "TOKEN-LEAK",
+          "level": "warning",
+          "message": {
+            "text": "The reset-password endpoint at /console/api/reset-password returns the password reset token in the response body. Same pattern as forgot-password: the token should be delivered exclusively via email to ensure only the email account owner can use it."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/login.py"
+                },
+                "region": {
+                  "startLine": 130,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "CSRF",
+          "level": "error",
+          "message": {
+            "text": "OAuth state parameter is repurposed as invite_token (invite_token = state) instead of being used for CSRF protection. The OAuth 2.0 'state' parameter exists to prevent CSRF attacks during the authorization flow. By using it solely for invite_token passthrough, the application has no CSRF protection on the OAuth callback, allowing an attacker to force-login a victim with the attacker's OAuth account."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/oauth.py"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "The OAuthDataSourceCallback endpoint (GET /oauth/data-source/callback/<provider>) lacks @login_required and @setup_required decorators. It accepts an authorization code from the query string and passes it to the OAuth provider's access token exchange. While the endpoint is typically called by the OAuth redirect flow, the missing authentication allows unauthenticated access and potential abuse."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/data_source_oauth.py"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "The OAuthDataSourceBinding endpoint (GET /oauth/data-source/binding/<provider>) lacks @login_required decorator. It accepts an authorization code and exchanges it for an access token, binding a data source to the application. Without authentication, any caller who obtains or guesses a valid authorization code can bind a data source to the system."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/data_source_oauth.py"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "AUTH-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "The RefreshTokenApi endpoint (POST /console/api/refresh-token) has no decorators at all - no @setup_required, no CSRF validation, no rate limiting. The refresh token is extracted from cookies, but without CSRF protection, a cross-site attacker could trigger token refresh via a forged POST request, potentially obtaining new tokens if the response is readable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/login.py"
+                },
+                "region": {
+                  "startLine": 137,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "ACCOUNT-ENUM",
+          "level": "warning",
+          "message": {
+            "text": "The OAuth callback returns distinct redirect URLs with specific error messages for different failure modes: 'Account not found', 'Account is banned', 'Workspace not found'. These distinct messages allow an attacker to enumerate valid accounts and their status by initiating OAuth flows with different email addresses."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/oauth.py"
+                },
+                "region": {
+                  "startLine": 114,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.80
+          }
+        },
+        {
+          "ruleId": "ACCOUNT-ENUM",
+          "level": "note",
+          "message": {
+            "text": "The email-code-login endpoint returns AccountNotFound error when registration is disabled and the account does not exist, but returns success when the account exists. This differential response allows user enumeration by observing whether the email-code-login/send request succeeds or fails."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/login.py"
+                },
+                "region": {
+                  "startLine": 155,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.70
+          }
+        },
+        {
+          "ruleId": "INFO-DISCLOSURE",
+          "level": "warning",
+          "message": {
+            "text": "The refresh token endpoint catches all exceptions and returns the exception message directly to the client (return {\"result\": \"fail\", \"message\": str(e)}). This can leak internal implementation details, stack traces, or sensitive information depending on what exception is raised during token refresh."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/console/auth/login.py"
+                },
+                "region": {
+                  "startLine": 156,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

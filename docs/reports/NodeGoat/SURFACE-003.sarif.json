@@ -1,0 +1,165 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "1.0.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "SENSITIVE-DATA-EXPOSURE",
+              "name": "SensitiveDataExposure",
+              "shortDescription": {
+                "text": "Sensitive personal data (SSN, DOB) stored and returned in plaintext without encryption"
+              },
+              "fullDescription": {
+                "text": "The profile DAO stores and retrieves sensitive personally identifiable information (SSN and date of birth) in plaintext. The code contains commented-out encryption/decryption logic using crypto module but it is not active. An attacker who gains access to the database or intercepts the response can read SSN and DOB values directly. This violates OWASP A3:2017 Sensitive Data Exposure."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "CWE-312", "CWE-311", "OWASP-A3"]
+              }
+            },
+            {
+              "id": "REDOS",
+              "name": "RegularExpressionDenialOfService",
+              "shortDescription": {
+                "text": "Regex with catastrophic backtracking in bank routing validation"
+              },
+              "fullDescription": {
+                "text": "The regex pattern /([0-9]+)+\\#/ used to validate bankRouting contains nested quantifiers ([0-9]+)+ which causes catastrophic backtracking (exponential time complexity) on crafted input. An attacker can submit a long string of digits without a trailing '#' to cause the server to hang, resulting in denial of service. The fix is to remove the redundant '+' quantifier: /([0-9]+)\\#/."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "CWE-1333", "CWE-400", "OWASP-A1"]
+              }
+            },
+            {
+              "id": "INCORRECT-OUTPUT-ENCODING",
+              "name": "IncorrectOutputEncodingContext",
+              "shortDescription": {
+                "text": "encodeForHTML used in URL context, allowing XSS via crafted website URL"
+              },
+              "fullDescription": {
+                "text": "The profile handler uses ESAPI.encoder().encodeForHTML() to encode the user-supplied website field. However, this value is rendered in the template as an href attribute (URL context). HTML encoding does not prevent javascript: or data: URI schemes from being injected. The correct function is encodeForURL() which sanitizes the value for use in URL contexts, preventing protocol-based XSS attacks."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": ["security", "CWE-838", "CWE-79", "OWASP-A7"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SENSITIVE-DATA-EXPOSURE",
+          "level": "error",
+          "message": {
+            "text": "SSN and DOB are stored in plaintext in MongoDB and returned without encryption. The encryption code exists but is commented out. Any database compromise or MITM attack exposes PII directly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 391,
+                  "startColumn": 5,
+                  "endLine": 416
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 443,
+                  "startColumn": 5,
+                  "endLine": 459
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "REDOS",
+          "level": "error",
+          "message": {
+            "text": "The regex /([0-9]+)+\\#/ contains nested quantifiers causing catastrophic backtracking. Input like '0000000000000000000000000000!' triggers exponential evaluation time, causing denial of service. Fix: change to /([0-9]+)\\#/ by removing the outer '+'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 292,
+                  "startColumn": 31,
+                  "endLine": 292
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.98
+          }
+        },
+        {
+          "ruleId": "INCORRECT-OUTPUT-ENCODING",
+          "level": "error",
+          "message": {
+            "text": "ESAPI.encoder().encodeForHTML() is applied to doc.website, but the value is used in an href attribute (URL context). HTML encoding does not block javascript: or data: URI schemes. An attacker can set their website to 'javascript:alert(document.cookie)' which will pass HTML encoding but execute as XSS when clicked. Use encodeForURL() instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 261,
+                  "startColumn": 13,
+                  "endLine": 261
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.92
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "surface_id": "SURFACE-003",
+            "surface_kind": "endpoint",
+            "surface_identifier": "GET /profile"
+          }
+        }
+      ]
+    }
+  ]
+}

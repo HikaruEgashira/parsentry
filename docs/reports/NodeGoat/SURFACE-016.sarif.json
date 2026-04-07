@@ -1,0 +1,285 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "MISSING-SECURITY-HEADERS",
+              "name": "MissingSecurityHeaders",
+              "shortDescription": {
+                "text": "Helmet security headers middleware commented out"
+              },
+              "fullDescription": {
+                "text": "The helmet middleware is imported but commented out in server.js. Helmet sets critical HTTP security headers including X-Content-Type-Options, X-DNS-Prefetch-Control, X-Download-Options, X-Frame-Options, X-XSS-Protection, and Strict-Transport-Security. Without helmet, the application lacks all standard browser-side security controls."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "headers", "CWE-693", "A05:2021"]
+              }
+            },
+            {
+              "id": "MISSING-CSRF-PROTECTION",
+              "name": "MissingCSRFProtection",
+              "shortDescription": {
+                "text": "CSRF protection middleware commented out"
+              },
+              "fullDescription": {
+                "text": "The csurf middleware is imported but commented out in server.js. Without CSRF token validation, all state-changing endpoints (POST/PUT/DELETE) are vulnerable to cross-site request forgery attacks. An attacker can craft a malicious page that submits authenticated requests on behalf of a victim user."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "csrf", "CWE-352", "A01:2021"]
+              }
+            },
+            {
+              "id": "TEMPLATE-AUTOESCAPE-DISABLED",
+              "name": "TemplateAutoescapeDisabled",
+              "shortDescription": {
+                "text": "Swig template engine autoescape set to false"
+              },
+              "fullDescription": {
+                "text": "The Swig template engine is configured with autoescape: false, disabling automatic HTML entity encoding of template variables. Every template variable rendered without manual escaping becomes a stored or reflected XSS vector. This is a global configuration that affects all views in the application."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "xss", "CWE-79", "A03:2021"]
+              }
+            },
+            {
+              "id": "NO-HTTPS-TRANSPORT",
+              "name": "NoHTTPSTransport",
+              "shortDescription": {
+                "text": "Application runs over HTTP without TLS encryption"
+              },
+              "fullDescription": {
+                "text": "The application creates an HTTP server (http.createServer) without TLS. All data including session cookies, authentication credentials, and sensitive user data is transmitted in cleartext. An attacker on the same network can intercept all traffic via passive eavesdropping or active MITM attacks."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "transport", "CWE-319", "A02:2021"]
+              }
+            },
+            {
+              "id": "MISSING-CLICKJACKING-PROTECTION",
+              "name": "MissingClickjackingProtection",
+              "shortDescription": {
+                "text": "No X-Frame-Options or frame-ancestors CSP directive"
+              },
+              "fullDescription": {
+                "text": "With helmet commented out, no X-Frame-Options header is set and no Content-Security-Policy frame-ancestors directive exists. The application can be embedded in iframes on attacker-controlled pages, enabling clickjacking attacks where users are tricked into clicking hidden UI elements."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "clickjacking", "CWE-1021", "A05:2021"]
+              }
+            },
+            {
+              "id": "MISSING-CSP",
+              "name": "MissingContentSecurityPolicy",
+              "shortDescription": {
+                "text": "No Content-Security-Policy header configured"
+              },
+              "fullDescription": {
+                "text": "No Content-Security-Policy header is set. CSP is the primary defense-in-depth mechanism against XSS. Without it, inline scripts, eval(), and resources from arbitrary origins can execute freely. Combined with autoescape disabled in Swig, this eliminates all XSS mitigations."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
+              "properties": {
+                "tags": ["security", "csp", "CWE-693", "A05:2021"]
+              }
+            },
+            {
+              "id": "STATIC-AFTER-SESSION",
+              "name": "StaticAssetsAfterSessionMiddleware",
+              "shortDescription": {
+                "text": "Static file serving ordered after session middleware"
+              },
+              "fullDescription": {
+                "text": "Express static file middleware is registered after session middleware in the middleware chain. Every request for static assets (CSS, JS, images) unnecessarily creates or loads a session, wasting server resources and creating unnecessary session store I/O. This can amplify denial-of-service attacks and leak session cookies on public assets."
+              },
+              "helpUri": "https://expressjs.com/en/guide/using-middleware.html",
+              "properties": {
+                "tags": ["security", "performance", "CWE-400", "A05:2021"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "MISSING-SECURITY-HEADERS",
+          "level": "error",
+          "message": {
+            "text": "Helmet middleware is imported but commented out: '// app.use(helmet())'. This disables all standard security headers including X-Content-Type-Options (nosniff), X-Frame-Options, Strict-Transport-Security, and X-XSS-Protection. The dont-sniff-mimetype middleware is also commented out, and app.disable('x-powered-by') is not called, leaking the Express framework identity. Fix: uncomment app.use(helmet()) and ensure it is placed early in the middleware chain."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-CSRF-PROTECTION",
+          "level": "error",
+          "message": {
+            "text": "CSRF protection middleware (csurf) is imported but commented out. All POST/PUT/DELETE endpoints accept requests without CSRF token validation. An attacker can create a malicious page with auto-submitting forms targeting authenticated endpoints (e.g., fund transfers, password changes, profile updates). Fix: uncomment app.use(csrf()) and ensure CSRF tokens are embedded in all forms and validated on state-changing requests."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "TEMPLATE-AUTOESCAPE-DISABLED",
+          "level": "error",
+          "message": {
+            "text": "Swig template engine is configured with autoescape: false, globally disabling HTML output encoding. Any user-controlled data rendered in templates will be injected as raw HTML, creating stored and reflected XSS vulnerabilities across all views. This is the root cause enabling XSS in every template that renders user input. Fix: set autoescape: true in swig configuration and audit templates for any places that intentionally render raw HTML using the |safe filter."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "NO-HTTPS-TRANSPORT",
+          "level": "error",
+          "message": {
+            "text": "Application uses http.createServer() without TLS. All traffic including session cookies, login credentials, and sensitive data travels in cleartext. Session cookies lack the Secure flag (which requires HTTPS), making them interceptable on any network hop. Fix: use https.createServer() with valid TLS certificates, or deploy behind a TLS-terminating reverse proxy and set the 'trust proxy' setting, and mark session cookies as Secure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "MISSING-CLICKJACKING-PROTECTION",
+          "level": "error",
+          "message": {
+            "text": "No X-Frame-Options header or CSP frame-ancestors directive is set because helmet is commented out. The application can be framed by any origin, enabling clickjacking attacks. An attacker can overlay transparent iframes of the application over decoy UI to trick users into performing unintended actions. Fix: enable helmet (which sets X-Frame-Options: SAMEORIGIN by default) or manually set the header and add a CSP frame-ancestors directive."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MISSING-CSP",
+          "level": "error",
+          "message": {
+            "text": "No Content-Security-Policy header is configured. Without CSP, there is no browser-enforced restriction on script sources, inline script execution, or eval(). Combined with Swig autoescape: false, the application has zero XSS mitigations at any layer. Fix: configure a strict CSP with script-src 'self', disallow unsafe-inline and unsafe-eval, and add nonce-based or hash-based script allowlisting."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "STATIC-AFTER-SESSION",
+          "level": "warning",
+          "message": {
+            "text": "express.static() middleware is registered after the session middleware in the middleware chain. Every request for CSS, JavaScript, images, and other static files triggers session store lookups and session cookie processing unnecessarily. This wastes resources and can leak session cookies on cacheable public assets. Fix: move express.static() before session middleware, or serve static assets from a CDN/separate origin."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via user-controlled URL in needle.get()"
+              },
+              "fullDescription": {
+                "text": "The research endpoint constructs a URL by concatenating req.query.url and req.query.symbol, then passes it directly to needle.get(). An attacker can supply an arbitrary URL to make the server issue requests to internal services, cloud metadata endpoints (169.254.169.254), or localhost services, bypassing network-level access controls."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "CWE-918", "OWASP-A10"]
+              }
+            },
+            {
+              "id": "XSS-REFLECTED",
+              "name": "ReflectedCrosssSiteScripting",
+              "shortDescription": {
+                "text": "Reflected XSS via unsanitized response body written to HTTP response"
+              },
+              "fullDescription": {
+                "text": "The response body from the external HTTP request made via needle.get() is written directly to the client response using res.write(body) without any output encoding or sanitization. If an attacker controls the fetched URL, the response content (which may contain malicious scripts) is reflected to the user's browser."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "properties": {
+                "tags": ["security", "CWE-79", "OWASP-A03"]
+              }
+            },
+            {
+              "id": "INPUT-VALIDATION",
+              "name": "MissingInputValidation",
+              "shortDescription": {
+                "text": "No validation or sanitization of user-supplied URL parameter"
+              },
+              "fullDescription": {
+                "text": "The req.query.url parameter is used without any validation, allowlist, blocklist, or URL parsing. There is no check that the URL scheme is http/https, no restriction on target host or port, and no prevention of access to internal network ranges."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "CWE-20"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Full SSRF: needle.get() is called with a URL constructed entirely from user-controlled query parameters (req.query.url + req.query.symbol). An attacker can set url=http://169.254.169.254/latest/meta-data/&symbol= to access AWS metadata, or url=http://localhost:27017/&symbol= to probe internal MongoDB. No URL validation, allowlist, or blocklist is applied."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 249,
+                  "startColumn": 20,
+                  "endLine": 249,
+                  "snippet": {
+                    "text": "return needle.get(url, (error, newResponse, body) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "SSRF",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Tainted URL construction: the URL is built by directly concatenating two user-controlled query parameters without any sanitization. The attacker has full control over the scheme, host, port, and path of the request target."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 248,
+                  "startColumn": 27,
+                  "endLine": 248,
+                  "snippet": {
+                    "text": "const url = req.query.url + req.query.symbol;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        },
+        {
+          "ruleId": "XSS-REFLECTED",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS: the response body from the SSRF-fetched URL is written directly to the HTTP response with Content-Type text/html and no output encoding. An attacker can host a page containing malicious JavaScript at the URL they control, and the script will execute in the victim's browser in the context of the application's origin."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 258,
+                  "startColumn": 21,
+                  "endLine": 258,
+                  "snippet": {
+                    "text": "res.write(body);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "XSS-REFLECTED",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Content-Type set to text/html for proxied content: the response from the external server is served as HTML regardless of its actual content type, enabling script execution in the browser if the fetched content contains JavaScript."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 251,
+                  "startColumn": 21,
+                  "endLine": 253,
+                  "snippet": {
+                    "text": "res.writeHead(200, {\n                        \"Content-Type\": \"text/html\"\n                    });"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.90
+          }
+        },
+        {
+          "ruleId": "INPUT-VALIDATION",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "No input validation on req.query.url: the parameter is used directly in URL construction without checking the scheme (allowing file://, gopher://, dict://), host (allowing 127.0.0.1, 169.254.169.254, internal hostnames), or applying any allowlist. This enables SSRF attacks against internal infrastructure."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 9,
+                  "endLine": 249,
+                  "snippet": {
+                    "text": "if (req.query.symbol) {\n            const url = req.query.url + req.query.symbol;\n            return needle.get(url, (error, newResponse, body) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.99
+          }
+        }
+      ]
+    }
+  ]
+}

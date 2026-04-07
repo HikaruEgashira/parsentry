@@ -1,0 +1,188 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "MOD-001",
+              "name": "KeywordModerationBypass",
+              "shortDescription": {
+                "text": "Keyword moderation bypass via unicode tricks"
+              },
+              "fullDescription": {
+                "text": "KeywordsModeration._check_keywords_in_value uses simple `keyword.lower() in str(value).lower()` matching which is trivially bypassed using unicode normalization tricks (zero-width characters, homoglyphs, combining characters). An attacker can insert U+200B (zero-width space), U+FEFF (BOM), or Cyrillic/Greek homoglyphs between keyword characters to evade detection while preserving visual meaning."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/116.html",
+              "properties": {
+                "tags": ["security", "moderation-bypass", "CWE-116"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "MOD-002",
+              "name": "EmptyKeywordMatchAll",
+              "shortDescription": {
+                "text": "Empty keyword string matches all input values"
+              },
+              "fullDescription": {
+                "text": "Keywords are split by newline but there is no validation that keyword content is non-empty. An empty string passes the `keyword.lower() in str(value).lower()` check for any value, since empty string is a substring of every string. This causes all content to be flagged as violating moderation, creating a denial-of-service on legitimate content."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1286.html",
+              "properties": {
+                "tags": ["security", "input-validation", "CWE-1286"],
+                "confidence": 0.9
+              }
+            },
+            {
+              "id": "MOD-003",
+              "name": "ApiModerationSSRF",
+              "shortDescription": {
+                "text": "SSRF via user-configured moderation API endpoint"
+              },
+              "fullDescription": {
+                "text": "ApiModeration._get_config_by_requestor creates an APIBasedExtensionRequestor using a user-configured endpoint URL. If the endpoint URL is not validated against an allowlist or restricted to external hosts, an attacker with configuration access can point the moderation API to internal services (e.g., cloud metadata at 169.254.169.254, internal APIs) to perform Server-Side Request Forgery."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "properties": {
+                "tags": ["security", "ssrf", "CWE-918"],
+                "confidence": 0.8
+              }
+            },
+            {
+              "id": "MOD-004",
+              "name": "OpenAIModerationInputBug",
+              "shortDescription": {
+                "text": "OpenAI moderation receives dict_values string representation instead of actual values"
+              },
+              "fullDescription": {
+                "text": "OpenAIModeration._is_violated joins input values using `\"\\n\".join(str(inputs.values()))` which converts the dict_values view object to its string representation (e.g., `dict_values(['actual content'])`) rather than joining the actual string values. This means OpenAI's moderation API receives a Python internal representation string instead of the real content, effectively bypassing moderation entirely since malicious content is wrapped in the dict_values(...) representation."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/704.html",
+              "properties": {
+                "tags": ["security", "correctness", "moderation-bypass", "CWE-704"],
+                "confidence": 0.95
+              }
+            },
+            {
+              "id": "MOD-005",
+              "name": "UntrustedModerationResponse",
+              "shortDescription": {
+                "text": "Moderation API responses trusted without sanitization"
+              },
+              "fullDescription": {
+                "text": "ModerationInputsResult and ModerationOutputsResult from external API-based moderation are deserialized via model_validate without sanitization of the returned content. A malicious or compromised moderation API endpoint could inject crafted content into the moderation results, which then flows back into the application. This is especially dangerous combined with MOD-003 (SSRF) as an attacker controlling the endpoint controls the response."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "properties": {
+                "tags": ["security", "input-validation", "CWE-20"],
+                "confidence": 0.75
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "MOD-001",
+          "level": "error",
+          "message": {
+            "text": "Keyword moderation uses naive substring matching (`keyword.lower() in str(value).lower()`) that is trivially bypassed with zero-width characters (U+200B, U+FEFF), homoglyphs (Cyrillic а/е/о for Latin a/e/o), or combining diacritical marks. Attackers can visually reproduce blocked keywords while evading detection. Apply Unicode NFKC normalization, strip zero-width characters, and consider confusable detection (e.g., ICU skeleton mapping) before matching."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/moderation/keywords/keywords.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MOD-002",
+          "level": "warning",
+          "message": {
+            "text": "Keywords are split by newline without filtering empty strings. An empty keyword (from trailing newline or blank line in config) matches every input string since `'' in any_string` is always True. This creates an unintentional denial-of-service where all content is flagged. Add `filter(None, ...)` or strip/validate keywords after splitting."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/moderation/keywords/keywords.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "MOD-003",
+          "level": "error",
+          "message": {
+            "text": "ApiModeration._get_config_by_requestor allows user-configured API endpoints without URL validation or allowlisting. An attacker with app configuration access can set the moderation endpoint to internal services (cloud metadata endpoint 169.254.169.254, internal APIs, localhost services) to perform SSRF. Validate URLs against an allowlist, block RFC 1918 addresses and link-local ranges, and enforce HTTPS-only."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/moderation/api/api.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "MOD-004",
+          "level": "error",
+          "message": {
+            "text": "OpenAIModeration._is_violated uses `\"\\n\".join(str(inputs.values()))` which converts the dict_values view to its string representation rather than joining actual values. The correct form is `\"\\n\".join(str(v) for v in inputs.values())`. This bug causes OpenAI's moderation API to receive `dict_values([...])` instead of the actual content, completely undermining moderation for all inputs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/moderation/openai_moderation/openai_moderation.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "MOD-005",
+          "level": "warning",
+          "message": {
+            "text": "ModerationInputsResult and ModerationOutputsResult from external API-based moderation endpoints are deserialized via model_validate without content sanitization. A compromised or malicious moderation endpoint (see MOD-003) can inject arbitrary content into the application's moderation results. Validate and sanitize all fields in moderation responses, enforce expected types and value ranges, and treat external moderation responses as untrusted input."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/core/moderation/api/api.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        }
+      ]
+    }
+  ]
+}

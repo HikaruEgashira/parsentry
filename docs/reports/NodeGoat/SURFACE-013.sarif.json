@@ -1,0 +1,239 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/HikaruEgashira/parsentry",
+          "rules": [
+            {
+              "id": "VULN-013-001",
+              "name": "PlaintextPasswordStorage",
+              "shortDescription": {
+                "text": "Passwords stored in plaintext without hashing"
+              },
+              "fullDescription": {
+                "text": "The user-dao.js module stores passwords in plaintext. The bcrypt hashing code has been commented out, meaning all user passwords are written directly to MongoDB without any cryptographic protection. An attacker who gains read access to the database (via injection, backup leak, or misconfiguration) obtains every credential immediately."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-256",
+                  "OWASP-A02:2021"
+                ],
+                "precision": "very-high",
+                "security-severity": "9.8"
+              }
+            },
+            {
+              "id": "VULN-013-002",
+              "name": "PlaintextPasswordComparison",
+              "shortDescription": {
+                "text": "Password verification uses plaintext string comparison"
+              },
+              "fullDescription": {
+                "text": "Password authentication in user-dao.js compares the user-supplied password directly against the stored value using the === operator instead of a constant-time hash comparison. This confirms passwords are never hashed and also introduces a timing side-channel that could allow an attacker to infer password characters incrementally."
+              },
+              "helpUri": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-261",
+                  "CWE-208"
+                ],
+                "precision": "very-high",
+                "security-severity": "9.1"
+              }
+            },
+            {
+              "id": "VULN-013-003",
+              "name": "HardcodedCredentials",
+              "shortDescription": {
+                "text": "Hardcoded credentials in database seed script"
+              },
+              "fullDescription": {
+                "text": "The db-reset.js script contains hardcoded usernames and passwords (admin/Admin_123, user1/User1_123, user2/User2_123) committed to source control. These credentials are inserted directly into the users collection. If these defaults are not changed after deployment, attackers can authenticate with known credentials. Even if changed, the commit history permanently exposes them."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-798",
+                  "OWASP-A07:2021"
+                ],
+                "precision": "very-high",
+                "security-severity": "8.6"
+              }
+            },
+            {
+              "id": "VULN-013-004",
+              "name": "DeprecatedBcryptLibrary",
+              "shortDescription": {
+                "text": "Deprecated bcrypt-nodejs 0.0.3 with known vulnerabilities"
+              },
+              "fullDescription": {
+                "text": "The project depends on bcrypt-nodejs version 0.0.3, which has been deprecated and has known security vulnerabilities. Even though the bcrypt code is currently commented out, the dependency remains and could be re-enabled without updating, leading to weak or broken password hashing."
+              },
+              "helpUri": "https://www.npmjs.com/package/bcrypt-nodejs",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-327",
+                  "OWASP-A06:2021"
+                ],
+                "precision": "high",
+                "security-severity": "7.5"
+              }
+            },
+            {
+              "id": "VULN-013-005",
+              "name": "SeedDataWithCredentials",
+              "shortDescription": {
+                "text": "Seed data with plaintext credentials committed to source control"
+              },
+              "fullDescription": {
+                "text": "Database seed data containing plaintext usernames and passwords is committed to the source code repository. This violates the principle of separating secrets from code. Anyone with repository access (including public access if the repo is open source) can read these credentials and use them to authenticate against any deployment that was initialized with this seed data."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/540.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-540",
+                  "CWE-259"
+                ],
+                "precision": "very-high",
+                "security-severity": "7.8"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "VULN-013-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Passwords are stored in plaintext in the MongoDB users collection. The bcrypt hashing code in user-dao.js has been commented out, so passwords passed during user registration are written directly to the database without any cryptographic transformation. This allows mass credential theft if the database is compromised."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-002",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Password authentication uses direct string comparison (===) against the plaintext stored password instead of bcrypt.compare() or an equivalent constant-time hash verification. This confirms the absence of password hashing and introduces a timing side-channel."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-003",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded credentials found in db-reset.js: admin/Admin_123, user1/User1_123, user2/User2_123. These are inserted into the users collection as seed data and are permanently visible in source control history."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/db-reset.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-004",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "The project uses bcrypt-nodejs version 0.0.3 which is deprecated and has known vulnerabilities. Although the bcrypt usage is currently commented out in user-dao.js, the dependency remains and could be re-enabled without upgrading to a secure alternative (e.g., bcrypt or argon2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        },
+        {
+          "ruleId": "VULN-013-005",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "Plaintext credentials are embedded in the db-reset.js seed script and committed to source control. These credentials (admin/Admin_123, user1/User1_123, user2/User2_123) are accessible to anyone with repository read access and persist in git history even if removed from the current branch."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/db-reset.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,312 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "SSRF",
+              "name": "ServerSideRequestForgery",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery via remote URL file fetch"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html"
+            },
+            {
+              "id": "UNRESTRICTED-UPLOAD",
+              "name": "UnrestrictedFileUpload",
+              "shortDescription": {
+                "text": "Unrestricted file type upload allows dangerous file types"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/434.html"
+            },
+            {
+              "id": "SQLI",
+              "name": "SQLInjection",
+              "shortDescription": {
+                "text": "SQL Injection via unsanitized string interpolation in SQL queries"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "PATH-TRAVERSAL",
+              "name": "PathTraversal",
+              "shortDescription": {
+                "text": "Path traversal via user-controlled filename in storage operations"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "AUTHZ-BYPASS",
+              "name": "AuthorizationBypass",
+              "shortDescription": {
+                "text": "Authorization bypass through tool file validation exemption"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/863.html"
+            },
+            {
+              "id": "SENSITIVE-DATA",
+              "name": "SensitiveDataExposure",
+              "shortDescription": {
+                "text": "Sensitive credentials stored in Redis without encryption"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/312.html"
+            },
+            {
+              "id": "WEAK-HASH",
+              "name": "WeakHashAlgorithm",
+              "shortDescription": {
+                "text": "Use of MD5 for file integrity checksum"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/328.html"
+            },
+            {
+              "id": "PERM-BYPASS",
+              "name": "PermissionBypass",
+              "shortDescription": {
+                "text": "Permission check fallback grants access on failure"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/280.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SSRF",
+          "level": "error",
+          "message": {
+            "text": "The _build_from_remote_url function accepts a user-supplied URL from the mapping payload (mapping.get('url') or mapping.get('remote_url')) and passes it to get_remote_file_info(), which issues an HTTP HEAD request via ssrf_proxy.head(). While an SSRF proxy is used, the URL itself is not validated against allowlists or scheme restrictions before being passed. If the ssrf_proxy configuration is misconfigured or bypassed, an attacker could probe internal network services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/factories/file_factory/builders.py"
+                },
+                "region": {
+                  "startLine": 1394,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "UNRESTRICTED-UPLOAD",
+          "level": "error",
+          "message": {
+            "text": "The PluginUploadFileApi.post endpoint accepts any file uploaded by a plugin with signature verification, but does not enforce an allowlist of permitted MIME types or file extensions. The file.mimetype is taken directly from the client-provided Content-Type header without server-side validation. An attacker who compromises the signing mechanism (or a malicious plugin) could upload executable files (e.g., .html, .svg with embedded scripts, .exe) that may be served to other users."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/controllers/files/upload.py"
+                },
+                "region": {
+                  "startLine": 909,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "In volume_permissions.py, the _get_table_permissions method constructs a SQL query using f-string interpolation with the table_name variable: 'SELECT COUNT(*) FROM {table_name} LIMIT 1'. The table_name is derived from user-controlled dataset_id input. Although the dataset_id goes through a prefix check, no proper SQL parameterization or escaping is applied, enabling SQL injection if an attacker can control the dataset_id value."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/clickzetta_volume/volume_permissions.py"
+                },
+                "region": {
+                  "startLine": 2907,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "In volume_permissions.py, the _get_external_volume_permissions method uses f-string interpolation to build SQL: 'SHOW GRANTS ON VOLUME {volume_name}'. The volume_name comes from configuration but could be influenced by user input in multi-tenant scenarios. No parameterization or escaping is applied."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/clickzetta_volume/volume_permissions.py"
+                },
+                "region": {
+                  "startLine": 2995,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.7
+          }
+        },
+        {
+          "ruleId": "SQLI",
+          "level": "error",
+          "message": {
+            "text": "In clickzetta_volume_storage.py, the _ensure_table_volume_exists method constructs SQL using f-string interpolation with table_name derived from dataset_id: 'SHOW TABLES LIKE '{table_name}'' and 'CREATE TABLE {table_name} ...'. The dataset_id is extracted from user-supplied file paths without proper sanitization, allowing SQL injection."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/clickzetta_volume/clickzetta_volume_storage.py"
+                },
+                "region": {
+                  "startLine": 4080,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.85
+          }
+        },
+        {
+          "ruleId": "PATH-TRAVERSAL",
+          "level": "warning",
+          "message": {
+            "text": "Storage backend implementations (OpenDALStorage, AliyunOssStorage, AwsS3Storage, etc.) accept filename parameters directly from callers without path normalization or traversal prevention. While filenames are typically generated server-side, if any caller passes user-controlled input, an attacker could use path traversal sequences (e.g., '../../etc/passwd') to read or overwrite arbitrary files in the storage backend. The _contains_path_traversal check exists only in the ClickZetta permission manager and is not applied universally."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/base_storage.py"
+                },
+                "region": {
+                  "startLine": 2328,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.6
+          }
+        },
+        {
+          "ruleId": "AUTHZ-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "In validation.py, the is_file_valid_with_config function unconditionally returns True for any file with transfer_method == FileTransferMethod.TOOL_FILE, bypassing all file type and upload method restrictions. A malicious plugin or compromised tool could upload arbitrary file types by marking them as TOOL_FILE, circumventing the user-configured upload restrictions intended to limit file types."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/factories/file_factory/validation.py"
+                },
+                "region": {
+                  "startLine": 1862,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.75
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-DATA",
+          "level": "warning",
+          "message": {
+            "text": "In azure_blob_storage.py, SAS tokens are stored in Redis with plaintext key format 'azure_blob_sas_token_{account_name}_{account_key}', which embeds the account_key directly into the Redis cache key. This exposes the secret key in Redis key listings and monitoring tools. The SAS token value is also stored unencrypted in Redis."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/azure_blob_storage.py"
+                },
+                "region": {
+                  "startLine": 2154,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.8
+          }
+        },
+        {
+          "ruleId": "PERM-BYPASS",
+          "level": "warning",
+          "message": {
+            "text": "In volume_permissions.py, the _get_external_volume_permissions method has a fallback path (lines 3056-3069) that grants both read and write permissions when the primary permission check fails with an exception. This 'fail-open' pattern means any transient error in the permission system results in full access being granted to the external volume, violating the principle of fail-safe defaults."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/clickzetta_volume/volume_permissions.py"
+                },
+                "region": {
+                  "startLine": 3064,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        },
+        {
+          "ruleId": "WEAK-HASH",
+          "level": "note",
+          "message": {
+            "text": "In file_lifecycle.py, the _calculate_checksum method uses MD5 (hashlib.md5) for file integrity verification. MD5 is cryptographically broken and susceptible to collision attacks. An attacker could craft two different files with the same MD5 checksum, undermining the integrity guarantees of the lifecycle management system."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api/extensions/storage/clickzetta_volume/file_lifecycle.py"
+                },
+                "region": {
+                  "startLine": 3806,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "confidence": 0.9
+          }
+        }
+      ]
+    }
+  ]
+}
