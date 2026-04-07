@@ -14,26 +14,27 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 
 ```
 parsentry model <repo>              →  threat model prompt  →  pipe to agent
-parsentry scan model.json <repo>    →  per-surface prompts  →  pipe to agent (parallel)
-parsentry merge results/            →  merged SARIF report
+parsentry scan model.json <repo>    →  per-surface prompts + orchestrator prompt
+parsentry merge results/            →  merged SARIF report (with baseline tracking)
 ```
 
 1. **Threat Model** — Collect repo metadata, generate a prompt for attack surface enumeration
-2. **Scan** — Read source code for each surface, generate focused analysis prompts
-3. **Merge** — Combine per-surface SARIF results into a single report
+2. **Scan** — Read source code for each surface, generate focused analysis prompts + an orchestrator prompt for single-process parallel execution
+3. **Merge** — Combine per-surface SARIF results into a single report with baseline comparison and triage preservation
 
 ```bash
 # Step 1: Generate threat model
 parsentry model owner/repo | claude -p > model.json
 
-# Step 2: Generate per-surface prompts
+# Step 2: Generate prompts
 parsentry scan model.json owner/repo --output-dir results/
 
-# Step 3: Run in parallel with any CLI agent
-ls results/*.prompt.md | parallel -j10 'claude -p "$(cat {})"'
+# Step 3: Run analysis (single-process parallel via orchestrator)
+claude -p "$(cat results/*/orchestrator.prompt.md)"
 
-# Step 4: Merge results
-parsentry merge results/ -o results/merged.sarif.json
+# Step 4: Merge results (with optional baseline for triage tracking)
+parsentry merge results/*/ -o results/merged.sarif.json
+parsentry merge results/*/ --baseline prev.sarif.json -o results/merged.sarif.json
 ```
 
 ### Prerequisites
@@ -65,12 +66,13 @@ cargo install parsentry
 # Scan a GitHub repo
 parsentry model owner/repo | claude -p > model.json
 parsentry scan model.json owner/repo --output-dir results/
-ls results/*.prompt.md | parallel 'claude -p "$(cat {})"'
-parsentry merge results/ -o results/merged.sarif.json
+claude -p "$(cat results/*/orchestrator.prompt.md)"
+parsentry merge results/*/ -o merged.sarif.json
 
 # Scan a local project
 parsentry model . | claude -p > model.json
 parsentry scan model.json . --output-dir results/
+claude -p "$(cat results/*/orchestrator.prompt.md)"
 ```
 
 ### Command Line Options
@@ -90,19 +92,20 @@ Commands:
 
 ```
 Phase 1: parsentry model   →  repo metadata  →  threat model prompt (stdout)
-Phase 2: parsentry scan    →  threat model + source code  →  prompt files (output-dir)
-Phase 3: user orchestrates →  prompt files  →  CLI agent  →  SARIF results
+Phase 2: parsentry scan    →  threat model + source code  →  prompt files + orchestrator
+Phase 3: claude -p         →  orchestrator dispatches subagents in parallel  →  SARIF files
+Phase 4: parsentry merge   →  SARIF files + baseline  →  merged report (with triage state)
 ```
 
 | Crate | Role |
 |-------|------|
 | `parsentry-core` | Language, RepoMetadata, ThreatModel, AttackSurface types |
 | `parsentry-cache` | Content-addressable file cache |
-| `parsentry-reports` | SARIF/Markdown report generation |
+| `parsentry-reports` | SARIF merge with baseline comparison and triage preservation |
 
 ### Example Reports
 
-Each report contains a `threat-model.json` and per-surface `SURFACE-*.prompt.md` files.
+Each report contains a `threat-model.json`, per-surface `SURFACE-*.prompt.md` files, and an `orchestrator.prompt.md`.
 
 | Repository | Type | Files | Surfaces |
 |-----------|------|-------|----------|
