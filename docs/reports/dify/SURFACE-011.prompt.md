@@ -1,14 +1,14 @@
 You are a security auditor. Read the source files listed in Locations and analyze them for vulnerabilities.
 
-## Surface Under Analysis
+Surface Under Analysis
 
-- **ID**: SURFACE-011
-- **Kind**: endpoint
-- **Identifier**: GET/POST/PUT/PATCH/DELETE /triggers/webhook/<webhook_id>
-- **Description**: Webhook trigger endpoint accepting all HTTP methods without authentication by design. Attacker can invoke arbitrary workflows by guessing or enumerating webhook IDs
-- **Locations**: api/controllers/trigger/webhook.py
+- ID: SURFACE-011
+- Kind: endpoint
+- Identifier: GET/POST/PUT/PATCH/DELETE /triggers/webhook/<webhook_id>
+- Description: Webhook trigger endpoint accepting all HTTP methods without authentication by design. Attacker can invoke arbitrary workflows by guessing or enumerating webhook IDs
+- Locations: api/controllers/trigger/webhook.py
 
-## Output Instructions
+Output Instructions
 
 Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.
 For each finding, provide:
@@ -17,5 +17,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/dify/SURFACE-011.sarif.json
+Write the SARIF JSON output to: docs/reports/dify/SURFACE-011.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.

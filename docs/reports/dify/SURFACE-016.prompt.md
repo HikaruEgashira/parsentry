@@ -1,14 +1,14 @@
 You are a security auditor. Read the source files listed in Locations and analyze them for vulnerabilities.
 
-## Surface Under Analysis
+Surface Under Analysis
 
-- **ID**: SURFACE-016
-- **Kind**: external_call
-- **Identifier**: Website Crawl Provider (HTTP fetching of user-supplied URLs)
-- **Description**: Fetches content from user-supplied URLs for knowledge base ingestion. Primary SSRF vector - must validate against internal network access, cloud metadata endpoints, and URL scheme restrictions
-- **Locations**: api/core/datasource/website_crawl/website_crawl_provider.py, api/core/datasource/website_crawl/website_crawl_plugin.py
+- ID: SURFACE-016
+- Kind: external_call
+- Identifier: Website Crawl Provider (HTTP fetching of user-supplied URLs)
+- Description: Fetches content from user-supplied URLs for knowledge base ingestion. Primary SSRF vector - must validate against internal network access, cloud metadata endpoints, and URL scheme restrictions
+- Locations: api/core/datasource/website_crawl/website_crawl_provider.py, api/core/datasource/website_crawl/website_crawl_plugin.py
 
-## Output Instructions
+Output Instructions
 
 Read each file in Locations using the Read tool, then output valid SARIF v2.1.0 JSON.
 For each finding, provide:
@@ -17,5 +17,5 @@ For each finding, provide:
 - confidence: 0.0-1.0
 
 
-Write the SARIF JSON output to: /Users/hikae/ghq/github.com/HikaruEgashira/parsentry/docs/reports/dify/SURFACE-016.sarif.json
+Write the SARIF JSON output to: docs/reports/dify/SURFACE-016.sarif.json
 Write ONLY valid JSON. No markdown, no code fences, no explanation.
