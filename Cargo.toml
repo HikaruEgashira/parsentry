@@ -25,9 +25,7 @@ thiserror.workspace = true
 log = "0.4"
 env_logger = "0.11"
 anyhow.workspace = true
-async-trait.workspace = true
 dotenvy = "0.15"
-futures = { version = "0.3", features = ["thread-pool"] }
 indicatif = "0.17"
 terminal_size = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
@@ -38,6 +36,7 @@ octocrab = "0.41"
 reqwest = { version = "0.12", features = ["json"] }
 urlencoding = "2.1"
 sha2 = "0.10"
+atty = "0.2"
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }

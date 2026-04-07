@@ -4,7 +4,7 @@
 //! source code from the surface's locations, so that surfaces can be
 //! independently dispatched to CLI agents and cached by content hash.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use parsentry_core::{AttackSurface, FileDiscovery, RepoMetadata, ThreatModel};
 use sha2::{Digest, Sha256};
@@ -21,8 +21,6 @@ pub struct SurfacePrompt {
     pub prompt: String,
     /// SHA-256 hex digest of resolved source contents, used as a cache key.
     pub cache_key: String,
-    /// File path where the agent should write its output.
-    pub output_path: PathBuf,
 }
 
 /// Resolved source file: relative path + contents.
@@ -88,14 +86,10 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
 ///
 /// Returns `None` when no readable source files overlap with the surface's
 /// `locations`.
-///
-/// `output_dir` is the directory where the agent should write its SARIF output.
-/// The output file will be named `{surface_id}.sarif.json`.
 pub fn build_surface_prompt(
     surface: &AttackSurface,
     repo_metadata: &RepoMetadata,
     root_dir: &Path,
-    output_dir: &Path,
 ) -> Option<SurfacePrompt> {
     let sources = resolve_source_files(surface, root_dir);
 
@@ -104,7 +98,6 @@ pub fn build_surface_prompt(
     }
 
     let repo_context = repo_metadata.to_prompt_context();
-    let output_path = output_dir.join(format!("{}.sarif.json", surface.id));
 
     // Cache key: SHA-256 of concatenated (relative_path + "\0" + file_contents)
     let mut cache_input = String::new();
@@ -152,21 +145,16 @@ pub fn build_surface_prompt(
     }
 
     prompt.push_str("## Output Instructions\n\n");
+    prompt.push_str("Output valid SARIF v2.1.0 JSON.\n");
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- rule_id: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
     prompt.push_str("- level: error/warning/note\n");
-    prompt.push_str("- confidence: 0.0-1.0\n\n");
-    prompt.push_str(&format!(
-        "Write the complete SARIF v2.1.0 JSON output to the file: {}\n",
-        output_path.display()
-    ));
-    prompt.push_str("Do NOT output the SARIF to stdout. Write it to the specified file only.\n");
+    prompt.push_str("- confidence: 0.0-1.0\n");
 
     Some(SurfacePrompt {
         surface_id: surface.id.clone(),
         prompt,
         cache_key,
-        output_path,
     })
 }
 
@@ -177,12 +165,11 @@ pub fn build_all_surface_prompts(
     threat_model: &ThreatModel,
     repo_metadata: &RepoMetadata,
     root_dir: &Path,
-    output_dir: &Path,
 ) -> Vec<SurfacePrompt> {
     threat_model
         .surfaces
         .iter()
-        .filter_map(|s| build_surface_prompt(s, repo_metadata, root_dir, output_dir))
+        .filter_map(|s| build_surface_prompt(s, repo_metadata, root_dir))
         .collect()
 }
 
@@ -224,22 +211,15 @@ mod tests {
     fn returns_none_when_no_files_exist() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let surface = make_surface("S-1", vec!["src/nonexistent.py"]);
         let meta = make_metadata(root);
-
-        assert!(build_surface_prompt(&surface, &meta, root, &out).is_none());
+        assert!(build_surface_prompt(&surface, &meta, root).is_none());
     }
 
     #[test]
     fn builds_prompt_with_file_contents() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
         fs::write(src_dir.join("auth.py"), "password = input()\n").unwrap();
@@ -247,14 +227,11 @@ mod tests {
         let surface = make_surface("S-1", vec!["src/auth.py"]);
         let meta = make_metadata(root);
 
-        let sp = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        let sp = build_surface_prompt(&surface, &meta, root).unwrap();
         assert_eq!(sp.surface_id, "S-1");
-        assert!(sp.prompt.contains("S-1"));
         assert!(sp.prompt.contains("password = input()"));
         assert!(sp.prompt.contains("src/auth.py"));
-        assert!(sp.prompt.contains("Write the complete SARIF"));
-        assert!(sp.prompt.contains("S-1.sarif.json"));
-        assert_eq!(sp.output_path, out.join("S-1.sarif.json"));
+        assert!(sp.prompt.contains("SARIF"));
         assert_eq!(sp.cache_key.len(), 64);
     }
 
@@ -262,9 +239,6 @@ mod tests {
     fn resolves_directory_locations() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
         fs::write(src_dir.join("app.py"), "import os\nos.system(cmd)\n").unwrap();
@@ -273,7 +247,7 @@ mod tests {
         let surface = make_surface("S-1", vec!["src"]);
         let meta = make_metadata(root);
 
-        let sp = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        let sp = build_surface_prompt(&surface, &meta, root).unwrap();
         assert!(sp.prompt.contains("os.system(cmd)"));
         assert!(sp.prompt.contains("def helper(): pass"));
     }
@@ -282,28 +256,19 @@ mod tests {
     fn skips_large_files() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
-        // Create a file > 50KB
-        let large_content = "x".repeat(60 * 1024);
-        fs::write(src_dir.join("big.py"), &large_content).unwrap();
+        fs::write(src_dir.join("big.py"), &"x".repeat(60 * 1024)).unwrap();
 
         let surface = make_surface("S-1", vec!["src/big.py"]);
         let meta = make_metadata(root);
-
-        assert!(build_surface_prompt(&surface, &meta, root, &out).is_none());
+        assert!(build_surface_prompt(&surface, &meta, root).is_none());
     }
 
     #[test]
     fn cache_key_deterministic() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
         fs::write(src_dir.join("app.py"), "os.system(cmd)\n").unwrap();
@@ -311,8 +276,8 @@ mod tests {
         let surface = make_surface("S-1", vec!["src/app.py"]);
         let meta = make_metadata(root);
 
-        let sp1 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
-        let sp2 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        let sp1 = build_surface_prompt(&surface, &meta, root).unwrap();
+        let sp2 = build_surface_prompt(&surface, &meta, root).unwrap();
         assert_eq!(sp1.cache_key, sp2.cache_key);
     }
 
@@ -320,21 +285,16 @@ mod tests {
     fn cache_key_changes_with_content() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
         fs::write(src_dir.join("app.py"), "version_1\n").unwrap();
 
         let surface = make_surface("S-1", vec!["src/app.py"]);
         let meta = make_metadata(root);
-
-        let sp1 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
+        let sp1 = build_surface_prompt(&surface, &meta, root).unwrap();
 
         fs::write(src_dir.join("app.py"), "version_2\n").unwrap();
-        let sp2 = build_surface_prompt(&surface, &meta, root, &out).unwrap();
-
+        let sp2 = build_surface_prompt(&surface, &meta, root).unwrap();
         assert_ne!(sp1.cache_key, sp2.cache_key);
     }
 
@@ -342,19 +302,14 @@ mod tests {
     fn deduplicates_overlapping_locations() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
-        let out = root.join("out");
-        fs::create_dir_all(&out).unwrap();
-
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
         fs::write(src_dir.join("app.py"), "eval(x)\n").unwrap();
 
-        // Both locations resolve to the same file
         let surface = make_surface("S-1", vec!["src/app.py", "src/app.py"]);
         let meta = make_metadata(root);
 
-        let sp = build_surface_prompt(&surface, &meta, root, &out).unwrap();
-        let count = sp.prompt.matches("eval(x)").count();
-        assert_eq!(count, 1);
+        let sp = build_surface_prompt(&surface, &meta, root).unwrap();
+        assert_eq!(sp.prompt.matches("eval(x)").count(), 1);
     }
 }
