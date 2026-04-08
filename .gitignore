@@ -32,3 +32,14 @@ analysis_result.json
 # Mutation testing output
 mutants.out/
 mutants.out.old/
+
+# Agent skill directories (npx skills add)
+.agents/
+.claude/
+.goose/
+.kiro/
+.openhands/
+.pi/
+.windsurf/
+skills/
+skills-lock.json
