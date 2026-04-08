@@ -57,13 +57,45 @@ Each agent prompt — pass the prompt.md content verbatim. It already contains:
 - Instructions to read source files and output SARIF v2.1.0
 - Output path for result.sarif.json
 
-### Phase 3: Generate Report
+### Phase 3: Merge & Report
 
 ```bash
+parsentry merge <TARGET>
 parsentry generate <TARGET>
 ```
 
 Open the PDF and summarize findings.
+
+### Phase 4: Triage (optional — run when user requests triage/patch/fix)
+
+1. Read the per-surface `result.sarif.json` files under the reports directory.
+2. Create a feature branch: `git checkout -b fix/<descriptive-name>`
+3. Dispatch **one Agent per surface in parallel**. Each agent receives:
+
+```
+You are triaging security findings for one attack surface. Follow these steps for EACH finding in the list.
+
+## Surface: {surface_id}
+## Findings
+{for each finding in this surface's result.sarif.json:}
+- Rule: {rule_id}, File: {file_path}:{line}, Severity: {level}
+  Description: {description}
+
+## Per-finding workflow
+For each finding:
+1. Classify — Read the source file at the reported location. Based on the actual code:
+   - TP: Exploitable or clearly unsafe code → proceed to Patch
+   - FP: Built-in protection, operator-controlled input, by-design, or duplicate → skip
+   - Low Risk: Theoretically possible but practically unexploitable → skip
+2. Patch (TP only) — Apply a minimal patch. Do NOT modify tests or unrelated code.
+3. Verify — After all patches for this surface, run the project quality gate. If it fails, fix and re-run.
+
+## Output
+Return a table:
+| Rule | File | Classification | Reason / Patch |
+```
+
+4. Collect results from all surface agents. Present a unified summary table.
 
 ## Error Handling
 
