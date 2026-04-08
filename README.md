@@ -8,7 +8,7 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 
 </div>
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/parsentry)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/parsentry) | [日本語](README.ja.md)
 
 ### Usage
 
