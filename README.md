@@ -2,7 +2,7 @@
 
   <img width="250" src="./logo.png" alt="Parsentry Logo">
 
-**Security prompt orchestrator for CLI agents.**
+**Security Scan orchestrator for AI Agents.**
 
 Parsentry analyzes repository structure, enumerates attack surfaces, and generates per-surface analysis prompts. Pipe them to any CLI agent for parallel security analysis.
 
@@ -17,10 +17,9 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 parsentry model owner/repo | claude -p
 parsentry scan owner/repo | claude -p
 
-# Codex CLI (local target example)
-CACHE="${PARSENTRY_CACHE_DIR:-$HOME/Library/Caches/parsentry}"
-parsentry model . | codex -a never exec -C . -s workspace-write --add-dir "$CACHE" -
-parsentry scan . | codex -a never exec -C . -s workspace-write --add-dir "$CACHE" -
+# Codex CLI
+parsentry model . | codex -
+parsentry scan . | codex -
 ```
 
 That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to a CLI agent with subagent support and it dispatches parallel workers automatically. Tested with Claude Code and Codex CLI.
@@ -56,7 +55,7 @@ Install the orchestrator skill to run scans directly inside Claude Code without 
 npx skills add HikaruEgashira/parsentry
 ```
 
-Once installed, just ask Claude Code to scan a repository — the skill dispatches parallel subagents for each attack surface automatically.
+Once installed, just ask Claude Code to scan a repository — the skill dispatches scan process automatically.
 
 ### Commands
 
@@ -65,13 +64,6 @@ parsentry model [TARGET]    Generate threat model prompt (default: .)
 parsentry scan  [TARGET]    Generate analysis prompts + orchestrator (default: .)
 parsentry log   [TARGET]    Monitor scan progress
 ```
-
-### Architecture
-
-| Crate | Role |
-|-------|------|
-| `parsentry-core` | Language, RepoMetadata, ThreatModel, AttackSurface types |
-| `parsentry-reports` | SARIF/Markdown report generation |
 
 ### Example Reports
 

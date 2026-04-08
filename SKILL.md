@@ -10,7 +10,7 @@ description: >
 
 # Parsentry Scan Orchestrator
 
-Act as the orchestrator for parsentry security scans. Dispatch subagents via Agent tool instead of piping to `claude -p`.
+Act as the orchestrator for parsentry security scans. Dispatch subagents via Agent tool.
 
 ## Workflow
 
@@ -26,7 +26,7 @@ Capture stdout into a variable. The prompt contains:
 - Output path: `~/Library/Caches/parsentry/<owner>__<repo>/model.json`
 - JSON schema for ThreatModel
 
-Dispatch one Agent with `model: "sonnet"`:
+Dispatch one Agent
 
 ```
 Prompt: $MODEL_PROMPT
@@ -51,7 +51,6 @@ Otherwise, scan generates `SURFACE-*/prompt.md` files under the reports director
 
 1. List all `prompt.md` files that have no corresponding `result.sarif.json`
 2. Dispatch **all agents in parallel** (single message with multiple Agent tool calls)
-3. Use `model: "sonnet"` for each subagent
 
 Each agent prompt — pass the prompt.md content verbatim. It already contains:
 - Surface metadata (ID, kind, identifier, locations)
@@ -65,7 +64,7 @@ cargo run -- merge <TARGET>
 cargo run -- generate <TARGET>
 ```
 
-Open the PDF and summarize findings with `say`.
+Open the PDF and summarize findings.
 
 ## Error Handling
 
