@@ -76,9 +76,8 @@ jobs:
         if: steps.diff.outputs.skip != 'true'
         timeout-minutes: 20
         run: |
-          parsentry . \
-            --diff-base origin/${{ github.base_ref }} \
-            --output-dir reports
+          parsentry scan . \
+            --diff-base origin/${{ github.base_ref }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 

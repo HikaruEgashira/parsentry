@@ -93,11 +93,6 @@ path = "tests/external_benchmark_integration_test.rs"
 required-features = ["benchmark"]
 
 [[test]]
-name = "par_classification_accuracy_test"
-path = "tests/par_classification_accuracy_test.rs"
-required-features = ["benchmark"]
-
-[[test]]
 name = "prompt_slo_test"
 path = "tests/prompt_slo_test.rs"
 required-features = ["benchmark"]
