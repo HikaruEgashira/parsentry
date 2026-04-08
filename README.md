@@ -21,11 +21,19 @@ parsentry scan owner/repo | claude -p
 parsentry model owner/repo | codex -
 parsentry scan owner/repo | codex -
 
+# OpenCode
+parsentry model owner/repo | opencode run --dir owner/repo
+parsentry scan owner/repo | opencode run --dir owner/repo
+
+# Crush
+parsentry model owner/repo | crush run -c owner/repo
+parsentry scan owner/repo | crush run -c owner/repo
+
 # Monitoring Agent Sessions
 parsentry log owner/repo
 ```
 
-That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to a CLI agent with subagent support and it dispatches parallel workers automatically. Tested with Claude Code and Codex CLI.
+That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to a CLI agent with subagent support and it dispatches parallel workers automatically. Tested with Claude Code, Codex CLI, OpenCode, and Crush.
 
 ### How it works
 
