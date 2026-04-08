@@ -1,79 +1,134 @@
 # 解析パイプライン
 
-Parsentry の解析は3つのフェーズで構成されます。
-
-## フェーズ 1: パターンマッチング
-
-ソースコードに対してセキュリティパターンを適用し、解析対象を絞り込みます。
-
-### 目的
-
-- 大規模コードベースから関連ファイルを効率的に抽出
-- LLM 解析のコストと時間を最適化
-- PAR 分類に基づくリスクスコアリング
-
-### PAR パターン
-
-各パターンは PAR のいずれかに分類されます：
-
-| 分類 | 検出対象 | 例 |
-|------|----------|-----|
-| Principal | データ入力点 | リクエストハンドラ、ファイル読み取り |
-| Action | 処理・検証 | サニタイズ関数、暗号化処理 |
-| Resource | 出力・操作対象 | DB クエリ、コマンド実行 |
-
-### リスクスコア
-
-パターンマッチの結果にリスクスコア（1-10）を付与し、優先度を決定します。
-
-## フェーズ 2: コンテキスト構築
-
-マッチした箇所の周辺情報を収集し、LLM が正確に解析できるコンテキストを構築します。
-
-### 収集する情報
-
-- **コード構造**: 関数定義、変数宣言、制御フロー
-- **データフロー**: 変数の定義元と使用先
-- **依存関係**: インポート、関数呼び出しグラフ
-
-### PAR に基づくコンテキスト収集
-
-パターンの PAR 分類に応じて、適切な方向にコンテキストを拡張します：
-
-- **Principal**: 前方追跡（データがどこに流れるか）
-- **Action**: 双方向追跡（入力と出力の両方）
-- **Resource**: 後方追跡（データがどこから来たか）
-
-## フェーズ 3: LLM 解析
-
-構築したコンテキストを LLM に渡し、脆弱性を検出・評価します。
-
-### LLM の役割
-
-- パターンマッチでは検出できない複雑な脆弱性の発見
-- ビジネスロジックの欠陥の特定
-- 悪用可能性の評価と PoC 生成
-- 修復提案の作成
-
-### 出力
-
-LLM は構造化された形式で以下を出力します：
-
-- 脆弱性の説明と分類
-- 信頼度スコア
-- 概念実証コード
-- 該当コードの参照
+Parsentry は CLI エージェント向けのセキュリティプロンプトオーケストレータです。LLM を内部で呼び出さず、プロンプトを stdout に出力する方式を採用しています。外部の CLI エージェント（Claude Code、Codex CLI、OpenCode、Crush 等）にパイプして実行します。
 
 ## パイプラインの流れ
 
 ```
-ソースコード
-    ↓
-[パターンマッチング] → リスクスコア付きファイルリスト
-    ↓
-[コンテキスト構築] → PAR 分類に基づく関連コード収集
-    ↓
-[LLM 解析] → 脆弱性レポート
+parsentry model [TARGET]
+    ↓ stdout: 脅威モデルプロンプト
+    ↓ パイプ → 外部エージェントが model.json をキャッシュに書き込み
+
+parsentry scan [TARGET]
+    ↓ model.json を読み込み
+    ↓ 各 AttackSurface のソースコードを収集
+    ↓ reports/<surface_id>/prompt.md を生成
+    ↓ stdout: オーケストレータプロンプト
+    ↓ パイプ → 外部エージェントが並列サブエージェントをディスパッチ
+    ↓            各サブエージェントが result.sarif.json を書き込み
+
+parsentry generate [TARGET]
+    ↓ 全 result.sarif.json をマージ
+    ↓ PDF レポートを生成
 ```
 
-各フェーズは独立しており、パターン定義やコンテキスト収集戦略を変更しても、パイプライン全体への影響を最小限に抑えられます。
+## フェーズ 1: Model — 脅威モデル生成
+
+```
+parsentry model owner/repo | claude -p
+```
+
+### 処理内容
+
+`RepoMetadata` を収集し、脅威モデルプロンプトを stdout に出力します。
+
+### RepoMetadata の構成
+
+| フィールド | 内容 |
+|-----------|------|
+| `directory_tree` | リポジトリのディレクトリ構造 |
+| `languages` | 検出された言語とファイル数 |
+| `dependency_manifests` | 依存関係マニフェスト（package.json 等） |
+| `entry_points` | エントリポイントファイル |
+| `total_files` | 総ファイル数 |
+
+### 外部エージェントの役割
+
+プロンプトを受け取ったエージェントは `ThreatModel`（`AttackSurface` のリスト）を JSON でキャッシュに書き込みます。
+
+### ThreatModel の構成
+
+| フィールド | 内容 |
+|-----------|------|
+| `repository` | リポジトリ識別子 |
+| `app_type` | アプリケーション種別（web_application, library 等） |
+| `surfaces` | AttackSurface の配列 |
+
+### AttackSurface の構成
+
+| フィールド | 内容 |
+|-----------|------|
+| `id` | 一意識別子（SURFACE-001 等） |
+| `kind` | 自由形式の種別（endpoint, db_table, public_api 等） |
+| `identifier` | 人間可読な識別子 |
+| `locations` | 関連ファイルパス |
+| `description` | 分析が必要な理由 |
+
+## フェーズ 2: Scan — 攻撃面分析
+
+```
+parsentry scan owner/repo | claude -p
+```
+
+### 処理内容
+
+1. キャッシュから `model.json`（ThreatModel）を読み込む
+2. 各 AttackSurface の `locations` からソースコードを収集
+3. 各 surface に `SurfacePrompt`（prompt.md）を生成
+4. オーケストレータプロンプトを stdout に出力
+
+### オプション
+
+| フラグ | 説明 |
+|--------|------|
+| `--diff-base <REF>` | 差分ベースの Git ref（変更ファイルのみを対象） |
+| `--filter-lang <LANGS>` | 言語フィルタ（カンマ区切り） |
+
+### キャッシュの仕組み
+
+各 surface は `cache_key`（ソースコードの SHA-256 ハッシュ）で管理されます。同じ内容の surface は再分析をスキップします。
+
+### 外部エージェントの役割
+
+オーケストレータプロンプトを受け取ったエージェントは、未完了の surface ごとに並列サブエージェントをディスパッチします。各サブエージェントは `prompt.md` を読み込み、SARIF v2.1.0 形式で `result.sarif.json` に結果を書き込みます。
+
+## フェーズ 3: Generate — レポート生成
+
+```
+parsentry generate owner/repo
+```
+
+### 処理内容
+
+1. 全 surface の `result.sarif.json` をマージ
+2. PDF レポートを生成（デフォルト出力先: キャッシュディレクトリ内）
+
+### オプション
+
+| フラグ | 説明 |
+|--------|------|
+| `-o, --output <PATH>` | PDF の出力パス |
+
+## キャッシュディレクトリ構造
+
+```
+~/Library/Caches/parsentry/<target>/
+├── model.json                              — ThreatModel
+├── reports/
+│   ├── SURFACE-001/
+│   │   ├── prompt.md                       — 分析プロンプト
+│   │   └── result.sarif.json               — SARIF v2.1.0 結果
+│   └── SURFACE-002/
+│       ├── prompt.md
+│       └── result.sarif.json
+```
+
+キャッシュパスは `PARSENTRY_CACHE_DIR` 環境変数で上書き可能です。
+
+## モニタリング
+
+```
+parsentry log owner/repo -f
+```
+
+スキャンの進捗をリアルタイムで表示します（`docker compose logs -f` と同様のインターフェース）。

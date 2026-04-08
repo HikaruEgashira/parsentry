@@ -1,98 +1,142 @@
 # 出力形式
 
-Parsentry は LLM の解析結果を構造化された形式で出力します。
+Parsentry はプロンプトを stdout に出力し、外部エージェントが分析結果を SARIF v2.1.0 形式でキャッシュに書き込みます。
 
 ## 設計思想
 
-### なぜ構造化出力か
+### なぜ SARIF か
 
-- **一貫性**: 異なる脆弱性タイプでも統一された形式
-- **自動処理**: CI/CD パイプラインや他ツールとの連携
-- **追跡可能性**: コードとの明確な紐付け
+- **標準規格**: OASIS 標準の静的解析結果交換フォーマット
+- **ツール連携**: GitHub Code Scanning、VS Code 等との統合
+- **構造化**: 脆弱性の位置、深刻度、メッセージを機械可読な形式で表現
 
-### 出力の構成要素
+### データフロー
 
-| 要素 | 目的 |
-|------|------|
-| 思考プロセス | LLM の解析過程を可視化し、判断根拠を明確化 |
-| 脆弱性説明 | 問題の本質、影響範囲、リスクを説明 |
-| 概念実証 | 悪用可能性を実証し、誤検知を削減 |
-| 信頼度 | 発見の確実性を定量化し、優先度付けを支援 |
-| コード参照 | 該当箇所を特定し、修正を容易に |
+```
+parsentry scan → prompt.md (外部エージェントへ)
+                    ↓
+外部エージェント → result.sarif.json (SARIF v2.1.0)
+                    ↓
+parsentry generate → 統合 PDF レポート
+```
 
-## 思考プロセス（Scratchpad）
+## キャッシュディレクトリ構造
 
-LLM が解析で辿った思考過程を記録します。
+```
+~/Library/Caches/parsentry/<target>/
+├── model.json                              — 脅威モデル (ThreatModel)
+├── reports/
+│   ├── SURFACE-001/
+│   │   ├── prompt.md                       — 攻撃面分析プロンプト
+│   │   └── result.sarif.json               — SARIF v2.1.0 分析結果
+│   ├── SURFACE-002/
+│   │   ├── prompt.md
+│   │   └── result.sarif.json
+│   └── ...
+```
 
-### 意図
+キャッシュパスは `PARSENTRY_CACHE_DIR` 環境変数で上書き可能です。
 
-- 「なぜこれが脆弱性なのか」の根拠を示す
-- 誤検知時のデバッグを容易に
-- 解析品質の評価基準を提供
+## model.json — ThreatModel
 
-### 典型的な内容
+外部エージェントが `parsentry model` のプロンプトに応答して書き込む JSON ファイルです。
 
-1. 入力ソースの特定
-2. データフローの追跡
-3. 検証の有無・妥当性の確認
-4. 悪用シナリオの構築
+```json
+{
+  "repository": "owner/repo",
+  "generated_at": "2026-04-09T12:00:00Z",
+  "app_type": "web_application",
+  "summary": "Web application with REST API",
+  "surfaces": [
+    {
+      "id": "SURFACE-001",
+      "kind": "endpoint",
+      "identifier": "POST /api/users",
+      "locations": ["src/routes/users.py"],
+      "description": "User creation endpoint with input handling"
+    }
+  ]
+}
+```
 
-## 信頼度スコア
+### AttackSurface フィールド
 
-脆弱性発見の確実性を数値で表現します。
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string | 一意識別子（SURFACE-NNN） |
+| `kind` | string | 自由形式の種別（endpoint, db_table, public_api, iac_resource 等） |
+| `identifier` | string | 人間可読な識別子 |
+| `locations` | string[] | 関連ファイルパス |
+| `description` | string | 分析対象の説明 |
 
-### スコアの意味
+## prompt.md — 攻撃面分析プロンプト
 
-| 範囲 | 解釈 |
-|------|------|
-| 低 | 可能性あり、追加調査が必要 |
-| 中 | 脆弱である可能性が高い |
-| 高 | 脆弱性を確認、PoC で実証済み |
+`parsentry scan` が各 AttackSurface ごとに生成する Markdown ファイルです。外部エージェントのサブエージェントが読み込みます。
 
-### スコアに影響する要因
+### 内容
 
-- コードの明確性（曖昧さがないか）
-- データフローの追跡可能性
-- 悪用の実現可能性
-- 外部要因への依存度
+1. **システムプロンプト**: セキュリティ分析者の役割定義
+2. **攻撃面メタデータ**: ID、kind、identifier、locations
+3. **ソースコード**: locations に対応するファイルの内容
+4. **出力指示**: SARIF v2.1.0 形式での結果書き込み先パス
 
-## 概念実証（PoC）
+## result.sarif.json — SARIF v2.1.0
 
-脆弱性が実際に悪用可能であることを示すコードまたは手順です。
+外部エージェントが各攻撃面の分析結果として書き込む SARIF ファイルです。
 
-### 目的
+### 基本構造
 
-- 誤検知の削減（動作する PoC は実際の脆弱性の証拠）
-- 修正確認のテストケースとして活用
-- 影響範囲の理解を支援
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "parsentry-surface-analyzer",
+          "version": "1.0.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SQL_INJECTION",
+          "level": "error",
+          "message": {
+            "text": "SQL injection vulnerability in user query"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/routes/users.py"
+                },
+                "region": {
+                  "startLine": 42
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
 
-### 良い PoC の特徴
+### 主要フィールド
 
-- 再現可能で具体的
-- 最小限のステップで悪用を実証
-- 期待される結果を明記
+| フィールド | 説明 |
+|-----------|------|
+| `ruleId` | 検出ルールの識別子（SQL_INJECTION, XSS, RCE 等） |
+| `level` | 深刻度（error, warning, note） |
+| `message.text` | 脆弱性の説明 |
+| `locations` | 該当コードの位置（ファイルパス + 行番号） |
 
-## コード参照
+## レポート生成
 
-脆弱性に関連するコード箇所を特定します。
+```
+parsentry generate owner/repo [-o report.pdf]
+```
 
-### 含まれる情報
-
-- 関数・メソッド名
-- 脆弱性との関連理由
-- 該当コード行
-
-### PAR との関連
-
-コード参照は PAR 分類と紐付けられ、脆弱性の構造（どの Principal がどの Resource に影響するか）を明確にします。
-
-## 脆弱性タイプ
-
-検出された脆弱性を分類します。主なカテゴリ：
-
-- インジェクション系（SQL、コマンド、コード）
-- アクセス制御系（認証バイパス、権限昇格）
-- データ漏洩系（情報露出、暗号化の欠如）
-- 入力検証系（パストラバーサル、XSS）
-
-分類により、修正の優先度付けや傾向分析が可能になります。
+全 surface の `result.sarif.json` をマージし、PDF レポートを生成します。内部的には `parsentry merge`（非公開コマンド）で SARIF ファイルを統合してから PDF をレンダリングします。
