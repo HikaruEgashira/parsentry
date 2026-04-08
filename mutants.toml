@@ -4,9 +4,6 @@
 timeout_multiplier = 3.0
 minimum_test_timeout = 20
 
-# CI ではin-placeが必要（一時ディレクトリコピーで循環依存エラーが出るため）
-in_place = true
-
 # Equivalent mutants (behaviorally identical, no test can distinguish)
 # - normalize_confidence_score: `score > 0` vs `>= 0` → 0*10 == 0
 # - to_prompt_context: `len > 2000` vs `>= 2000` → `&[..2000]` == full content at boundary

@@ -64,7 +64,7 @@ jobs:
         run: which cargo-mutants || cargo install cargo-mutants --locked
 
       - name: Run mutation testing on ${{ matrix.crate }}
-        run: cargo mutants -p ${{ matrix.crate }} --timeout 60 --output mutants.out --config mutants.toml -- --lib
+        run: cargo mutants -p ${{ matrix.crate }} --timeout 60 --output mutants.out --in-place --config mutants.toml -- --lib
 
       - name: Upload mutation report
         if: always()

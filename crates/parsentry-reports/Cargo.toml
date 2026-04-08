@@ -1,13 +1,13 @@
 [package]
 name = "parsentry-reports"
-version.workspace = true
+version = "0.21.1"
 edition.workspace = true
 description = "Report generation for Parsentry"
 license = "AGPL-3.0"
 repository = "https://github.com/HikaruEgashira/parsentry"
 
 [dependencies]
-parsentry-core = { path = "../parsentry-core", version = "0.21.0" }
+parsentry-core = { path = "../parsentry-core" }
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "parsentry-cache"
-version.workspace = true
+version = "0.21.1"
 edition = "2021"
 description = "Content-addressable file cache for Parsentry"
 license = "AGPL-3.0"
