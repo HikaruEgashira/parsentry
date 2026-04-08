@@ -1,6 +1,6 @@
 [package]
 name = "parsentry-core"
-version = "0.21.2"
+version = "0.21.3"
 edition.workspace = true
 description = "Core types and traits for Parsentry"
 license = "AGPL-3.0"

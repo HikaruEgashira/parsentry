@@ -1,6 +1,6 @@
 [package]
 name = "parsentry-reports"
-version = "0.21.2"
+version = "0.21.3"
 edition.workspace = true
 description = "Report generation for Parsentry"
 license = "AGPL-3.0"
