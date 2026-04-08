@@ -18,8 +18,11 @@ parsentry model owner/repo | claude -p
 parsentry scan owner/repo | claude -p
 
 # Codex CLI
-parsentry model . | codex -
-parsentry scan . | codex -
+parsentry model owner/repo | codex -
+parsentry scan owner/repo | codex -
+
+# Monitoring Agent Sessions
+parsentry log owner/repo
 ```
 
 That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to a CLI agent with subagent support and it dispatches parallel workers automatically. Tested with Claude Code and Codex CLI.
@@ -40,7 +43,7 @@ parsentry log     →  monitor scan progress in real-time
 ### Install
 
 ```bash
-# Via mise (recommended)
+# Via mise
 mise use -g github:HikaruEgashira/parsentry
 
 # Via cargo
@@ -49,21 +52,11 @@ cargo install parsentry
 
 ### Claude Code Skill
 
-Install the orchestrator skill to run scans directly inside Claude Code without spawning external processes:
-
 ```bash
 npx skills add HikaruEgashira/parsentry
 ```
 
 Once installed, just ask Claude Code to scan a repository — the skill dispatches scan process automatically.
-
-### Commands
-
-```
-parsentry model [TARGET]    Generate threat model prompt (default: .)
-parsentry scan  [TARGET]    Generate analysis prompts + orchestrator (default: .)
-parsentry log   [TARGET]    Monitor scan progress
-```
 
 ### Example Reports
 
