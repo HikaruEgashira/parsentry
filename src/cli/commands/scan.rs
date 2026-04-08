@@ -6,7 +6,7 @@ use crate::prompt::{SurfacePrompt, build_all_surface_prompts, build_orchestrator
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 
-use super::common::{cache_dir_for, locate_repository, repo_name_from_target};
+use super::common::{cache_dir_for, locate_repository, repo_name_from_target, write_stdout};
 
 /// Check if a surface has a cached SARIF result with a matching cache key.
 fn is_cached(output_dir: &Path, sp: &SurfacePrompt) -> bool {
@@ -149,7 +149,8 @@ pub async fn run_scan_command(
     std::fs::write(&orchestrator_path, &orchestrator_content)?;
     printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
 
-    println!("{}", orchestrator_content);
+    write_stdout(&format!("{}\n", orchestrator_content))?;
+
     printer.success(
         "Complete",
         &format!(

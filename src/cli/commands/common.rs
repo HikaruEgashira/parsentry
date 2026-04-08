@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::collections::HashSet;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use crate::cli::ui::StatusPrinter;
@@ -99,6 +100,20 @@ pub fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBu
         .filter(|l| !l.is_empty())
         .map(|l| root_dir.join(l.trim()))
         .collect())
+}
+
+/// Write content to stdout with an explicit flush.
+///
+/// When stdout is piped (not a TTY), Rust uses full block-buffering by default.
+/// `print!` / `println!` only flush on newlines in line-buffered mode (TTY),
+/// so downstream processes like `claude -p` may see empty stdin when the
+/// producer is slow (e.g. git clone).  This helper guarantees the bytes are
+/// delivered immediately.
+pub fn write_stdout(content: &str) -> Result<()> {
+    let mut out = io::stdout().lock();
+    out.write_all(content.as_bytes())?;
+    out.flush()?;
+    Ok(())
 }
 
 /// Build threat model prompt for Claude Code CLI.

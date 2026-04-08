@@ -1,6 +1,13 @@
 //! Re-exports from parsentry-core and extensions for the main crate.
 
+use std::io::{self, Write};
+
 pub use parsentry_core::{Language as CoreLanguage, Response, VulnType, response_json_schema};
+
+fn write_stdout(content: &str) {
+    let mut out = io::stdout().lock();
+    let _ = out.write_all(content.as_bytes()).and_then(|()| out.flush());
+}
 
 /// Extension trait for Response to add methods specific to the main parsentry crate.
 pub trait ResponseExt {
@@ -12,8 +19,10 @@ pub trait ResponseExt {
 
 impl ResponseExt for Response {
     fn print_readable(&self) {
-        println!("\n  Security Analysis Report");
-        println!("{}", "=".repeat(80));
+        let mut buf = String::new();
+        buf.push_str("\n  Security Analysis Report\n");
+        buf.push_str(&"=".repeat(80));
+        buf.push('\n');
 
         let confidence_icon = match self.confidence_score {
             90..=100 => "critical",
@@ -22,35 +31,42 @@ impl ResponseExt for Response {
             30..=49 => "low",
             _ => "info",
         };
-        println!(
-            "\n  Confidence: {} ({})",
+        buf.push_str(&format!(
+            "\n  Confidence: {} ({})\n",
             self.confidence_score, confidence_icon
-        );
+        ));
 
         if !self.vulnerability_types.is_empty() {
-            println!("\n  Vulnerability types:");
+            buf.push_str("\n  Vulnerability types:\n");
             for vuln_type in &self.vulnerability_types {
-                println!("  - {:?}", vuln_type);
+                buf.push_str(&format!("  - {:?}\n", vuln_type));
             }
         }
 
-        println!("\n  Analysis:");
-        println!("{}", "-".repeat(80));
-        println!("{}", self.analysis);
+        buf.push_str("\n  Analysis:\n");
+        buf.push_str(&"-".repeat(80));
+        buf.push('\n');
+        buf.push_str(&self.analysis);
+        buf.push('\n');
 
         if !self.poc.is_empty() {
-            println!("\n  PoC:");
-            println!("{}", "-".repeat(80));
-            println!("{}", self.poc);
+            buf.push_str("\n  PoC:\n");
+            buf.push_str(&"-".repeat(80));
+            buf.push('\n');
+            buf.push_str(&self.poc);
+            buf.push('\n');
         }
 
         if !self.scratchpad.is_empty() {
-            println!("\n  Notes:");
-            println!("{}", "-".repeat(80));
-            println!("{}", self.scratchpad);
+            buf.push_str("\n  Notes:\n");
+            buf.push_str(&"-".repeat(80));
+            buf.push('\n');
+            buf.push_str(&self.scratchpad);
+            buf.push('\n');
         }
 
-        println!();
+        buf.push('\n');
+        write_stdout(&buf);
     }
 
     fn to_markdown(&self) -> String {
