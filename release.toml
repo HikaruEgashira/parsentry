@@ -1,0 +1,3 @@
+disable-publish = true
+consolidate-commits = true
+tag-name = "v{{version}}"
