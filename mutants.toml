@@ -8,10 +8,13 @@ minimum_test_timeout = 20
 # - normalize_confidence_score: `score > 0` vs `>= 0` → 0*10 == 0
 # - to_prompt_context: `len > 2000` vs `>= 2000` → `&[..2000]` == full content at boundary
 # - is_docker_compose: CI-specific timeout issue with existing test coverage
-# - notion: External API (Notion) — cannot be tested without mocks
+# External API modules — cannot be tested without mocks
+# - notion, jira, linear: external issue tracker APIs
 exclude_re = [
     "normalize_confidence_score",
     "to_prompt_context",
     "is_docker_compose",
     "notion::",
+    "jira::",
+    "linear::",
 ]
