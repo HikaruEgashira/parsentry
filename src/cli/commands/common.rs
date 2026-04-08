@@ -72,6 +72,10 @@ pub fn locate_repository(
 
 /// Get files changed relative to a diff base ref.
 pub fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBuf>> {
+    // Reject flag-like values to prevent git argument injection
+    if diff_base.starts_with('-') {
+        anyhow::bail!("Invalid diff base ref: must not start with '-'");
+    }
     let three_dot = format!("{}...HEAD", diff_base);
     let output = std::process::Command::new("git")
         .args(["diff", "--name-only", "--diff-filter=ACMR", &three_dot])

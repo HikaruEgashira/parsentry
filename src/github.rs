@@ -42,7 +42,9 @@ fn get_verified_git_path() -> Option<String> {
     // Allow: /usr/*, /opt/*, ~/.nix-profile/*, /nix/store/*
     let is_trusted = git_path.starts_with("/usr/")
         || git_path.starts_with("/opt/")
-        || git_path.contains(".nix-profile/")
+        || dirs::home_dir()
+            .map(|home| git_path.starts_with(&format!("{}/.nix-profile/", home.display())))
+            .unwrap_or(false)
         || git_path.starts_with("/nix/store/");
 
     if !is_trusted {
@@ -53,6 +55,21 @@ fn get_verified_git_path() -> Option<String> {
     Some(git_path)
 }
 
+/// Validate that a string matches the `owner/repo` format.
+fn is_valid_repo_slug(s: &str) -> bool {
+    let parts: Vec<&str> = s.splitn(2, '/').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+    let valid_part = |p: &str| {
+        !p.is_empty()
+            && !p.starts_with('-')
+            && !p.starts_with('.')
+            && p.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+    };
+    valid_part(parts[0]) && valid_part(parts[1])
+}
+
 /// Clone a GitHub repository to the specified destination
 ///
 /// # Arguments
@@ -61,6 +78,10 @@ fn get_verified_git_path() -> Option<String> {
 pub fn clone_repo(repo: &str, dest: &Path) -> Result<()> {
     if dest.exists() {
         anyhow::bail!("Destination directory already exists");
+    }
+
+    if !is_valid_repo_slug(repo) {
+        anyhow::bail!("Invalid repository format: expected 'owner/repo', got: {}", repo);
     }
 
     let url = format!("https://github.com/{}.git", repo);

@@ -92,8 +92,13 @@ impl FileDiscovery {
         if dir.is_dir() {
             for entry in std::fs::read_dir(dir)? {
                 let entry = entry?;
+                let file_type = entry.file_type()?;
+                // Skip symlinks to prevent traversal outside repo
+                if file_type.is_symlink() {
+                    continue;
+                }
                 let path = entry.path();
-                if path.is_dir() {
+                if file_type.is_dir() {
                     self.visit_dirs(&path, cb)?;
                 } else {
                     cb(&path);

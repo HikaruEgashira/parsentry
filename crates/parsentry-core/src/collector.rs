@@ -191,6 +191,13 @@ fn build_tree_recursive(
             continue;
         }
 
+        // Skip symlinks to prevent traversal outside repo
+        if let Ok(ft) = entry.file_type() {
+            if ft.is_symlink() {
+                continue;
+            }
+        }
+
         let indent = "  ".repeat(depth);
         let path = entry.path();
 

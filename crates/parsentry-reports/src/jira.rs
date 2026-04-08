@@ -185,6 +185,11 @@ async fn fetch_existing_issues(
     let mut start = 0usize;
     let max = 100usize;
 
+    // Validate project_key format to prevent JQL injection
+    if !project_key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        anyhow::bail!("Invalid Jira project key: {}", project_key);
+    }
+
     loop {
         let jql = format!(
             r#"project = "{project_key}" AND labels = "{JIRA_LABEL}" AND statusCategory != Done ORDER BY created DESC"#
