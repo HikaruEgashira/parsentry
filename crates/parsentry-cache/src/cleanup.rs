@@ -1016,6 +1016,45 @@ mod tests {
     }
 
     #[test]
+    fn test_cleanup_by_size_partial_removal() {
+        // Kills - → + in target_removal = total_size - max_size
+        // Use non-zero max_cache_size_mb so subtraction matters
+        let temp_dir = TempDir::new().unwrap();
+        let cache_dir = temp_dir.path();
+
+        let policy = CleanupPolicy {
+            max_cache_size_mb: 1, // 1 MB limit
+            max_age_days: 90,
+            max_idle_days: 30,
+            remove_version_mismatch: true,
+        };
+
+        let manager =
+            CleanupManager::with_config(cache_dir, policy, CleanupTrigger::Manual).unwrap();
+
+        // Create entries totaling >1MB so cleanup is triggered
+        let big_val = "x".repeat(600_000);
+        let mut old_entry = make_entry("1.0.0", "ns", "old111", &big_val);
+        old_entry.metadata.last_accessed = Utc::now() - chrono::Duration::days(10);
+
+        let big_val2 = "y".repeat(600_000);
+        let new_entry = make_entry("1.0.0", "ns", "new222", &big_val2);
+
+        let dir = cache_dir.join("ns").join("ol");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("old111.json"), serde_json::to_string(&old_entry).unwrap()).unwrap();
+
+        let dir2 = cache_dir.join("ns").join("ne");
+        fs::create_dir_all(&dir2).unwrap();
+        fs::write(dir2.join("new222.json"), serde_json::to_string(&new_entry).unwrap()).unwrap();
+
+        let stats = manager.cleanup_by_size().unwrap();
+        // With - : target_removal > 0, so oldest entry removed
+        // With + : target_removal huge, both removed
+        assert_eq!(stats.removed_count, 1, "should remove only the oldest to get under limit");
+    }
+
+    #[test]
     fn test_cleanup_by_size_target_removal_subtraction() {
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();

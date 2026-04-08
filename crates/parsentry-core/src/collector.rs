@@ -515,6 +515,59 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_to_files_excludes_other_language() {
+        // Kills != → == : Other files must NOT be counted
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/a.py"), "x = 1").unwrap();
+        fs::write(root.join("README.md"), "# hello").unwrap();
+
+        let mut meta = RepoMetadata::collect(root).unwrap();
+        assert!(meta.languages.contains_key(&Language::Python));
+
+        let py_only: HashSet<PathBuf> = [root.join("src/a.py")].into_iter().collect();
+        meta.filter_to_files(&py_only);
+        assert_eq!(*meta.languages.get(&Language::Python).unwrap(), 1);
+        assert!(!meta.languages.contains_key(&Language::Other));
+    }
+
+    #[test]
+    fn test_filter_to_files_updates_counts() {
+        // Kills += → -= and += → *= : counts must accumulate correctly
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/a.py"), "x = 1").unwrap();
+        fs::write(root.join("src/b.py"), "y = 2").unwrap();
+
+        let mut meta = RepoMetadata::collect(root).unwrap();
+        assert_eq!(*meta.languages.get(&Language::Python).unwrap(), 2);
+
+        let one_file: HashSet<PathBuf> = [root.join("src/a.py")].into_iter().collect();
+        meta.filter_to_files(&one_file);
+        assert_eq!(*meta.languages.get(&Language::Python).unwrap(), 1);
+        assert_eq!(meta.total_files, 1);
+    }
+
+    #[test]
+    fn test_filter_to_files_actually_filters() {
+        // Kills filter_to_files → () : must actually modify state
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/a.py"), "x = 1").unwrap();
+        fs::write(root.join("src/b.py"), "y = 2").unwrap();
+
+        let mut meta = RepoMetadata::collect(root).unwrap();
+        assert_eq!(meta.total_files, 2);
+
+        let one: HashSet<PathBuf> = [root.join("src/a.py")].into_iter().collect();
+        meta.filter_to_files(&one);
+        assert_eq!(meta.total_files, 1);
+    }
+
+    #[test]
     fn test_build_tree_skips_dist_and_build() {
         let tmp = TempDir::new().unwrap();
         let root = tmp.path();
