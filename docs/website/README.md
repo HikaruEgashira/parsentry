@@ -1,10 +1,10 @@
 # Parsentry Website
 
-This is the documentation website for Parsentry, an AI-powered security vulnerability scanner.
+This is the documentation website for Parsentry, a security prompt orchestrator for CLI agents.
 
 ## About Parsentry
 
-Parsentry is a PAR (Principal-Action-Resource) based security scanner that combines static code analysis with LLMs to detect vulnerabilities across multiple languages including IaC. It provides comprehensive multi-language security analysis.
+Parsentry analyzes repository structure, enumerates attack surfaces, and generates per-surface analysis prompts. Pipe them to any CLI agent (Claude Code, Codex CLI, OpenCode, Crush) for parallel security analysis.
 
 ## Website Development
 

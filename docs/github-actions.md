@@ -21,24 +21,22 @@ jobs:
   scan:
     uses: HikaruEgashira/parsentry/.github/workflows/scan.yml@main
     # with:
-    #   version: 'v0.15.0'  # default: latest
-    #   model: 'gpt-5.4'  # default: gpt-5.4
+    #   version: 'v0.20.0'  # default: latest
 ```
 
 ## 入力パラメータ
 
 | パラメータ | 必須 | デフォルト | 説明 |
 |-----------|------|-----------|------|
-| `version` | No | `latest` | 使用するParsentryのバージョン (e.g., `v0.15.0`) |
-| `model` | No | `gpt-5.4` | 分析に使用するモデル |
+| `version` | No | `latest` | 使用するParsentryのバージョン (e.g., `v0.20.0`) |
 
 ## 仕組み
 
 1. GitHub Releaseからビルド済みバイナリをダウンロード
 2. `git diff --diff-filter=ACMR` でPRの差分ファイルを取得
 3. ソースコード拡張子のみをフィルタ（`.md` や `.txt` は除外）
-4. `--diff-base origin/<base-branch>` で差分ファイルのみスキャン
-5. パターンベースキャッシュ（`.parsentry/cache`）をCI間で共有
+4. `parsentry scan . --diff-base origin/<base-branch>` で差分ファイルのみスキャン
+5. キャッシュをCI間で共有
 
 ## キャッシュ
 
@@ -46,17 +44,17 @@ jobs:
 |-----------|------|------|
 | Parsentry | スキャン結果 | ベースブランチ + コミットSHA |
 
-同じパターン（`pattern_type + matched_text`）が検出されれば、ファイルやリポジトリが異なってもキャッシュヒットします。
+同じパターンが検出されれば、ファイルやリポジトリが異なってもキャッシュヒットします。
 
 ## ローカルでの差分スキャン
 
 ```bash
 # 直近コミットの差分のみスキャン
-parsentry . --diff-base HEAD~1
+parsentry scan . --diff-base HEAD~1
 
 # mainブランチとの差分
-parsentry . --diff-base origin/main
+parsentry scan . --diff-base origin/main
 
 # 特定コミットとの差分
-parsentry . --diff-base abc1234
+parsentry scan . --diff-base abc1234
 ```

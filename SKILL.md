@@ -57,10 +57,9 @@ Each agent prompt — pass the prompt.md content verbatim. It already contains:
 - Instructions to read source files and output SARIF v2.1.0
 - Output path for result.sarif.json
 
-### Phase 3: Merge & Report
+### Phase 3: Generate Report
 
 ```bash
-parsentry merge <TARGET>
 parsentry generate <TARGET>
 ```
 
