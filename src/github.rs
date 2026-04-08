@@ -67,7 +67,7 @@ fn is_valid_repo_slug(s: &str) -> bool {
             && !p.starts_with('.')
             && p.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
     };
-    valid_part(parts[0]) && valid_part(parts[1])
+    valid_part(parts[0]) && !parts[1].ends_with(".git") && valid_part(parts[1])
 }
 
 /// Clone a GitHub repository to the specified destination
