@@ -17,7 +17,7 @@ Act as the orchestrator for parsentry security scans. Dispatch subagents via Age
 ### Phase 1: Threat Model
 
 ```bash
-MODEL_PROMPT=$(cargo run -- model <TARGET> 2>/dev/null)
+MODEL_PROMPT=$(parsentry model <TARGET> 2>/dev/null)
 ```
 
 Capture stdout into a variable. The prompt contains:
@@ -36,13 +36,13 @@ The prompt already instructs the agent to write JSON to the output path via Writ
 
 **Verify** model.json was created before proceeding:
 ```bash
-test -s ~/Library/Caches/parsentry/<owner>__<repo>/model.json
+test -s "~/Library/Caches/parsentry/<owner>__<repo>/model.json"
 ```
 
 ### Phase 2: Per-Surface Analysis
 
 ```bash
-cargo run -- scan <TARGET> 2>&1
+parsentry scan <TARGET> 2>&1
 ```
 
 If output says "all N surfaces cached, no analysis needed" → skip to Phase 3.
@@ -60,8 +60,8 @@ Each agent prompt — pass the prompt.md content verbatim. It already contains:
 ### Phase 3: Merge & Report
 
 ```bash
-cargo run -- merge <TARGET>
-cargo run -- generate <TARGET>
+parsentry merge <TARGET>
+parsentry generate <TARGET>
 ```
 
 Open the PDF and summarize findings.
