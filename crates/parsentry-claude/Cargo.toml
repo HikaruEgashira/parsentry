@@ -10,5 +10,7 @@ repository = "https://github.com/HikaruEgashira/parsentry"
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
-libc = "0.2"
 dirs-next = "2.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

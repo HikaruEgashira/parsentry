@@ -293,9 +293,20 @@ fn encode_project_path(path: &Path) -> String {
     abs.replace('/', "-").replace('.', "-")
 }
 
+#[cfg(unix)]
 fn is_pid_alive(pid: u32) -> bool {
     // SAFETY: kill with signal 0 only checks process existence
     unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
+}
+
+#[cfg(windows)]
+fn is_pid_alive(pid: u32) -> bool {
+    use std::process::Command;
+    Command::new("tasklist")
+        .args(["/FI", &format!("PID eq {pid}"), "/NH"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
+        .unwrap_or(false)
 }
 
 fn extract_events_from_content(
