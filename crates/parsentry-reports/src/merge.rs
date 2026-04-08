@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn baseline_marks_absent() {
-        let tmp = TempDir::new().unwrap();
+        let scan_dir = TempDir::new().unwrap();
         let baseline_dir = TempDir::new().unwrap();
 
         // Baseline has SQLI + XSS
@@ -332,17 +332,17 @@ mod tests {
             &minimal_sarif("XSS", "web.py", "xss"),
         );
         let baseline = merge_sarif_dir(baseline_dir.path(), None).unwrap();
-        let baseline_path = tmp.path().join("baseline.sarif.json");
+        let baseline_path = baseline_dir.path().join("baseline.sarif.json");
         std::fs::write(&baseline_path, serde_json::to_string(&baseline).unwrap()).unwrap();
 
         // Current scan only has SQLI (XSS was fixed)
         write_sarif(
-            tmp.path(),
+            scan_dir.path(),
             "S1.sarif.json",
             &minimal_sarif("SQLI", "app.py", "sqli"),
         );
 
-        let merged = merge_sarif_dir(tmp.path(), Some(&baseline_path)).unwrap();
+        let merged = merge_sarif_dir(scan_dir.path(), Some(&baseline_path)).unwrap();
         let results = &merged.runs[0].results;
         assert_eq!(results.len(), 2);
 
