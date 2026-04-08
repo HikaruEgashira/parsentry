@@ -1,6 +1,6 @@
 [package]
 name = "parsentry-claude"
-version = "0.21.1"
+version = "0.21.2"
 edition.workspace = true
 description = "Claude Code session reader for parsentry"
 license = "AGPL-3.0"

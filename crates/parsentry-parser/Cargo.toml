@@ -1,6 +1,6 @@
 [package]
 name = "parsentry-parser"
-version = "0.21.1"
+version = "0.21.2"
 edition.workspace = true
 description = "Tree-sitter based code parser and security pattern matcher for Parsentry"
 license = "AGPL-3.0"
