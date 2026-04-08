@@ -48,6 +48,18 @@ mise use -g github:HikaruEgashira/parsentry
 cargo install parsentry
 ```
 
+### Claude Code Skill
+
+Install the orchestrator skill to run scans directly inside Claude Code without spawning external processes:
+
+```bash
+npx @anthropic-ai/claude-code skill add ./parsentry.skill
+# or from a remote URL
+npx @anthropic-ai/claude-code skill add https://github.com/HikaruEgashira/parsentry/releases/latest/download/parsentry.skill
+```
+
+Once installed, just ask Claude Code to scan a repository — the skill dispatches parallel subagents for each attack surface automatically.
+
 ### Commands
 
 ```
