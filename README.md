@@ -53,7 +53,7 @@ cargo install parsentry
 Install the orchestrator skill to run scans directly inside Claude Code without spawning external processes:
 
 ```bash
-npx --registry https://registry.npmjs.org skills add HikaruEgashira/parsentry
+npx skills add HikaruEgashira/parsentry
 ```
 
 Once installed, just ask Claude Code to scan a repository — the skill dispatches parallel subagents for each attack surface automatically.
