@@ -6,6 +6,7 @@ default-run = "parsentry"
 description = "Security prompt orchestrator for CLI agents"
 license = "AGPL-3.0"
 repository = "https://github.com/HikaruEgashira/parsentry"
+exclude = ["tools/", "packaging/", "docs/", "benchmarks/", "tests/snapshots/"]
 
 
 [features]
