@@ -248,13 +248,14 @@ async fn fetch_existing_issues(
     let mut cursor: Option<String> = None;
 
     loop {
-        let after_clause = cursor
-            .as_deref()
-            .map(|c| format!(r#", after: "{}""#, c))
-            .unwrap_or_default();
+        let after_clause = if cursor.is_some() {
+            ", after: $cursor".to_string()
+        } else {
+            String::new()
+        };
 
         let query = format!(
-            r#"query($teamId: String!, $label: String!) {{
+            r#"query($teamId: String!, $label: String!, $cursor: String) {{
                 issues(
                     filter: {{
                         team: {{ id: {{ eq: $teamId }} }}
@@ -269,11 +270,16 @@ async fn fetch_existing_issues(
             }}"#
         );
 
+        let mut variables = json!({ "teamId": team_id, "label": LINEAR_LABEL });
+        if let Some(ref c) = cursor {
+            variables["cursor"] = json!(c);
+        }
+
         let data = gql(
             client,
             api_key,
             &query,
-            json!({ "teamId": team_id, "label": LINEAR_LABEL }),
+            variables,
         )
         .await?;
 

@@ -35,10 +35,28 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
     let mut sources: Vec<SourceFile> = Vec::new();
     let mut seen = std::collections::HashSet::new();
 
+    let canonical_root = match root_dir.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return sources,
+    };
+
     for location in &surface.locations {
+        // Reject absolute paths and path traversal attempts
+        if Path::new(location).is_absolute() || location.contains("..") {
+            continue;
+        }
+
         let full_path = root_dir.join(location);
 
         if full_path.is_file() {
+            // Verify the resolved path stays within root_dir
+            if let Ok(canonical) = full_path.canonicalize() {
+                if !canonical.starts_with(&canonical_root) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
             // Single file
             if let Ok(meta) = std::fs::metadata(&full_path) {
                 if meta.len() <= MAX_FILE_SIZE {
@@ -58,6 +76,14 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
                 }
             }
         } else if full_path.is_dir() {
+            // Verify the directory stays within root_dir
+            if let Ok(canonical) = full_path.canonicalize() {
+                if !canonical.starts_with(&canonical_root) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
             // Directory — find all source files under it
             if let Ok(files) = discovery.get_files_in_path(&full_path) {
                 for file_path in files {

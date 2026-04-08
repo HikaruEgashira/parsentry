@@ -42,10 +42,17 @@ impl CacheStorage {
     /// Uses first 2 characters of key as subdirectory for distribution.
     /// Example: key=abc123... -> cache_dir/namespace/ab/abc123....json
     fn get_cache_path(&self, namespace: &str, key: &str) -> PathBuf {
+        // Sanitize namespace: reject path separators and traversal
+        let safe_namespace = namespace.replace(['/', '\\', '\0'], "_");
+        let safe_namespace = if safe_namespace.contains("..") {
+            safe_namespace.replace("..", "__")
+        } else {
+            safe_namespace
+        };
         let prefix = if key.len() >= 2 { &key[..2] } else { key };
 
         self.cache_dir
-            .join(namespace)
+            .join(&safe_namespace)
             .join(prefix)
             .join(format!("{}.json", key))
     }

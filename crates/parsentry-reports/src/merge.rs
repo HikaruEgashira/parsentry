@@ -14,6 +14,9 @@ use std::path::Path;
 
 use crate::sarif::*;
 
+/// Maximum SARIF file size (10 MiB) to prevent OOM from malicious agents.
+const MAX_SARIF_FILE_SIZE: u64 = 10 * 1024 * 1024;
+
 /// Compute a stable fingerprint for a result.
 ///
 /// Uses agent-provided `fingerprints["parsentry/v1"]` if available.
@@ -65,6 +68,7 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut sarif_files: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
         .with_context(|| format!("cannot read directory: {}", dir.display()))?
         .filter_map(|e| e.ok())
+        .filter(|e| !e.file_type().map_or(false, |ft| ft.is_symlink()))
         .flat_map(|e| {
             let path = e.path();
             if path.is_dir() {
@@ -105,6 +109,16 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut seen_fingerprints: HashMap<String, usize> = HashMap::new();
 
     for path in &sarif_files {
+        let meta = std::fs::metadata(path)
+            .with_context(|| format!("cannot stat {}", path.display()))?;
+        if meta.len() > MAX_SARIF_FILE_SIZE {
+            anyhow::bail!(
+                "SARIF file exceeds {}MiB limit: {} ({}B)",
+                MAX_SARIF_FILE_SIZE / (1024 * 1024),
+                path.display(),
+                meta.len()
+            );
+        }
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("cannot read {}", path.display()))?;
 
