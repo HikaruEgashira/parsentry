@@ -1343,7 +1343,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-cache"
-version = "0.21.2"
+version = "0.21.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1359,7 +1359,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-claude"
-version = "0.21.2"
+version = "0.21.3"
 dependencies = [
  "anyhow",
  "dirs-next",
@@ -1370,7 +1370,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-core"
-version = "0.21.2"
+version = "0.21.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1382,7 +1382,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-parser"
-version = "0.21.2"
+version = "0.21.3"
 dependencies = [
  "anyhow",
  "parsentry-core",
@@ -1407,7 +1407,7 @@ dependencies = [
 
 [[package]]
 name = "parsentry-reports"
-version = "0.21.2"
+version = "0.21.3"
 dependencies = [
  "anyhow",
  "parsentry-core",
