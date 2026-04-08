@@ -14,23 +14,18 @@ use std::path::Path;
 
 use crate::sarif::*;
 
+// DoS protection constants
+const MAX_SARIF_FILES: usize = 500;
+const MAX_RESULTS_PER_MERGE: usize = 10_000;
+const MAX_SARIF_FILE_SIZE: u64 = 50 * 1024 * 1024; // 50 MB
+
 /// Compute a stable fingerprint for a result.
 ///
-/// Uses agent-provided `fingerprints["parsentry/v1"]` if available.
-/// Otherwise falls back to `SHA256(ruleId + first location URI)`.
+/// The fingerprint is ALWAYS computed from ruleId + URI. Any agent-provided
+/// fingerprints are ignored. The computed fingerprint is used as the dedup key
+/// (parsentry/v1).
 fn fingerprint(result: &SarifResult) -> String {
-    // Use agent-provided fingerprint if available
-    if let Some(ref fps) = result.fingerprints {
-        if let Some(fp) = fps.get("parsentry/v1") {
-            return fp.clone();
-        }
-        // Use any available fingerprint
-        if let Some((_, fp)) = fps.iter().next() {
-            return fp.clone();
-        }
-    }
-
-    // Compute from ruleId + first location URI
+    // Always compute from ruleId + first location URI
     let uri = result
         .locations
         .first()
@@ -48,7 +43,8 @@ fn fingerprint(result: &SarifResult) -> String {
 fn ensure_fingerprint(result: &mut SarifResult) {
     let fp = fingerprint(result);
     let map = result.fingerprints.get_or_insert_with(HashMap::new);
-    map.entry("parsentry/v1".to_string()).or_insert(fp);
+    // Always write computed fingerprint as dedup key (overwrite any existing)
+    map.insert("parsentry/v1".to_string(), fp);
 }
 
 /// Merge all `*.sarif.json` files in `dir` into a single [`SarifReport`].
@@ -65,6 +61,8 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut sarif_files: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
         .with_context(|| format!("cannot read directory: {}", dir.display()))?
         .filter_map(|e| e.ok())
+        // Symlink protection: skip symbolic links to avoid following them
+        .filter(|e| e.file_type().map(|ft| !ft.is_symlink()).unwrap_or(false))
         .flat_map(|e| {
             let path = e.path();
             if path.is_dir() {
@@ -86,6 +84,15 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
         })
         .collect();
 
+    // DoS: limit number of SARIF files to process
+    if sarif_files.len() > MAX_SARIF_FILES {
+        sarif_files.truncate(MAX_SARIF_FILES);
+        log::warn!(
+            "SARIF file list truncated to {} entries to mitigate DoS risks",
+            MAX_SARIF_FILES
+        );
+    }
+
     sarif_files.sort();
 
     if sarif_files.is_empty() {
@@ -104,7 +111,18 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut all_results: Vec<SarifResult> = Vec::new();
     let mut seen_fingerprints: HashMap<String, usize> = HashMap::new();
 
-    for path in &sarif_files {
+    'sarifs: for path in &sarif_files {
+        // DOS protection: skip oversized files before reading
+        if let Ok(meta) = std::fs::metadata(path) {
+            if meta.len() > MAX_SARIF_FILE_SIZE {
+                log::warn!(
+                    "skipping oversized SARIF file {} (size: {} bytes)",
+                    path.display(),
+                    meta.len()
+                );
+                continue 'sarifs;
+            }
+        }
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("cannot read {}", path.display()))?;
 
@@ -158,6 +176,10 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
                 seen_fingerprints.insert(fp, all_results.len());
                 all_results.push(result);
             }
+        }
+        // DoS protection: cap total merged results to avoid resource exhaustion
+        if all_results.len() > MAX_RESULTS_PER_MERGE {
+            break 'sarifs;
         }
     }
 

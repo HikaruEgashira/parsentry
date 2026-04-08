@@ -32,6 +32,12 @@ use crate::sarif::SarifResult;
 const NOTION_API: &str = "https://api.notion.com/v1";
 const NOTION_VERSION: &str = "2022-06-28";
 
+// Validate Notion page/database IDs: 32 hex chars, with or without dashes
+fn validate_notion_id(id: &str) -> bool {
+    let compact: String = id.chars().filter(|&c| c != '-').collect();
+    compact.len() == 32 && compact.chars().all(|c| c.is_digit(16))
+}
+
 pub async fn run_notion_command(
     reports_dir: &Path,
     database_id: &str,
@@ -40,6 +46,11 @@ pub async fn run_notion_command(
 ) -> Result<()> {
     let token = env::var("NOTION_TOKEN").map_err(|_| anyhow!("NOTION_TOKEN not set"))?;
     let db_id = env::var("NOTION_DATABASE_ID").unwrap_or_else(|_| database_id.to_string());
+
+    // Basic validation for Notion IDs before using them in requests
+    if !validate_notion_id(&db_id) {
+        return Err(anyhow!("Invalid Notion database id format"));
+    }
 
     let client = Client::new();
 
@@ -275,7 +286,7 @@ async fn create_finding_page(
         }
     });
 
-    if let Some(fp) = fingerprint {
+            if let Some(fp) = fingerprint {
         properties["Fingerprint"] = json!({
             "rich_text": [{ "text": { "content": fp } }]
         });
@@ -288,11 +299,12 @@ async fn create_finding_page(
         .chunks(20)
         .map(|chunk| {
             let text = chunk.join("\n");
+            let text_cut: String = text.chars().take(2000).collect();
             json!({
                 "object": "block",
                 "type": "paragraph",
                 "paragraph": {
-                    "rich_text": [{ "type": "text", "text": { "content": text } }]
+                    "rich_text": [{ "type": "text", "text": { "content": text_cut } }]
                 }
             })
         })
@@ -323,6 +335,9 @@ async fn create_finding_page(
 }
 
 async fn mark_done(client: &Client, token: &str, page_id: &str) -> Result<()> {
+    if !validate_notion_id(page_id) {
+        return Err(anyhow!("Invalid Notion page id"));
+    }
     let payload = json!({
         "properties": {
             "Status": { "status": { "name": "Done" } }

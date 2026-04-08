@@ -36,7 +36,28 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
     let mut seen = std::collections::HashSet::new();
 
     for location in &surface.locations {
-        let full_path = root_dir.join(location);
+        // Resolve the location against the repository root with traversal protection
+        let joined = root_dir.join(location);
+        // Canonicalize to resolve symlinks and normalize the path
+        let full_path = match joined.canonicalize() {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+
+        // Ensure the resolved path stays within the repository root
+        let root_canon = root_dir
+            .canonicalize()
+            .unwrap_or_else(|_| root_dir.to_path_buf());
+        if !full_path.starts_with(&root_canon) {
+            continue;
+        }
+
+        // If the path is a symlink, skip to prevent symlink traversal attacks
+        if let Ok(meta) = std::fs::symlink_metadata(&full_path) {
+            if meta.file_type().is_symlink() {
+                continue;
+            }
+        }
 
         if full_path.is_file() {
             // Single file

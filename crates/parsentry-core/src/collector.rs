@@ -61,6 +61,9 @@ const ENTRY_POINT_PATTERNS: &[&str] = &[
     "main.tf",
 ];
 
+/// Maximum number of directory entries to traverse in a single directory to prevent DoS
+const MAX_DIR_ENTRIES: usize = 1000;
+
 impl RepoMetadata {
     /// Collect metadata from the given repository root.
     pub fn collect(root_dir: &Path) -> Result<Self> {
@@ -170,9 +173,11 @@ fn build_tree_recursive(
     if depth > max_depth {
         return Ok(());
     }
-
     let mut entries: Vec<_> = std::fs::read_dir(dir)?.filter_map(|e| e.ok()).collect();
     entries.sort_by_key(|e| e.file_name());
+
+    // DoS protection: cap directory traversal
+    let mut traversed: usize = 0;
 
     for entry in entries {
         let name = entry.file_name().to_string_lossy().to_string();
@@ -193,10 +198,21 @@ fn build_tree_recursive(
 
         let indent = "  ".repeat(depth);
         let path = entry.path();
+        // Use file_type() to detect directories and symlinks safely
+        let file_type = entry.file_type()?;
 
-        if path.is_dir() {
+        // Prevent DoS by limiting directory depth traversal
+        traversed += 1;
+        if traversed > MAX_DIR_ENTRIES {
+            break;
+        }
+
+        if file_type.is_dir() {
             out.push_str(&format!("{}{}/ \n", indent, name));
             build_tree_recursive(root, &path, out, depth + 1, max_depth)?;
+        } else if file_type.is_symlink() {
+            // Skip symlinks to protect against symlink traversal
+            continue;
         } else if depth <= 1 {
             // Only show files at top levels to keep it compact
             out.push_str(&format!("{}{}\n", indent, name));

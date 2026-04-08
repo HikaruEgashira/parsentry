@@ -1410,6 +1410,7 @@ name = "parsentry-reports"
 version = "0.20.0"
 dependencies = [
  "anyhow",
+ "log",
  "parsentry-core",
  "regex",
  "reqwest",

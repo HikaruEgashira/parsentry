@@ -93,8 +93,13 @@ impl FileDiscovery {
             for entry in std::fs::read_dir(dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.is_dir() {
+                // Use file_type for accurate type checks and to detect symlinks
+                let file_type = entry.file_type()?;
+                if file_type.is_dir() {
                     self.visit_dirs(&path, cb)?;
+                } else if file_type.is_symlink() {
+                    // Skip symlinked files to protect against symlink traversal
+                    continue;
                 } else {
                     cb(&path);
                 }

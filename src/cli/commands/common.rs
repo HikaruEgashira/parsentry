@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -7,7 +7,7 @@ use crate::cli::ui::StatusPrinter;
 use crate::github::clone_repo;
 
 use parsentry_core::{
-    RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT, build_threat_model_prompt, threat_model_schema,
+    build_threat_model_prompt, threat_model_schema, RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT,
 };
 
 /// Base cache directory. Respects PARSENTRY_CACHE_DIR, falls back to XDG.
@@ -24,7 +24,12 @@ pub fn cache_base() -> PathBuf {
 /// Per-repository cache directory.
 /// e.g. ~/Library/Caches/parsentry/langgenius__dify/
 pub fn cache_dir_for(target: &str) -> PathBuf {
-    cache_base().join(target.replace('/', "__"))
+    // Sanitize target to avoid invalid paths including /, \\, and ..
+    let sanitized = target
+        .replace('/', "__")
+        .replace('\\', "__")
+        .replace("..", "__");
+    cache_base().join(sanitized)
 }
 
 /// Extract short repository name from a target string.
@@ -71,7 +76,24 @@ pub fn locate_repository(
 }
 
 /// Get files changed relative to a diff base ref.
+fn validate_git_ref(ref_str: &str) -> bool {
+    if ref_str.starts_with('-') {
+        return false;
+    }
+    if ref_str.as_bytes().contains(&0) {
+        return false;
+    }
+    if ref_str.len() > 256 {
+        return false;
+    }
+    true
+}
+
 pub fn get_diff_files(root_dir: &Path, diff_base: &str) -> Result<HashSet<PathBuf>> {
+    // Validate git ref to prevent command injections
+    if !validate_git_ref(diff_base) {
+        return Err(anyhow!("Invalid git ref: {}", diff_base));
+    }
     let three_dot = format!("{}...HEAD", diff_base);
     let output = std::process::Command::new("git")
         .args(["diff", "--name-only", "--diff-filter=ACMR", &three_dot])

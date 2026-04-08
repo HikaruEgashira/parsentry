@@ -21,6 +21,7 @@ use crate::report_common::{
     SURFACE_MARKER, build_markdown_body, build_title, extract_fingerprint, load_surface_reports,
     parse_fingerprint_from_body, parse_surface_from_body,
 };
+use crate::report_common::escape_html_comment;
 
 const LINEAR_API: &str = "https://api.linear.app/graphql";
 const LINEAR_LABEL: &str = "parsentry";
@@ -69,9 +70,10 @@ pub async fn run_linear_command(
             eprintln!("[dry-run] Would create surface issue: {surface_title}");
             String::new()
         } else {
+            let surface_name_esc = escape_html_comment(&surface.surface_name);
             let parent_desc = format!(
                 "This issue tracks all parsentry findings for surface: {}.\n\n{SURFACE_MARKER} {} -->",
-                surface.surface_name, surface.surface_name
+                surface.surface_name, surface_name_esc
             );
             let url = create_issue(
                 &client,
@@ -248,32 +250,27 @@ async fn fetch_existing_issues(
     let mut cursor: Option<String> = None;
 
     loop {
-        let after_clause = cursor
-            .as_deref()
-            .map(|c| format!(r#", after: "{}""#, c))
-            .unwrap_or_default();
+        let query = r#"query($teamId: String!, $label: String!, $cursor: String) {
+            issues(
+                filter: {
+                    team: { id: { eq: $teamId } }
+                    labels: { name: { eq: $label } }
+                    state: { type: { nin: ["completed", "cancelled"] } }
+                }
+                first: 100, after: $cursor
+            ) {
+                nodes { id description }
+                pageInfo { hasNextPage endCursor }
+            }
+        }"#;
 
-        let query = format!(
-            r#"query($teamId: String!, $label: String!) {{
-                issues(
-                    filter: {{
-                        team: {{ id: {{ eq: $teamId }} }}
-                        labels: {{ name: {{ eq: $label }} }}
-                        state: {{ type: {{ nin: ["completed", "cancelled"] }} }}
-                    }}
-                    first: 100{after_clause}
-                ) {{
-                    nodes {{ id description }}
-                    pageInfo {{ hasNextPage endCursor }}
-                }}
-            }}"#
-        );
+        let cursor_value = cursor.as_deref().map(|s| json!(s)).unwrap_or(Value::Null);
 
         let data = gql(
             client,
             api_key,
-            &query,
-            json!({ "teamId": team_id, "label": LINEAR_LABEL }),
+            query,
+            json!({ "teamId": team_id, "label": LINEAR_LABEL, "cursor": cursor_value }),
         )
         .await?;
 

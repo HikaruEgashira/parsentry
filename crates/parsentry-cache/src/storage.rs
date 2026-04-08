@@ -5,6 +5,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::entry::CacheEntry;
+use anyhow::{bail, Context as _Context};
+use std::borrow::Cow;
 
 /// Cache storage manager
 ///
@@ -37,11 +39,28 @@ impl CacheStorage {
         Ok(Self { cache_dir })
     }
 
+    /// Validate a namespace for safety (no traversal/basename tricks)
+    fn validate_namespace(namespace: &str) -> Result<()> {
+        // Disallow starting with a dot (hidden), and any traversal or path separators
+        if namespace.starts_with('.') {
+            bail!("invalid namespace: starts with '.'");
+        }
+        if namespace.contains('/') || namespace.contains('\\') {
+            bail!("invalid namespace: contains path separators");
+        }
+        if namespace.contains("..") {
+            bail!("invalid namespace: contains '..'");
+        }
+        Ok(())
+    }
+
     /// Get the cache file path for a given namespace and key.
     ///
     /// Uses first 2 characters of key as subdirectory for distribution.
     /// Example: key=abc123... -> cache_dir/namespace/ab/abc123....json
     fn get_cache_path(&self, namespace: &str, key: &str) -> PathBuf {
+        // Validate namespace to prevent invalid or dangerous paths
+        Self::validate_namespace(namespace).expect("invalid cache namespace");
         let prefix = if key.len() >= 2 { &key[..2] } else { key };
 
         self.cache_dir
@@ -52,11 +71,12 @@ impl CacheStorage {
 
     /// Check if a cache entry exists
     pub fn exists(&self, namespace: &str, key: &str) -> bool {
-        self.get_cache_path(namespace, key).exists()
+        Self::validate_namespace(namespace).is_ok() && self.get_cache_path(namespace, key).exists()
     }
 
     /// Get a cache entry by namespace and key
     pub fn get(&self, namespace: &str, key: &str) -> Result<Option<CacheEntry>> {
+        Self::validate_namespace(namespace)?;
         let path = self.get_cache_path(namespace, key);
 
         if !path.exists() {
@@ -80,6 +100,7 @@ impl CacheStorage {
 
     /// Set a cache entry
     pub fn set(&self, entry: &CacheEntry) -> Result<()> {
+        Self::validate_namespace(&entry.namespace)?;
         let path = self.get_cache_path(&entry.namespace, &entry.key);
 
         if let Some(parent) = path.parent() {
@@ -101,6 +122,7 @@ impl CacheStorage {
 
     /// Delete a cache entry
     pub fn delete(&self, namespace: &str, key: &str) -> Result<()> {
+        Self::validate_namespace(namespace)?;
         let path = self.get_cache_path(namespace, key);
 
         if path.exists() {

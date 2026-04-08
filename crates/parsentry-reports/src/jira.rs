@@ -19,10 +19,33 @@ use std::path::Path;
 
 use crate::report_common::{
     SURFACE_MARKER, build_markdown_body, build_title, extract_fingerprint, load_surface_reports,
-    parse_fingerprint_from_body, parse_surface_from_body,
+    parse_fingerprint_from_body, parse_surface_from_body, escape_html_comment,
 };
 
 const JIRA_LABEL: &str = "parsentry";
+
+// Escape values used inside JQL queries. We escape backslashes and quotes.
+fn escape_jql_value(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+// Basic validation for Jira issue keys used in URLs (e.g. PROJ-1234).
+fn validate_issue_key(key: &str) -> bool {
+    // Must contain a single '-' separating project key and numeric part
+    let mut parts = key.splitn(2, '-');
+    let proj = parts.next().unwrap_or("");
+    let num = parts.next().unwrap_or("");
+    if proj.is_empty() || num.is_empty() {
+        return false;
+    }
+    if !proj.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
+        return false;
+    }
+    if !num.chars().all(|c| c.is_ascii_digit()) {
+        return false;
+    }
+    true
+}
 
 pub async fn run_jira_command(
     reports_dir: &Path,
@@ -30,10 +53,18 @@ pub async fn run_jira_command(
     dry_run: bool,
     min_level: &str,
 ) -> Result<()> {
-    let base_url = env::var("JIRA_URL")
-        .map_err(|_| anyhow!("JIRA_URL not set (e.g. https://company.atlassian.net)"))?
-        .trim_end_matches('/')
-        .to_string();
+    // Validate inputs early
+    if !project_key.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
+        return Err(anyhow!("Invalid Jira project key: must be ASCII uppercase letters A-Z and digits"));
+    }
+    let base_url = {
+        let v = env::var("JIRA_URL").map_err(|_| anyhow!("JIRA_URL not set (e.g. https://company.atlassian.net)"))?;
+        v.trim_end_matches('/').to_string()
+    };
+    // SSRF protection: require https URL
+    if !base_url.starts_with("https://") {
+        return Err(anyhow!("JIRA_URL must start with https://"));
+    }
     let email = env::var("JIRA_EMAIL").map_err(|_| anyhow!("JIRA_EMAIL not set"))?;
     let token = env::var("JIRA_API_TOKEN").map_err(|_| anyhow!("JIRA_API_TOKEN not set"))?;
 
@@ -72,9 +103,10 @@ pub async fn run_jira_command(
             eprintln!("[dry-run] Would create surface Story: {surface_title}");
             String::new()
         } else {
+            let surface_name_esc = escape_html_comment(&surface.surface_name);
             let desc = format!(
                 "This story tracks all parsentry findings for surface: {}.\n\n{SURFACE_MARKER} {} -->",
-                surface.surface_name, surface.surface_name
+                surface.surface_name, surface_name_esc
             );
             let url = create_issue_with_type(
                 &client,
@@ -187,7 +219,9 @@ async fn fetch_existing_issues(
 
     loop {
         let jql = format!(
-            r#"project = "{project_key}" AND labels = "{JIRA_LABEL}" AND statusCategory != Done ORDER BY created DESC"#
+            r#"project = "{proj}" AND labels = "{lbl}" AND statusCategory != Done ORDER BY created DESC"#,
+            proj = escape_jql_value(project_key),
+            lbl = escape_jql_value(JIRA_LABEL),
         );
         let (email, token) = auth.basic_auth();
         let resp: Value = client
@@ -213,6 +247,10 @@ async fn fetch_existing_issues(
 
         for issue in &issues {
             let key = issue["key"].as_str().unwrap_or("").to_string();
+            if !validate_issue_key(&key) {
+                // Skip unexpected or non-standard issue keys
+                continue;
+            }
             let desc = extract_adf_text(&issue["fields"]["description"]);
             if let Some(fp) = parse_fingerprint_from_body(&desc) {
                 fp_map.insert(fp, key.clone());
@@ -304,6 +342,10 @@ async fn create_issue_with_type(
 }
 
 async fn close_issue(client: &Client, auth: &JiraAuth, issue_key: &str) -> Result<()> {
+    if !validate_issue_key(issue_key) {
+        // Do not attempt to close invalid keys
+        return Ok(());
+    }
     let (email, token) = auth.basic_auth();
 
     // Fetch available transitions
