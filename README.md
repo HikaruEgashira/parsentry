@@ -13,27 +13,13 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 ### Usage
 
 ```bash
-# Claude Code
 parsentry model owner/repo | claude -p
 parsentry scan owner/repo | claude -p
-
-# Codex CLI
-parsentry model owner/repo | codex -
-parsentry scan owner/repo | codex -
-
-# OpenCode
-parsentry model owner/repo | opencode run --dir owner/repo
-parsentry scan owner/repo | opencode run --dir owner/repo
-
-# Crush
-parsentry model owner/repo | crush run -c owner/repo
-parsentry scan owner/repo | crush run -c owner/repo
-
-# Monitoring Agent Sessions
-parsentry log owner/repo
 ```
 
-That's it. `model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to a CLI agent with subagent support and it dispatches parallel workers automatically. Tested with Claude Code, Codex CLI, OpenCode, and Crush.
+`model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to Claude Code and it dispatches parallel subagents automatically.
+
+See [HACKING.md](HACKING.md) for usage with other CLI agents.
 
 ### How it works
 
