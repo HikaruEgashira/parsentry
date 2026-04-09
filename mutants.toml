@@ -14,7 +14,7 @@ exclude_re = [
     "normalize_confidence_score",
     "to_prompt_context",
     "is_docker_compose",
-    "notion::",
-    "jira::",
-    "linear::",
+    "notion\\.rs",
+    "jira\\.rs",
+    "linear\\.rs",
 ]
