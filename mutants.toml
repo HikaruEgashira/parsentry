@@ -9,6 +9,7 @@ minimum_test_timeout = 20
 # - to_prompt_context: `len > 2000` vs `>= 2000` → `&[..2000]` == full content at boundary
 # - is_docker_compose: CI-specific timeout issue with existing test coverage
 # - markdown to_markdown match arms: "go"/"java"/"php"/"json" — deletion falls to `_ => ext` which returns same string
+# - merge MAX_SARIF_FILE_SIZE: `* → +` and `> → ==/>=` — 10MiB boundary, testing requires 10MiB+ files
 # External API modules — cannot be tested without mocks
 # - notion, jira, linear: external issue tracker APIs
 exclude_re = [
@@ -18,5 +19,7 @@ exclude_re = [
     "notion\\.rs",
     "jira\\.rs",
     "linear\\.rs",
-    "to_markdown.*delete match arm",
+    "delete match arm \"(go|java|php|json)\" in to_markdown",
+    "MAX_SARIF_FILE_SIZE",
+    "replace > with (==|>=) in merge_sarif_dir",
 ]
