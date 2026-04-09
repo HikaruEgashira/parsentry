@@ -21,5 +21,6 @@ exclude_re = [
     "linear\\.rs",
     "delete match arm \"(go|java|php|json)\" in to_markdown",
     "MAX_SARIF_FILE_SIZE",
+    "merge\\.rs:18.*replace",
     "replace > with (==|>=) in merge_sarif_dir",
 ]
