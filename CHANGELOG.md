@@ -1,5 +1,94 @@
 # Changelog
 
+## [0.21.3] - 2026-04-09
+
+### 🎉 New Features
+- レポートヘルパー、キャッシュクリーンアップ、コレクター改善を追加
+
+### 🐛 Bug Fixes
+- ミューテーションテストで未検出のmutantを修正
+
+### 🛠️ Infrastructure
+- cargo-release設定追加とpre-release-hookでバージョン自動同期
+
+---
+
+## [0.21.0] - 2026-04-09
+
+### 🎉 New Features
+- parsentry skillにPhase 4トリアージを追加
+
+### 🐛 Bug Fixes
+- `.git`で終わるリポジトリスラッグを拒否し、二重`.git.git`を防止
+- 入力バリデーションとパストラバーサル保護を強化 (#260)
+- stdoutを即時フラッシュ（パイプ利用時のバッファリング問題を解消）
+
+---
+
+## [0.20.0] - 2026-04-08
+
+### 🎉 New Features
+- Claude Code skill追加（orchestratorモードスキャン対応）
+- npx skills発見用のSKILL.mdをリポジトリルートに追加
+
+### 🐛 Bug Fixes
+- parsentry-claudeをWindows対応（libc使用をcfg-gate化）
+- cargo publishを冪等化（既存公開クレートのスキップ）
+
+---
+
+## [0.19.0] - 2026-04-08
+
+### 🎉 New Features
+- **`parsentry generate`コマンド**: SARIF結果からPDFレポートを生成
+- **課題トラッカー連携**: GitHub Issues、Jira、Linear、Notionとの統合
+- **trusted publishing**: crates.ioへのOIDCベース公開
+
+### 🔧 Improvements
+- プロンプト生成をAgent Skills形式に切り替え
+- surface出力をサーフェスごとのディレクトリにグループ化
+
+---
+
+## [0.18.0] - 2026-04-08
+
+### 🎉 Breaking Changes
+- **プロンプト専用アーキテクチャ**: 内部LLM呼び出しを廃止、stdoutにプロンプトを出力する設計に刷新
+- **scanをサブコマンド化**: CLIインターフェースを簡素化
+- **tree-sitter/PAR分類/5クレート削除**: parsentry-executor、parsentry-utils等を統合し大幅簡素化
+
+### 🎉 New Features
+- **orchestratorプロンプト生成**: 単一プロセス並列分析用のオーケストレータプロンプト
+- **SARIFマージ**: ベースライン比較とトリアージ保持付きのマージコマンド
+- **`parsentry log`（watchコマンド）**: スキャン進捗のリアルタイムモニタリング
+- **脅威モデル自動生成**: scan時に`--threat-model`不要で自動生成
+- **stdin対応**: scanコマンドのstdin入力対応とMarkdownフェンス自動除去
+- **キャッシュ済みsurfaceスキップ**: 再スキャン時のキャッシュ活用
+
+### 🐛 Bug Fixes
+- クローンリポジトリをXDGキャッシュに配置（CWD汚染防止）
+- キャッシュキーをパターンマッチのみで計算（メタデータ変更の影響排除）
+
+### 🔧 Improvements
+- convention over configurationで全パスを自動決定
+- XDGキャッシュをデフォルトに使用、/tmpフォールバック削除
+- surfaceプロンプトからインラインソースコードを除去
+
+### 🛠️ Infrastructure
+- cargo-mutantsミューテーションテストワークフロー追加
+
+---
+
+## [0.17.0] - 2026-04-04
+
+### 🎉 New Features
+- **脅威モデルキャッシュ**: 脅威モデル生成結果をキャッシュし、冗長なLLM呼び出しをスキップ
+
+### 🐛 Bug Fixes
+- キャッシュエラーを警告として表面化（サイレントな無視を防止）
+
+---
+
 ## [0.16.1] - 2026-04-04
 
 ### 🎉 Breaking Changes
