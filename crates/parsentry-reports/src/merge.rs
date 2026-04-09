@@ -430,4 +430,47 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         assert!(merge_sarif_dir(tmp.path(), None).is_err());
     }
+
+    #[test]
+    fn rejects_oversized_sarif_file() {
+        // Kills > → == and > → >= : file larger than 10MiB must be rejected
+        let tmp = TempDir::new().unwrap();
+        // Actually, write a file that's > 10MiB directly
+        let big_sarif = tmp.path().join("big.sarif.json");
+        // Create a JSON file > 10MiB
+        let padding = "X".repeat(11 * 1024 * 1024);
+        std::fs::write(&big_sarif, format!("{{\"padding\": \"{}\"}}", padding)).unwrap();
+
+        let result = merge_sarif_dir(tmp.path(), None);
+        assert!(result.is_err(), "should reject SARIF file exceeding 10MiB");
+    }
+
+    #[test]
+    fn accepts_sarif_file_within_limit() {
+        // Kills * → + in MAX_SARIF_FILE_SIZE: 10*1024*1024 vs 10+1024+1024
+        // With +, limit would be 2054 bytes, so even small files would be rejected
+        let tmp = TempDir::new().unwrap();
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "test"),
+        );
+        let merged = merge_sarif_dir(tmp.path(), None);
+        assert!(merged.is_ok(), "normal-sized SARIF should be accepted");
+    }
+
+    #[test]
+    fn ensure_fingerprint_adds_parsentry_v1() {
+        // Kills ensure_fingerprint → () : must actually add fingerprint
+        let tmp = TempDir::new().unwrap();
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &minimal_sarif("SQLI", "app.py", "test"),
+        );
+        let merged = merge_sarif_dir(tmp.path(), None).unwrap();
+        let result = &merged.runs[0].results[0];
+        let fps = result.fingerprints.as_ref().unwrap();
+        assert!(fps.contains_key("parsentry/v1"), "ensure_fingerprint must add parsentry/v1");
+    }
 }

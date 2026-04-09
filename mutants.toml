@@ -8,6 +8,7 @@ minimum_test_timeout = 20
 # - normalize_confidence_score: `score > 0` vs `>= 0` → 0*10 == 0
 # - to_prompt_context: `len > 2000` vs `>= 2000` → `&[..2000]` == full content at boundary
 # - is_docker_compose: CI-specific timeout issue with existing test coverage
+# - markdown to_markdown match arms: "go"/"java"/"php"/"json" — deletion falls to `_ => ext` which returns same string
 # External API modules — cannot be tested without mocks
 # - notion, jira, linear: external issue tracker APIs
 exclude_re = [
@@ -17,4 +18,5 @@ exclude_re = [
     "notion\\.rs",
     "jira\\.rs",
     "linear\\.rs",
+    "to_markdown.*delete match arm",
 ]
