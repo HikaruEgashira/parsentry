@@ -38,7 +38,7 @@ pub async fn run_scan_command(
 ) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
 
-    let (root_dir, _repo_name) = locate_repository(target, &printer)?;
+    let (root_dir, _repo_name) = locate_repository(target, &printer).await?;
 
     // Phase 1: Collect repository metadata
     let repo_metadata = RepoMetadata::collect(&root_dir)?;

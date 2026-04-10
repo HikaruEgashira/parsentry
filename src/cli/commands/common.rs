@@ -10,6 +10,19 @@ use parsentry_core::{
     RepoMetadata, THREAT_MODEL_SYSTEM_PROMPT, build_threat_model_prompt, threat_model_schema,
 };
 
+/// Check if the target string is an HTTP(S) URL.
+pub fn is_url(target: &str) -> bool {
+    target.starts_with("http://") || target.starts_with("https://")
+}
+
+/// Compute a filesystem-safe cache key from a URL using SHA-256.
+fn url_cache_key(url: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(url.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
 /// Base cache directory. Respects PARSENTRY_CACHE_DIR, falls back to XDG.
 pub fn cache_base() -> PathBuf {
     if let Ok(dir) = std::env::var("PARSENTRY_CACHE_DIR") {
@@ -23,27 +36,47 @@ pub fn cache_base() -> PathBuf {
 
 /// Per-repository cache directory.
 /// e.g. ~/Library/Caches/parsentry/langgenius__dify/
+/// For URL targets: ~/Library/Caches/parsentry/url/{sha256}/
 pub fn cache_dir_for(target: &str) -> PathBuf {
-    cache_base().join(target.replace('/', "__"))
+    if is_url(target) {
+        cache_base().join("url").join(url_cache_key(target))
+    } else {
+        cache_base().join(target.replace('/', "__"))
+    }
 }
 
 /// Extract short repository name from a target string.
 /// e.g. "HikaruEgashira/parsentry" → "parsentry", "/local/path/repo" → "repo"
+/// For URL targets: "https://example.com/app" → "example.com"
 pub fn repo_name_from_target(target: &str) -> String {
-    target
-        .trim_end_matches('/')
-        .split('/')
-        .last()
-        .unwrap_or(target)
-        .replace(".git", "")
+    if is_url(target) {
+        target
+            .trim_start_matches("http://")
+            .trim_start_matches("https://")
+            .split('/')
+            .next()
+            .unwrap_or("url-target")
+            .to_string()
+    } else {
+        target
+            .trim_end_matches('/')
+            .split('/')
+            .last()
+            .unwrap_or(target)
+            .replace(".git", "")
+    }
 }
 
 /// Phase 0: Locate and optionally clone the repository.
 /// Returns (root_dir, repo_name).
-pub fn locate_repository(
+pub async fn locate_repository(
     target: &str,
     printer: &StatusPrinter,
 ) -> Result<(PathBuf, Option<String>)> {
+    if is_url(target) {
+        return locate_url_assets(target, printer).await;
+    }
+
     if target.contains('/') && !Path::new(target).exists() {
         let project_cache = cache_dir_for(target);
         let dest = project_cache.join("repo");
@@ -68,6 +101,40 @@ pub fn locate_repository(
     } else {
         Ok((PathBuf::from(target), None))
     }
+}
+
+/// Fetch frontend assets from a URL target into the cache directory.
+async fn locate_url_assets(
+    target: &str,
+    printer: &StatusPrinter,
+) -> Result<(PathBuf, Option<String>)> {
+    let project_cache = cache_dir_for(target);
+    let asset_dir = project_cache.join("assets");
+
+    if asset_dir.exists() && std::fs::read_dir(&asset_dir)?.next().is_some() {
+        printer.status("Cached", &format!("{} → {}", target, asset_dir.display()));
+        return Ok((asset_dir, Some(repo_name_from_target(target))));
+    }
+
+    std::fs::create_dir_all(&asset_dir)?;
+    printer.status("Fetching", &format!("assets from {}", target));
+
+    // Save source URL for log display
+    std::fs::write(project_cache.join("source_url.txt"), target)?;
+
+    let collector = crate::url_collector::UrlAssetCollector::new(target)?;
+    let assets = collector.collect(&asset_dir).await?;
+
+    if assets.is_empty() {
+        anyhow::bail!("No frontend assets found at {}", target);
+    }
+
+    printer.status(
+        "Collected",
+        &format!("{} frontend assets from {}", assets.len(), target),
+    );
+
+    Ok((asset_dir, Some(repo_name_from_target(target))))
 }
 
 /// Get files changed relative to a diff base ref.

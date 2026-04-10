@@ -23,6 +23,8 @@ pub enum Language {
     Bash,
     Shell,
     Php,
+    Html,
+    Css,
     Other,
 }
 
@@ -44,6 +46,8 @@ impl Language {
             "yml" | "yaml" => Language::Yaml,
             "sh" | "bash" => Language::Bash,
             "php" | "php3" | "php4" | "php5" | "phtml" => Language::Php,
+            "html" | "htm" => Language::Html,
+            "css" => Language::Css,
             _ => Language::Other,
         }
     }
@@ -90,6 +94,8 @@ impl Language {
             Language::Bash => "Bash",
             Language::Shell => "Shell",
             Language::Php => "PHP",
+            Language::Html => "HTML",
+            Language::Css => "CSS",
             Language::Other => "Other",
         }
     }
@@ -123,9 +129,11 @@ impl FromStr for Language {
             "bash" => Ok(Language::Bash),
             "shell" | "sh" => Ok(Language::Shell),
             "php" => Ok(Language::Php),
+            "html" | "htm" => Ok(Language::Html),
+            "css" => Ok(Language::Css),
             "other" => Ok(Language::Other),
             _ => Err(format!(
-                "Unknown language: '{}'. Supported languages: python, javascript, rust, typescript, java, go, ruby, c, cpp, terraform, cloudformation, kubernetes, yaml, bash, shell, php",
+                "Unknown language: '{}'. Supported languages: python, javascript, rust, typescript, java, go, ruby, c, cpp, terraform, cloudformation, kubernetes, yaml, bash, shell, php, html, css",
                 s
             )),
         }
@@ -223,6 +231,9 @@ mod tests {
         assert_eq!(Language::from_str("shell").unwrap(), Language::Shell);
         assert_eq!(Language::from_str("sh").unwrap(), Language::Shell);
         assert_eq!(Language::from_str("php").unwrap(), Language::Php);
+        assert_eq!(Language::from_str("html").unwrap(), Language::Html);
+        assert_eq!(Language::from_str("htm").unwrap(), Language::Html);
+        assert_eq!(Language::from_str("css").unwrap(), Language::Css);
         assert_eq!(Language::from_str("other").unwrap(), Language::Other);
         assert_eq!(Language::from_str("tsx").unwrap(), Language::TypeScript);
         assert_eq!(
@@ -259,6 +270,9 @@ mod tests {
         assert_eq!(Language::from_extension("php4"), Language::Php);
         assert_eq!(Language::from_extension("php5"), Language::Php);
         assert_eq!(Language::from_extension("phtml"), Language::Php);
+        assert_eq!(Language::from_extension("html"), Language::Html);
+        assert_eq!(Language::from_extension("htm"), Language::Html);
+        assert_eq!(Language::from_extension("css"), Language::Css);
     }
 
     // --- Mutant-killing: is_iac all variants ---
@@ -300,6 +314,8 @@ mod tests {
         assert_eq!(Language::Bash.display_name(), "Bash");
         assert_eq!(Language::Shell.display_name(), "Shell");
         assert_eq!(Language::Php.display_name(), "PHP");
+        assert_eq!(Language::Html.display_name(), "HTML");
+        assert_eq!(Language::Css.display_name(), "CSS");
         assert_eq!(Language::Other.display_name(), "Other");
     }
 }

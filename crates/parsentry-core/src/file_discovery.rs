@@ -13,7 +13,7 @@ impl FileDiscovery {
     const DEFAULT_EXTENSIONS: &'static [&'static str] = &[
         "py", "js", "jsx", "ts", "tsx", "rs", "go", "java", "rb", "c", "h", "cpp", "cxx", "cc",
         "hpp", "hxx", "tf", "hcl", "yml", "yaml", "sh", "bash", "php", "php3", "php4", "php5",
-        "phtml",
+        "phtml", "html", "htm", "css",
     ];
 
     /// Create a new FileDiscovery with default extensions

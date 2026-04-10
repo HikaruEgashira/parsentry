@@ -25,15 +25,36 @@ const SESSION_POLL_SECS: u64 = 10;
 fn list_all_report_dirs() -> Vec<(String, PathBuf)> {
     let cache_base = super::common::cache_base();
     let mut dirs = Vec::new();
+
+    // Repo targets: cache_base/{owner}__{repo}/reports
     if let Ok(entries) = std::fs::read_dir(&cache_base) {
         for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == "url" {
+                continue;
+            }
             let reports = entry.path().join("reports");
             if reports.is_dir() {
-                let name = entry.file_name().to_string_lossy().replace("__", "/");
-                dirs.push((name, reports));
+                let display_name = name.replace("__", "/");
+                dirs.push((display_name, reports));
             }
         }
     }
+
+    // URL targets: cache_base/url/{sha256}/reports
+    let url_dir = cache_base.join("url");
+    if let Ok(entries) = std::fs::read_dir(&url_dir) {
+        for entry in entries.flatten() {
+            let reports = entry.path().join("reports");
+            if reports.is_dir() {
+                // Try to read saved source URL for display
+                let display_name = std::fs::read_to_string(entry.path().join("source_url.txt"))
+                    .unwrap_or_else(|_| entry.file_name().to_string_lossy().to_string());
+                dirs.push((display_name, reports));
+            }
+        }
+    }
+
     dirs.sort_by(|a, b| a.0.cmp(&b.0));
     dirs
 }

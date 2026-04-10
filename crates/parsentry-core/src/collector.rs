@@ -20,6 +20,8 @@ pub struct RepoMetadata {
     pub entry_points: Vec<String>,
     /// Total number of source files
     pub total_files: usize,
+    /// Source URL when collected from a web page (None for local repos)
+    pub source_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -90,6 +92,7 @@ impl RepoMetadata {
             dependency_manifests,
             entry_points,
             total_files: files.len(),
+            source_url: None,
         })
     }
 
@@ -112,6 +115,11 @@ impl RepoMetadata {
     /// Render metadata as a compact string for LLM consumption.
     pub fn to_prompt_context(&self) -> String {
         let mut ctx = String::new();
+
+        if let Some(ref url) = self.source_url {
+            ctx.push_str(&format!("## Source URL\n{}\n\n", url));
+            ctx.push_str("Assets collected from a live web page via HTTP.\n\n");
+        }
 
         ctx.push_str("## Directory Structure\n```\n");
         ctx.push_str(&self.directory_tree);
@@ -393,6 +401,7 @@ mod tests {
             }],
             entry_points: vec![],
             total_files: 1,
+            source_url: None,
         };
         let ctx = meta.to_prompt_context();
         assert!(ctx.contains("Dependencies"));
@@ -409,6 +418,7 @@ mod tests {
             dependency_manifests: vec![],
             entry_points: vec!["src/main.py".to_string()],
             total_files: 1,
+            source_url: None,
         };
         let ctx = meta.to_prompt_context();
         assert!(ctx.contains("## Entry Points"));
@@ -424,6 +434,7 @@ mod tests {
             dependency_manifests: vec![],
             entry_points: vec![],
             total_files: 0,
+            source_url: None,
         };
         let ctx = meta.to_prompt_context();
         assert!(!ctx.contains("## Entry Points"));
@@ -438,6 +449,7 @@ mod tests {
             dependency_manifests: vec![],
             entry_points: vec![],
             total_files: 0,
+            source_url: None,
         };
         let ctx = meta.to_prompt_context();
         assert!(!ctx.contains("## Dependencies"));
@@ -452,6 +464,7 @@ mod tests {
             dependency_manifests: vec![],
             entry_points: vec![],
             total_files: 42,
+            source_url: None,
         };
         let ctx = meta.to_prompt_context();
         assert!(ctx.contains("Total source files: 42"));
@@ -487,6 +500,7 @@ mod tests {
             }],
             entry_points: vec![],
             total_files: 0,
+            source_url: None,
         };
         let ctx = meta.to_prompt_context();
         // Exactly 2000 chars: with > 2000, NOT truncated (Z is present)
@@ -506,6 +520,7 @@ mod tests {
             }],
             entry_points: vec![],
             total_files: 0,
+            source_url: None,
         };
         let ctx2 = meta2.to_prompt_context();
         // 2001 chars: truncated to [..2000], so Q is missing

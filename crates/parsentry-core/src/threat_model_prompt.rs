@@ -12,6 +12,14 @@ For web applications:
 - Database tables or collections accessed
 - External service calls
 
+For web applications (frontend assets collected from URL):
+- Client-side JavaScript handling user input (form handlers, DOM manipulation)
+- AJAX/fetch calls to external services
+- Client-side URL/path manipulation
+- Cookie/localStorage/sessionStorage access
+- PostMessage handlers
+- DOM sinks (innerHTML, document.write, eval)
+
 For libraries:
 - Public API functions/methods that accept untrusted input
 
