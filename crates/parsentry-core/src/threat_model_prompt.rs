@@ -3,67 +3,43 @@ use serde::Deserialize;
 
 use crate::threat_model::{AttackSurface, ThreatModel};
 
-pub const THREAT_MODEL_SYSTEM_PROMPT: &str = r#"You are an attack surface enumerator. Given repository metadata, identify all concrete attack surfaces and the file locations where they are defined.
+pub const THREAT_MODEL_SYSTEM_PROMPT: &str = r#"You are a security analyst. Given the target context, investigate the target and identify all concrete attack surfaces.
 
-Focus on listing:
-
-For web applications:
-- HTTP/gRPC/GraphQL endpoints (method + path)
-- Database tables or collections accessed
-- External service calls
-
-For web applications (frontend assets collected from URL):
-- Client-side JavaScript handling user input (form handlers, DOM manipulation)
-- AJAX/fetch calls to external services
-- Client-side URL/path manipulation
-- Cookie/localStorage/sessionStorage access
-- PostMessage handlers
-- DOM sinks (innerHTML, document.write, eval)
-
-For libraries:
-- Public API functions/methods that accept untrusted input
-
-For CLI tools:
-- Command handlers that process user input
-- File I/O operations
-
-For Infrastructure-as-Code:
-- Cloud resources with security implications (IAM, storage, network)
+Use whatever analysis methods are appropriate for the target — code review, network reconnaissance, service fingerprinting, configuration analysis, dynamic testing, etc.
 
 Rules:
-- Be specific: "POST /api/users" not "user management endpoints"
-- Include file paths where each surface is defined
+- Be specific and actionable in surface identification
+- Include locations or references for each surface (file paths, URLs, ports, services, etc.)
 - Quality over quantity — only list surfaces that warrant security review"#;
 
 pub fn build_threat_model_prompt(repo_context: &str, languages: &[String]) -> String {
+    let lang_section = if languages.is_empty() {
+        String::new()
+    } else {
+        format!("\nLanguages present: {}\n", languages.join(", "))
+    };
     format!(
-        r#"Enumerate the attack surfaces of this repository.
+        r#"Target context:
 
-{repo_context}
+{repo_context}{lang_section}
 
-Languages present: {languages}
-
-For each attack surface:
-1. Identify the specific surface (endpoint, table, public function, etc.)
-2. List the file(s) where it is defined or used
-3. Briefly explain why it warrants security review
-
+Identify all attack surfaces of this target.
 Return a JSON object with this structure:
 {{
-  "app_type": "web_application|library|cli|infrastructure|mixed",
-  "summary": "High-level security posture summary (2-3 sentences)",
+  "app_type": "<what kind of target this is>",
+  "summary": "<security posture summary>",
   "surfaces": [
     {{
       "id": "SURFACE-001",
-      "kind": "endpoint|db_table|public_api|file_handler|external_call|iac_resource",
-      "identifier": "POST /api/users",
-      "locations": ["src/routes/users.py", "src/models/user.py"],
-      "description": "User registration endpoint accepting untrusted input"
+      "kind": "<type of attack surface>",
+      "identifier": "<specific surface>",
+      "locations": ["<references>"],
+      "description": "<why it warrants security review>"
     }}
   ]
 }}"#,
         repo_context = repo_context,
-        languages = languages.join(", "),
+        lang_section = lang_section,
     )
 }
 
@@ -155,6 +131,12 @@ mod tests {
     fn test_build_threat_model_prompt_contains_languages() {
         let prompt = build_threat_model_prompt("ctx", &["Rust".to_string(), "Go".to_string()]);
         assert!(prompt.contains("Rust, Go"));
+    }
+
+    #[test]
+    fn test_build_threat_model_prompt_omits_languages_when_empty() {
+        let prompt = build_threat_model_prompt("ctx", &[]);
+        assert!(!prompt.contains("Languages present"));
     }
 
     #[test]

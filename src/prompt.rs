@@ -116,24 +116,29 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
 
 /// Generate a prompt for a single [`AttackSurface`].
 ///
-/// Returns `None` when no readable source files overlap with the surface's
-/// `locations`.
+/// If source files are resolvable, they are included as context.
+/// Otherwise, the prompt instructs the agent to investigate the surface
+/// using whatever methods are appropriate.
 pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<SurfacePrompt> {
     let sources = resolve_source_files(surface, root_dir);
 
-    if sources.is_empty() {
-        return None;
-    }
+    // Cache key: file contents when available, otherwise surface metadata
+    let cache_key = if !sources.is_empty() {
+        let mut cache_input = String::new();
+        for src in &sources {
+            cache_input.push_str(&src.rel_path);
+            cache_input.push('\0');
+            cache_input.push_str(&src.contents);
+            cache_input.push('\0');
+        }
+        hex_sha256(&cache_input)
+    } else {
+        hex_sha256(&format!(
+            "{}\0{}\0{}\0{:?}",
+            surface.id, surface.kind, surface.identifier, surface.locations
+        ))
+    };
 
-    // Cache key: SHA-256 of concatenated (relative_path + "\0" + file_contents)
-    let mut cache_input = String::new();
-    for src in &sources {
-        cache_input.push_str(&src.rel_path);
-        cache_input.push('\0');
-        cache_input.push_str(&src.contents);
-        cache_input.push('\0');
-    }
-    let cache_key = hex_sha256(&cache_input);
     let repository_root = root_dir
         .canonicalize()
         .unwrap_or_else(|_| root_dir.to_path_buf());
@@ -141,8 +146,7 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
     let mut prompt = String::new();
 
     prompt.push_str(
-        "You are a security auditor. Read the source files listed in Locations \
-         and analyze them for vulnerabilities.\n\n",
+        "You are a security auditor. Analyze the following attack surface for security findings.\n\n",
     );
 
     prompt.push_str("Surface Under Analysis\n\n");
@@ -159,19 +163,20 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
         surface.locations.join(", ")
     ));
 
-    prompt.push_str("Output Instructions\n\n");
     prompt.push_str(
-        "Resolve every relative path in Locations against Repository Root. \
-         Read the relevant files using your file-reading tool, then output valid \
-         SARIF v2.1.0 JSON that is compatible with `parsentry merge`.\n",
+        "Investigate this surface using appropriate methods. \
+         Locations may reference source code files, network endpoints, services, \
+         or other resources — investigate accordingly.\n\n",
     );
+
+    prompt.push_str("Output valid SARIF v2.1.0 JSON compatible with `parsentry merge`.\n");
     prompt.push_str("The SARIF MUST include:\n");
     prompt.push_str("- top-level `$schema`\n");
     prompt.push_str("- top-level `version` set to `2.1.0`\n");
     prompt.push_str("- `runs[0].tool.driver.name`\n");
     prompt.push_str("- `runs[0].tool.driver.version`\n");
     prompt.push_str("For each finding, provide:\n");
-    prompt.push_str("- `ruleId`: vulnerability type (e.g. SQLI, XSS, LFI, RCE, SSRF)\n");
+    prompt.push_str("- `ruleId`: vulnerability type\n");
     prompt.push_str("- `level`: error/warning/note\n");
     prompt.push_str("- `message.text`\n");
     prompt.push_str("- `locations[].physicalLocation.artifactLocation.uri`\n");
@@ -186,8 +191,6 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
 }
 
 /// Build prompts for every surface in a [`ThreatModel`].
-///
-/// Surfaces that have no readable source files are silently skipped.
 pub fn build_all_surface_prompts(
     threat_model: &ThreatModel,
     root_dir: &Path,
@@ -307,11 +310,15 @@ mod tests {
     }
 
     #[test]
-    fn returns_none_when_no_files_exist() {
+    fn generates_prompt_even_without_files() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
         let surface = make_surface("S-1", vec!["src/nonexistent.py"]);
-        assert!(build_surface_prompt(&surface, root).is_none());
+        let sp = build_surface_prompt(&surface, root).unwrap();
+        assert!(sp.prompt.contains("S-1"));
+        assert!(sp.prompt.contains("investigate accordingly"));
+        // Cache key derived from metadata, not file contents
+        assert_eq!(sp.cache_key.len(), 64);
     }
 
     #[test]
@@ -392,7 +399,7 @@ mod tests {
     }
 
     #[test]
-    fn skips_large_files() {
+    fn generates_prompt_with_metadata_cache_key_for_large_files() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
         let src_dir = root.join("src");
@@ -400,7 +407,10 @@ mod tests {
         fs::write(src_dir.join("big.py"), &"x".repeat(60 * 1024)).unwrap();
 
         let surface = make_surface("S-1", vec!["src/big.py"]);
-        assert!(build_surface_prompt(&surface, root).is_none());
+        let sp = build_surface_prompt(&surface, root).unwrap();
+        // Large file skipped, but prompt still generated with metadata-based cache key
+        assert!(sp.prompt.contains("S-1"));
+        assert_eq!(sp.cache_key.len(), 64);
     }
 
     #[test]
