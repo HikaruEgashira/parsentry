@@ -29,13 +29,13 @@ pub struct Args {
 pub enum Commands {
     /// Generate threat model prompt from repo metadata
     Model {
-        /// Target to analyze: local path, GitHub repository (owner/repo), or URL
+        /// Target to analyze: local path, GitHub repo (owner/repo), URL, IP, or domain
         #[arg(default_value = ".")]
         target: String,
     },
     /// Generate per-surface analysis prompts from a threat model
     Scan {
-        /// Target to analyze: local path, GitHub repository (owner/repo), or URL
+        /// Target to analyze: local path, GitHub repo (owner/repo), URL, IP, or domain
         #[arg(default_value = ".")]
         target: String,
 
@@ -50,7 +50,7 @@ pub enum Commands {
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
     Merge {
-        /// Target to resolve report directory: local path, owner/repo, or URL
+        /// Target to resolve report directory: local path, owner/repo, URL, IP, or domain
         #[arg(default_value = ".")]
         target: String,
 
@@ -80,7 +80,7 @@ pub enum Commands {
     },
     /// Generate PDF report from scan results
     Generate {
-        /// Target to resolve report directory: local path, owner/repo, or URL
+        /// Target to resolve report directory: local path, owner/repo, URL, IP, or domain
         #[arg(default_value = ".")]
         target: String,
 

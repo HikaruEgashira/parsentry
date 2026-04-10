@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::cli::ui::StatusPrinter;
 
 use super::common::{
-    build_threat_model_cli_prompt, cache_dir_for, is_url, locate_repository,
+    build_threat_model_cli_prompt, cache_dir_for, is_network_target, locate_repository,
     repo_name_from_target, write_stdout,
 };
 
@@ -16,7 +16,7 @@ pub async fn run_model_command(target: &str) -> Result<()> {
 
     let mut repo_metadata = RepoMetadata::collect(&root_dir)?;
 
-    if is_url(target) {
+    if is_network_target(target) {
         repo_metadata.source_url = Some(target.to_string());
     }
 
