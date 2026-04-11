@@ -1334,7 +1334,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "terminal_size",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-test",
  "tracing",
@@ -1352,7 +1352,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tokio",
  "walkdir",
 ]
@@ -1377,7 +1377,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1389,7 +1389,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "streaming-iterator",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tree-sitter",
  "tree-sitter-c",
  "tree-sitter-cpp",
