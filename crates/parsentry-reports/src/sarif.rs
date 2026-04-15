@@ -380,36 +380,35 @@ impl SarifReport {
                     if let Some(confidence) = props.confidence {
                         md.push_str(&format!("**Confidence**: {:.0}%\n", confidence * 100.0));
                     }
-                    if let Some(cwe) = &props.cwe {
-                        if !cwe.is_empty() {
-                            md.push_str(&format!("**CWE**: {}\n", cwe.join(", ")));
-                        }
+                    if let Some(cwe) = &props.cwe
+                        && !cwe.is_empty()
+                    {
+                        md.push_str(&format!("**CWE**: {}\n", cwe.join(", ")));
                     }
-                    if let Some(owasp) = &props.owasp {
-                        if !owasp.is_empty() {
-                            md.push_str(&format!("**OWASP**: {}\n", owasp.join(", ")));
-                        }
+                    if let Some(owasp) = &props.owasp
+                        && !owasp.is_empty()
+                    {
+                        md.push_str(&format!("**OWASP**: {}\n", owasp.join(", ")));
                     }
-                    if let Some(mitre) = &props.mitre_attack {
-                        if !mitre.is_empty() {
-                            md.push_str(&format!("**MITRE ATT&CK**: {}\n", mitre.join(", ")));
-                        }
+                    if let Some(mitre) = &props.mitre_attack
+                        && !mitre.is_empty()
+                    {
+                        md.push_str(&format!("**MITRE ATT&CK**: {}\n", mitre.join(", ")));
                     }
                     md.push('\n');
                 }
 
-                if let Some(rules) = &run.tool.driver.rules {
-                    if let Some(rule) = rules.iter().find(|r| r.id == result.rule_id) {
-                        if let Some(help) = &rule.help {
-                            md.push_str("### Remediation\n\n");
-                            if let Some(markdown_help) = &help.markdown {
-                                md.push_str(markdown_help);
-                            } else {
-                                md.push_str(&help.text);
-                            }
-                            md.push_str("\n\n");
-                        }
+                if let Some(rules) = &run.tool.driver.rules
+                    && let Some(rule) = rules.iter().find(|r| r.id == result.rule_id)
+                    && let Some(help) = &rule.help
+                {
+                    md.push_str("### Remediation\n\n");
+                    if let Some(markdown_help) = &help.markdown {
+                        md.push_str(markdown_help);
+                    } else {
+                        md.push_str(&help.text);
                     }
+                    md.push_str("\n\n");
                 }
 
                 md.push_str("---\n\n");
@@ -444,8 +443,8 @@ impl SarifReport {
             }
 
             md.push_str("## Overview\n\n");
-            md.push_str(&format!("| Severity | Count |\n"));
-            md.push_str(&format!("|----------|-------|\n"));
+            md.push_str("| Severity | Count |\n");
+            md.push_str("|----------|-------|\n");
             if error_count > 0 {
                 md.push_str(&format!("| 🔴 Error | {} |\n", error_count));
             }

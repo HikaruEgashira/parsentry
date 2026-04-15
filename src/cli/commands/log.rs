@@ -239,24 +239,24 @@ pub async fn run_log_command(
 
     loop {
         // Check timeout
-        if let Some(timeout) = timeout_secs {
-            if start.elapsed().as_secs() >= timeout {
-                print_log(
-                    "parsentry",
-                    &format!("timeout after {}s", timeout),
-                    use_colors,
-                    timestamps,
-                    colors::BRIGHT_RED,
-                );
-                print_summary(
-                    &known_surfaces,
-                    &completed,
-                    start.elapsed(),
-                    use_colors,
-                    timestamps,
-                );
-                std::process::exit(1);
-            }
+        if let Some(timeout) = timeout_secs
+            && start.elapsed().as_secs() >= timeout
+        {
+            print_log(
+                "parsentry",
+                &format!("timeout after {}s", timeout),
+                use_colors,
+                timestamps,
+                colors::BRIGHT_RED,
+            );
+            print_summary(
+                &known_surfaces,
+                &completed,
+                start.elapsed(),
+                use_colors,
+                timestamps,
+            );
+            std::process::exit(1);
         }
 
         // Wait for fs events with a short timeout so we can do periodic session polls
@@ -438,10 +438,10 @@ fn poll_sessions(
 
         for session_id in &active_sessions {
             let jsonl_path = project_dir.join(format!("{}.jsonl", session_id));
-            if !session_jsonls.iter().any(|(_, p)| p == &jsonl_path) {
-                if let Some(surface_id) = parsentry_claude::extract_surface_id(&jsonl_path) {
-                    session_jsonls.push((surface_id, jsonl_path.clone()));
-                }
+            if !session_jsonls.iter().any(|(_, p)| p == &jsonl_path)
+                && let Some(surface_id) = parsentry_claude::extract_surface_id(&jsonl_path)
+            {
+                session_jsonls.push((surface_id, jsonl_path.clone()));
             }
 
             if let Ok(subagents) = parsentry_claude::list_subagents(project_dir, session_id) {
@@ -602,13 +602,15 @@ fn print_log(service: &str, message: &str, use_colors: bool, show_timestamps: bo
     for line in message.lines() {
         if use_colors {
             eprintln!(
-                "{}{}{:<14}{} {} {}",
+                "{}{}{:<14}{} {}|{} {}{}",
                 color,
                 colors::BOLD,
                 service,
                 colors::RESET,
-                format!("{}|{}", colors::DIM, colors::RESET),
-                format!("{}{}", ts, line),
+                colors::DIM,
+                colors::RESET,
+                ts,
+                line,
             );
         } else {
             eprintln!("{:<14} | {}{}", service, ts, line);
@@ -619,12 +621,13 @@ fn print_log(service: &str, message: &str, use_colors: bool, show_timestamps: bo
     if message.is_empty() {
         if use_colors {
             eprintln!(
-                "{}{}{:<14}{} {} {}",
+                "{}{}{:<14}{} {}|{} {}",
                 color,
                 colors::BOLD,
                 service,
                 colors::RESET,
-                format!("{}|{}", colors::DIM, colors::RESET),
+                colors::DIM,
+                colors::RESET,
                 ts.trim_end(),
             );
         } else {

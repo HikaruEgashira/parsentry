@@ -104,11 +104,11 @@ pub async fn run_notion_command(
                 skipped += 1;
                 continue;
             }
-            if let Some(f) = &fp {
-                if fp_map.contains_key(f) {
-                    skipped += 1;
-                    continue;
-                }
+            if let Some(f) = &fp
+                && fp_map.contains_key(f)
+            {
+                skipped += 1;
+                continue;
             }
 
             let title = build_title(result);
@@ -121,11 +121,13 @@ pub async fn run_notion_command(
                     &client,
                     &token,
                     &db_id,
-                    result,
-                    &title,
-                    &body,
-                    fp.as_deref(),
-                    &surface.surface_name,
+                    FindingPageArgs {
+                        result,
+                        title: &title,
+                        body: &body,
+                        fingerprint: fp.as_deref(),
+                        surface_name: &surface.surface_name,
+                    },
                 )
                 .await?;
                 eprintln!("Created: {url}");
@@ -187,16 +189,16 @@ async fn fetch_existing_pages(
                 .as_str()
                 .unwrap_or("");
 
-            if let Some(fp) = fp_val {
-                if !fp.is_empty() {
-                    if page_type == "surface" {
-                        // surface pages use "surface:{name}" as fingerprint
-                        if let Some(name) = fp.strip_prefix("surface:") {
-                            surface_map.insert(name.to_string(), page_id);
-                        }
-                    } else {
-                        fp_map.insert(fp, page_id);
+            if let Some(fp) = fp_val
+                && !fp.is_empty()
+            {
+                if page_type == "surface" {
+                    // surface pages use "surface:{name}" as fingerprint
+                    if let Some(name) = fp.strip_prefix("surface:") {
+                        surface_map.insert(name.to_string(), page_id);
                     }
+                } else {
+                    fp_map.insert(fp, page_id);
                 }
             }
         }
@@ -250,16 +252,27 @@ async fn create_surface_page(
     Ok(page_id.to_string())
 }
 
+struct FindingPageArgs<'a> {
+    result: &'a SarifResult,
+    title: &'a str,
+    body: &'a str,
+    fingerprint: Option<&'a str>,
+    surface_name: &'a str,
+}
+
 async fn create_finding_page(
     client: &Client,
     token: &str,
     db_id: &str,
-    result: &SarifResult,
-    title: &str,
-    body: &str,
-    fingerprint: Option<&str>,
-    surface_name: &str,
+    args: FindingPageArgs<'_>,
 ) -> Result<String> {
+    let FindingPageArgs {
+        result,
+        title,
+        body,
+        fingerprint,
+        surface_name,
+    } = args;
     let mut properties = json!({
         "Name": {
             "title": [{ "text": { "content": title } }]

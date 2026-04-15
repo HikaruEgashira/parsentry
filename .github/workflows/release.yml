@@ -9,13 +9,14 @@ on:
         description: 'Tag to release (e.g., v0.15.0)'
         required: true
         type: string
-permissions:
-  contents: write
+permissions: {}
 jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -126,6 +127,8 @@ jobs:
     needs: [build, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         timeout-minutes: 5

@@ -120,7 +120,7 @@ pub fn repo_name_from_target(target: &str) -> String {
         target
             .trim_end_matches('/')
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or(target)
             .replace(".git", "")
     }
@@ -146,7 +146,7 @@ pub async fn locate_repository(
         let dest = project_cache.join("repo");
         let repo_name = target
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown-repo")
             .replace(".git", "");
 
@@ -317,10 +317,7 @@ mod tests {
             resolve_network_target("192.168.1.1:8080"),
             "http://192.168.1.1:8080"
         );
-        assert_eq!(
-            resolve_network_target("example.com"),
-            "https://example.com"
-        );
+        assert_eq!(resolve_network_target("example.com"), "https://example.com");
         assert_eq!(
             resolve_network_target("sub.example.com:3000"),
             "https://sub.example.com:3000"

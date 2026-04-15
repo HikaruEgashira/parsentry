@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 
 use crate::cli::args::{Args, Commands};
+use crate::cli::commands::common::write_stdout;
 use crate::cli::commands::{
     run_generate_command, run_log_command, run_model_command, run_scan_command,
 };
-use crate::cli::commands::common::write_stdout;
 
 pub struct RootCommand;
 
@@ -39,10 +39,7 @@ impl RootCommand {
                 };
                 let reports_dir = cache_dir_for(&target).join("reports");
                 let merged = merge_sarif_dir(&reports_dir, None)?;
-                write_stdout(&format!(
-                    "{}\n",
-                    serde_json::to_string_pretty(&merged)?
-                ))?;
+                write_stdout(&format!("{}\n", serde_json::to_string_pretty(&merged)?))?;
                 if let Some(repo) = gh_issue {
                     run_gh_issue_command(&reports_dir, &repo, dry_run, &min_level).await?;
                 }

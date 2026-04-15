@@ -24,17 +24,9 @@ pub fn generate_output_filename(file_path: &std::path::Path, root_dir: &std::pat
 
     // Replace path separators and clean up dangerous characters
     let cleaned = path_str
-        .replace(std::path::MAIN_SEPARATOR, "-")
-        .replace('/', "-") // Handle both Unix and Windows separators
-        .replace('\\', "-")
+        .replace([std::path::MAIN_SEPARATOR, '/', '\\'], "-")
         .replace("..", "dotdot") // Remove dangerous path traversal
-        .replace(':', "_") // Replace colon (problematic on Windows)
-        .replace('*', "_") // Replace wildcard characters
-        .replace('?', "_")
-        .replace('<', "_")
-        .replace('>', "_")
-        .replace('|', "_")
-        .replace('"', "_");
+        .replace([':', '*', '?', '<', '>', '|', '"'], "_");
 
     // Append .md extension
     format!("{}.md", cleaned)

@@ -138,12 +138,11 @@ pub fn find_active_project_sessions(project_dir: &Path) -> Result<Vec<String>> {
     for entry in fs::read_dir(project_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
-            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                if active_ids.contains(stem) {
-                    result.push(stem.to_string());
-                }
-            }
+        if path.extension().and_then(|e| e.to_str()) == Some("jsonl")
+            && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+            && active_ids.contains(stem)
+        {
+            result.push(stem.to_string());
         }
     }
 
@@ -230,10 +229,10 @@ pub fn read_events_from(path: &Path, offset: u64) -> Result<(Vec<SessionEvent>, 
 
         match entry.entry_type.as_str() {
             "assistant" => {
-                if let Some(msg) = &entry.message {
-                    if let Some(content) = &msg.content {
-                        extract_events_from_content(content, &timestamp, &mut events);
-                    }
+                if let Some(msg) = &entry.message
+                    && let Some(content) = &msg.content
+                {
+                    extract_events_from_content(content, &timestamp, &mut events);
                 }
             }
             "last-prompt" => {
@@ -264,14 +263,14 @@ pub fn extract_surface_id(path: &Path) -> Option<String> {
             if let Some(content) = &entry.content {
                 return extract_surface_from_text(content);
             }
-            if let Some(msg) = &entry.message {
-                if let Some(serde_json::Value::Array(blocks)) = &msg.content {
-                    for block in blocks {
-                        if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                            if let Some(id) = extract_surface_from_text(text) {
-                                return Some(id);
-                            }
-                        }
+            if let Some(msg) = &entry.message
+                && let Some(serde_json::Value::Array(blocks)) = &msg.content
+            {
+                for block in blocks {
+                    if let Some(text) = block.get("text").and_then(|t| t.as_str())
+                        && let Some(id) = extract_surface_from_text(text)
+                    {
+                        return Some(id);
                     }
                 }
             }
@@ -290,7 +289,7 @@ fn claude_home() -> Result<PathBuf> {
 fn encode_project_path(path: &Path) -> String {
     let abs = path.to_string_lossy();
     // Claude Code encodes paths by replacing both '/' and '.' with '-'
-    abs.replace('/', "-").replace('.', "-")
+    abs.replace(['/', '.'], "-")
 }
 
 #[cfg(unix)]

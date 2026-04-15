@@ -1042,16 +1042,27 @@ mod tests {
 
         let dir = cache_dir.join("ns").join("ol");
         fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join("old111.json"), serde_json::to_string(&old_entry).unwrap()).unwrap();
+        fs::write(
+            dir.join("old111.json"),
+            serde_json::to_string(&old_entry).unwrap(),
+        )
+        .unwrap();
 
         let dir2 = cache_dir.join("ns").join("ne");
         fs::create_dir_all(&dir2).unwrap();
-        fs::write(dir2.join("new222.json"), serde_json::to_string(&new_entry).unwrap()).unwrap();
+        fs::write(
+            dir2.join("new222.json"),
+            serde_json::to_string(&new_entry).unwrap(),
+        )
+        .unwrap();
 
         let stats = manager.cleanup_by_size().unwrap();
         // With - : target_removal > 0, so oldest entry removed
         // With + : target_removal huge, both removed
-        assert_eq!(stats.removed_count, 1, "should remove only the oldest to get under limit");
+        assert_eq!(
+            stats.removed_count, 1,
+            "should remove only the oldest to get under limit"
+        );
     }
 
     #[test]

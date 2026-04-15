@@ -68,7 +68,7 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut sarif_files: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
         .with_context(|| format!("cannot read directory: {}", dir.display()))?
         .filter_map(|e| e.ok())
-        .filter(|e| !e.file_type().map_or(false, |ft| ft.is_symlink()))
+        .filter(|e| !e.file_type().is_ok_and(|ft| ft.is_symlink()))
         .flat_map(|e| {
             let path = e.path();
             if path.is_dir() {
@@ -109,8 +109,8 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut seen_fingerprints: HashMap<String, usize> = HashMap::new();
 
     for path in &sarif_files {
-        let meta = std::fs::metadata(path)
-            .with_context(|| format!("cannot stat {}", path.display()))?;
+        let meta =
+            std::fs::metadata(path).with_context(|| format!("cannot stat {}", path.display()))?;
         if meta.len() > MAX_SARIF_FILE_SIZE {
             anyhow::bail!(
                 "SARIF file exceeds {}MiB limit: {} ({}B)",
@@ -471,6 +471,9 @@ mod tests {
         let merged = merge_sarif_dir(tmp.path(), None).unwrap();
         let result = &merged.runs[0].results[0];
         let fps = result.fingerprints.as_ref().unwrap();
-        assert!(fps.contains_key("parsentry/v1"), "ensure_fingerprint must add parsentry/v1");
+        assert!(
+            fps.contains_key("parsentry/v1"),
+            "ensure_fingerprint must add parsentry/v1"
+        );
     }
 }

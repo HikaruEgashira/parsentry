@@ -113,11 +113,11 @@ pub async fn run_linear_command(
                 skipped += 1;
                 continue;
             }
-            if let Some(f) = &fp {
-                if fp_map.contains_key(f) {
-                    skipped += 1;
-                    continue;
-                }
+            if let Some(f) = &fp
+                && fp_map.contains_key(f)
+            {
+                skipped += 1;
+                continue;
             }
 
             let title = build_title(result);
@@ -275,13 +275,7 @@ async fn fetch_existing_issues(
             variables["cursor"] = json!(c);
         }
 
-        let data = gql(
-            client,
-            api_key,
-            &query,
-            variables,
-        )
-        .await?;
+        let data = gql(client, api_key, &query, variables).await?;
 
         let nodes = data["issues"]["nodes"]
             .as_array()

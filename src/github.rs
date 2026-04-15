@@ -65,7 +65,8 @@ fn is_valid_repo_slug(s: &str) -> bool {
         !p.is_empty()
             && !p.starts_with('-')
             && !p.starts_with('.')
-            && p.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+            && p.chars()
+                .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
     };
     valid_part(parts[0]) && !parts[1].ends_with(".git") && valid_part(parts[1])
 }
@@ -81,7 +82,10 @@ pub fn clone_repo(repo: &str, dest: &Path) -> Result<()> {
     }
 
     if !is_valid_repo_slug(repo) {
-        anyhow::bail!("Invalid repository format: expected 'owner/repo', got: {}", repo);
+        anyhow::bail!(
+            "Invalid repository format: expected 'owner/repo', got: {}",
+            repo
+        );
     }
 
     let url = format!("https://github.com/{}.git", repo);
@@ -111,10 +115,9 @@ impl GitHubSearchClient {
         // Try to get token from git credential helper first, then fall back to env var
         if let Some(token) =
             Self::get_token_from_credential_helper().or_else(|| env::var("GITHUB_TOKEN").ok())
+            && !token.is_empty()
         {
-            if !token.is_empty() {
-                builder = builder.personal_token(token);
-            }
+            builder = builder.personal_token(token);
         }
 
         let client = builder
@@ -368,10 +371,9 @@ pub async fn run_gh_issue_command(
     let mut builder = Octocrab::builder();
     if let Some(token) = GitHubSearchClient::get_token_from_credential_helper()
         .or_else(|| env::var("GITHUB_TOKEN").ok())
+        && !token.is_empty()
     {
-        if !token.is_empty() {
-            builder = builder.personal_token(token);
-        }
+        builder = builder.personal_token(token);
     }
     let client = builder
         .build()
@@ -506,29 +508,29 @@ pub async fn run_gh_issue_command(
                 skipped += 1;
                 continue;
             }
-            if let Some(f) = &fp {
-                if let Some(&num) = fp_map.get(f) {
-                    // already exists — add to tasklist but don't recreate
-                    let label = format!(
-                        "[{}] {} in {}",
-                        result.level.to_uppercase(),
-                        result.rule_id,
-                        result
-                            .locations
-                            .first()
-                            .map(|l| l
-                                .physical_location
-                                .artifact_location
-                                .uri
-                                .split('/')
-                                .next_back()
-                                .unwrap_or("unknown"))
-                            .unwrap_or("unknown")
-                    );
-                    tasklist_items.push((num, label, false));
-                    skipped += 1;
-                    continue;
-                }
+            if let Some(f) = &fp
+                && let Some(&num) = fp_map.get(f)
+            {
+                // already exists — add to tasklist but don't recreate
+                let label = format!(
+                    "[{}] {} in {}",
+                    result.level.to_uppercase(),
+                    result.rule_id,
+                    result
+                        .locations
+                        .first()
+                        .map(|l| l
+                            .physical_location
+                            .artifact_location
+                            .uri
+                            .split('/')
+                            .next_back()
+                            .unwrap_or("unknown"))
+                        .unwrap_or("unknown")
+                );
+                tasklist_items.push((num, label, false));
+                skipped += 1;
+                continue;
             }
 
             let title = build_title(result);

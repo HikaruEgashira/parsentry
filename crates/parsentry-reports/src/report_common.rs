@@ -128,11 +128,11 @@ pub fn build_markdown_body(result: &SarifResult, fingerprint: Option<&str>) -> S
                 .map(|r| format!(":{}", r.start_line))
                 .unwrap_or_default();
             body.push_str(&format!("- `{uri}{line}`\n"));
-            if let Some(region) = &loc.physical_location.region {
-                if let Some(snippet) = &region.snippet {
-                    let safe_snippet = snippet.text.replace("```", "` ` `");
-                    body.push_str(&format!("\n```\n{}\n```\n\n", safe_snippet));
-                }
+            if let Some(region) = &loc.physical_location.region
+                && let Some(snippet) = &region.snippet
+            {
+                let safe_snippet = snippet.text.replace("```", "` ` `");
+                body.push_str(&format!("\n```\n{}\n```\n\n", safe_snippet));
             }
         }
         body.push('\n');
@@ -502,7 +502,11 @@ mod tests {
                 ]
             }]
         });
-        std::fs::write(surface_dir.join("result.sarif.json"), sarif_content.to_string()).unwrap();
+        std::fs::write(
+            surface_dir.join("result.sarif.json"),
+            sarif_content.to_string(),
+        )
+        .unwrap();
 
         let reports = load_surface_reports(reports_dir, "note").unwrap();
         assert_eq!(reports.len(), 1);
@@ -542,7 +546,11 @@ mod tests {
                 ]
             }]
         });
-        std::fs::write(surface_dir.join("result.sarif.json"), sarif_content.to_string()).unwrap();
+        std::fs::write(
+            surface_dir.join("result.sarif.json"),
+            sarif_content.to_string(),
+        )
+        .unwrap();
 
         // Only error
         let reports = load_surface_reports(reports_dir, "error").unwrap();

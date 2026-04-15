@@ -164,12 +164,11 @@ impl RepoMetadata {
 
 fn build_directory_tree(root: &Path, max_depth: usize) -> Result<String> {
     let mut tree = String::new();
-    build_tree_recursive(root, root, &mut tree, 0, max_depth)?;
+    build_tree_recursive(root, &mut tree, 0, max_depth)?;
     Ok(tree)
 }
 
 fn build_tree_recursive(
-    root: &Path,
     dir: &Path,
     out: &mut String,
     depth: usize,
@@ -200,10 +199,10 @@ fn build_tree_recursive(
         }
 
         // Skip symlinks to prevent traversal outside repo
-        if let Ok(ft) = entry.file_type() {
-            if ft.is_symlink() {
-                continue;
-            }
+        if let Ok(ft) = entry.file_type()
+            && ft.is_symlink()
+        {
+            continue;
         }
 
         let indent = "  ".repeat(depth);
@@ -211,7 +210,7 @@ fn build_tree_recursive(
 
         if path.is_dir() {
             out.push_str(&format!("{}{}/ \n", indent, name));
-            build_tree_recursive(root, &path, out, depth + 1, max_depth)?;
+            build_tree_recursive(&path, out, depth + 1, max_depth)?;
         } else if depth <= 1 {
             // Only show files at top levels to keep it compact
             out.push_str(&format!("{}{}\n", indent, name));
@@ -226,13 +225,13 @@ fn collect_manifests(root: &Path) -> Result<Vec<ManifestInfo>> {
 
     for &name in MANIFEST_FILES {
         let path = root.join(name);
-        if path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&path) {
-                manifests.push(ManifestInfo {
-                    path: name.to_string(),
-                    content,
-                });
-            }
+        if path.exists()
+            && let Ok(content) = std::fs::read_to_string(&path)
+        {
+            manifests.push(ManifestInfo {
+                path: name.to_string(),
+                content,
+            });
         }
     }
 

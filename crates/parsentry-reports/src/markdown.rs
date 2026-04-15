@@ -9,13 +9,13 @@ pub fn to_markdown(response: &Response) -> String {
     {
         format!(
             "# Security Analysis: {} - {}",
-            file_path.split('/').last().unwrap_or(file_path),
+            file_path.split('/').next_back().unwrap_or(file_path),
             pattern
         )
     } else if let Some(file_path) = &response.file_path {
         format!(
             "# Security Analysis: {}",
-            file_path.split('/').last().unwrap_or(file_path)
+            file_path.split('/').next_back().unwrap_or(file_path)
         )
     } else {
         "# Security Analysis Report".to_string()
@@ -30,7 +30,7 @@ pub fn to_markdown(response: &Response) -> String {
         if let Some(pattern) = &response.pattern_description {
             md.push_str(&format!("- **検出パターン**: {}\n", pattern));
         }
-        md.push_str("\n");
+        md.push('\n');
     }
 
     let confidence_badge = match response.confidence_score {
@@ -54,36 +54,36 @@ pub fn to_markdown(response: &Response) -> String {
     }
 
     // Source code sections
-    if let Some(matched_code) = &response.matched_source_code {
-        if !matched_code.trim().is_empty() {
-            let lang = response
-                .file_path
-                .as_ref()
-                .and_then(|p| p.split('.').last())
-                .map(|ext| match ext {
-                    "rb" => "ruby",
-                    "py" => "python",
-                    "js" => "javascript",
-                    "ts" => "typescript",
-                    "go" => "go",
-                    "rs" => "rust",
-                    "java" => "java",
-                    "c" | "h" => "c",
-                    "cpp" | "cc" | "cxx" | "hpp" => "cpp",
-                    "php" => "php",
-                    "sh" | "bash" => "bash",
-                    "tf" => "hcl",
-                    "yaml" | "yml" => "yaml",
-                    "json" => "json",
-                    _ => ext,
-                })
-                .unwrap_or("text");
+    if let Some(matched_code) = &response.matched_source_code
+        && !matched_code.trim().is_empty()
+    {
+        let lang = response
+            .file_path
+            .as_ref()
+            .and_then(|p| p.split('.').next_back())
+            .map(|ext| match ext {
+                "rb" => "ruby",
+                "py" => "python",
+                "js" => "javascript",
+                "ts" => "typescript",
+                "go" => "go",
+                "rs" => "rust",
+                "java" => "java",
+                "c" | "h" => "c",
+                "cpp" | "cc" | "cxx" | "hpp" => "cpp",
+                "php" => "php",
+                "sh" | "bash" => "bash",
+                "tf" => "hcl",
+                "yaml" | "yml" => "yaml",
+                "json" => "json",
+                _ => ext,
+            })
+            .unwrap_or("text");
 
-            md.push_str("## マッチしたソースコード\n\n");
-            md.push_str(&format!("```{}\n", lang));
-            md.push_str(matched_code);
-            md.push_str("\n```\n\n");
-        }
+        md.push_str("## マッチしたソースコード\n\n");
+        md.push_str(&format!("```{}\n", lang));
+        md.push_str(matched_code);
+        md.push_str("\n```\n\n");
     }
 
     md.push_str("## 詳細解析\n\n");

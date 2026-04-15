@@ -33,10 +33,7 @@ impl UrlAssetCollector {
     }
 
     /// Fetch the HTML page and collect all linked frontend assets.
-    pub async fn collect(
-        &self,
-        asset_dir: &Path,
-    ) -> Result<Vec<CollectedAsset>> {
+    pub async fn collect(&self, asset_dir: &Path) -> Result<Vec<CollectedAsset>> {
         let response = self.client.get(&self.base_url).send().await?;
         if !response.status().is_success() {
             anyhow::bail!("HTTP {} fetching {}", response.status(), self.base_url);
@@ -167,7 +164,14 @@ fn extract_inline_assets(html: &str) -> Vec<(String, String)> {
         if content.is_empty() || content.contains("src=") {
             continue;
         }
-        let filename = format!("inline{}.js", if script_idx == 0 { String::new() } else { script_idx.to_string() });
+        let filename = format!(
+            "inline{}.js",
+            if script_idx == 0 {
+                String::new()
+            } else {
+                script_idx.to_string()
+            }
+        );
         script_idx += 1;
         result.push((content, filename));
     }
@@ -178,7 +182,14 @@ fn extract_inline_assets(html: &str) -> Vec<(String, String)> {
         if content.is_empty() {
             continue;
         }
-        let filename = format!("inline{}.css", if style_idx == 0 { String::new() } else { style_idx.to_string() });
+        let filename = format!(
+            "inline{}.css",
+            if style_idx == 0 {
+                String::new()
+            } else {
+                style_idx.to_string()
+            }
+        );
         style_idx += 1;
         result.push((content, filename));
     }
@@ -217,7 +228,11 @@ fn resolve_url(base: &str, relative: &str) -> String {
 
     // Relative path: strip filename from base, append relative
     if let Some(last_slash) = base_path.rfind('/') {
-        let mut resolved = format!("{}{}", &base_path[..=last_slash], relative.trim_start_matches("./"));
+        let mut resolved = format!(
+            "{}{}",
+            &base_path[..=last_slash],
+            relative.trim_start_matches("./")
+        );
         // Normalize path segments
         while let Some(idx) = resolved.find("/../") {
             if let Some(parent_end) = resolved[..idx].rfind('/') {
@@ -240,10 +255,11 @@ fn url_to_filename(url: &str, _kind: AssetKind) -> String {
     let path = path.split('#').next().unwrap_or(path);
 
     // Take the last path segment
-    if let Some(segment) = path.rsplit('/').next() {
-        if !segment.is_empty() && segment.contains('.') {
-            return segment.to_string();
-        }
+    if let Some(segment) = path.rsplit('/').next()
+        && !segment.is_empty()
+        && segment.contains('.')
+    {
+        return segment.to_string();
     }
 
     // Fallback: hash the URL to produce a filename
@@ -259,7 +275,8 @@ mod tests {
 
     #[test]
     fn test_extract_asset_urls_script() {
-        let html = r#"<html><script src="/app.js"></script><script src="vendor.min.js"></script></html>"#;
+        let html =
+            r#"<html><script src="/app.js"></script><script src="vendor.min.js"></script></html>"#;
         let urls = extract_asset_urls(html);
         assert_eq!(urls.len(), 2);
         assert_eq!(urls[0].0, "/app.js");
@@ -268,7 +285,8 @@ mod tests {
 
     #[test]
     fn test_extract_asset_urls_stylesheet() {
-        let html = r#"<link rel="stylesheet" href="/style.css"><link href="theme.css" rel="stylesheet">"#;
+        let html =
+            r#"<link rel="stylesheet" href="/style.css"><link href="theme.css" rel="stylesheet">"#;
         let urls = extract_asset_urls(html);
         assert_eq!(urls.len(), 2);
         assert!(urls.iter().any(|(u, _)| u == "/style.css"));
@@ -345,7 +363,10 @@ mod tests {
     #[test]
     fn test_url_to_filename_with_path() {
         assert_eq!(
-            url_to_filename("https://cdn.example.com/js/app.bundle.js?v=1", AssetKind::JavaScript),
+            url_to_filename(
+                "https://cdn.example.com/js/app.bundle.js?v=1",
+                AssetKind::JavaScript
+            ),
             "app.bundle.js"
         );
     }

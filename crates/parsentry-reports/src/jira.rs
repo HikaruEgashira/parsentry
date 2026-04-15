@@ -116,11 +116,11 @@ pub async fn run_jira_command(
                 skipped += 1;
                 continue;
             }
-            if let Some(f) = &fp {
-                if fp_map.contains_key(f) {
-                    skipped += 1;
-                    continue;
-                }
+            if let Some(f) = &fp
+                && fp_map.contains_key(f)
+            {
+                skipped += 1;
+                continue;
             }
 
             let title = build_title(result);
@@ -186,7 +186,10 @@ async fn fetch_existing_issues(
     let max = 100usize;
 
     // Validate project_key format to prevent JQL injection
-    if !project_key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    if !project_key
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    {
         anyhow::bail!("Invalid Jira project key: {}", project_key);
     }
 

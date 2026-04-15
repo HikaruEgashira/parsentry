@@ -14,16 +14,12 @@ fn resolve_reports_dir(target: &str) -> PathBuf {
     if local.is_dir() {
         let has_sarif = std::fs::read_dir(&local)
             .map(|entries| {
-                entries
-                    .filter_map(|e| e.ok())
-                    .any(|e| {
-                        e.path()
-                            .extension()
-                            .is_some_and(|ext| ext == "json")
-                            && e.path()
-                                .to_str()
-                                .is_some_and(|s| s.ends_with(".sarif.json"))
-                    })
+                entries.filter_map(|e| e.ok()).any(|e| {
+                    e.path().extension().is_some_and(|ext| ext == "json")
+                        && e.path()
+                            .to_str()
+                            .is_some_and(|s| s.ends_with(".sarif.json"))
+                })
             })
             .unwrap_or(false);
         if has_sarif {
@@ -67,9 +63,7 @@ fn pdf_tool_dir() -> Result<PathBuf> {
         }
     }
 
-    bail!(
-        "pdf-report tool not found. Set PARSENTRY_PDF_TOOL or run from the repository root."
-    )
+    bail!("pdf-report tool not found. Set PARSENTRY_PDF_TOOL or run from the repository root.")
 }
 
 /// Ensure npm dependencies are installed.

@@ -58,21 +58,21 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
                 continue;
             }
             // Single file
-            if let Ok(meta) = std::fs::metadata(&full_path) {
-                if meta.len() <= MAX_FILE_SIZE {
-                    let rel = full_path
-                        .strip_prefix(root_dir)
-                        .unwrap_or(&full_path)
-                        .to_string_lossy()
-                        .to_string();
-                    if seen.insert(rel.clone()) {
-                        if let Ok(contents) = std::fs::read_to_string(&full_path) {
-                            sources.push(SourceFile {
-                                rel_path: rel,
-                                contents,
-                            });
-                        }
-                    }
+            if let Ok(meta) = std::fs::metadata(&full_path)
+                && meta.len() <= MAX_FILE_SIZE
+            {
+                let rel = full_path
+                    .strip_prefix(root_dir)
+                    .unwrap_or(&full_path)
+                    .to_string_lossy()
+                    .to_string();
+                if seen.insert(rel.clone())
+                    && let Ok(contents) = std::fs::read_to_string(&full_path)
+                {
+                    sources.push(SourceFile {
+                        rel_path: rel,
+                        contents,
+                    });
                 }
             }
         } else if full_path.is_dir() {
@@ -87,23 +87,23 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
             // Directory — find all source files under it
             if let Ok(files) = discovery.get_files_in_path(&full_path) {
                 for file_path in files {
-                    if let Ok(meta) = std::fs::metadata(&file_path) {
-                        if meta.len() > MAX_FILE_SIZE {
-                            continue;
-                        }
+                    if let Ok(meta) = std::fs::metadata(&file_path)
+                        && meta.len() > MAX_FILE_SIZE
+                    {
+                        continue;
                     }
                     let rel = file_path
                         .strip_prefix(root_dir)
                         .unwrap_or(&file_path)
                         .to_string_lossy()
                         .to_string();
-                    if seen.insert(rel.clone()) {
-                        if let Ok(contents) = std::fs::read_to_string(&file_path) {
-                            sources.push(SourceFile {
-                                rel_path: rel,
-                                contents,
-                            });
-                        }
+                    if seen.insert(rel.clone())
+                        && let Ok(contents) = std::fs::read_to_string(&file_path)
+                    {
+                        sources.push(SourceFile {
+                            rel_path: rel,
+                            contents,
+                        });
                     }
                 }
             }
@@ -404,7 +404,7 @@ mod tests {
         let root = temp.path();
         let src_dir = root.join("src");
         fs::create_dir_all(&src_dir).unwrap();
-        fs::write(src_dir.join("big.py"), &"x".repeat(60 * 1024)).unwrap();
+        fs::write(src_dir.join("big.py"), "x".repeat(60 * 1024)).unwrap();
 
         let surface = make_surface("S-1", vec!["src/big.py"]);
         let sp = build_surface_prompt(&surface, root).unwrap();
