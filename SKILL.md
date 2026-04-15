@@ -1,104 +1,82 @@
 ---
 name: parsentry
 description: >
-  Parsentry security scan orchestrator. Run a full security audit on a GitHub repository
-  or local codebase using parsentry CLI, dispatching parallel subagents for per-surface
-  analysis without spawning external claude processes.
+  Parsentry security scan orchestrator. Runs a full security audit on a GitHub
+  repository or local codebase — enumerates attack surfaces via threat model,
+  dispatches parallel subagents for per-surface SARIF analysis, merges results,
+  and generates a PDF report.
   Trigger when: user asks to "scan", "security audit", "parsentry",
-  "セキュリティスキャン", "脆弱性分析" a repository or codebase.
+  "セキュリティスキャン", "脆弱性分析", "vulnerability scan",
+  "threat model", or "attack surface analysis" on a repository or codebase.
+compatibility: Requires parsentry CLI (cargo install parsentry) and git.
+metadata:
+  author: HikaruEgashira
+  version: "0.21"
+allowed-tools: Bash(parsentry:*) Bash(test:*) Bash(git:*) Read Write Agent Glob
 ---
 
 # Parsentry Scan Orchestrator
 
-Act as the orchestrator for parsentry security scans. Dispatch subagents via Agent tool.
+Run `parsentry model` → agent writes model.json → `parsentry scan` → parallel agents write SARIF → `parsentry merge` + `parsentry generate`.
 
-## Workflow
-
-### Phase 1: Threat Model
+## Phase 1: Threat Model
 
 ```bash
 MODEL_PROMPT=$(parsentry model <TARGET> 2>/dev/null)
 ```
 
-Capture stdout into a variable. The prompt contains:
-- System prompt (attack surface enumerator role)
-- Repository metadata (directory tree, languages, manifests, entry points)
-- Output path: `~/Library/Caches/parsentry/<owner>__<repo>/model.json`
-- JSON schema for ThreatModel
+Dispatch **one Agent** with `$MODEL_PROMPT` as the prompt verbatim. The prompt already instructs the agent to write `model.json` to the correct cache path — no additional wrapping needed.
 
-Dispatch one Agent
-
-```
-Prompt: $MODEL_PROMPT
-```
-
-The prompt already instructs the agent to write JSON to the output path via Write tool. No additional instruction needed — pass the prompt verbatim.
-
-**Verify** model.json was created before proceeding:
-```bash
-test -s "~/Library/Caches/parsentry/<owner>__<repo>/model.json"
-```
-
-### Phase 2: Per-Surface Analysis
+**Validate** before proceeding:
 
 ```bash
-parsentry scan <TARGET> 2>&1
+parsentry scan <TARGET> 2>&1 | head -1
+# Must NOT say "model.json not found"
 ```
 
-If output says "all N surfaces cached, no analysis needed" → skip to Phase 3.
+## Phase 2: Per-Surface Analysis
 
-Otherwise, scan generates `SURFACE-*/prompt.md` files under the reports directory. For each pending surface:
+```bash
+SCAN_OUTPUT=$(parsentry scan <TARGET> 2>&1)
+```
 
-1. List all `prompt.md` files that have no corresponding `result.sarif.json`
-2. Dispatch **all agents in parallel** (single message with multiple Agent tool calls)
+- If output says **"all N surfaces cached, no analysis needed"** → skip to Phase 3.
+- Otherwise, list all `prompt.md` files that have **no** sibling `result.sarif.json`:
 
-Each agent prompt — pass the prompt.md content verbatim. It already contains:
-- Surface metadata (ID, kind, identifier, locations)
-- Instructions to read source files and output SARIF v2.1.0
-- Output path for result.sarif.json
+```bash
+# Find pending surfaces
+for d in ~/Library/Caches/parsentry/*/reports/*/; do
+  [ -f "$d/prompt.md" ] && [ ! -f "$d/result.sarif.json" ] && echo "$d"
+done
+```
 
-### Phase 3: Merge & Report
+Dispatch **all pending surface agents in parallel** (single message, multiple Agent tool calls). Pass each `prompt.md` content verbatim — it already contains surface metadata, source file paths, SARIF schema, and output path.
+
+**Validate** — re-run `parsentry scan <TARGET>` and confirm all surfaces are cached.
+
+## Phase 3: Merge & Report
 
 ```bash
 parsentry merge <TARGET>
 parsentry generate <TARGET>
 ```
 
-Open the PDF and summarize findings.
+Open the generated PDF path (printed to stdout) and summarize findings to the user.
 
-### Phase 4: Triage (optional — run when user requests triage/patch/fix)
+## Phase 4: Triage (on request)
 
-1. Read the per-surface `result.sarif.json` files under the reports directory.
-2. Create a feature branch: `git checkout -b fix/<descriptive-name>`
-3. Dispatch **one Agent per surface in parallel**. Each agent receives:
+When the user asks to triage, patch, or fix findings, read [references/triage.md](references/triage.md) for the full workflow.
 
-```
-You are triaging security findings for one attack surface. Follow these steps for EACH finding in the list.
+## Gotchas
 
-## Surface: {surface_id}
-## Findings
-{for each finding in this surface's result.sarif.json:}
-- Rule: {rule_id}, File: {file_path}:{line}, Severity: {level}
-  Description: {description}
-
-## Per-finding workflow
-For each finding:
-1. Classify — Read the source file at the reported location. Based on the actual code:
-   - TP: Exploitable or clearly unsafe code → proceed to Patch
-   - FP: Built-in protection, operator-controlled input, by-design, or duplicate → skip
-   - Low Risk: Theoretically possible but practically unexploitable → skip
-2. Patch (TP only) — Apply a minimal patch. Do NOT modify tests or unrelated code.
-3. Verify — After all patches for this surface, run the project quality gate. If it fails, fix and re-run.
-
-## Output
-Return a table:
-| Rule | File | Classification | Reason / Patch |
-```
-
-4. Collect results from all surface agents. Present a unified summary table.
+- `parsentry model` output goes to **stdout**; progress/logs go to stderr. Always use `2>/dev/null` or `2>&1` intentionally.
+- The cache directory is platform-dependent (`~/Library/Caches/parsentry/` on macOS, `~/.cache/parsentry/` on Linux). Let `parsentry scan` resolve paths — don't hardcode.
+- Agent prompts from parsentry are self-contained. **Do not** add system prompts or wrap them — pass verbatim.
+- `parsentry merge` must run **before** `parsentry generate`. Merge consolidates per-surface SARIF into a unified report; generate converts it to PDF.
+- If an agent produces invalid SARIF, `parsentry merge` will skip that surface and log a warning. Check merge output for skipped surfaces.
 
 ## Error Handling
 
-- Agent failure → retry that surface once
-- 429/529 → wait and retry with backoff
-- Invalid SARIF → log and skip, note in summary
+- Agent failure → retry that surface **once**
+- Rate limit (429/529) → wait with exponential backoff, then retry
+- Invalid SARIF → log, skip surface, note in final summary
