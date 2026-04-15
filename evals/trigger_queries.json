@@ -20,9 +20,9 @@
     "note": "Direct CLI invocation"
   },
   {
-    "query": "What are the attack surfaces in this project?",
+    "query": "Enumerate all attack surfaces in this project and generate a threat model with SARIF output",
     "should_trigger": true,
-    "note": "Threat modeling language without 'scan'"
+    "note": "Threat modeling with structured output — needs parsentry"
   },
   {
     "query": "本番リリース前にこのアプリの脆弱性分析をお願いします",
@@ -40,9 +40,9 @@
     "note": "Explicit scan + report request"
   },
   {
-    "query": "Review the security posture of ./src before the pentest next week",
+    "query": "Run a full security scan on ./src and generate a PDF report before the pentest next week",
     "should_trigger": true,
-    "note": "Security posture review — implicit scan"
+    "note": "Security scan + PDF report request — pre-pentest"
   },
   {
     "query": "How risky is this codebase? I want to know what an attacker would target first",
