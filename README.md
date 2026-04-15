@@ -10,6 +10,14 @@ Parsentry analyzes repository structure, enumerates attack surfaces, and generat
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HikaruEgashira/parsentry) | [日本語](README.ja.md)
 
+### [Agent Skill](https://agentskills.io/)
+
+```bash
+npx skills add HikaruEgashira/parsentry
+```
+
+Once installed, just ask your agent to scan a repository — the skill dispatches the scan process automatically.
+
 ### Usage
 
 ```bash
@@ -17,7 +25,7 @@ parsentry model owner/repo | claude -p
 parsentry scan owner/repo | claude -p
 ```
 
-`model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to Claude Code and it dispatches parallel subagents automatically.
+`model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to any CLI agent and it dispatches parallel subagents automatically.
 
 See [HACKING.md](HACKING.md) for usage with other CLI agents.
 
@@ -43,14 +51,6 @@ mise use -g github:HikaruEgashira/parsentry
 # Via cargo
 cargo install parsentry
 ```
-
-### Claude Code Skill
-
-```bash
-npx skills add HikaruEgashira/parsentry
-```
-
-Once installed, just ask Claude Code to scan a repository — the skill dispatches scan process automatically.
 
 ### Example Reports
 
