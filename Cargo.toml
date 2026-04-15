@@ -30,7 +30,7 @@ thiserror.workspace = true
 log = "0.4"
 anyhow.workspace = true
 dotenvy = "0.15"
-indicatif = "0.17"
+indicatif = "0.18"
 terminal_size = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
