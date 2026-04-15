@@ -152,7 +152,7 @@ fn extract_asset_urls(html: &str) -> Vec<(String, AssetKind)> {
     urls
 }
 
-/// Extract inline <script> and <style> blocks as separate files.
+/// Extract inline `<script>` and `<style>` blocks as separate files.
 fn extract_inline_assets(html: &str) -> Vec<(String, String)> {
     let mut result = Vec::new();
     let mut script_idx = 0u32;

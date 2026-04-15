@@ -98,5 +98,35 @@
     "query": "Generate API documentation from the source code",
     "should_trigger": false,
     "note": "Documentation generation — not security"
+  },
+  {
+    "query": "Fix the SQL injection vulnerability in src/db.py line 42",
+    "should_trigger": false,
+    "note": "Near-miss: specific security fix, not a scan"
+  },
+  {
+    "query": "Create a PR with the security fixes I just made",
+    "should_trigger": false,
+    "note": "Near-miss: PR creation mentioning security"
+  },
+  {
+    "query": "Update the dependencies to fix the known CVEs",
+    "should_trigger": false,
+    "note": "Near-miss: CVE remediation, not scanning"
+  },
+  {
+    "query": "Add input validation to prevent XSS in the login form",
+    "should_trigger": false,
+    "note": "Near-miss: security hardening implementation"
+  },
+  {
+    "query": "Review this diff for security issues before I merge",
+    "should_trigger": false,
+    "note": "Near-miss: security-flavored code review, not a full scan"
+  },
+  {
+    "query": "Commit these changes and push to main",
+    "should_trigger": false,
+    "note": "Near-miss: routine git workflow"
   }
 ]

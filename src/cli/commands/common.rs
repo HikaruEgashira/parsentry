@@ -101,7 +101,7 @@ pub fn cache_dir_for(target: &str) -> PathBuf {
 
 /// Extract short repository name from a target string.
 /// e.g. "HikaruEgashira/parsentry" → "parsentry", "/local/path/repo" → "repo"
-/// For network targets: "https://example.com/app" → "example.com", "192.168.1.1" → "192.168.1.1"
+/// For network targets: `https://example.com/app` → "example.com", "192.168.1.1" → "192.168.1.1"
 pub fn repo_name_from_target(target: &str) -> String {
     if is_network_target(target) {
         let host_part = if is_url(target) {

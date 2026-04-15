@@ -1,17 +1,14 @@
 ---
 name: parsentry
 description: >
-  ALWAYS use this skill when the user asks about security, vulnerabilities,
-  scanning, or risk assessment for a repository or codebase. This skill
-  orchestrates parsentry CLI to enumerate attack surfaces, dispatch parallel
-  analysis agents, and produce a PDF report with SARIF findings. Activate for:
+  Use this skill to run a whole-repository security scan — it orchestrates
+  parsentry CLI to enumerate attack surfaces, dispatch parallel analysis
+  agents, and produce a PDF report with SARIF findings. Activate for:
   security scan, security audit, vulnerability scan, threat model, attack
-  surface enumeration, attack surface analysis, security posture review,
-  risk assessment, pentest preparation, pre-deployment security check,
-  "parsentry", セキュリティスキャン, 脆弱性分析, or any request to find
-  security issues or assess what an attacker could target in code — even if
-  the user doesn't name the tool. Do NOT attempt to run parsentry directly
-  without this skill; the orchestration workflow is required.
+  surface enumeration, pentest preparation, "parsentry", セキュリティスキャン,
+  脆弱性分析. Do NOT activate for: fixing a specific bug, creating PRs or
+  commits, updating dependencies, code review of a diff, or implementing a
+  single security fix. This skill is for broad analysis, not targeted edits.
 compatibility: Requires parsentry CLI (cargo install parsentry) and git.
 metadata:
   author: HikaruEgashira
