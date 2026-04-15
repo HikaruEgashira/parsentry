@@ -1,13 +1,13 @@
 ---
 name: parsentry
 description: >
-  Parsentry security scan orchestrator. Runs a full security audit on a GitHub
-  repository or local codebase — enumerates attack surfaces via threat model,
-  dispatches parallel subagents for per-surface SARIF analysis, merges results,
-  and generates a PDF report.
-  Trigger when: user asks to "scan", "security audit", "parsentry",
-  "セキュリティスキャン", "脆弱性分析", "vulnerability scan",
-  "threat model", or "attack surface analysis" on a repository or codebase.
+  Use this skill to run a security audit on a GitHub repository or local
+  codebase. It enumerates attack surfaces, dispatches parallel analysis agents,
+  and produces a PDF report with SARIF findings. Use when the user wants to
+  find vulnerabilities, review security posture, or assess risk — even if they
+  don't explicitly say "parsentry." Also activate for requests about threat
+  modeling, attack surface analysis, or security scanning in any language
+  (e.g. "セキュリティスキャン", "脆弱性分析").
 compatibility: Requires parsentry CLI (cargo install parsentry) and git.
 metadata:
   author: HikaruEgashira
@@ -44,9 +44,9 @@ SCAN_OUTPUT=$(parsentry scan <TARGET> 2>&1)
 - Otherwise, list all `prompt.md` files that have **no** sibling `result.sarif.json`:
 
 ```bash
-# Find pending surfaces
-for d in ~/Library/Caches/parsentry/*/reports/*/; do
-  [ -f "$d/prompt.md" ] && [ ! -f "$d/result.sarif.json" ] && echo "$d"
+# Parse report paths from parsentry scan output (platform-independent)
+parsentry scan <TARGET> 2>&1 | grep '→' | awk '{print $NF}' | while read dir; do
+  [ -f "$dir/prompt.md" ] && [ ! -f "$dir/result.sarif.json" ] && echo "$dir"
 done
 ```
 

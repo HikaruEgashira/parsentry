@@ -1,0 +1,102 @@
+[
+  {
+    "query": "このリポジトリのセキュリティスキャンを実行して",
+    "should_trigger": true,
+    "note": "Direct Japanese trigger"
+  },
+  {
+    "query": "Can you run a security audit on https://github.com/example/webapp?",
+    "should_trigger": true,
+    "note": "Direct English trigger with GitHub URL"
+  },
+  {
+    "query": "I just inherited this codebase and want to know if there are any vulnerabilities before we deploy to production",
+    "should_trigger": true,
+    "note": "Implicit — no keyword but clear security intent"
+  },
+  {
+    "query": "parsentry scan HikaruEgashira/hikae-vulnerable-python",
+    "should_trigger": true,
+    "note": "Direct CLI invocation"
+  },
+  {
+    "query": "What are the attack surfaces in this project?",
+    "should_trigger": true,
+    "note": "Threat modeling language without 'scan'"
+  },
+  {
+    "query": "本番リリース前にこのアプリの脆弱性分析をお願いします",
+    "should_trigger": true,
+    "note": "Japanese pre-release vulnerability request"
+  },
+  {
+    "query": "I need a threat model for our API — what endpoints are most at risk?",
+    "should_trigger": true,
+    "note": "Threat model request with API context"
+  },
+  {
+    "query": "Scan this repo for security issues and give me a PDF report",
+    "should_trigger": true,
+    "note": "Explicit scan + report request"
+  },
+  {
+    "query": "Review the security posture of ./src before the pentest next week",
+    "should_trigger": true,
+    "note": "Security posture review — implicit scan"
+  },
+  {
+    "query": "How risky is this codebase? I want to know what an attacker would target first",
+    "should_trigger": true,
+    "note": "Attacker perspective / risk assessment language"
+  },
+  {
+    "query": "Fix the failing unit tests in src/auth.rs",
+    "should_trigger": false,
+    "note": "Test fix — not security"
+  },
+  {
+    "query": "Can you review my pull request and leave comments?",
+    "should_trigger": false,
+    "note": "Code review — not security scan"
+  },
+  {
+    "query": "Add rate limiting to the /api/login endpoint",
+    "should_trigger": false,
+    "note": "Security hardening — but implementation, not analysis"
+  },
+  {
+    "query": "Deploy this app to AWS with Terraform",
+    "should_trigger": false,
+    "note": "Infrastructure — not security scanning"
+  },
+  {
+    "query": "Write a Python script to parse CSV files",
+    "should_trigger": false,
+    "note": "Unrelated programming task"
+  },
+  {
+    "query": "このリポジトリのREADMEを日本語に翻訳して",
+    "should_trigger": false,
+    "note": "Translation request — not security"
+  },
+  {
+    "query": "Set up CI/CD with GitHub Actions for this project",
+    "should_trigger": false,
+    "note": "DevOps task — not security scan"
+  },
+  {
+    "query": "Can you help me understand how the authentication flow works in this codebase?",
+    "should_trigger": false,
+    "note": "Code comprehension about auth — not vulnerability scanning"
+  },
+  {
+    "query": "Refactor the database queries to use prepared statements",
+    "should_trigger": false,
+    "note": "Security fix but specific implementation, not a scan"
+  },
+  {
+    "query": "Generate API documentation from the source code",
+    "should_trigger": false,
+    "note": "Documentation generation — not security"
+  }
+]

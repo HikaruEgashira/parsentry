@@ -1,0 +1,41 @@
+{
+  "skill_name": "parsentry",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run a security scan on HikaruEgashira/hikae-vulnerable-python and give me the findings",
+      "expected_output": "A PDF report with SARIF-based security findings covering SQL injection, XSS, and other vulnerabilities in the Python app.",
+      "assertions": [
+        "parsentry model was invoked and model.json was created",
+        "parsentry scan was invoked and generated per-surface prompts",
+        "Subagents were dispatched in parallel for surface analysis",
+        "Each subagent produced a valid SARIF result.sarif.json",
+        "parsentry merge was run before parsentry generate",
+        "A PDF report was generated",
+        "The summary mentions specific vulnerability types found"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "このリポジトリの脆弱性分析をして、結果をレポートにまとめて",
+      "expected_output": "A Japanese-language summary with PDF report covering all attack surfaces in the current directory.",
+      "assertions": [
+        "parsentry model was invoked with '.' or the current directory as target",
+        "All phases (model → scan → merge → generate) completed",
+        "The summary to the user is in Japanese",
+        "A PDF report file path was provided to the user"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need a threat model for this API — what endpoints are most at risk?",
+      "expected_output": "Threat model output listing attack surfaces with risk assessment, focused on API endpoints.",
+      "assertions": [
+        "parsentry model was invoked",
+        "The threat model identifies API endpoints as attack surfaces",
+        "Surface descriptions include file locations",
+        "The response explains which surfaces are highest risk"
+      ]
+    }
+  ]
+}
