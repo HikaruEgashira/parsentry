@@ -1,5 +1,4 @@
 name: Mutation Testing
-
 on:
   push:
     branches: [main]
@@ -12,14 +11,11 @@ on:
     paths:
       - "crates/*/src/**"
   workflow_dispatch:
-
 concurrency:
   group: mutants-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
   mutants:
     runs-on: ubuntu-latest
@@ -34,20 +30,22 @@ jobs:
           - parsentry-reports
     steps:
       - name: Free disk space
+        timeout-minutes: 5
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/local/lib/android
           sudo docker image prune --all --force || true
-
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        timeout-minutes: 5
         with:
           submodules: true
           persist-credentials: false
-
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        timeout-minutes: 5
         with:
           toolchain: stable
-
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      - if: github.event_name != 'push'
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        timeout-minutes: 5
         with:
           path: |
             ~/.cargo/bin/
@@ -55,20 +53,32 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-mutants-${{ matrix.crate }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-mutants-${{ matrix.crate }}-${{ github.sha }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-mutants-${{ matrix.crate }}-
             ${{ runner.os }}-mutants-
-
       - name: Install cargo-mutants
+        timeout-minutes: 5
         run: which cargo-mutants || cargo install cargo-mutants --locked
-
       - name: Run mutation testing on ${{ matrix.crate }}
+        timeout-minutes: 5
         run: cargo mutants -p ${{ matrix.crate }} --timeout 60 --output mutants.out --in-place --config mutants.toml -- --lib
-
       - name: Upload mutation report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        timeout-minutes: 5
         with:
           name: mutation-report-${{ matrix.crate }}
           path: mutants.out/
+      - name: Save cache
+        if: github.event_name == 'push'
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        timeout-minutes: 5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-mutants-${{ matrix.crate }}-${{ github.sha }}-${{ hashFiles('**/Cargo.lock') }}

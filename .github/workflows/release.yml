@@ -1,5 +1,4 @@
 name: Release
-
 on:
   push:
     tags:
@@ -10,10 +9,8 @@ on:
         description: 'Tag to release (e.g., v0.15.0)'
         required: true
         type: string
-
 permissions:
   contents: write
-
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -32,7 +29,6 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
-
     steps:
       - name: Checkout
         timeout-minutes: 5
@@ -40,39 +36,33 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
           persist-credentials: false
-
       - name: Install Rust
         timeout-minutes: 5
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
-
       - name: Cache cargo registry
         timeout-minutes: 5
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Cache cargo index
         timeout-minutes: 5
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Cache cargo build
         timeout-minutes: 5
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Build
         timeout-minutes: 20
         run: cargo build --release --locked --target ${{ matrix.target }}
-
       - name: Package (Unix)
         if: matrix.archive == 'tar.gz'
         timeout-minutes: 2
@@ -80,7 +70,6 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar czf ../../../parsentry-${{ matrix.target }}.tar.gz parsentry
           cd -
-
       - name: Package (Windows)
         if: matrix.archive == 'zip'
         timeout-minutes: 2
@@ -89,14 +78,12 @@ jobs:
           cd target/${{ matrix.target }}/release
           Compress-Archive -Path parsentry.exe -DestinationPath ../../../parsentry-${{ matrix.target }}.zip
           cd -
-
       - name: Upload artifact
         timeout-minutes: 5
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: parsentry-${{ matrix.target }}
           path: parsentry-${{ matrix.target }}.${{ matrix.archive }}
-
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest
@@ -111,17 +98,15 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
           persist-credentials: false
-
       - name: Install Rust
         timeout-minutes: 5
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: stable
-
       - name: Authenticate with crates.io
-        uses: rust-lang/crates-io-auth-action@v1
+        uses: rust-lang/crates-io-auth-action@b7e9a28eded4986ec6b1fa40eeee8f8f165559ec # v1
         id: auth
-
+        timeout-minutes: 5
       - name: Publish crates
         timeout-minutes: 10
         env:
@@ -136,7 +121,6 @@ jobs:
           publish parsentry-reports
           sleep 10
           publish parsentry
-
   release:
     name: Create Release
     needs: [build, publish]
@@ -149,13 +133,11 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
           persist-credentials: false
-
       - name: Download all artifacts
         timeout-minutes: 5
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: ${{ runner.temp }}/artifacts
-
       - name: Create Release
         timeout-minutes: 5
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
