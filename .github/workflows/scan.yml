@@ -61,25 +61,28 @@ jobs:
       - name: Get changed source files
         id: diff
         timeout-minutes: 2
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD \
+          FILES=$(git diff --name-only --diff-filter=ACMR "origin/${BASE_REF}...HEAD" \
             | grep -E '\.(py|js|ts|jsx|tsx|go|java|rb|rs|c|cpp|cs|php|swift|kt|scala|tf|hcl|yml|yaml|sh|sql|pl|pm|lua)$' \
             | head -200)
           if [ -z "$FILES" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
-            echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run scan
         if: steps.diff.outputs.skip != 'true'
         timeout-minutes: 20
-        run: |
-          parsentry scan . \
-            --diff-base origin/${{ github.base_ref }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          parsentry scan . \
+            --diff-base "origin/${BASE_REF}"
 
       - name: Upload reports
         if: steps.diff.outputs.skip != 'true'
