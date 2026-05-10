@@ -15,7 +15,11 @@ pub fn hash_key(parts: &[&str]) -> String {
         hasher.update(b"|");
         hasher.update(part.as_bytes());
     }
-    format!("{:x}", hasher.finalize())
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>()
 }
 
 #[cfg(test)]
