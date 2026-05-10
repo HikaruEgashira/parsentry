@@ -44,7 +44,11 @@ fn fingerprint(result: &SarifResult) -> String {
     hasher.update(result.rule_id.as_bytes());
     hasher.update(b"\0");
     hasher.update(uri.as_bytes());
-    hasher.finalize().iter().map(|b| format!("{b:02x}")).collect::<String>()
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>()
 }
 
 /// Ensure every result has a `fingerprints` map with `parsentry/v1`.
