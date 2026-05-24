@@ -10,7 +10,7 @@ repository = "https://github.com/HikaruEgashira/parsentry"
 parsentry-core = { path = "../parsentry-core" }
 
 # Tree-sitter core
-tree-sitter = "0.26.8"
+tree-sitter = "0.26.9"
 streaming-iterator = "0.1"
 
 # Tree-sitter language grammars
