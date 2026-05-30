@@ -11,13 +11,13 @@ description: >
 compatibility: Requires parsentry CLI (cargo install parsentry) and git.
 metadata:
   author: HikaruEgashira
-  version: "0.21"
+  version: "0.22"
 allowed-tools: Bash(parsentry:*) Bash(test:*) Bash(git:*) Read Write Agent Glob
 ---
 
 # Parsentry Scan Orchestrator
 
-Run `parsentry model` → agent writes model.json → `parsentry scan` → parallel agents write SARIF → `parsentry merge` + `parsentry generate`.
+Run `parsentry model` → agent writes model.json → `parsentry scan` → parallel agents write SARIF → `parsentry generate` (merges SARIF + renders PDF).
 
 ## Phase 1: Threat Model
 
@@ -54,14 +54,15 @@ Dispatch **all pending surface agents in parallel** (single message, multiple Ag
 
 **Validate** — re-run `parsentry scan <TARGET>` and confirm all surfaces are cached.
 
-## Phase 3: Merge & Report
+## Phase 3: Report
 
 ```bash
-parsentry merge <TARGET>
 parsentry generate <TARGET>
 ```
 
-Open the generated PDF path (printed to stdout) and summarize findings to the user.
+`generate` merges the per-surface SARIF files into `merged.sarif.json` and renders the PDF in one step. Open the generated PDF path (printed to stdout) and summarize findings to the user.
+
+To file findings as issues instead of (or alongside) a PDF, run `parsentry merge <TARGET> --gh-issue <owner/repo>` (also supports `--jira`, `--linear`, `--notion`, `--min-level`, `--dry-run`).
 
 ## Phase 4: Triage (on request)
 
@@ -72,8 +73,8 @@ When the user asks to triage, patch, or fix findings, read [references/triage.md
 - `parsentry model` output goes to **stdout**; progress/logs go to stderr. Always use `2>/dev/null` or `2>&1` intentionally.
 - The cache directory is platform-dependent (`~/Library/Caches/parsentry/` on macOS, `~/.cache/parsentry/` on Linux). Let `parsentry scan` resolve paths — don't hardcode.
 - Agent prompts from parsentry are self-contained. **Do not** add system prompts or wrap them — pass verbatim.
-- `parsentry merge` must run **before** `parsentry generate`. Merge consolidates per-surface SARIF into a unified report; generate converts it to PDF.
-- If an agent produces invalid SARIF, `parsentry merge` will skip that surface and log a warning. Check merge output for skipped surfaces.
+- `parsentry generate` merges SARIF internally before rendering — no separate `merge` step is required for the PDF. The standalone `parsentry merge` is only for issue-tracker integration (`--gh-issue`/`--jira`/`--linear`/`--notion`).
+- If an agent produces invalid SARIF, the merge step skips that surface and logs a warning. Check `generate` output for skipped surfaces.
 
 ## Error Handling
 

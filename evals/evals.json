@@ -10,8 +10,7 @@
         "parsentry scan was invoked and generated per-surface prompts",
         "Subagents were dispatched in parallel for surface analysis",
         "Each subagent produced a valid SARIF result.sarif.json",
-        "parsentry merge was run before parsentry generate",
-        "A PDF report was generated",
+        "parsentry generate was run and produced merged.sarif.json plus a PDF report",
         "The summary mentions specific vulnerability types found"
       ]
     },
@@ -21,7 +20,7 @@
       "expected_output": "A Japanese-language summary with PDF report covering all attack surfaces in the current directory.",
       "assertions": [
         "parsentry model was invoked with '.' or the current directory as target",
-        "All phases (model → scan → merge → generate) completed",
+        "All phases (model → scan → generate) completed",
         "The summary to the user is in Japanese",
         "A PDF report file path was provided to the user"
       ]
