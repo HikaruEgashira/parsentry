@@ -31,7 +31,9 @@ parsentry model [TARGET]                  # 脅威モデルプロンプトをstd
 parsentry scan [TARGET]                   # surface分析プロンプト生成 + orchestratorをstdoutに出力
   --diff-base <REF>                       # diffベースのgit ref
   --filter-lang <LANGS>                   # 言語フィルタ(カンマ区切り)
-parsentry generate [TARGET] [-o PATH]     # SARIF結果からPDFレポート生成
+parsentry generate [TARGET] [-o PATH]     # SARIF統合 + PDFレポート生成 (内部でmergeを実行)
+parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion)
+                                          #   generateが内部でmergeするためPDF用途では不要 (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ```
 
