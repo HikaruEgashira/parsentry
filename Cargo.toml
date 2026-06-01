@@ -35,7 +35,7 @@ terminal_size = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tempfile = "3.10"
-octocrab = "0.41"
+octocrab = "0.48"
 reqwest = { version = "0.13", features = ["json"] }
 urlencoding = "2.1"
 sha2 = "0.10"
