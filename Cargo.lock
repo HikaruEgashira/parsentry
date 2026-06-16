@@ -605,6 +605,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
+
+[[package]]
 name = "elliptic-curve"
 version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -942,16 +948,6 @@ dependencies = [
  "http",
  "http-body",
  "pin-project-lite",
-]
-
-[[package]]
-name = "http-serde"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f056c8559e3757392c8d091e796416e4649d8e49e88b8d76df6c002f05027fd"
-dependencies = [
- "http",
- "serde",
 ]
 
 [[package]]
@@ -1555,9 +1551,9 @@ dependencies = [
 
 [[package]]
 name = "octocrab"
-version = "0.53.1"
+version = "0.48.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe45bd53ce50c9e85e8a27259675f65d772165fe5eef3e278c1b6168c3f97623"
+checksum = "c5930b376c98c438a4f4259a760cda2c198efea3b82de8f8a2aff0c00a8b7c1c"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1566,18 +1562,19 @@ dependencies = [
  "cargo_metadata",
  "cfg-if",
  "chrono",
+ "either",
  "futures",
  "futures-util",
  "getrandom 0.2.16",
  "http",
  "http-body",
  "http-body-util",
- "http-serde",
  "hyper",
  "hyper-rustls",
  "hyper-timeout",
  "hyper-util",
  "jsonwebtoken",
+ "once_cell",
  "percent-encoding",
  "pin-project",
  "secrecy",
@@ -1686,7 +1683,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "tempfile",
  "terminal_size",
  "thiserror 2.0.18",
