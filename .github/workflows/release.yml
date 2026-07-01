@@ -39,7 +39,7 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         timeout-minutes: 5
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
@@ -101,7 +101,7 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         timeout-minutes: 5
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
         with:
           toolchain: stable
       - name: Authenticate with crates.io
