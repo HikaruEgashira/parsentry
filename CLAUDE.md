@@ -37,6 +37,10 @@ parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issu
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ```
 
+## Security Scanning
+- SARIF出力のCWEフィールドは必ず配列にすること（文字列ではない）。マージフェーズでのスキーマバリデーションエラーを防ぐ
+- マージ前に merged.sarif.json が既に存在しないか、空でないかを確認する。再生成前にstale/emptyなファイルを削除すること
+
 ## After Code Changes
 
 ```bash
