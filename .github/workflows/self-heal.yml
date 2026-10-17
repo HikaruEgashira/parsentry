@@ -1,0 +1,22 @@
+name: Post-merge self-heal
+on:
+  workflow_run:
+    workflows: ["Rust CI", "Mutation Testing", "Deploy Documentation"]
+    branches: [main]
+    types: [completed]
+permissions: {}
+concurrency:
+  group: post-merge-self-heal
+  cancel-in-progress: false
+jobs:
+  heal:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    uses: HikaruEgashira/gh-verify/.github/workflows/post-merge-heal.yml@503b2700478f3d90abb1a7bd6ee023f7e2b36ac1
+    with:
+      automation_ref: 503b2700478f3d90abb1a7bd6ee023f7e2b36ac1
+      check_workflows: '["ci.yml"]'
+      post_merge_workflows: '["ci.yml","mutants.yml","website.yml"]'
