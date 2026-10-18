@@ -42,9 +42,9 @@ jobs:
           echo "Installing parsentry ${TAG}"
           gh release download "${TAG}" \
             --repo HikaruEgashira/parsentry \
-            --pattern 'parsentry-x86_64-unknown-linux-gnu.tar.gz' \
+            --pattern 'parsentry-aarch64-unknown-linux-gnu.tar.gz' \
             --dir /tmp
-          tar xzf /tmp/parsentry-x86_64-unknown-linux-gnu.tar.gz -C /usr/local/bin
+          tar xzf /tmp/parsentry-aarch64-unknown-linux-gnu.tar.gz -C /usr/local/bin
           chmod +x /usr/local/bin/parsentry
           parsentry --version
 
