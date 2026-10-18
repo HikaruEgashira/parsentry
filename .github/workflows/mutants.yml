@@ -18,7 +18,7 @@ permissions:
   contents: read
 jobs:
   mutants:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64, hikae-economy]
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -30,6 +30,7 @@ jobs:
           - parsentry-reports
     steps:
       - name: Free disk space
+        if: runner.environment == 'github-hosted'
         timeout-minutes: 5
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/local/lib/android
