@@ -20,7 +20,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64, hikae-flash]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -62,10 +62,11 @@ jobs:
 
   build_and_test:
     name: Build and Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64, hikae-economy]
     timeout-minutes: 30
     steps:
       - name: Free disk space
+        if: runner.environment == 'github-hosted'
         timeout-minutes: 5
         run: |
           sudo rm -rf /usr/share/dotnet

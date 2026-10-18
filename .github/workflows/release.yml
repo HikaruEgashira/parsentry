@@ -22,7 +22,7 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: hikae-flash
             archive: tar.gz
           - target: aarch64-apple-darwin
             os: macos-latest
@@ -87,7 +87,7 @@ jobs:
           path: parsentry-${{ matrix.target }}.${{ matrix.archive }}
   publish:
     name: Publish to crates.io
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64, hikae-flash]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -125,7 +125,7 @@ jobs:
   release:
     name: Create Release
     needs: [build, publish]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64, hikae-flash]
     timeout-minutes: 10
     permissions:
       contents: write
