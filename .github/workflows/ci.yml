@@ -41,16 +41,21 @@ jobs:
         timeout-minutes: 5
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-lint-registry-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}-
-            ${{ runner.os }}-cargo-lint-
+            ${{ runner.os }}-cargo-lint-registry-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-cargo-lint-registry-
+
+      - name: Cache cargo git index
+        timeout-minutes: 5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-lint-git-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-lint-git-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-cargo-lint-git-
 
       - name: Check formatting
         timeout-minutes: 5
