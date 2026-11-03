@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g., v0.15.0)'
+        description: 'Tag to build (e.g., v0.15.0). Build-only; publish by pushing a new v* tag.'
         required: true
         type: string
 permissions: {}
@@ -73,6 +73,8 @@ jobs:
           path: parsentry-${{ matrix.target }}.${{ matrix.archive }}
   publish:
     name: Publish to crates.io
+    # Only v* tag pushes may publish; workflow_dispatch is build-only recovery.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: [self-hosted, linux, arm64, hikae-flash]
     timeout-minutes: 15
     permissions:
@@ -83,7 +85,7 @@ jobs:
         timeout-minutes: 5
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ github.ref }}
           persist-credentials: false
       - name: Install Rust
         timeout-minutes: 5
@@ -111,6 +113,7 @@ jobs:
   release:
     name: Create Release
     needs: [build, publish]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: [self-hosted, linux, arm64, hikae-flash]
     timeout-minutes: 10
     permissions:
@@ -120,7 +123,7 @@ jobs:
         timeout-minutes: 5
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ github.ref }}
           persist-credentials: false
       - name: Download all artifacts
         timeout-minutes: 5
@@ -131,7 +134,7 @@ jobs:
         timeout-minutes: 5
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
           files: ${{ runner.temp }}/artifacts/*/*
           generate_release_notes: true
         env:
