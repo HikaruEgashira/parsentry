@@ -1,0 +1,55 @@
+name: Website CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docs/website/**'
+      - '.github/workflows/website-ci.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/website/**'
+      - '.github/workflows/website-ci.yml'
+
+concurrency:
+  group: website-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint_and_build:
+    name: Website Lint and Build
+    runs-on: hikae-2vcpu-ubuntu-2404-arm
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: docs/website
+    steps:
+      - name: Checkout repository
+        timeout-minutes: 5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        timeout-minutes: 5
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: latest
+
+      # Fails when package.json changes without a matching update to bun.lockb.
+      - name: Install dependencies
+        timeout-minutes: 5
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        timeout-minutes: 5
+        run: bun run lint
+
+      - name: Build
+        timeout-minutes: 10
+        run: bun run build
