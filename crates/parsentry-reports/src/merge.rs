@@ -14,7 +14,6 @@ use std::path::Path;
 
 use crate::sarif::*;
 
-
 /// Maximum SARIF file size (10 MiB) to prevent OOM from malicious agents.
 const MAX_SARIF_FILE_SIZE: u64 = 10 * 1024 * 1024;
 
@@ -299,7 +298,7 @@ mod tests {
         write_sarif(
             tmp.path(),
             "S1.sarif.json",
-            &r#"{"$schema":"s","version":"2.1.0","runs":[{"tool":{"driver":{"name":"t","version":"1"}},
+            r#"{"$schema":"s","version":"2.1.0","runs":[{"tool":{"driver":{"name":"t","version":"1"}},
               "results":[
                 {"ruleId":"A","level":"error","message":{"text":"static"},
                  "locations":[{"physicalLocation":{"artifactLocation":{"uri":"a.py"}}}],

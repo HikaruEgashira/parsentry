@@ -157,10 +157,7 @@ mod tests {
             ..Default::default()
         }));
         normalize(&mut r);
-        assert_eq!(
-            r.properties.unwrap().verdict,
-            Some(Verdict::Indeterminate)
-        );
+        assert_eq!(r.properties.unwrap().verdict, Some(Verdict::Indeterminate));
     }
 
     #[test]
