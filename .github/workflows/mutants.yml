@@ -75,7 +75,8 @@ jobs:
         timeout-minutes: 5
         run: which cargo-mutants || cargo install cargo-mutants --locked
       - name: Run mutation testing on ${{ matrix.crate }}
-        timeout-minutes: 5
+        # parsentry-reports alone has ~190 mutants (5m+ on 4 vCPU) since #391; --in-place forbids -j
+        timeout-minutes: 15
         run: cargo mutants -p ${{ matrix.crate }} --timeout 60 --output mutants.out --in-place --config mutants.toml -- --lib
       - name: Upload mutation report
         if: always()
