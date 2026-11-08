@@ -27,25 +27,21 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Generate threat model prompt from repo metadata
-    Model {
-        /// Target to analyze: local path, GitHub repo (owner/repo), URL, IP, or domain
-        #[arg(default_value = ".")]
-        target: String,
-    },
-    /// Generate per-surface analysis prompts from a threat model
+    /// Run the next phase of the security scan (model → surfaces → report)
+    ///
+    /// The phase is chosen from cached state: a cold cache starts a full scan,
+    /// changed sources re-run only affected surfaces, and a changed repository
+    /// structure regenerates the threat model and diffs its findings against
+    /// the previous model. Pipe stdout to a CLI agent; each phase prompt tells
+    /// the agent to re-run this command until the scan completes.
     Scan {
         /// Target to analyze: local path, GitHub repo (owner/repo), URL, IP, or domain
         #[arg(default_value = ".")]
         target: String,
 
-        /// Git ref to diff against (only changed files)
-        #[arg(long)]
-        diff_base: Option<String>,
-
-        /// Filter by language (comma-separated)
-        #[arg(long)]
-        filter_lang: Option<String>,
+        /// Also render a PDF report to this path when the scan completes
+        #[arg(short, long)]
+        output: Option<String>,
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
@@ -77,16 +73,6 @@ pub enum Commands {
         /// Show what would be created without making changes
         #[arg(long)]
         dry_run: bool,
-    },
-    /// Generate PDF report from scan results
-    Generate {
-        /// Target to resolve report directory: local path, owner/repo, URL, IP, or domain
-        #[arg(default_value = ".")]
-        target: String,
-
-        /// Output PDF path (default: <reports_dir>/report.pdf)
-        #[arg(short, long)]
-        output: Option<String>,
     },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]

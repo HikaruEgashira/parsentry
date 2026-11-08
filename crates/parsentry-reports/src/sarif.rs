@@ -9,7 +9,7 @@ use parsentry_core::{Response, VulnType};
 /// SARIF (Static Analysis Results Interchange Format) v2.1.0 implementation
 /// Spec: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifReport {
     #[serde(rename = "$schema")]
     pub schema: String,
@@ -17,7 +17,7 @@ pub struct SarifReport {
     pub runs: Vec<SarifRun>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifRun {
     pub tool: SarifTool,
     pub results: Vec<SarifResult>,
@@ -27,12 +27,12 @@ pub struct SarifRun {
     pub invocation: Option<SarifInvocation>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifTool {
     pub driver: SarifDriver,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifDriver {
     pub name: String,
     pub version: String,
@@ -42,7 +42,7 @@ pub struct SarifDriver {
     pub rules: Option<Vec<SarifRule>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifRule {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -59,7 +59,7 @@ pub struct SarifRule {
     pub default_configuration: Option<SarifConfiguration>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifRuleProperties {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
@@ -71,7 +71,7 @@ pub struct SarifRuleProperties {
     pub security_severity: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifConfiguration {
     pub level: String,
 }
@@ -177,7 +177,7 @@ pub struct SarifArtifactContent {
     pub text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifArtifact {
     pub location: SarifArtifactLocation,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -186,7 +186,7 @@ pub struct SarifArtifact {
     pub mime_type: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarifInvocation {
     #[serde(rename = "executionSuccessful")]
     pub execution_successful: bool,

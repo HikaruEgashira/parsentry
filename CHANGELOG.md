@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-08
+
+### 💥 Breaking Changes
+- `parsentry model` / `parsentry generate` を削除し `parsentry scan` に統合。`scan` はキャッシュ状態から次フェーズ (model → surface → report) を決定して 1 フェーズずつ実行し、各プロンプトが `PARSENTRY_SCAN_COMPLETE` まで `scan` の再実行を指示するため `parsentry scan <target> | claude -p` 1 本で完走する
+- 未実装のまま公開されていた `scan --diff-base` / `--filter-lang` を削除 (インクリメンタル判定は surface 単位のハッシュで自動化)
+- PDF は `parsentry scan -o <path>` で生成。`merged.sarif.json` / `report.md` はキャッシュ直下に出力
+
+### 🎉 New Features
+- スキャンモードの自動決定: 全体スキャン / インクリメンタルスキャン / モデル差分スキャン。リポジトリ構造が変化すると旧モデルと検出結果を `previous/` に退避して新モデルを生成し、report で両モデルの検出結果の差分 (new / absent / unchanged) を出力
+
+### 🐛 Bug Fixes
+- surface のキャッシュキーに surface 定義を含め、モデル再生成で再定義された surface が古い結果を再利用する問題を修正
+- モデルから削除された surface の古い SARIF が merge に混入する問題を修正 (`merge` hidden command も同様)
+- 不正な SARIF をキャッシュ済みとみなし merge 全体が失敗する問題を修正 (不正な surface は再分析対象になる)
+- reusable workflow `scan.yml` が `PARSENTRY_CACHE_DIR` を設定しておらずキャッシュが効いていなかった問題を修正
+
 ### 🐛 Bug Fixes
 - parsentry skill: drop redundant `parsentry merge` from Phase 3 (`generate` merges SARIF internally); document `merge` as issue-tracker integration only
 - parsentry skill: align eval assertions with actual behavior (remove the hardcoded required-merge step)

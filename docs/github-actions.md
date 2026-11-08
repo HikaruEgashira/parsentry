@@ -35,8 +35,8 @@ jobs:
 1. GitHub Releaseからビルド済みバイナリをダウンロード
 2. `git diff --diff-filter=ACMR` でPRの差分ファイルを取得
 3. ソースコード拡張子のみをフィルタ（`.md` や `.txt` は除外）
-4. `parsentry scan . --diff-base origin/<base-branch>` で差分ファイルのみスキャン
-5. キャッシュをCI間で共有
+4. `PARSENTRY_CACHE_DIR=.parsentry/cache parsentry scan .` を実行
+5. キャッシュをCI間で共有（surface 定義とソースのハッシュが一致する surface は再分析されないため、差分スキャンになる）
 
 ## キャッシュ
 
@@ -48,13 +48,8 @@ jobs:
 
 ## ローカルでの差分スキャン
 
+差分の指定は不要です。`parsentry scan` はキャッシュ済みの結果を surface 単位のハッシュで照合し、変更のあった surface のみを再分析します。
+
 ```bash
-# 直近コミットの差分のみスキャン
-parsentry scan . --diff-base HEAD~1
-
-# mainブランチとの差分
-parsentry scan . --diff-base origin/main
-
-# 特定コミットとの差分
-parsentry scan . --diff-base abc1234
+parsentry scan . | claude -p
 ```

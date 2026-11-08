@@ -122,22 +122,20 @@ fn resolve_source_files(surface: &AttackSurface, root_dir: &Path) -> Vec<SourceF
 pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<SurfacePrompt> {
     let sources = resolve_source_files(surface, root_dir);
 
-    // Cache key: file contents when available, otherwise surface metadata
-    let cache_key = if !sources.is_empty() {
-        let mut cache_input = String::new();
-        for src in &sources {
-            cache_input.push_str(&src.rel_path);
-            cache_input.push('\0');
-            cache_input.push_str(&src.contents);
-            cache_input.push('\0');
-        }
-        hex_sha256(&cache_input)
-    } else {
-        hex_sha256(&format!(
-            "{}\0{}\0{}\0{:?}",
-            surface.id, surface.kind, surface.identifier, surface.locations
-        ))
-    };
+    // Cache key: surface definition + file contents. The definition is always
+    // included so a regenerated threat model that redefines a surface (same
+    // locations, different kind/description) does not reuse stale results.
+    let mut cache_input = format!(
+        "{}\0{}\0{}\0{}\0{:?}\0",
+        surface.id, surface.kind, surface.identifier, surface.description, surface.locations
+    );
+    for src in &sources {
+        cache_input.push_str(&src.rel_path);
+        cache_input.push('\0');
+        cache_input.push_str(&src.contents);
+        cache_input.push('\0');
+    }
+    let cache_key = hex_sha256(&cache_input);
 
     let repository_root = root_dir
         .canonicalize()
@@ -169,7 +167,9 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
          or other resources — investigate accordingly.\n\n",
     );
 
-    prompt.push_str("Output valid SARIF v2.1.0 JSON compatible with `parsentry merge`.\n");
+    prompt.push_str(
+        "Output valid SARIF v2.1.0 JSON compatible with `parsentry scan` report merging.\n",
+    );
     prompt.push_str("The SARIF MUST include:\n");
     prompt.push_str("- top-level `$schema`\n");
     prompt.push_str("- top-level `version` set to `2.1.0`\n");
@@ -208,6 +208,7 @@ pub fn build_orchestrator_prompt(
     surface_prompts: &[SurfacePrompt],
     output_dir: &Path,
     target: &str,
+    cache_base: &Path,
     parsentry_bin: &Path,
 ) -> String {
     let mut prompt = String::new();
@@ -242,45 +243,40 @@ pub fn build_orchestrator_prompt(
         ));
     }
 
-    let target_q = shell_quote(target);
-    let parsentry_bin_q = shell_quote(&parsentry_bin.display().to_string());
-    let project_cache = output_dir
-        .parent()
-        .expect("reports dir must have a project cache parent");
-    let cache_base = project_cache
-        .parent()
-        .expect("project cache dir must have a cache base parent");
-    let merged_sarif = output_dir.join("merged.sarif.json");
-    let report_md = output_dir.join("report.md");
-    let cache_base_q = shell_quote(&cache_base.display().to_string());
-    let merged_q = shell_quote(&merged_sarif.display().to_string());
-    let report_q = shell_quote(&report_md.display().to_string());
-    prompt.push_str(&format!(
-        "\nAfter ALL workers complete, run exactly:\n\
-         ```bash\n\
-         tmp_merged=$(mktemp /tmp/parsentry-merged.XXXXXX.json)\n\
-         PARSENTRY_CACHE_DIR={cache_base} {parsentry_bin} merge {target} > \"$tmp_merged\"\n\
-         test -s \"$tmp_merged\"\n\
-         mv \"$tmp_merged\" {merged}\n\
-         ```\n\
-         Then read {merged} and write a security report to {report} with:\n\
-         - Executive summary (finding counts by severity)\n\
-         - Per-finding details (rule ID, severity, confidence, location, description)\n\
-         - Remediation recommendations\n\
-         The task is not complete until `{report}` exists and is non-empty. \
-         Verify that with:\n\
-         ```bash\n\
-         test -s {report_q}\n\
-         ```\n",
-        cache_base = cache_base_q,
-        parsentry_bin = parsentry_bin_q,
-        target = target_q,
-        merged = merged_q,
-        report = report_md.display(),
-        report_q = report_q,
+    prompt.push_str(&continuation_instructions(
+        target,
+        cache_base,
+        parsentry_bin,
     ));
 
     prompt
+}
+
+/// Marker printed by `parsentry scan` once every phase is done.
+pub const SCAN_COMPLETE_MARKER: &str = "PARSENTRY_SCAN_COMPLETE";
+
+/// Instructions appended to every phase prompt so a single
+/// `parsentry scan <target> | <agent>` drives the whole pipeline: the agent
+/// re-runs `parsentry scan`, which inspects cache state and emits the prompt
+/// for the next phase, until the completion marker is printed.
+pub fn continuation_instructions(target: &str, cache_base: &Path, parsentry_bin: &Path) -> String {
+    let command = format!(
+        "PARSENTRY_CACHE_DIR={cache_base} {bin} scan {target}",
+        cache_base = shell_quote(&cache_base.display().to_string()),
+        bin = shell_quote(&parsentry_bin.display().to_string()),
+        target = shell_quote(target),
+    );
+    format!(
+        "\nNext Phase\n\n\
+         After this phase is finished, run exactly:\n\
+         ```bash\n\
+         {command}\n\
+         ```\n\
+         Its stdout is the prompt for the next phase. Execute it the same way, \
+         and repeat until the output contains `{marker}`. \
+         The task is not complete before that marker appears.\n",
+        marker = SCAN_COMPLETE_MARKER,
+    )
 }
 
 fn shell_quote(input: &str) -> String {
@@ -355,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn surface_prompt_mentions_repository_root_and_merge_compatible_sarif() {
+    fn surface_prompt_mentions_repository_root_and_mergeable_sarif() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();
         let src_dir = root.join("src");
@@ -366,13 +362,13 @@ mod tests {
         let sp = build_surface_prompt(&surface, root).unwrap();
 
         assert!(sp.prompt.contains("Repository Root"));
-        assert!(sp.prompt.contains("parsentry merge"));
+        assert!(sp.prompt.contains("parsentry scan"));
         assert!(sp.prompt.contains("tool.driver.version"));
         assert!(sp.prompt.contains("ruleId"));
     }
 
     #[test]
-    fn orchestrator_prompt_is_agent_neutral_and_uses_safe_merge_flow() {
+    fn orchestrator_prompt_is_agent_neutral_and_continues_scan() {
         let prompts = vec![SurfacePrompt {
             surface_id: "SURFACE-001".to_string(),
             prompt: "irrelevant".to_string(),
@@ -384,18 +380,32 @@ mod tests {
             &prompts,
             temp.path(),
             "/tmp/repo with spaces",
+            Path::new("/tmp/cache"),
             Path::new("/tmp/bin/parsentry"),
         );
 
         assert!(prompt.contains("subagent or agent capability"));
         assert!(prompt.contains("Worker `SURFACE-001`"));
         assert!(!prompt.contains("Agent("));
-        assert!(prompt.contains("PARSENTRY_CACHE_DIR="));
-        assert!(prompt.contains("'/tmp/bin/parsentry' merge '/tmp/repo with spaces'"));
-        assert!(prompt.contains("tmp_merged=$(mktemp"));
-        assert!(prompt.contains("test -s \"$tmp_merged\""));
-        assert!(prompt.contains("The task is not complete until"));
-        assert!(prompt.contains("test -s '"));
+        assert!(prompt.contains(
+            "PARSENTRY_CACHE_DIR='/tmp/cache' '/tmp/bin/parsentry' scan '/tmp/repo with spaces'"
+        ));
+        assert!(prompt.contains(SCAN_COMPLETE_MARKER));
+        assert!(!prompt.contains(" merge "));
+    }
+
+    #[test]
+    fn cache_key_changes_with_surface_definition() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        fs::write(root.join("app.py"), "x\n").unwrap();
+
+        let a = make_surface("S-1", vec!["app.py"]);
+        let mut b = a.clone();
+        b.description = "redefined surface".to_string();
+        let ka = build_surface_prompt(&a, root).unwrap().cache_key;
+        let kb = build_surface_prompt(&b, root).unwrap().cache_key;
+        assert_ne!(ka, kb);
     }
 
     #[test]

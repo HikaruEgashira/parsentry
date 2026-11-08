@@ -100,6 +100,19 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
         anyhow::bail!("no sarif files found in {}", dir.display());
     }
 
+    merge_sarif_files(&sarif_files, baseline)
+}
+
+/// Merge an explicit list of SARIF files into a single [`SarifReport`].
+///
+/// Use this instead of [`merge_sarif_dir`] when only a subset of the
+/// directory is current (e.g. surfaces still present in the threat model),
+/// so results from stale surfaces never leak into the merged report.
+/// Baseline semantics are identical to [`merge_sarif_dir`].
+pub fn merge_sarif_files(
+    sarif_files: &[std::path::PathBuf],
+    baseline: Option<&Path>,
+) -> Result<SarifReport> {
     // Load baseline results indexed by fingerprint
     let baseline_map = if let Some(baseline_path) = baseline {
         load_baseline(baseline_path)?
@@ -112,7 +125,7 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
     let mut all_results: Vec<SarifResult> = Vec::new();
     let mut seen_fingerprints: HashMap<String, usize> = HashMap::new();
 
-    for path in &sarif_files {
+    for path in sarif_files {
         let meta =
             std::fs::metadata(path).with_context(|| format!("cannot stat {}", path.display()))?;
         if meta.len() > MAX_SARIF_FILE_SIZE {

@@ -47,9 +47,9 @@ PAR はこれを拡張し：
 
 Parsentry のパイプライン（model → scan → generate）において、PAR 分類は脅威モデルの生成とプロンプト構築で活用されます：
 
-1. **Principal 特定**: `parsentry model` が生成する脅威モデルプロンプトで、リポジトリのエントリポイント（APIハンドラ、入力フォーム等）を Principal として列挙
+1. **Principal 特定**: `parsentry scan` の model フェーズが生成する脅威モデルプロンプトで、リポジトリのエントリポイント（APIハンドラ、入力フォーム等）を Principal として列挙
 2. **Action・Resource の文脈化**: `parsentry scan` が各 AttackSurface のソースコードを読み込み、Principal→Action→Resource の経路を外部エージェントが分析するためのコンテキストを構築
-3. **結果の集約**: `parsentry generate` が SARIF v2.1.0 形式で結果を集約し、各脆弱性を PAR 分類に沿って報告
+3. **結果の集約**: `parsentry scan` の report フェーズが SARIF v2.1.0 形式で結果を集約し、各脆弱性を PAR 分類に沿って報告
 
 ## 例
 

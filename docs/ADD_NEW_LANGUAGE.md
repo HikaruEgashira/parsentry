@@ -223,7 +223,7 @@ fn test_your_language_parsing() {
 ```bash
 cargo build
 cargo test
-cargo run -- model . | head  # Verify language detection in metadata
+cargo run -- scan . 2>/dev/null | head  # Verify language detection in metadata (cold cache)
 ```
 
 ## Implementation Checklist
