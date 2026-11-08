@@ -527,4 +527,26 @@ mod tests {
             "ensure_fingerprint must add parsentry/v1"
         );
     }
+
+    #[test]
+    fn size_limit_is_inclusive_at_boundary() {
+        let tmp = TempDir::new().unwrap();
+        // Sparse files: metadata reports the length without writing 10MiB.
+        let at = tmp.path().join("at.sarif.json");
+        std::fs::File::create(&at)
+            .unwrap()
+            .set_len(MAX_SARIF_FILE_SIZE)
+            .unwrap();
+        let over = tmp.path().join("over.sarif.json");
+        std::fs::File::create(&over)
+            .unwrap()
+            .set_len(MAX_SARIF_FILE_SIZE + 1)
+            .unwrap();
+
+        // At the limit the size check passes; the zero bytes then fail JSON parsing.
+        let err = format!("{:#}", merge_sarif_files(&[at], None).unwrap_err());
+        assert!(err.contains("invalid SARIF JSON"), "{err}");
+        let err = format!("{:#}", merge_sarif_files(&[over], None).unwrap_err());
+        assert!(err.contains("exceeds"), "{err}");
+    }
 }

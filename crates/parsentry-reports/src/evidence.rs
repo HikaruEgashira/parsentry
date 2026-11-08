@@ -171,4 +171,42 @@ mod tests {
             EvidenceKind::DynamicPoc
         );
     }
+
+    #[test]
+    fn as_str_matches_serde_names() {
+        for v in [
+            Verdict::Confirmed,
+            Verdict::RuledOut,
+            Verdict::Indeterminate,
+        ] {
+            assert_eq!(
+                format!("\"{}\"", v.as_str()),
+                serde_json::to_string(&v).unwrap()
+            );
+        }
+        for k in [
+            EvidenceKind::DynamicPoc,
+            EvidenceKind::StaticTrace,
+            EvidenceKind::Heuristic,
+        ] {
+            assert_eq!(
+                format!("\"{}\"", k.as_str()),
+                serde_json::to_string(&k).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn confidence_at_cap_is_not_reported_as_clamped() {
+        let mut r = result(Some(SarifResultProperties {
+            confidence: Some(STATIC_CONFIDENCE_CAP),
+            evidence_kind: Some(EvidenceKind::StaticTrace),
+            ..Default::default()
+        }));
+        assert!(!normalize(&mut r));
+        assert_eq!(
+            r.properties.unwrap().confidence,
+            Some(STATIC_CONFIDENCE_CAP)
+        );
+    }
 }

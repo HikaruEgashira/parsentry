@@ -1665,4 +1665,93 @@ mod tests {
         );
         assert!(md.contains("🟠 Warning"));
     }
+
+    fn report_with(results: Vec<SarifResult>) -> SarifReport {
+        SarifReport {
+            schema: "".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![SarifRun {
+                tool: SarifTool {
+                    driver: SarifDriver {
+                        name: "Parsentry".to_string(),
+                        version: "1.0".to_string(),
+                        information_uri: None,
+                        rules: None,
+                    },
+                },
+                results,
+                artifacts: None,
+                invocation: None,
+            }],
+        }
+    }
+
+    fn with_props(props: SarifResultProperties) -> SarifResult {
+        let mut r = make_sarif_result("error", "SQLI");
+        r.properties = Some(props);
+        r
+    }
+
+    #[test]
+    fn test_to_markdown_verdict_overview_counts() {
+        let md = report_with(vec![
+            with_props(SarifResultProperties {
+                verdict: Some(Verdict::Confirmed),
+                ..Default::default()
+            }),
+            with_props(SarifResultProperties {
+                verdict: Some(Verdict::RuledOut),
+                ..Default::default()
+            }),
+            with_props(SarifResultProperties {
+                verdict: Some(Verdict::RuledOut),
+                ..Default::default()
+            }),
+            with_props(SarifResultProperties::default()),
+        ])
+        .to_markdown();
+        assert!(
+            md.contains("**Verdicts**: 1 confirmed, 1 indeterminate, 2 ruled out\n"),
+            "{md}"
+        );
+    }
+
+    #[test]
+    fn test_to_markdown_counterevidence_and_poc_artifacts() {
+        let present = report_with(vec![with_props(SarifResultProperties {
+            counterevidence: Some("no sink reached".to_string()),
+            evidence_uris: Some(vec!["poc/a.sh".to_string(), "poc/b.log".to_string()]),
+            ..Default::default()
+        })])
+        .to_markdown();
+        assert!(present.contains("**Counterevidence**: no sink reached\n"));
+        assert!(present.contains("**PoC artifacts**: poc/a.sh, poc/b.log\n"));
+
+        let empty = report_with(vec![with_props(SarifResultProperties {
+            counterevidence: Some(String::new()),
+            evidence_uris: Some(vec![]),
+            ..Default::default()
+        })])
+        .to_markdown();
+        assert!(!empty.contains("**Counterevidence**"));
+        assert!(!empty.contains("**PoC artifacts**"));
+    }
+
+    #[test]
+    fn test_from_analysis_summary_sets_taxonomy_properties() {
+        let mut summary = AnalysisSummary::new();
+        let response = Response {
+            analysis: "test".to_string(),
+            confidence_score: 85,
+            vulnerability_types: vec![VulnType::SQLI],
+            ..Default::default()
+        };
+        summary.add_result(PathBuf::from("t.py"), response, "t.md".to_string());
+
+        let sarif = SarifReport::from_analysis_summary(&summary, "1.0");
+        let props = sarif.runs[0].results[0].properties.as_ref().unwrap();
+        assert_eq!(props.mitre_attack, Some(VulnType::SQLI.mitre_attack_ids()));
+        assert_eq!(props.cwe, Some(VulnType::SQLI.cwe_ids()));
+        assert_eq!(props.owasp, Some(VulnType::SQLI.owasp_categories()));
+    }
 }
