@@ -79,10 +79,11 @@ jobs:
         timeout-minutes: 20
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          BASE_REF: ${{ github.base_ref }}
+          # Restored by the cache step above; unchanged surfaces are skipped
+          # by content hash, so only changed surfaces are re-analyzed.
+          PARSENTRY_CACHE_DIR: ${{ github.workspace }}/.parsentry/cache
         run: |
-          parsentry scan . \
-            --diff-base "origin/${BASE_REF}"
+          parsentry scan .
 
       - name: Upload reports
         if: steps.diff.outputs.skip != 'true'
@@ -90,5 +91,5 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: security-scan-reports
-          path: reports/
+          path: .parsentry/cache/
           if-no-files-found: ignore

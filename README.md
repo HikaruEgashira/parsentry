@@ -21,26 +21,34 @@ Once installed, just ask your agent to scan a repository — the skill dispatche
 ### Usage
 
 ```bash
-parsentry model owner/repo | claude -p
 parsentry scan owner/repo | claude -p
 ```
 
-`model` produces a threat model, `scan` generates per-surface prompts and outputs an orchestrator prompt to stdout. Pipe it to any CLI agent and it dispatches parallel subagents automatically.
+`scan` is the only command you need. It inspects the cache and emits the prompt for the next phase (threat model → per-surface analysis → report). Every prompt tells the agent to re-run `parsentry scan` until it prints `PARSENTRY_SCAN_COMPLETE`, so one pipe runs the whole pipeline. Add `-o report.pdf` to also render a PDF.
+
+The scan mode is decided from state, not flags:
+
+| State | Mode |
+|---|---|
+| No threat model | **Full scan** |
+| Threat model is current, some sources changed | **Incremental scan** — only affected surfaces re-run |
+| Repository structure changed since the model was built | **Model diff scan** — the previous model and its findings are kept, a new model is built, and the report diffs the findings of both models |
 
 See [HACKING.md](HACKING.md) for usage with other CLI agents.
 
 ### How it works
 
 ```
-parsentry model   →  repo metadata  →  threat model prompt (stdout)
-parsentry scan    →  threat model + source code  →  orchestrator prompt (stdout)
-  └─ orchestrator dispatches subagents per surface  →  SARIF files
-parsentry log     →  monitor scan progress in real-time
+parsentry scan  ─┬─ model phase    →  threat model prompt                →  model.json
+                 ├─ surface phase  →  orchestrator + per-surface prompts →  SARIF files
+                 └─ report phase   →  merged.sarif.json + report.md (+ PDF)
+parsentry log   →  monitor scan progress in real-time
 ```
 
-1. **Model** — Collect repo metadata (languages, manifests, entry points), generate a threat model prompt. Pipe to an agent to enumerate attack surfaces.
-2. **Scan** — Load the threat model, read source code per surface, generate focused `.prompt.md` files. Outputs an orchestrator prompt that launches parallel subagents — each reads its own prompt file and writes SARIF results.
-3. **Log** — Stream scan progress like `docker compose logs -f`.
+1. **Model** — Collect repo metadata (languages, manifests, entry points), generate a threat model prompt. The agent enumerates attack surfaces into `model.json`.
+2. **Surfaces** — Read source code per surface, generate focused `prompt.md` files and an orchestrator prompt that launches parallel subagents — each writes SARIF results. Surfaces whose definition and sources are unchanged are skipped.
+3. **Report** — Merge SARIF of the current model's surfaces and write `report.md` (with a model diff section when a previous model exists).
+4. **Log** — Stream scan progress like `docker compose logs -f`.
 
 ### Install
 

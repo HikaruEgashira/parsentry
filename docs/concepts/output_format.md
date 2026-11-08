@@ -17,7 +17,7 @@ parsentry scan → prompt.md (外部エージェントへ)
                     ↓
 外部エージェント → result.sarif.json (SARIF v2.1.0)
                     ↓
-parsentry generate → 統合 PDF レポート
+parsentry scan (report フェーズ) → merged.sarif.json + report.md (+ PDF)
 ```
 
 ## キャッシュディレクトリ構造
@@ -25,6 +25,12 @@ parsentry generate → 統合 PDF レポート
 ```
 ~/Library/Caches/parsentry/<target>/
 ├── model.json                              — 脅威モデル (ThreatModel)
+├── model.key                               — model.json の入力 (RepoMetadata) ハッシュ
+├── merged.sarif.json                       — 現行モデルの surface を統合した SARIF
+├── report.md                               — Markdown レポート (モデル差分を含む)
+├── previous/                               — モデル差分スキャンの比較元
+│   ├── model.json
+│   └── merged.sarif.json
 ├── reports/
 │   ├── SURFACE-001/
 │   │   ├── prompt.md                       — 攻撃面分析プロンプト
@@ -39,7 +45,7 @@ parsentry generate → 統合 PDF レポート
 
 ## model.json — ThreatModel
 
-外部エージェントが `parsentry model` のプロンプトに応答して書き込む JSON ファイルです。
+外部エージェントが `parsentry scan` の model フェーズのプロンプトに応答して書き込む JSON ファイルです。
 
 ```json
 {
@@ -136,7 +142,7 @@ parsentry generate → 統合 PDF レポート
 ## レポート生成
 
 ```
-parsentry generate owner/repo [-o report.pdf]
+parsentry scan owner/repo [-o report.pdf]
 ```
 
-全 surface の `result.sarif.json` をマージし、PDF レポートを生成します。内部的には `parsentry merge`（非公開コマンド）で SARIF ファイルを統合してから PDF をレンダリングします。
+全 surface が完了した状態で `scan` を実行すると report フェーズになり、現行の `model.json` に含まれる surface の `result.sarif.json` だけをマージして `merged.sarif.json` と `report.md` を書き出します（モデルから削除された surface の古い結果は含めません）。`-o` を指定すると PDF もレンダリングします。`previous/merged.sarif.json` がある場合はそれを baseline として各結果に `baselineState`（new / unchanged / absent）を付与し、レポートに Model Diff セクションを追加します。

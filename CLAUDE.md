@@ -4,16 +4,27 @@ Parsentry is a security prompt orchestrator. It analyzes repository structure, e
 
 ### Architecture
 
+`parsentry scan` が唯一のエントリポイント。キャッシュ状態から次のフェーズを決定し、1フェーズだけ実行する
+(`src/cli/commands/scan.rs` の `determine_phase`)。各プロンプト末尾で agent に `parsentry scan` の再実行を指示し、
+`PARSENTRY_SCAN_COMPLETE` が出るまでループさせる。
+
 ```
-Phase 1: parsentry model  → RepoMetadata収集 → 脅威モデルプロンプト出力(stdout)
-Phase 2: 外部agent(claude -p等)がmodel.jsonをキャッシュに書き込み
-Phase 3: parsentry scan   → model.json読み込み → surface毎のプロンプト生成・orchestrator出力(stdout)
-Phase 4: 外部agentがSARIF結果をキャッシュに書き込み
-Phase 5: parsentry generate → SARIF結果からPDFレポート生成
+model   : model.json が無い / 不正 / model.key ≠ RepoMetadata のハッシュ → 脅威モデルプロンプト出力
+surface : .cache_key 不一致 or SARIF 不正の surface がある → surface プロンプト + orchestrator 出力
+report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統合 → merged.sarif.json + report.md (+ -o で PDF)
 ```
+
+モード (フラグではなく状態で決まる):
+- 全体スキャン: キャッシュ無し
+- インクリメンタル: surface 定義+ソースの SHA-256 (`.cache_key`) が変わった surface のみ再分析
+- モデル差分: RepoMetadata が変化 → 旧 model.json / merged.sarif.json を `previous/` に退避し新モデル生成。
+  report で `previous/merged.sarif.json` を baseline に merge し、new/absent/unchanged を Model Diff として出力
 
 キャッシュ: `~/Library/Caches/parsentry/<target>/` (macOS)
 - `model.json` — 脅威モデル（外部agentが書き込み）
+- `model.key` / `model.pending_key` — model.json の入力 (RepoMetadata) ハッシュ
+- `previous/model.json`, `previous/merged.sarif.json` — モデル差分の比較元
+- `merged.sarif.json`, `report.md` — report フェーズの出力
 - `reports/<surface_id>/prompt.md` — surface分析プロンプト
 - `reports/<surface_id>/result.sarif.json` — 分析結果（外部agentが書き込み）
 
@@ -27,13 +38,8 @@ Phase 5: parsentry generate → SARIF結果からPDFレポート生成
 ### CLI Commands
 
 ```
-parsentry model [TARGET]                  # 脅威モデルプロンプトをstdoutに出力
-parsentry scan [TARGET]                   # surface分析プロンプト生成 + orchestratorをstdoutに出力
-  --diff-base <REF>                       # diffベースのgit ref
-  --filter-lang <LANGS>                   # 言語フィルタ(カンマ区切り)
-parsentry generate [TARGET] [-o PATH]     # SARIF統合 + PDFレポート生成 (内部でmergeを実行)
-parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion)
-                                          #   generateが内部でmergeするためPDF用途では不要 (hidden command)
+parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
+parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ```
 
@@ -60,7 +66,5 @@ cargo test && cargo check
 
 ```bash
 git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
-cargo run -- model benchmarks/benchmarks/XBEN-001-24 | claude -p
-cargo run -- scan benchmarks/benchmarks/XBEN-001-24 | claude -p
-cargo run -- generate benchmarks/benchmarks/XBEN-001-24
+cargo run -- scan benchmarks/benchmarks/XBEN-001-24 -o report.pdf | claude -p
 ```

@@ -4,29 +4,31 @@ Parsentry は CLI エージェント向けのセキュリティプロンプト�
 
 ## パイプラインの流れ
 
-```
-parsentry model [TARGET]
-    ↓ stdout: 脅威モデルプロンプト
-    ↓ パイプ → 外部エージェントが model.json をキャッシュに書き込み
+`parsentry scan` が唯一のコマンドです。実行のたびにキャッシュの状態を調べ、次のフェーズを 1 つだけ実行します。出力されるプロンプトの末尾には「`parsentry scan` を再実行し、`PARSENTRY_SCAN_COMPLETE` が出力されるまで繰り返す」という指示が含まれるため、1 回のパイプでパイプライン全体が完了します。
 
-parsentry scan [TARGET]
-    ↓ model.json を読み込み
-    ↓ 各 AttackSurface のソースコードを収集
-    ↓ reports/<surface_id>/prompt.md を生成
-    ↓ stdout: オーケストレータプロンプト
-    ↓ パイプ → 外部エージェントが並列サブエージェントをディスパッチ
-    ↓            各サブエージェントが result.sarif.json を書き込み
-
-parsentry generate [TARGET]
-    ↓ 全 result.sarif.json をマージ
-    ↓ PDF レポートを生成
 ```
+parsentry scan owner/repo | claude -p
+
+  model フェーズ    model.json が無い・不正・入力 (RepoMetadata) が変化
+      ↓ stdout: 脅威モデルプロンプト → エージェントが model.json を書き込み
+  surface フェーズ  定義またはソースが変わった surface / SARIF が無い・不正な surface がある
+      ↓ stdout: オーケストレータプロンプト → 並列サブエージェントが result.sarif.json を書き込み
+  report フェーズ   全 surface 完了
+      ↓ merged.sarif.json + report.md (+ -o 指定時は PDF)
+      ↓ stdout: サマリ + PARSENTRY_SCAN_COMPLETE
+```
+
+## スキャンモード
+
+モードはオプションではなくキャッシュの状態から決まります。
+
+| 状態 | モード | 動作 |
+|------|--------|------|
+| キャッシュ無し | 全体スキャン | model → 全 surface → report |
+| `model.key` が現在の RepoMetadata と一致し、一部の surface の `.cache_key` が不一致 | インクリメンタルスキャン | 変化した surface のみ再分析 |
+| `model.key` が現在の RepoMetadata と不一致 | モデル差分スキャン | 旧 `model.json` と `merged.sarif.json` を `previous/` に退避し新モデルを生成。surface ID を引き継ぐよう指示するため、変化の無い surface の結果は再利用される。report で旧結果を baseline に差分 (new / absent / unchanged) を出力 |
 
 ## フェーズ 1: Model — 脅威モデル生成
-
-```
-parsentry model owner/repo | claude -p
-```
 
 ### 処理内容
 
@@ -64,44 +66,30 @@ parsentry model owner/repo | claude -p
 | `locations` | 関連ファイルパス |
 | `description` | 分析が必要な理由 |
 
-## フェーズ 2: Scan — 攻撃面分析
-
-```
-parsentry scan owner/repo | claude -p
-```
+## フェーズ 2: Surface — 攻撃面分析
 
 ### 処理内容
 
 1. キャッシュから `model.json`（ThreatModel）を読み込む
 2. 各 AttackSurface の `locations` からソースコードを収集
-3. 各 surface に `SurfacePrompt`（prompt.md）を生成
+3. 未完了の surface に `SurfacePrompt`（prompt.md）を生成
 4. オーケストレータプロンプトを stdout に出力
-
-### オプション
-
-| フラグ | 説明 |
-|--------|------|
-| `--diff-base <REF>` | 差分ベースの Git ref（変更ファイルのみを対象） |
-| `--filter-lang <LANGS>` | 言語フィルタ（カンマ区切り） |
 
 ### キャッシュの仕組み
 
-各 surface は `cache_key`（ソースコードの SHA-256 ハッシュ）で管理されます。同じ内容の surface は再分析をスキップします。
+各 surface は `cache_key`（surface 定義とソースコードの SHA-256 ハッシュ）で管理されます。定義・内容ともに同じで、有効な SARIF がある surface は再分析をスキップします。
 
 ### 外部エージェントの役割
 
 オーケストレータプロンプトを受け取ったエージェントは、未完了の surface ごとに並列サブエージェントをディスパッチします。各サブエージェントは `prompt.md` を読み込み、SARIF v2.1.0 形式で `result.sarif.json` に結果を書き込みます。
 
-## フェーズ 3: Generate — レポート生成
-
-```
-parsentry generate owner/repo
-```
+## フェーズ 3: Report — レポート生成
 
 ### 処理内容
 
-1. 全 surface の `result.sarif.json` をマージ
-2. PDF レポートを生成（デフォルト出力先: キャッシュディレクトリ内）
+1. 現行モデルに含まれる surface の `result.sarif.json` のみをマージ（`previous/merged.sarif.json` があれば baseline として比較）
+2. `merged.sarif.json` と `report.md` を書き出し
+3. `-o` 指定時は PDF をレンダリング
 
 ### オプション
 
@@ -114,6 +102,9 @@ parsentry generate owner/repo
 ```
 ~/Library/Caches/parsentry/<target>/
 ├── model.json                              — ThreatModel
+├── model.key                               — model.json の入力ハッシュ
+├── merged.sarif.json / report.md           — report フェーズの出力
+├── previous/                               — モデル差分の比較元
 ├── reports/
 │   ├── SURFACE-001/
 │   │   ├── prompt.md                       — 分析プロンプト

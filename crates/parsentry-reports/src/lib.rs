@@ -21,7 +21,7 @@ pub use filename::{generate_output_filename, generate_pattern_specific_filename}
 pub use jira::run_jira_command;
 pub use linear::run_linear_command;
 pub use markdown::to_markdown;
-pub use merge::merge_sarif_dir;
+pub use merge::{merge_sarif_dir, merge_sarif_files};
 pub use notion::run_notion_command;
 pub use report_common::{SurfaceReport, load_surface_reports};
 pub use sarif::{SarifReport, SarifResult, SarifResultProperties};
