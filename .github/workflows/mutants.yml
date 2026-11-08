@@ -18,7 +18,7 @@ permissions:
   contents: read
 jobs:
   mutants:
-    runs-on: hikae-4vcpu-ubuntu-2404-arm
+    runs-on: hikae-4vcpu-ubuntu-2404
     timeout-minutes: 30
     strategy:
       fail-fast: false
