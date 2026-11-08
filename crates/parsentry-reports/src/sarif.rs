@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::evidence::{EvidenceKind, Verdict};
 use crate::summary::AnalysisSummary;
 use parsentry_core::{Response, VulnType};
 
@@ -116,10 +117,22 @@ pub struct SarifSuppression {
     pub justification: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SarifResultProperties {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<f64>,
+    /// Final state of the finding; defaults to `indeterminate` on merge.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verdict: Option<Verdict>,
+    /// What backs the finding; defaults to `heuristic` on merge.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_kind: Option<EvidenceKind>,
+    /// The strongest argument against this finding, recorded before filing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub counterevidence: Option<String>,
+    /// Paths of PoC artifacts (requests, exploits, logs) that prove the finding.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_uris: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mitre_attack: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -198,6 +211,28 @@ pub struct SarifInvocation {
     pub arguments: Option<Vec<String>>,
 }
 
+/// Count results by verdict. Results without a verdict are indeterminate.
+fn verdict_overview(results: &[SarifResult]) -> String {
+    let count = |v: Verdict| {
+        results
+            .iter()
+            .filter(|r| {
+                r.properties
+                    .as_ref()
+                    .and_then(|p| p.verdict)
+                    .unwrap_or_default()
+                    == v
+            })
+            .count()
+    };
+    format!(
+        "**Verdicts**: {} confirmed, {} indeterminate, {} ruled out\n\n",
+        count(Verdict::Confirmed),
+        count(Verdict::Indeterminate),
+        count(Verdict::RuledOut),
+    )
+}
+
 impl SarifReport {
     /// Create a new SARIF report from analysis summary
     pub fn from_analysis_summary(summary: &AnalysisSummary, version: &str) -> Self {
@@ -263,10 +298,7 @@ impl SarifReport {
                         mitre_attack: Some(vuln_type.mitre_attack_ids()),
                         cwe: Some(vuln_type.cwe_ids()),
                         owasp: Some(vuln_type.owasp_categories()),
-                        principal: None,
-                        action: None,
-                        resource: None,
-                        data_flow: None,
+                        ..Default::default()
                     }),
                 });
             }
@@ -338,6 +370,7 @@ impl SarifReport {
             }
 
             md.push_str(&format!("**Total findings**: {}\n\n", run.results.len()));
+            md.push_str(&verdict_overview(&run.results));
 
             for (i, result) in run.results.iter().enumerate() {
                 md.push_str(&format!("## Finding {}: {}\n\n", i + 1, result.rule_id));
@@ -377,8 +410,24 @@ impl SarifReport {
                 md.push_str("\n\n");
 
                 if let Some(props) = &result.properties {
+                    if let Some(verdict) = props.verdict {
+                        md.push_str(&format!("**Verdict**: {}\n", verdict.as_str()));
+                    }
+                    if let Some(kind) = props.evidence_kind {
+                        md.push_str(&format!("**Evidence**: {}\n", kind.as_str()));
+                    }
                     if let Some(confidence) = props.confidence {
                         md.push_str(&format!("**Confidence**: {:.0}%\n", confidence * 100.0));
+                    }
+                    if let Some(counter) = &props.counterevidence
+                        && !counter.is_empty()
+                    {
+                        md.push_str(&format!("**Counterevidence**: {}\n", counter));
+                    }
+                    if let Some(uris) = &props.evidence_uris
+                        && !uris.is_empty()
+                    {
+                        md.push_str(&format!("**PoC artifacts**: {}\n", uris.join(", ")));
                     }
                     if let Some(cwe) = &props.cwe
                         && !cwe.is_empty()
@@ -852,10 +901,7 @@ mod tests {
                 mitre_attack: None,
                 cwe: Some(vec!["CWE-89".to_string()]),
                 owasp: Some(vec!["A03".to_string()]),
-                principal: None,
-                action: None,
-                resource: None,
-                data_flow: None,
+                ..Default::default()
             }),
         }
     }
@@ -1503,10 +1549,7 @@ mod tests {
                 mitre_attack: Some(vec!["T1190".to_string()]),
                 cwe: None,
                 owasp: None,
-                principal: None,
-                action: None,
-                resource: None,
-                data_flow: None,
+                ..Default::default()
             }),
         };
         let report = SarifReport {

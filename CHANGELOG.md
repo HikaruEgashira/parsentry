@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### 🎉 New Features
+- finding の `properties` に `verdict` (confirmed / ruled_out / indeterminate)、`evidence_kind` (dynamic_poc / static_trace / heuristic)、`counterevidence`、`evidence_uris` を追加 (#391)。merge 時に未指定の verdict は `indeterminate`、evidenceKind は `heuristic` に正規化し、`dynamic_poc` 以外の finding は confidence を 0.7 に制限、`confirmed` を `indeterminate` に降格する。surface プロンプトと report.md に verdict ルールと集計を反映
+
 ## [0.22.0] - 2026-11-08
 
 ### 💥 Breaking Changes

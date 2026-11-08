@@ -14,6 +14,7 @@ use std::path::Path;
 
 use crate::sarif::*;
 
+
 /// Maximum SARIF file size (10 MiB) to prevent OOM from malicious agents.
 const MAX_SARIF_FILE_SIZE: u64 = 10 * 1024 * 1024;
 
@@ -170,6 +171,10 @@ pub fn merge_sarif_files(
                 ensure_fingerprint(&mut result);
                 let fp = fingerprint(&result);
 
+                // Unexecuted findings cannot claim high confidence or a
+                // confirmed verdict, whatever the agent wrote.
+                crate::evidence::normalize(&mut result);
+
                 // Deduplicate: skip if same fingerprint already seen
                 if seen_fingerprints.contains_key(&fp) {
                     continue;
@@ -263,6 +268,7 @@ fn load_baseline(path: &Path) -> Result<HashMap<String, SarifResult>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::evidence::{EvidenceKind, STATIC_CONFIDENCE_CAP, Verdict};
     use tempfile::TempDir;
 
     fn write_sarif(dir: &Path, name: &str, content: &str) {
@@ -285,6 +291,35 @@ mod tests {
             }}]
         }}"#
         )
+    }
+
+    #[test]
+    fn merge_normalizes_verdict_and_caps_static_confidence() {
+        let tmp = TempDir::new().unwrap();
+        write_sarif(
+            tmp.path(),
+            "S1.sarif.json",
+            &r#"{"$schema":"s","version":"2.1.0","runs":[{"tool":{"driver":{"name":"t","version":"1"}},
+              "results":[
+                {"ruleId":"A","level":"error","message":{"text":"static"},
+                 "locations":[{"physicalLocation":{"artifactLocation":{"uri":"a.py"}}}],
+                 "properties":{"confidence":0.95,"verdict":"confirmed","evidence_kind":"static_trace"}},
+                {"ruleId":"B","level":"error","message":{"text":"dynamic"},
+                 "locations":[{"physicalLocation":{"artifactLocation":{"uri":"b.py"}}}],
+                 "properties":{"confidence":0.95,"verdict":"confirmed","evidence_kind":"dynamic_poc"}},
+                {"ruleId":"C","level":"error","message":{"text":"bare"},
+                 "locations":[{"physicalLocation":{"artifactLocation":{"uri":"c.py"}}}]}
+              ]}]}"#,
+        );
+        let merged = merge_sarif_dir(tmp.path(), None).unwrap();
+        let props = |i: usize| merged.runs[0].results[i].properties.clone().unwrap();
+
+        assert_eq!(props(0).confidence, Some(STATIC_CONFIDENCE_CAP));
+        assert_eq!(props(0).verdict, Some(Verdict::Indeterminate));
+        assert_eq!(props(1).confidence, Some(0.95));
+        assert_eq!(props(1).verdict, Some(Verdict::Confirmed));
+        assert_eq!(props(2).verdict, Some(Verdict::Indeterminate));
+        assert_eq!(props(2).evidence_kind, Some(EvidenceKind::Heuristic));
     }
 
     #[test]

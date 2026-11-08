@@ -182,6 +182,21 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
     prompt.push_str("- `locations[].physicalLocation.artifactLocation.uri`\n");
     prompt.push_str("- `locations[].physicalLocation.region.startLine` when known\n");
     prompt.push_str("- `properties.confidence`: 0.0-1.0\n");
+    prompt.push_str(
+        "- `properties.verdict`: `confirmed` | `ruled_out` | `indeterminate`\n\
+         - `properties.evidence_kind`: `dynamic_poc` | `static_trace` | `heuristic`\n\
+         - `properties.counterevidence`: the strongest argument that this finding is wrong\n\n",
+    );
+    prompt.push_str(
+        "Verdict rules\n\n\
+         - `confirmed` requires `dynamic_poc` evidence: you reproduced the issue against a \
+           running target. A trace you only read is `static_trace` and stays `indeterminate`.\n\
+         - `ruled_out` requires naming the specific control at a specific location that \
+           prevents the issue.\n\
+         - Missing information is not proof of safety. When you cannot prove either way, \
+           report `indeterminate` and state the proof gap in `counterevidence`.\n\
+         - Confidence of findings without `dynamic_poc` evidence is capped at 0.7 on merge.\n",
+    );
 
     Some(SurfacePrompt {
         surface_id: surface.id.clone(),
@@ -365,6 +380,10 @@ mod tests {
         assert!(sp.prompt.contains("parsentry scan"));
         assert!(sp.prompt.contains("tool.driver.version"));
         assert!(sp.prompt.contains("ruleId"));
+        assert!(sp.prompt.contains("properties.verdict"));
+        assert!(sp.prompt.contains("properties.evidence_kind"));
+        assert!(sp.prompt.contains("properties.counterevidence"));
+        assert!(sp.prompt.contains("capped at 0.7"));
     }
 
     #[test]

@@ -396,10 +396,7 @@ mod tests {
             cwe: Some(vec!["CWE-89".to_string()]),
             owasp: Some(vec!["A03".to_string()]),
             mitre_attack: Some(vec!["T1190".to_string()]),
-            principal: None,
-            action: None,
-            resource: None,
-            data_flow: None,
+            ..Default::default()
         });
         let body = build_markdown_body(&result, None);
         assert!(body.contains("## Classification"));

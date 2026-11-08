@@ -46,11 +46,12 @@ parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ## Security Scanning
 - SARIF出力のCWEフィールドは必ず配列にすること（文字列ではない）。マージフェーズでのスキーマバリデーションエラーを防ぐ
 - マージ前に merged.sarif.json が既に存在しないか、空でないかを確認する。再生成前にstale/emptyなファイルを削除すること
+- finding の verdict は 3 状態 (confirmed / ruled_out / indeterminate)。`confirmed` は `evidence_kind=dynamic_poc` (実行による再現) が必要で、静的解析のみの finding は merge 時に confidence 0.7 に制限される (`crates/parsentry-reports/src/evidence.rs`)
 
 ## After Code Changes
 
 ```bash
-cargo test && cargo check
+cargo test --workspace && cargo check
 ```
 
 ## Dynamic Check Guide
