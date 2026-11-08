@@ -66,7 +66,7 @@ jobs:
         run: cargo mutants -p ${{ matrix.crate }} --timeout 60 --output mutants.out --in-place --config mutants.toml -- --lib
       - name: Upload mutation report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         timeout-minutes: 5
         with:
           name: mutation-report-${{ matrix.crate }}
