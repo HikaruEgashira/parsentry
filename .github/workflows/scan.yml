@@ -19,6 +19,9 @@ permissions:
 jobs:
   scan:
     runs-on: hikae-2vcpu-ubuntu-2404-arm
+    permissions:
+      contents: read
+      security-events: write
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -74,6 +77,13 @@ jobs:
             echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Install Claude Code
+        if: steps.diff.outputs.skip != 'true'
+        timeout-minutes: 5
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
       - name: Run scan
         if: steps.diff.outputs.skip != 'true'
         timeout-minutes: 20
@@ -83,10 +93,53 @@ jobs:
           # by content hash, so only changed surfaces are re-analyzed.
           PARSENTRY_CACHE_DIR: ${{ github.workspace }}/.parsentry/cache
         run: |
-          parsentry scan .
+          mkdir -p "${PARSENTRY_CACHE_DIR}"
+          # Writes are limited to the cache directory and the working tree;
+          # Bash is limited to re-running `parsentry scan` (no bypassPermissions).
+          SETTINGS=$(mktemp)
+          jq -n --arg ws "/${GITHUB_WORKSPACE}" --arg cache "/${PARSENTRY_CACHE_DIR}" '{
+            permissions: {
+              defaultMode: "default",
+              allow: [
+                "Read", "Glob", "Grep", "Task",
+                "Bash(parsentry scan:*)",
+                "Bash(/usr/local/bin/parsentry scan:*)",
+                "Bash(PARSENTRY_CACHE_DIR=*parsentry\u0027 scan:*)",
+                ("Write(" + $cache + "/**)"), ("Edit(" + $cache + "/**)"),
+                ("Write(" + $ws + "/**)"), ("Edit(" + $ws + "/**)")
+              ],
+              deny: ["WebFetch", "WebSearch"]
+            }
+          }' > "${SETTINGS}"
+          parsentry scan . | claude -p \
+            --settings "${SETTINGS}" \
+            --permission-mode default \
+            --output-format text
+
+      - name: Check SARIF output
+        id: sarif
+        if: steps.diff.outputs.skip != 'true'
+        timeout-minutes: 2
+        env:
+          PARSENTRY_CACHE_DIR: ${{ github.workspace }}/.parsentry/cache
+        run: |
+          SARIF=$(find "${PARSENTRY_CACHE_DIR}" -name merged.sarif.json -not -path '*/previous/*' -newer "${GITHUB_WORKSPACE}/.git/HEAD" | head -1)
+          if [ -z "${SARIF}" ] || [ ! -s "${SARIF}" ]; then
+            echo "::error::merged.sarif.json was not produced by the scan"
+            exit 1
+          fi
+          echo "path=${SARIF}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload SARIF to code scanning
+        if: steps.diff.outputs.skip != 'true'
+        timeout-minutes: 5
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.sarif.outputs.path }}
+          category: parsentry
 
       - name: Upload reports
-        if: steps.diff.outputs.skip != 'true'
+        if: always() && steps.diff.outputs.skip != 'true'
         timeout-minutes: 5
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
