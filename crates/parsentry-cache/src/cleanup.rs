@@ -173,13 +173,10 @@ impl CleanupManager {
     pub fn is_over_size_limit(&self) -> Result<bool> {
         let threshold_mb = match &self.trigger {
             CleanupTrigger::OnSizeLimit { threshold_mb } => *threshold_mb,
-            CleanupTrigger::Combined { size_limit_mb, .. } => {
-                if let Some(limit) = size_limit_mb {
-                    *limit
-                } else {
-                    return Ok(false);
-                }
-            }
+            CleanupTrigger::Combined {
+                size_limit_mb: Some(limit),
+                ..
+            } => *limit,
             _ => return Ok(false),
         };
 
@@ -228,7 +225,7 @@ impl CleanupManager {
             }
 
             let path = entry.path();
-            if !path.extension().map_or(false, |ext| ext == "json") {
+            if !path.extension().is_some_and(|ext| ext == "json") {
                 continue;
             }
 
@@ -280,7 +277,7 @@ impl CleanupManager {
             }
 
             let path = entry.path();
-            if !path.extension().map_or(false, |ext| ext == "json") {
+            if !path.extension().is_some_and(|ext| ext == "json") {
                 continue;
             }
 
@@ -985,7 +982,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let cache_dir = temp_dir.path();
 
-        fs::write(cache_dir.join("small.bin"), &[b'x'; 100]).unwrap();
+        fs::write(cache_dir.join("small.bin"), [b'x'; 100]).unwrap();
 
         let manager = CleanupManager::with_config(
             cache_dir,

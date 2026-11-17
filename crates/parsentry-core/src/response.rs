@@ -105,9 +105,10 @@ mod tests {
 
     #[test]
     fn test_severity_level() {
-        let mut response = Response::default();
-
-        response.confidence_score = 95;
+        let mut response = Response {
+            confidence_score: 95,
+            ..Default::default()
+        };
         assert_eq!(response.severity_level(), "critical");
 
         response.confidence_score = 75;
@@ -162,8 +163,10 @@ mod tests {
 
     #[test]
     fn test_severity_level_boundaries() {
-        let mut r = Response::default();
-        r.confidence_score = 90;
+        let mut r = Response {
+            confidence_score: 90,
+            ..Default::default()
+        };
         assert_eq!(r.severity_level(), "critical");
         r.confidence_score = 100;
         assert_eq!(r.severity_level(), "critical");
