@@ -151,7 +151,7 @@ impl CacheStorage {
             .filter_map(|e| e.ok())
         {
             if entry.file_type().is_file()
-                && entry.path().extension().map_or(false, |ext| ext == "json")
+                && entry.path().extension().is_some_and(|ext| ext == "json")
             {
                 count += 1;
             }
@@ -169,7 +169,7 @@ impl CacheStorage {
             .filter_map(|e| e.ok())
         {
             if entry.file_type().is_file()
-                && entry.path().extension().map_or(false, |ext| ext == "json")
+                && entry.path().extension().is_some_and(|ext| ext == "json")
             {
                 fs::remove_file(entry.path())?;
                 removed += 1;

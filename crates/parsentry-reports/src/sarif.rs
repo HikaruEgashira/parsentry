@@ -649,26 +649,25 @@ fn parse_line_number_from_text(text: &str) -> Option<SarifRegion> {
     ];
 
     for pattern in &patterns {
-        if let Ok(regex) = regex::Regex::new(pattern) {
-            if let Some(captures) = regex.captures(text) {
-                if let Ok(line_num) = captures[1].parse::<i32>() {
-                    let column = if captures.len() > 2 {
-                        captures[2].parse::<i32>().ok()
-                    } else {
-                        None
-                    };
+        if let Ok(regex) = regex::Regex::new(pattern)
+            && let Some(captures) = regex.captures(text)
+            && let Ok(line_num) = captures[1].parse::<i32>()
+        {
+            let column = if captures.len() > 2 {
+                captures[2].parse::<i32>().ok()
+            } else {
+                None
+            };
 
-                    return Some(SarifRegion {
-                        start_line: line_num,
-                        start_column: column,
-                        end_line: None,
-                        end_column: None,
-                        snippet: Some(SarifArtifactContent {
-                            text: text.to_string(),
-                        }),
-                    });
-                }
-            }
+            return Some(SarifRegion {
+                start_line: line_num,
+                start_column: column,
+                end_line: None,
+                end_column: None,
+                snippet: Some(SarifArtifactContent {
+                    text: text.to_string(),
+                }),
+            });
         }
     }
 
