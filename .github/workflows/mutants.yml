@@ -19,7 +19,7 @@ permissions:
 jobs:
   mutants:
     runs-on: hikae-4vcpu-ubuntu-2404
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -40,6 +40,8 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
+          # PRs need the base commit to compute the --in-diff patch
+          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
       - name: Ensure writable RUSTUP_HOME
         if: runner.environment == 'self-hosted'
         timeout-minutes: 1
@@ -74,9 +76,20 @@ jobs:
       - name: Install cargo-mutants
         timeout-minutes: 5
         run: which cargo-mutants || cargo install cargo-mutants --locked
-      - name: Run mutation testing on ${{ matrix.crate }}
-        # parsentry-reports alone has ~190 mutants (5m+ on 4 vCPU) since #391; --in-place forbids -j
+      - name: Run mutation testing on changed lines of ${{ matrix.crate }}
+        # PRs mutate only the diff so new code must land with mutant-killing tests
+        if: github.event_name == 'pull_request'
         timeout-minutes: 15
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git diff "$BASE_SHA"...HEAD > pr.diff
+          cargo mutants -p ${{ matrix.crate }} --in-diff pr.diff --timeout 60 --output mutants.out --in-place --config mutants.toml -- --lib
+      - name: Run mutation testing on ${{ matrix.crate }}
+        # parsentry-reports measured 188 mutants in ~5m on 4 vCPU (run 42466644625);
+        # 6x headroom keeps crate growth a verdict rather than a cancellation. --in-place forbids -j
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 30
         run: cargo mutants -p ${{ matrix.crate }} --timeout 60 --output mutants.out --in-place --config mutants.toml -- --lib
       - name: Upload mutation report
         if: always()
