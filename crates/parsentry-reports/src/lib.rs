@@ -16,6 +16,7 @@ pub mod notion;
 pub mod report_common;
 pub mod sarif;
 pub mod summary;
+pub mod triage;
 pub mod validation;
 
 pub use evidence::{EvidenceKind, STATIC_CONFIDENCE_CAP, Verdict};
@@ -28,4 +29,5 @@ pub use notion::run_notion_command;
 pub use report_common::{SurfaceReport, load_surface_reports};
 pub use sarif::{SarifReport, SarifResult, SarifResultProperties};
 pub use summary::AnalysisSummary;
+pub use triage::{carry_suppressions, suppress_result, unsuppress_result};
 pub use validation::validate_output_directory;

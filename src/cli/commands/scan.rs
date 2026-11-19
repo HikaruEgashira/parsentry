@@ -26,7 +26,7 @@ use crate::prompt::{
 };
 
 use parsentry_core::{RepoMetadata, ThreatModel};
-use parsentry_reports::{SarifReport, merge_sarif_files};
+use parsentry_reports::{SarifReport, carry_suppressions, merge_sarif_files};
 use sha2::{Digest, Sha256};
 
 use super::common::{
@@ -339,12 +339,20 @@ fn run_report_phase(
         },
     );
 
+    // Triage decisions written to the last merged report (e.g. from
+    // `parsentry triage`) must survive the rescan.
+    let triaged = std::fs::read_to_string(layout.merged())
+        .ok()
+        .and_then(|s| serde_json::from_str::<SarifReport>(&s).ok());
     // Never leave a stale merged report behind if the merge fails.
     std::fs::remove_file(layout.merged()).ok();
     if files.is_empty() {
         printer.warning("Report", "threat model has no analyzable surfaces");
     }
-    let merged = merge_sarif_files(&files, baseline)?;
+    let mut merged = merge_sarif_files(&files, baseline)?;
+    if let Some(triaged) = &triaged {
+        carry_suppressions(&mut merged, triaged);
+    }
 
     let tmp = layout.root.join("merged.sarif.json.tmp");
     std::fs::write(&tmp, serde_json::to_string_pretty(&merged)?)
@@ -563,5 +571,33 @@ mod tests {
         }
         let files = current_sarif_files(&layout.reports(), &model);
         assert_eq!(files, vec![layout.reports().join("S-1/result.sarif.json")]);
+    }
+
+    #[test]
+    fn suppression_survives_rescan() {
+        let (repo, _c, layout) = setup();
+        std::fs::write(layout.model(), model_json(&["S-1"])).unwrap();
+        reconcile_model_key(&layout, "k1").unwrap();
+        complete_surfaces(&layout, repo.path());
+        let finding = r#"{"$schema":"s","version":"2.1.0","runs":[{"tool":{"driver":{"name":"t","version":"1"}},"results":[{"ruleId":"SQLI","level":"error","message":{"text":"m"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"app.py"}}}]}]}]}"#;
+        std::fs::write(layout.reports().join("S-1/result.sarif.json"), finding).unwrap();
+        let model: ThreatModel =
+            serde_json::from_str(&std::fs::read_to_string(layout.model()).unwrap()).unwrap();
+        let printer = StatusPrinter::new();
+        let read_merged = || -> SarifReport {
+            serde_json::from_str(&std::fs::read_to_string(layout.merged()).unwrap()).unwrap()
+        };
+
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let mut merged = read_merged();
+        let fp = parsentry_reports::merge::fingerprint(&merged.runs[0].results[0]);
+        assert!(parsentry_reports::suppress_result(&mut merged, &fp, "false positive"));
+        std::fs::write(layout.merged(), serde_json::to_string(&merged).unwrap()).unwrap();
+
+        // Rescan: the surface is re-analyzed and its SARIF rewritten.
+        std::fs::write(layout.reports().join("S-1/result.sarif.json"), finding).unwrap();
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let suppressions = read_merged().runs[0].results[0].suppressions.clone().unwrap();
+        assert_eq!(suppressions[0].justification.as_deref(), Some("false positive"));
     }
 }

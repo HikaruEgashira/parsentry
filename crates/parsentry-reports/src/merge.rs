@@ -21,7 +21,7 @@ const MAX_SARIF_FILE_SIZE: u64 = 10 * 1024 * 1024;
 ///
 /// Uses agent-provided `fingerprints["parsentry/v1"]` if available.
 /// Otherwise falls back to `SHA256(ruleId + first location URI)`.
-fn fingerprint(result: &SarifResult) -> String {
+pub fn fingerprint(result: &SarifResult) -> String {
     // Use agent-provided fingerprint if available
     if let Some(ref fps) = result.fingerprints {
         if let Some(fp) = fps.get("parsentry/v1") {

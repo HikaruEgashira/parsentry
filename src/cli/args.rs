@@ -74,6 +74,19 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Open a local web UI to triage findings of the merged report
+    ///
+    /// Suppressing a finding writes it to SARIF `suppressions[]` in
+    /// merged.sarif.json; suppressions carry over to the next scan's report.
+    Triage {
+        /// Target whose merged report to triage
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Port to listen on (localhost only)
+        #[arg(long, default_value = "8787")]
+        port: u16,
+    },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
     Log {
