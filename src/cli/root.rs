@@ -12,7 +12,11 @@ impl RootCommand {
         let args = Args::parse();
 
         match args.command {
-            Commands::Scan { target, output } => run_scan_command(&target, output.as_deref()).await,
+            Commands::Scan {
+                target,
+                output,
+                env,
+            } => run_scan_command(&target, output.as_deref(), env.as_deref()).await,
             Commands::Merge {
                 target,
                 gh_issue,

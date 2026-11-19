@@ -39,6 +39,7 @@ octocrab = "0.48"
 reqwest = { version = "0.13", features = ["json"] }
 urlencoding = "2.1"
 sha2 = "0.10"
+serde_yaml = "0.9"
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }
