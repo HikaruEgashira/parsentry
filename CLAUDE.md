@@ -39,6 +39,7 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 
 ```
 parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
+parsentry scan --runtime claude [TARGET]  # sidecar (PARSENTRY_AGENT_RUNTIME / parsentry-agent-runtime) を JSON-RPC stdio で駆動し全フェーズ実行 (src/runtime.rs)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ```

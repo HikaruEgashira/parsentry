@@ -1,4 +1,14 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+
+/// How phase prompts are executed.
+#[derive(ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum RuntimeKind {
+    /// Print the next phase prompt to stdout for an external agent
+    #[default]
+    Pipe,
+    /// Run every phase through the agent runtime sidecar (PARSENTRY_AGENT_RUNTIME)
+    Claude,
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -42,6 +52,10 @@ pub enum Commands {
         /// Also render a PDF report to this path when the scan completes
         #[arg(short, long)]
         output: Option<String>,
+
+        /// Execution runtime: `pipe` prints prompts, `claude` drives the agent runtime sidecar
+        #[arg(long, value_enum, default_value_t = RuntimeKind::Pipe)]
+        runtime: RuntimeKind,
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
