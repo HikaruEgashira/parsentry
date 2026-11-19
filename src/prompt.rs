@@ -197,6 +197,16 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
            report `indeterminate` and state the proof gap in `counterevidence`.\n\
          - Confidence of findings without `dynamic_poc` evidence is capped at 0.7 on merge.\n",
     );
+    prompt.push_str(&format!(
+        "\nPoC artifacts\n\n\
+         - Save PoC artifacts under `reports/{id}/poc/` next to `result.sarif.json`: \
+           `request.http`, `response.http`, `exploit.*` (the script you ran) and `stdout.log`.\n\
+         - List each saved artifact in `properties.evidence_uris`, relative to `reports/{id}/` \
+           (e.g. `poc/request.http`).\n\
+         - After running the PoC, update the finding's `verdict` and `evidence_kind` to reflect \
+           the result. If it stays `indeterminate`, record the proof gap in `counterevidence`.\n",
+        id = surface.id
+    ));
 
     Some(SurfacePrompt {
         surface_id: surface.id.clone(),
@@ -384,6 +394,9 @@ mod tests {
         assert!(sp.prompt.contains("properties.evidence_kind"));
         assert!(sp.prompt.contains("properties.counterevidence"));
         assert!(sp.prompt.contains("capped at 0.7"));
+        assert!(sp.prompt.contains("reports/S-1/poc/"));
+        assert!(sp.prompt.contains("properties.evidence_uris"));
+        assert!(sp.prompt.contains("stdout.log"));
     }
 
     #[test]
