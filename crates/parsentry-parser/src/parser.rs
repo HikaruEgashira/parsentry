@@ -190,7 +190,7 @@ impl CodeParser {
             let mut definition_node: Option<Node> = None;
             let mut name_node: Option<Node> = None;
 
-            for cap in mat.captures {
+            for cap in mat.captures() {
                 let capture_name = &query.capture_names()[cap.index as usize];
                 match capture_name {
                     s if *s == "definition" => definition_node = Some(cap.node),
@@ -268,7 +268,7 @@ impl CodeParser {
             let mut matches = query_cursor.matches(&query, tree.root_node(), content.as_bytes());
 
             while let Some(mat) = matches.next() {
-                for cap in mat.captures {
+                for cap in mat.captures() {
                     let capture_name = query.capture_names()[cap.index as usize];
                     let valid_captures = [
                         "direct_call",
@@ -377,7 +377,7 @@ impl CodeParser {
         while let Some(mat) = matches.next() {
             let mut def_node: Option<Node> = None;
             let mut name_node: Option<Node> = None;
-            for cap in mat.captures {
+            for cap in mat.captures() {
                 let capture_name = &definitions_query.capture_names()[cap.index as usize];
                 match &capture_name[..] {
                     "definition" => def_node = Some(cap.node),
@@ -431,7 +431,7 @@ impl CodeParser {
             references_cursor.matches(&references_query, tree.root_node(), file_content.as_bytes());
 
         while let Some(mat) = ref_matches.next() {
-            for cap in mat.captures {
+            for cap in mat.captures() {
                 let capture_name = &references_query.capture_names()[cap.index as usize];
                 if [
                     "direct_call",
