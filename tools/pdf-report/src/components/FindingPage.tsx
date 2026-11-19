@@ -317,10 +317,14 @@ export function FindingPages({
   results,
   rules,
   mdFindings,
+  subtitle = "Detailed Analysis",
+  title = "Vulnerability Findings",
 }: {
   results: SarifResult[];
   rules: SarifRule[];
   mdFindings?: FindingDetail[];
+  subtitle?: string;
+  title?: string;
 }) {
   const ruleMap = new Map(rules.map((r) => [r.id, r]));
   const sorted = [...results].sort((a, b) => {
@@ -345,8 +349,8 @@ export function FindingPages({
   return (
     <Page size="A4" style={s.page} wrap>
       <View style={s.sectionHeader} fixed>
-        <Text style={s.sectionSub}>Detailed Analysis</Text>
-        <Text style={s.sectionTitle}>Vulnerability Findings</Text>
+        <Text style={s.sectionSub}>{subtitle}</Text>
+        <Text style={s.sectionTitle}>{title}</Text>
         <Svg style={s.gradientBar} viewBox="0 0 500 2">
           <Defs>
             <LinearGradient id="fbar" x1="0" y1="0" x2="1" y2="0">

@@ -211,6 +211,100 @@ pub struct SarifInvocation {
     pub arguments: Option<Vec<String>>,
 }
 
+/// Render one finding as a Markdown section.
+fn finding_markdown(n: usize, result: &SarifResult, run: &SarifRun) -> String {
+    let mut md = String::new();
+    md.push_str(&format!("## Finding {}: {}\n\n", n, result.rule_id));
+
+    let level_emoji = match result.level.as_str() {
+        "error" => "🔴",
+        "warning" => "🟠",
+        "note" => "🟡",
+        _ => "⚪",
+    };
+    md.push_str(&format!(
+        "**Severity**: {} {}\n\n",
+        level_emoji, result.level
+    ));
+
+    if let Some(location) = result.locations.first() {
+        let uri = &location.physical_location.artifact_location.uri;
+        md.push_str(&format!("**File**: `{}`\n", uri));
+
+        if let Some(region) = &location.physical_location.region {
+            md.push_str(&format!("**Line**: {}\n", region.start_line));
+            if let Some(snippet) = &region.snippet {
+                md.push_str("\n**Snippet**:\n```\n");
+                md.push_str(&snippet.text);
+                md.push_str("\n```\n");
+            }
+        }
+        md.push('\n');
+    }
+
+    md.push_str("### Analysis\n\n");
+    if let Some(markdown_text) = &result.message.markdown {
+        md.push_str(markdown_text);
+    } else {
+        md.push_str(&result.message.text);
+    }
+    md.push_str("\n\n");
+
+    if let Some(props) = &result.properties {
+        if let Some(verdict) = props.verdict {
+            md.push_str(&format!("**Verdict**: {}\n", verdict.as_str()));
+        }
+        if let Some(kind) = props.evidence_kind {
+            md.push_str(&format!("**Evidence**: {}\n", kind.as_str()));
+        }
+        if let Some(confidence) = props.confidence {
+            md.push_str(&format!("**Confidence**: {:.0}%\n", confidence * 100.0));
+        }
+        if let Some(counter) = &props.counterevidence
+            && !counter.is_empty()
+        {
+            md.push_str(&format!("**Counterevidence**: {}\n", counter));
+        }
+        if let Some(uris) = &props.evidence_uris
+            && !uris.is_empty()
+        {
+            md.push_str(&format!("**PoC artifacts**: {}\n", uris.join(", ")));
+        }
+        if let Some(cwe) = &props.cwe
+            && !cwe.is_empty()
+        {
+            md.push_str(&format!("**CWE**: {}\n", cwe.join(", ")));
+        }
+        if let Some(owasp) = &props.owasp
+            && !owasp.is_empty()
+        {
+            md.push_str(&format!("**OWASP**: {}\n", owasp.join(", ")));
+        }
+        if let Some(mitre) = &props.mitre_attack
+            && !mitre.is_empty()
+        {
+            md.push_str(&format!("**MITRE ATT&CK**: {}\n", mitre.join(", ")));
+        }
+        md.push('\n');
+    }
+
+    if let Some(rules) = &run.tool.driver.rules
+        && let Some(rule) = rules.iter().find(|r| r.id == result.rule_id)
+        && let Some(help) = &rule.help
+    {
+        md.push_str("### Remediation\n\n");
+        if let Some(markdown_help) = &help.markdown {
+            md.push_str(markdown_help);
+        } else {
+            md.push_str(&help.text);
+        }
+        md.push_str("\n\n");
+    }
+
+    md.push_str("---\n\n");
+    md
+}
+
 /// Count results by verdict. Results without a verdict are indeterminate.
 fn verdict_overview(results: &[SarifResult]) -> String {
     let count = |v: Verdict| {
@@ -372,95 +466,39 @@ impl SarifReport {
             md.push_str(&format!("**Total findings**: {}\n\n", run.results.len()));
             md.push_str(&verdict_overview(&run.results));
 
-            for (i, result) in run.results.iter().enumerate() {
-                md.push_str(&format!("## Finding {}: {}\n\n", i + 1, result.rule_id));
-
-                let level_emoji = match result.level.as_str() {
-                    "error" => "🔴",
-                    "warning" => "🟠",
-                    "note" => "🟡",
-                    _ => "⚪",
-                };
-                md.push_str(&format!(
-                    "**Severity**: {} {}\n\n",
-                    level_emoji, result.level
-                ));
-
-                if let Some(location) = result.locations.first() {
-                    let uri = &location.physical_location.artifact_location.uri;
-                    md.push_str(&format!("**File**: `{}`\n", uri));
-
-                    if let Some(region) = &location.physical_location.region {
-                        md.push_str(&format!("**Line**: {}\n", region.start_line));
-                        if let Some(snippet) = &region.snippet {
-                            md.push_str("\n**Snippet**:\n```\n");
-                            md.push_str(&snippet.text);
-                            md.push_str("\n```\n");
-                        }
-                    }
-                    md.push('\n');
+            let verdict_of = |r: &SarifResult| {
+                r.properties
+                    .as_ref()
+                    .and_then(|p| p.verdict)
+                    .unwrap_or(Verdict::Indeterminate)
+            };
+            let groups = [
+                (Verdict::Confirmed, None),
+                (
+                    Verdict::Indeterminate,
+                    Some(
+                        "# Unverified\n\nFindings without executed evidence. Treat these as leads, not proven vulnerabilities.\n\n",
+                    ),
+                ),
+                (Verdict::RuledOut, Some("# Ruled Out\n\n")),
+            ];
+            let mut n = 0;
+            for (verdict, heading) in groups {
+                let group: Vec<&SarifResult> = run
+                    .results
+                    .iter()
+                    .filter(|r| verdict_of(r) == verdict)
+                    .collect();
+                if group.is_empty() {
+                    continue;
                 }
-
-                md.push_str("### Analysis\n\n");
-                if let Some(markdown_text) = &result.message.markdown {
-                    md.push_str(markdown_text);
-                } else {
-                    md.push_str(&result.message.text);
+                if let Some(heading) = heading {
+                    md.push_str(heading);
                 }
-                md.push_str("\n\n");
-
-                if let Some(props) = &result.properties {
-                    if let Some(verdict) = props.verdict {
-                        md.push_str(&format!("**Verdict**: {}\n", verdict.as_str()));
-                    }
-                    if let Some(kind) = props.evidence_kind {
-                        md.push_str(&format!("**Evidence**: {}\n", kind.as_str()));
-                    }
-                    if let Some(confidence) = props.confidence {
-                        md.push_str(&format!("**Confidence**: {:.0}%\n", confidence * 100.0));
-                    }
-                    if let Some(counter) = &props.counterevidence
-                        && !counter.is_empty()
-                    {
-                        md.push_str(&format!("**Counterevidence**: {}\n", counter));
-                    }
-                    if let Some(uris) = &props.evidence_uris
-                        && !uris.is_empty()
-                    {
-                        md.push_str(&format!("**PoC artifacts**: {}\n", uris.join(", ")));
-                    }
-                    if let Some(cwe) = &props.cwe
-                        && !cwe.is_empty()
-                    {
-                        md.push_str(&format!("**CWE**: {}\n", cwe.join(", ")));
-                    }
-                    if let Some(owasp) = &props.owasp
-                        && !owasp.is_empty()
-                    {
-                        md.push_str(&format!("**OWASP**: {}\n", owasp.join(", ")));
-                    }
-                    if let Some(mitre) = &props.mitre_attack
-                        && !mitre.is_empty()
-                    {
-                        md.push_str(&format!("**MITRE ATT&CK**: {}\n", mitre.join(", ")));
-                    }
-                    md.push('\n');
+                for result in group {
+                    n += 1;
+                    md.push_str(&finding_markdown(n, result, run));
                 }
-
-                if let Some(rules) = &run.tool.driver.rules
-                    && let Some(rule) = rules.iter().find(|r| r.id == result.rule_id)
-                    && let Some(help) = &rule.help
-                {
-                    md.push_str("### Remediation\n\n");
-                    if let Some(markdown_help) = &help.markdown {
-                        md.push_str(markdown_help);
-                    } else {
-                        md.push_str(&help.text);
-                    }
-                    md.push_str("\n\n");
-                }
-
-                md.push_str("---\n\n");
             }
         }
 
@@ -1713,6 +1751,33 @@ mod tests {
             md.contains("**Verdicts**: 1 confirmed, 1 indeterminate, 2 ruled out\n"),
             "{md}"
         );
+    }
+
+    #[test]
+    fn test_to_markdown_groups_findings_by_verdict() {
+        let mut confirmed = with_props(SarifResultProperties {
+            verdict: Some(Verdict::Confirmed),
+            ..Default::default()
+        });
+        confirmed.rule_id = "CONFIRMED-RULE".into();
+        let mut unverified = with_props(SarifResultProperties {
+            verdict: Some(Verdict::Indeterminate),
+            ..Default::default()
+        });
+        unverified.rule_id = "UNVERIFIED-RULE".into();
+        let mut missing = make_sarif_result("warning", "MISSING-RULE");
+        missing.properties = None;
+        // Indeterminate first to prove confirmed findings are moved ahead.
+        let md = report_with(vec![unverified, missing, confirmed]).to_markdown();
+
+        let confirmed_at = md.find("## Finding 1: CONFIRMED-RULE").expect(&md);
+        let unverified_heading = md.find("# Unverified\n").expect(&md);
+        let unverified_at = md.find("## Finding 2: UNVERIFIED-RULE").expect(&md);
+        let missing_at = md.find("## Finding 3: MISSING-RULE").expect(&md);
+        assert!(confirmed_at < unverified_heading, "{md}");
+        assert!(unverified_heading < unverified_at, "{md}");
+        assert!(unverified_at < missing_at, "{md}");
+        assert!(!md.contains("# Ruled Out"), "{md}");
     }
 
     #[test]

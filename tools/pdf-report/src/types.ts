@@ -42,6 +42,7 @@ export interface SarifResult {
   baselineState?: "new" | "unchanged" | "updated" | "absent";
   properties?: {
     confidence?: number;
+    verdict?: "confirmed" | "ruled_out" | "indeterminate";
     cwe?: string[];
     owasp?: string[];
     mitre_attack?: string[];

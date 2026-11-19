@@ -5,7 +5,7 @@ import { SummaryPage } from "./SummaryPage.js";
 import { CategoriesPage } from "./CategoriesPage.js";
 import { FindingPages } from "./FindingPage.js";
 import { RemediationPage } from "./RemediationPage.js";
-import type { ReportData } from "../types.js";
+import type { ReportData, SarifResult } from "../types.js";
 import type { MarkdownReport } from "../markdown-parser.js";
 
 export function Report({
@@ -15,6 +15,9 @@ export function Report({
   data: ReportData;
   markdown?: MarkdownReport;
 }) {
+  const verdict = (r: SarifResult) => r.properties?.verdict ?? "indeterminate";
+  const confirmed = data.results.filter((r) => verdict(r) === "confirmed");
+  const unverified = data.results.filter((r) => verdict(r) === "indeterminate");
   return (
     <Document
       title={`Parsentry Report - ${data.title}`}
@@ -27,11 +30,22 @@ export function Report({
         <CategoriesPage categories={markdown.categories} />
       )}
       <SummaryPage data={data} />
-      <FindingPages
-        results={data.results}
-        rules={data.rules}
-        mdFindings={markdown?.findings}
-      />
+      {confirmed.length > 0 && (
+        <FindingPages
+          results={confirmed}
+          rules={data.rules}
+          mdFindings={markdown?.findings}
+        />
+      )}
+      {unverified.length > 0 && (
+        <FindingPages
+          results={unverified}
+          rules={data.rules}
+          mdFindings={markdown?.findings}
+          subtitle="Without executed evidence"
+          title="Unverified"
+        />
+      )}
       {markdown && markdown.remediationGroups.length > 0 && (
         <RemediationPage groups={markdown.remediationGroups} />
       )}
