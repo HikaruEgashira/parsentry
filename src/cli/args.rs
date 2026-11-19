@@ -74,6 +74,24 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Run a verify worker in a Docker sandbox (source mounted read-only)
+    ///
+    /// The container is labelled `parsentry.target=<cache key>`, reaches the
+    /// host via `host.docker.internal`, and is removed on exit or SIGTERM.
+    #[command(hide = true)]
+    Verify {
+        /// Target whose source is mounted at /src
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Container image for the worker
+        #[arg(long, default_value = crate::sandbox::DEFAULT_IMAGE)]
+        image: String,
+
+        /// Command to run inside the container
+        #[arg(last = true, required = true)]
+        command: Vec<String>,
+    },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
     Log {

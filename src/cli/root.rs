@@ -57,6 +57,11 @@ impl RootCommand {
                 }
                 Ok(())
             }
+            Commands::Verify {
+                target,
+                image,
+                command,
+            } => crate::cli::commands::run_verify_command(&target, &image, command).await,
             Commands::Log {
                 target,
                 follow,

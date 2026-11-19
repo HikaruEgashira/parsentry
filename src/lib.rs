@@ -5,6 +5,7 @@ pub mod github;
 pub mod prompt;
 pub mod repo;
 pub mod response;
+pub mod sandbox;
 pub mod url_collector;
 
 // Re-export core types for convenience

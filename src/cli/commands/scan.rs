@@ -210,6 +210,11 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
 
     let layout = CacheLayout::new(cache_dir_for(target));
     std::fs::create_dir_all(&layout.root)?;
+    // Containers left by a verify worker that exited abnormally.
+    let sandbox_key = crate::sandbox::target_cache_key(&layout.root);
+    if let Some(n @ 1..) = crate::sandbox::sweep_if_available(&sandbox_key) {
+        printer.warning("Sandbox", &format!("removed {n} stale verify container(s)"));
+    }
     let model_input_key = hex_sha256(&repo_metadata.to_prompt_context());
     reconcile_model_key(&layout, &model_input_key)?;
 
@@ -316,6 +321,8 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
         }
         Phase::Report { model } => {
             run_report_phase(&layout, &model, output, &printer)?;
+            // The scan is complete: no verify container may outlive it.
+            crate::sandbox::sweep_if_available(&sandbox_key);
         }
     }
     Ok(())
