@@ -3,7 +3,7 @@ use clap::Parser;
 
 use crate::cli::args::{Args, Commands};
 use crate::cli::commands::common::write_stdout;
-use crate::cli::commands::{run_log_command, run_scan_command};
+use crate::cli::commands::{run_log_command, run_report_command, run_scan_command};
 
 pub struct RootCommand;
 
@@ -13,6 +13,11 @@ impl RootCommand {
 
         match args.command {
             Commands::Scan { target, output } => run_scan_command(&target, output.as_deref()).await,
+            Commands::Report {
+                target,
+                surface,
+                finding,
+            } => run_report_command(&target, &surface, finding.as_deref()),
             Commands::Merge {
                 target,
                 gh_issue,

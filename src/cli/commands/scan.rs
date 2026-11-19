@@ -22,11 +22,11 @@ use std::path::{Path, PathBuf};
 use crate::cli::ui::StatusPrinter;
 use crate::prompt::{
     SCAN_COMPLETE_MARKER, SurfacePrompt, build_all_surface_prompts, build_orchestrator_prompt,
-    continuation_instructions,
+    continuation_instructions, report_instructions,
 };
 
 use parsentry_core::{RepoMetadata, ThreatModel};
-use parsentry_reports::{SarifReport, merge_sarif_files};
+use parsentry_reports::{ACCEPTED_MARKER, SarifReport, is_accepted, merge_sarif_files};
 use sha2::{Digest, Sha256};
 
 use super::common::{
@@ -180,13 +180,16 @@ fn snapshot_previous(layout: &CacheLayout) -> Result<()> {
     Ok(())
 }
 
-/// SARIF files of surfaces in the current model. Results of surfaces that
-/// the model no longer contains are deliberately excluded.
+/// Accepted SARIF files of surfaces in the current model. Results of surfaces
+/// that the model no longer contains, or that bypassed `parsentry report`,
+/// are deliberately excluded.
 pub fn current_sarif_files(reports_dir: &Path, model: &ThreatModel) -> Vec<PathBuf> {
     model
         .surfaces
         .iter()
-        .map(|s| reports_dir.join(&s.id).join("result.sarif.json"))
+        .map(|s| reports_dir.join(&s.id))
+        .filter(|dir| is_accepted(dir))
+        .map(|dir| dir.join("result.sarif.json"))
         .filter(|p| p.exists())
         .collect()
 }
@@ -290,12 +293,12 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
                 // Drop stale results so a failed worker cannot leave an old
                 // SARIF that looks current.
                 std::fs::remove_file(&sarif_path).ok();
+                std::fs::remove_file(surface_dir.join(ACCEPTED_MARKER)).ok();
                 let prompt_path = surface_dir.join("prompt.md");
                 let full_prompt = format!(
-                    "{}\n\nWrite the SARIF JSON output to: {}\n\
-                     Write ONLY valid JSON. No markdown, no code fences, no explanation.\n",
+                    "{}\n{}",
                     sp.prompt,
-                    sarif_path.display()
+                    report_instructions(target, &sp.surface_id, &cache_base(), &parsentry_bin)
                 );
                 std::fs::write(&prompt_path, &full_prompt)?;
                 std::fs::write(surface_dir.join(".cache_key"), &sp.cache_key)?;
@@ -449,6 +452,7 @@ mod tests {
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(".cache_key"), &sp.cache_key).unwrap();
             std::fs::write(dir.join("result.sarif.json"), VALID_SARIF).unwrap();
+            std::fs::write(dir.join(ACCEPTED_MARKER), "").unwrap();
         }
     }
 
@@ -560,8 +564,23 @@ mod tests {
             let dir = layout.reports().join(id);
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join("result.sarif.json"), VALID_SARIF).unwrap();
+            std::fs::write(dir.join(ACCEPTED_MARKER), "").unwrap();
         }
         let files = current_sarif_files(&layout.reports(), &model);
         assert_eq!(files, vec![layout.reports().join("S-1/result.sarif.json")]);
+    }
+
+    #[test]
+    fn report_ignores_results_without_accepted_marker() {
+        let (_repo, _c, layout) = setup();
+        let model: ThreatModel = serde_json::from_str(&model_json(&["S-1", "S-2"])).unwrap();
+        for id in ["S-1", "S-2"] {
+            let dir = layout.reports().join(id);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("result.sarif.json"), VALID_SARIF).unwrap();
+        }
+        std::fs::write(layout.reports().join("S-2").join(ACCEPTED_MARKER), "").unwrap();
+        let files = current_sarif_files(&layout.reports(), &model);
+        assert_eq!(files, vec![layout.reports().join("S-2/result.sarif.json")]);
     }
 }

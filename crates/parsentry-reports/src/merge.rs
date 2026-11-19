@@ -21,7 +21,7 @@ const MAX_SARIF_FILE_SIZE: u64 = 10 * 1024 * 1024;
 ///
 /// Uses agent-provided `fingerprints["parsentry/v1"]` if available.
 /// Otherwise falls back to `SHA256(ruleId + first location URI)`.
-fn fingerprint(result: &SarifResult) -> String {
+pub fn fingerprint(result: &SarifResult) -> String {
     // Use agent-provided fingerprint if available
     if let Some(ref fps) = result.fingerprints {
         if let Some(fp) = fps.get("parsentry/v1") {
@@ -76,8 +76,9 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
         .flat_map(|e| {
             let path = e.path();
             if path.is_dir() {
+                // Surface results only count once they passed the acceptance gate.
                 let candidate = path.join("result.sarif.json");
-                if candidate.exists() {
+                if candidate.exists() && crate::acceptance::is_accepted(&path) {
                     vec![candidate]
                 } else {
                     vec![]
@@ -548,5 +549,29 @@ mod tests {
         assert!(err.contains("invalid SARIF JSON"), "{err}");
         let err = format!("{:#}", merge_sarif_files(&[over], None).unwrap_err());
         assert!(err.contains("exceeds"), "{err}");
+    }
+
+    #[test]
+    fn merge_dir_skips_surface_results_without_accepted_marker() {
+        let tmp = TempDir::new().unwrap();
+        for (id, uri) in [("S-1", "a.py"), ("S-2", "b.py")] {
+            let dir = tmp.path().join(id);
+            std::fs::create_dir(&dir).unwrap();
+            write_sarif(&dir, "result.sarif.json", &minimal_sarif("A", uri, "m"));
+        }
+        std::fs::write(tmp.path().join("S-2").join(crate::ACCEPTED_MARKER), "").unwrap();
+        let merged = merge_sarif_dir(tmp.path(), None).unwrap();
+        let uris: Vec<_> = merged.runs[0]
+            .results
+            .iter()
+            .map(|r| {
+                r.locations[0]
+                    .physical_location
+                    .artifact_location
+                    .uri
+                    .as_str()
+            })
+            .collect();
+        assert_eq!(uris, vec!["b.py"]);
     }
 }

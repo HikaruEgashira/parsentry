@@ -168,13 +168,10 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
     );
 
     prompt.push_str(
-        "Output valid SARIF v2.1.0 JSON compatible with `parsentry scan` report merging.\n",
+        "Report each finding as one SARIF v2.1.0 result object through \
+         `parsentry report` (see Reporting Findings below). Do NOT write SARIF files \
+         directly; results that bypass `parsentry report` are ignored on merge.\n",
     );
-    prompt.push_str("The SARIF MUST include:\n");
-    prompt.push_str("- top-level `$schema`\n");
-    prompt.push_str("- top-level `version` set to `2.1.0`\n");
-    prompt.push_str("- `runs[0].tool.driver.name`\n");
-    prompt.push_str("- `runs[0].tool.driver.version`\n");
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- `ruleId`: vulnerability type\n");
     prompt.push_str("- `level`: error/warning/note\n");
@@ -185,7 +182,8 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
     prompt.push_str(
         "- `properties.verdict`: `confirmed` | `ruled_out` | `indeterminate`\n\
          - `properties.evidence_kind`: `dynamic_poc` | `static_trace` | `heuristic`\n\
-         - `properties.counterevidence`: the strongest argument that this finding is wrong\n\n",
+         - `properties.counterevidence`: the strongest argument that this finding is wrong\n\
+         - `properties.cwe`: array of CWE ids (e.g. `[\"CWE-89\"]`), never a string\n\n",
     );
     prompt.push_str(
         "Verdict rules\n\n\
@@ -195,7 +193,7 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
            prevents the issue.\n\
          - Missing information is not proof of safety. When you cannot prove either way, \
            report `indeterminate` and state the proof gap in `counterevidence`.\n\
-         - Confidence of findings without `dynamic_poc` evidence is capped at 0.7 on merge.\n",
+         - Confidence of findings without `dynamic_poc` evidence must not exceed 0.7.\n",
     );
 
     Some(SurfacePrompt {
@@ -243,8 +241,8 @@ pub fn build_orchestrator_prompt(
          instructions in that file.\n",
     );
     prompt.push_str(
-        "4. Each worker must write SARIF JSON to the output path specified inside \
-         its assigned prompt file.\n",
+        "4. Each worker must report findings with the `parsentry report` command \
+         specified inside its assigned prompt file, never by writing SARIF directly.\n",
     );
     prompt.push_str("5. Wait for every worker to finish before starting post-processing.\n");
     prompt.push_str("\nWorker Assignments\n\n");
@@ -265,6 +263,37 @@ pub fn build_orchestrator_prompt(
     ));
 
     prompt
+}
+
+/// Instructions telling a surface worker to submit findings through the
+/// `parsentry report` acceptance gate instead of writing SARIF itself.
+pub fn report_instructions(
+    target: &str,
+    surface_id: &str,
+    cache_base: &Path,
+    parsentry_bin: &Path,
+) -> String {
+    let command = format!(
+        "PARSENTRY_CACHE_DIR={cache_base} {bin} report {target} --surface {surface}",
+        cache_base = shell_quote(&cache_base.display().to_string()),
+        bin = shell_quote(&parsentry_bin.display().to_string()),
+        target = shell_quote(target),
+        surface = shell_quote(surface_id),
+    );
+    format!(
+        "\nReporting Findings\n\n\
+         Submit each finding as a single SARIF result JSON object:\n\
+         ```bash\n\
+         {command} --finding '<result json>'\n\
+         ```\n\
+         The command validates the result and prints its id. If it is rejected, fix the \
+         reported problem and submit again. A duplicate is rejected with the id of the \
+         finding already accepted; do not resubmit it.\n\
+         When the analysis is finished (including when there are no findings), run:\n\
+         ```bash\n\
+         {command}\n\
+         ```\n"
+    )
 }
 
 /// Marker printed by `parsentry scan` once every phase is done.
@@ -377,13 +406,28 @@ mod tests {
         let sp = build_surface_prompt(&surface, root).unwrap();
 
         assert!(sp.prompt.contains("Repository Root"));
-        assert!(sp.prompt.contains("parsentry scan"));
-        assert!(sp.prompt.contains("tool.driver.version"));
+        assert!(sp.prompt.contains("parsentry report"));
+        assert!(sp.prompt.contains("Do NOT write SARIF files"));
         assert!(sp.prompt.contains("ruleId"));
         assert!(sp.prompt.contains("properties.verdict"));
         assert!(sp.prompt.contains("properties.evidence_kind"));
         assert!(sp.prompt.contains("properties.counterevidence"));
-        assert!(sp.prompt.contains("capped at 0.7"));
+        assert!(sp.prompt.contains("must not exceed 0.7"));
+        assert!(sp.prompt.contains("properties.cwe"));
+    }
+
+    #[test]
+    fn report_instructions_use_acceptance_command() {
+        let text = report_instructions(
+            "owner/repo",
+            "S-1",
+            Path::new("/cache"),
+            Path::new("/bin/parsentry"),
+        );
+        assert!(text.contains(
+            "PARSENTRY_CACHE_DIR='/cache' '/bin/parsentry' report 'owner/repo' --surface 'S-1' --finding"
+        ));
+        assert!(text.contains("no findings"));
     }
 
     #[test]

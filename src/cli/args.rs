@@ -43,6 +43,24 @@ pub enum Commands {
         #[arg(short, long)]
         output: Option<String>,
     },
+    /// Submit one SARIF result for a surface through the acceptance gate
+    ///
+    /// Validates the result, rejects duplicates (printing the existing id),
+    /// and appends it to `reports/<surface>/result.sarif.json`. Without
+    /// `--finding`, marks the surface as analyzed (e.g. no findings).
+    Report {
+        /// Target whose cache holds the surface: local path, owner/repo, URL, IP, or domain
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Surface id from the threat model
+        #[arg(long)]
+        surface: String,
+
+        /// One SARIF result object as JSON
+        #[arg(long)]
+        finding: Option<String>,
+    },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
     Merge {
