@@ -104,4 +104,22 @@ pub enum Commands {
         #[arg(long)]
         no_color: bool,
     },
+    /// Serve an HTTP API that queues scans and runs them to completion
+    ///
+    /// The scan index, queue and events are stored in `serve.db` under the
+    /// cache directory. Each queued scan loops `parsentry scan` and pipes every
+    /// prompt to `--agent` until the scan completes.
+    Serve {
+        /// Address to listen on
+        #[arg(long, default_value = "127.0.0.1:8080")]
+        listen: String,
+
+        /// Shell command that receives each scan prompt on stdin
+        #[arg(long, default_value = "claude -p --dangerously-skip-permissions")]
+        agent: String,
+
+        /// Maximum scan phases per scan before it is marked failed
+        #[arg(long, default_value = "20")]
+        max_iterations: u32,
+    },
 }

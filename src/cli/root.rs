@@ -3,7 +3,7 @@ use clap::Parser;
 
 use crate::cli::args::{Args, Commands};
 use crate::cli::commands::common::write_stdout;
-use crate::cli::commands::{run_log_command, run_scan_command};
+use crate::cli::commands::{run_log_command, run_scan_command, run_serve_command};
 
 pub struct RootCommand;
 
@@ -57,6 +57,11 @@ impl RootCommand {
                 }
                 Ok(())
             }
+            Commands::Serve {
+                listen,
+                agent,
+                max_iterations,
+            } => run_serve_command(&listen, &agent, max_iterations).await,
             Commands::Log {
                 target,
                 follow,

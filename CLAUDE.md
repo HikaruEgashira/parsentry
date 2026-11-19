@@ -41,6 +41,7 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
+parsentry serve [--listen ADDR] [--agent CMD]  # HTTP API (POST /scans, GET /scans/:id[/events|/findings])。queue/index は <cache>/serve.db
 ```
 
 ## Security Scanning

@@ -39,10 +39,15 @@ octocrab = "0.48"
 reqwest = { version = "0.13", features = ["json"] }
 urlencoding = "2.1"
 sha2 = "0.10"
+axum = "0.8"
+rusqlite = { version = "0.37", features = ["bundled"] }
+tokio-stream = "0.1"
+futures-util = "0.3"
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }
 tokio-test = "0.4"
+tower = { version = "0.5", features = ["util"] }
 
 [workspace]
 members = ["crates/*"]
