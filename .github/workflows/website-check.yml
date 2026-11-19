@@ -1,0 +1,43 @@
+name: Website Check
+
+on:
+  pull_request:
+    paths:
+      - 'docs/website/**'
+      - '.github/workflows/website-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    name: Website Lint and Build
+    runs-on: hikae-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+    - name: Checkout
+      timeout-minutes: 5
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Setup Bun
+      timeout-minutes: 5
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      timeout-minutes: 5
+      working-directory: docs/website
+      run: bun install --frozen-lockfile
+
+    - name: Lint
+      timeout-minutes: 5
+      working-directory: docs/website
+      run: bun run lint
+
+    - name: Build
+      timeout-minutes: 5
+      working-directory: docs/website
+      run: bun run build
