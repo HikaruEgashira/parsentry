@@ -1753,4 +1753,37 @@ mod tests {
         assert_eq!(props.cwe, Some(VulnType::SQLI.cwe_ids()));
         assert_eq!(props.owasp, Some(VulnType::SQLI.owasp_categories()));
     }
+
+    #[test]
+    fn evidence_properties_round_trip_through_serde() {
+        let props = SarifResultProperties {
+            confidence: Some(0.9),
+            verdict: Some(Verdict::RuledOut),
+            evidence_kind: Some(EvidenceKind::DynamicPoc),
+            counterevidence: Some("input is escaped by middleware".to_string()),
+            evidence_uris: Some(vec![
+                "poc/request.http".to_string(),
+                "poc/log.txt".to_string(),
+            ]),
+            ..Default::default()
+        };
+
+        let value = serde_json::to_value(&props).unwrap();
+        assert_eq!(value["verdict"], "ruled_out");
+        assert_eq!(value["evidence_kind"], "dynamic_poc");
+        assert_eq!(value["counterevidence"], "input is escaped by middleware");
+        assert_eq!(
+            value["evidence_uris"],
+            serde_json::json!(["poc/request.http", "poc/log.txt"])
+        );
+
+        let back: SarifResultProperties = serde_json::from_value(value).unwrap();
+        assert_eq!(back.verdict, Some(Verdict::RuledOut));
+        assert_eq!(back.evidence_kind, Some(EvidenceKind::DynamicPoc));
+        assert_eq!(back.counterevidence, props.counterevidence);
+        assert_eq!(back.evidence_uris, props.evidence_uris);
+
+        let empty = serde_json::to_value(SarifResultProperties::default()).unwrap();
+        assert_eq!(empty, serde_json::json!({}));
+    }
 }
