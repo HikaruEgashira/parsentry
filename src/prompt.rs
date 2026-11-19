@@ -243,8 +243,8 @@ pub fn build_orchestrator_prompt(
          instructions in that file.\n",
     );
     prompt.push_str(
-        "4. Each worker must write SARIF JSON to the output path specified inside \
-         its assigned prompt file.\n",
+        "4. Each worker must report findings with the `parsentry report` command \
+         specified inside its assigned prompt file.\n",
     );
     prompt.push_str("5. Wait for every worker to finish before starting post-processing.\n");
     prompt.push_str("\nWorker Assignments\n\n");

@@ -26,7 +26,8 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 - `previous/model.json`, `previous/merged.sarif.json` — モデル差分の比較元
 - `merged.sarif.json`, `report.md` — report フェーズの出力
 - `reports/<surface_id>/prompt.md` — surface分析プロンプト
-- `reports/<surface_id>/result.sarif.json` — 分析結果（外部agentが書き込み）
+- `reports/<surface_id>/result.sarif.json` — 分析結果（`parsentry report` 経由で追記）
+- `reports/<surface_id>/.accepted` — `parsentry report` が書く受理マーカー。無い surface の結果は merge で無視
 
 ### Key types
 
@@ -41,6 +42,7 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
+parsentry report [TARGET] --surface <id> --finding <json>  # finding を検証して reports/<id>/result.sarif.json に追記 (+ .accepted)
 ```
 
 ## Security Scanning

@@ -74,6 +74,24 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Validate one finding and append it to a surface's SARIF
+    ///
+    /// Rejects malformed results (ruleId, level, message.text, locations,
+    /// cwe array, verdict/evidence_kind enums, counterevidence, confidence
+    /// cap). A duplicate fingerprint is not appended; the existing id is printed.
+    Report {
+        /// Target whose cache holds the surface: local path, owner/repo, URL, IP, or domain
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Surface ID from the threat model (e.g. S-1)
+        #[arg(long)]
+        surface: String,
+
+        /// One SARIF result as JSON
+        #[arg(long)]
+        finding: String,
+    },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
     Log {

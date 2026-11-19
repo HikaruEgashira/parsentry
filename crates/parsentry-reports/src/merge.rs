@@ -21,7 +21,7 @@ const MAX_SARIF_FILE_SIZE: u64 = 10 * 1024 * 1024;
 ///
 /// Uses agent-provided `fingerprints["parsentry/v1"]` if available.
 /// Otherwise falls back to `SHA256(ruleId + first location URI)`.
-fn fingerprint(result: &SarifResult) -> String {
+pub(crate) fn fingerprint(result: &SarifResult) -> String {
     // Use agent-provided fingerprint if available
     if let Some(ref fps) = result.fingerprints {
         if let Some(fp) = fps.get("parsentry/v1") {
@@ -76,8 +76,9 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
         .flat_map(|e| {
             let path = e.path();
             if path.is_dir() {
+                // Only results accepted through `parsentry report` are merged.
                 let candidate = path.join("result.sarif.json");
-                if candidate.exists() {
+                if candidate.exists() && path.join(crate::ACCEPTED_MARKER).exists() {
                     vec![candidate]
                 } else {
                     vec![]
@@ -319,6 +320,24 @@ mod tests {
         assert_eq!(props(1).verdict, Some(Verdict::Confirmed));
         assert_eq!(props(2).verdict, Some(Verdict::Indeterminate));
         assert_eq!(props(2).evidence_kind, Some(EvidenceKind::Heuristic));
+    }
+
+    #[test]
+    fn merge_dir_skips_surface_without_accepted_marker() {
+        let tmp = TempDir::new().unwrap();
+        for (id, rule) in [("S-1", "SQLI"), ("S-2", "XSS")] {
+            let dir = tmp.path().join(id);
+            std::fs::create_dir_all(&dir).unwrap();
+            write_sarif(&dir, "result.sarif.json", &minimal_sarif(rule, "a.py", "m"));
+        }
+        std::fs::write(tmp.path().join("S-2").join(crate::ACCEPTED_MARKER), "").unwrap();
+        let merged = merge_sarif_dir(tmp.path(), None).unwrap();
+        let rules: Vec<_> = merged.runs[0]
+            .results
+            .iter()
+            .map(|r| r.rule_id.as_str())
+            .collect();
+        assert_eq!(rules, vec!["XSS"]);
     }
 
     #[test]
