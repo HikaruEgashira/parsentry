@@ -111,6 +111,9 @@ jobs:
               deny: ["WebFetch", "WebSearch"]
             }
           }' > "${SETTINGS}"
+          # Pipe mode is deprecated (parsentry prints a warning on stderr);
+          # the prompt instructs claude to act as the runtime and re-run
+          # `parsentry scan` until PARSENTRY_SCAN_COMPLETE.
           parsentry scan . | claude -p \
             --settings "${SETTINGS}" \
             --permission-mode default \

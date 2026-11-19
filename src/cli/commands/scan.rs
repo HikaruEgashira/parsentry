@@ -10,13 +10,15 @@
 //! 3. **Report** — every surface is done. Merges SARIF and writes the report.
 //!
 //! Every emitted prompt ends with an instruction to re-run `parsentry scan`,
-//! so `parsentry scan <target> | <agent>` drives the pipeline to completion.
+//! so an agent runtime re-running it drives the pipeline to completion.
+//! Piping (`parsentry scan <target> | <agent>`) still works but is deprecated.
 //! The scan mode falls out of the cache state: a cold cache is a full scan,
 //! changed sources only re-run their surfaces (incremental), and a changed
 //! model input snapshots the previous model and its results so the report
 //! diffs the findings of both models.
 
 use anyhow::{Context, Result};
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 use crate::cli::ui::StatusPrinter;
@@ -34,6 +36,10 @@ use super::common::{
     repo_name_from_target, write_stdout,
 };
 use super::report::{render_pdf, render_report_markdown};
+
+/// Printed to stderr when stdout is piped (e.g. `parsentry scan | claude -p`).
+pub const PIPE_MODE_DEPRECATION: &str = "piping `parsentry scan` into an agent (`parsentry scan | claude -p`) is deprecated; \
+let the agent runtime drive the scan loop instead (install the skill: `npx skills add HikaruEgashira/parsentry`)";
 
 /// Files in the per-target cache directory that carry scan state.
 struct CacheLayout {
@@ -193,6 +199,9 @@ pub fn current_sarif_files(reports_dir: &Path, model: &ThreatModel) -> Vec<PathB
 
 pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
+    if !std::io::stdout().is_terminal() {
+        printer.warning("Deprecated", PIPE_MODE_DEPRECATION);
+    }
     let (root_dir, _repo_name) = locate_repository(target, &printer).await?;
 
     let mut repo_metadata = RepoMetadata::collect(&root_dir)?;
@@ -450,6 +459,13 @@ mod tests {
             std::fs::write(dir.join(".cache_key"), &sp.cache_key).unwrap();
             std::fs::write(dir.join("result.sarif.json"), VALID_SARIF).unwrap();
         }
+    }
+
+    #[test]
+    fn pipe_mode_deprecation_mentions_pipe_and_runtime() {
+        assert!(PIPE_MODE_DEPRECATION.contains("deprecated"));
+        assert!(PIPE_MODE_DEPRECATION.contains("claude -p"));
+        assert!(PIPE_MODE_DEPRECATION.contains("runtime"));
     }
 
     #[test]

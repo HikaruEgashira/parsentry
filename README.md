@@ -4,7 +4,7 @@
 
 **Security Scan orchestrator for AI Agents.**
 
-Parsentry analyzes repository structure, enumerates attack surfaces, and generates per-surface analysis prompts. Pipe them to any CLI agent for parallel security analysis.
+Parsentry analyzes repository structure, enumerates attack surfaces, and generates per-surface analysis prompts. An agent runtime (Claude Code, Codex CLI, OpenCode, Crush) drives the scan loop for parallel security analysis.
 
 </div>
 
@@ -20,11 +20,11 @@ Once installed, just ask your agent to scan a repository — the skill dispatche
 
 ### Usage
 
-```bash
-parsentry scan owner/repo | claude -p
-```
+Ask your agent to scan a target (e.g. "scan owner/repo with parsentry"). The agent runtime runs `parsentry scan owner/repo`, dispatches the emitted prompts (one agent per surface, in parallel), and re-runs `parsentry scan` until it prints `PARSENTRY_SCAN_COMPLETE`.
 
-`scan` is the only command you need. It inspects the cache and emits the prompt for the next phase (threat model → per-surface analysis → report). Every prompt tells the agent to re-run `parsentry scan` until it prints `PARSENTRY_SCAN_COMPLETE`, so one pipe runs the whole pipeline. Add `-o report.pdf` to also render a PDF.
+`scan` is the only command you need. It inspects the cache and emits the prompt for the next phase (threat model → per-surface analysis → report).
+
+> **Deprecated:** pipe mode (`parsentry scan owner/repo | claude -p`) still works but prints a deprecation warning on stderr. Use the agent runtime (skill) instead. Add `-o report.pdf` to also render a PDF.
 
 The scan mode is decided from state, not flags:
 

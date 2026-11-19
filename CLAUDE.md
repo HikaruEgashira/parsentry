@@ -67,5 +67,7 @@ cargo test --workspace && cargo check
 
 ```bash
 git clone git@github.com:xbow-engineering/validation-benchmarks.git benchmarks
-cargo run -- scan benchmarks/benchmarks/XBEN-001-24 -o report.pdf | claude -p
+cargo run -- scan benchmarks/benchmarks/XBEN-001-24 -o report.pdf
 ```
+
+上記を agent runtime (parsentry skill) から実行し、`PARSENTRY_SCAN_COMPLETE` まで `scan` を繰り返してください。`| claude -p` によるパイプ実行は非推奨 (deprecation warning が出力されます)。

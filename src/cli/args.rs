@@ -32,8 +32,9 @@ pub enum Commands {
     /// The phase is chosen from cached state: a cold cache starts a full scan,
     /// changed sources re-run only affected surfaces, and a changed repository
     /// structure regenerates the threat model and diffs its findings against
-    /// the previous model. Pipe stdout to a CLI agent; each phase prompt tells
-    /// the agent to re-run this command until the scan completes.
+    /// the previous model. Run it from an agent runtime (e.g. the parsentry
+    /// skill); each phase prompt tells the agent to re-run this command until
+    /// the scan completes. Piping stdout to an agent is deprecated.
     Scan {
         /// Target to analyze: local path, GitHub repo (owner/repo), URL, IP, or domain
         #[arg(default_value = ".")]

@@ -14,6 +14,12 @@ REPORTS_DIR="$PROJECT_CACHE/reports"
 
 Ensure the agent has write access to `$TARGET` and `$CACHE`.
 
+## Agent Runtime (recommended)
+
+Install the skill (`npx skills add HikaruEgashira/parsentry`) and ask the agent to scan the target. The agent runtime runs `parsentry scan "$TARGET"`, dispatches the emitted prompts (one agent per surface, in parallel), and re-runs `parsentry scan` until it prints `PARSENTRY_SCAN_COMPLETE`. See [SKILL.md](SKILL.md).
+
+> **Deprecated:** the pipe-mode TL;DRs below (`parsentry scan | <agent>`) still work, but `parsentry scan` prints a deprecation warning on stderr whenever stdout is piped.
+
 ## Main Outputs (all agents)
 
 - `"$PROJECT_CACHE/model.json"`

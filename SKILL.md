@@ -30,7 +30,7 @@ Repeat until `$OUT` contains `PARSENTRY_SCAN_COMPLETE`:
 - **Threat model prompt** (asks to write `model.json`) → dispatch **one Agent** with `$OUT` verbatim.
 - **Orchestrator prompt** (lists `Worker <id>: read <prompt.md>`) → dispatch **one Agent per worker in parallel** (single message, multiple Agent calls), each with the content of its `prompt.md` verbatim.
 
-Then run `parsentry scan <TARGET>` again. Ignore the `Next Phase` section of the prompt when you drive the loop yourself — it is for agents that run the whole pipeline from a single pipe.
+Then run `parsentry scan <TARGET>` again. Ignore the `Next Phase` section of the prompt when you drive the loop yourself — it is for the deprecated pipe mode (`parsentry scan | claude -p`).
 
 ## Report
 
@@ -44,6 +44,7 @@ When the user asks to triage, patch, or fix findings, read [references/triage.md
 
 ## Gotchas
 
+- This skill is the agent runtime for parsentry. Capturing stdout makes `scan` print a pipe-mode deprecation warning on stderr; ignore it (it is hidden by `2>/dev/null`).
 - Prompts go to **stdout**; progress/logs (including the current phase) go to stderr. Always use `2>/dev/null` or `2>&1` intentionally.
 - The cache directory is platform-dependent (`~/Library/Caches/parsentry/` on macOS, `~/.cache/parsentry/` on Linux). Let `parsentry scan` resolve paths — don't hardcode.
 - Agent prompts from parsentry are self-contained. **Do not** add system prompts or wrap them — pass verbatim.
