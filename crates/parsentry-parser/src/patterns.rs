@@ -150,7 +150,7 @@ impl SecurityRiskPatterns {
                 while let Some(match_) = matches.next() {
                     let mut has_valid_capture = false;
 
-                    for capture in match_.captures {
+                    for capture in match_.captures() {
                         let capture_name = &query.capture_names()[capture.index as usize];
                         let node = capture.node;
                         let start_byte = node.start_byte();
@@ -218,7 +218,7 @@ impl SecurityRiskPatterns {
                     let mut best_text = String::new();
                     let mut best_priority = 0;
 
-                    for capture in match_.captures {
+                    for capture in match_.captures() {
                         let capture_name = &query.capture_names()[capture.index as usize];
                         let node = capture.node;
                         let start_byte = node.start_byte();
