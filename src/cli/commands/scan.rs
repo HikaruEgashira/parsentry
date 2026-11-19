@@ -33,6 +33,7 @@ use super::common::{
     build_threat_model_cli_prompt, cache_base, cache_dir_for, is_network_target, locate_repository,
     repo_name_from_target, write_stdout,
 };
+use super::events::{ProgressEvent, emit};
 use super::report::{render_pdf, render_report_markdown};
 
 /// Files in the per-target cache directory that carry scan state.
@@ -239,6 +240,10 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
                 }
             }
             std::fs::write(layout.model_pending_key(), &model_input_key)?;
+            emit(
+                &layout.root,
+                &ProgressEvent::new("phase", None, "model: threat model prompt emitted"),
+            );
 
             let mut prompt = build_threat_model_cli_prompt(&repo_metadata, &layout.model());
             if layout.previous_model().exists() {
@@ -281,6 +286,17 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
                     model.total_surfaces()
                 ),
             );
+            emit(
+                &layout.root,
+                &ProgressEvent::new(
+                    "phase",
+                    None,
+                    format!(
+                        "surfaces ({mode}): {} pending, {cached} cached",
+                        pending.len()
+                    ),
+                ),
+            );
             let reports_dir = layout.reports();
             printer.section("Prompts");
             for sp in &pending {
@@ -300,6 +316,10 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
                 std::fs::write(&prompt_path, &full_prompt)?;
                 std::fs::write(surface_dir.join(".cache_key"), &sp.cache_key)?;
                 printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
+                emit(
+                    &layout.root,
+                    &ProgressEvent::new("surface_queued", Some(&sp.surface_id), "queued"),
+                );
             }
 
             let orchestrator = build_orchestrator_prompt(
@@ -365,6 +385,10 @@ fn run_report_phase(
             .count()
     };
     let findings = count(None) - count(Some("absent"));
+    emit(
+        &layout.root,
+        &ProgressEvent::new("report", None, format!("{findings} findings merged")),
+    );
     printer.success(
         "Merged",
         &format!("{findings} findings → {}", layout.merged().display()),

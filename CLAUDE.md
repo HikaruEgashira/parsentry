@@ -25,6 +25,7 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 - `model.key` / `model.pending_key` — model.json の入力 (RepoMetadata) ハッシュ
 - `previous/model.json`, `previous/merged.sarif.json` — モデル差分の比較元
 - `merged.sarif.json`, `report.md` — report フェーズの出力
+- `events.jsonl` — scan ランタイムの進捗イベント (`parsentry log` が読む)
 - `reports/<surface_id>/prompt.md` — surface分析プロンプト
 - `reports/<surface_id>/result.sarif.json` — 分析結果（外部agentが書き込み）
 
