@@ -714,6 +714,28 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn test_result_properties_evidence_round_trip() {
+        let json = r#"{"confidence":0.5,"verdict":"ruled_out","evidence_kind":"static_trace","counterevidence":"input is escaped at views.py:12","evidence_uris":["poc/req.http","poc/log.txt"]}"#;
+        let props: SarifResultProperties = serde_json::from_str(json).unwrap();
+        assert_eq!(props.verdict, Some(Verdict::RuledOut));
+        assert_eq!(props.evidence_kind, Some(EvidenceKind::StaticTrace));
+        assert_eq!(
+            props.counterevidence.as_deref(),
+            Some("input is escaped at views.py:12")
+        );
+        assert_eq!(
+            props.evidence_uris,
+            Some(vec!["poc/req.http".to_string(), "poc/log.txt".to_string()])
+        );
+        let back: serde_json::Value = serde_json::to_value(&props).unwrap();
+        let orig: serde_json::Value = serde_json::from_str(json).unwrap();
+        assert_eq!(back, orig);
+
+        let empty = serde_json::to_string(&SarifResultProperties::default()).unwrap();
+        assert_eq!(empty, "{}");
+    }
+
+    #[test]
     fn test_sarif_report_creation() {
         let mut summary = AnalysisSummary::new();
 
