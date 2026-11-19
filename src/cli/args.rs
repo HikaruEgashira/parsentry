@@ -42,6 +42,11 @@ pub enum Commands {
         /// Also render a PDF report to this path when the scan completes
         #[arg(short, long)]
         output: Option<String>,
+
+        /// Environment manifest (YAML) used to dynamically verify findings;
+        /// copied to the cache as env.yaml
+        #[arg(long, value_name = "PATH")]
+        env: Option<String>,
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]

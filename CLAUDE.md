@@ -11,6 +11,7 @@ Parsentry is a security prompt orchestrator. It analyzes repository structure, e
 ```
 model   : model.json が無い / 不正 / model.key ≠ RepoMetadata のハッシュ → 脅威モデルプロンプト出力
 surface : .cache_key 不一致 or SARIF 不正の surface がある → surface プロンプト + orchestrator 出力
+verify  : env.yaml があり、level>=warning の indeterminate finding が存在し、.verified_key ≠ 現在の key → 動的検証プロンプト出力
 report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統合 → merged.sarif.json + report.md (+ -o で PDF)
 ```
 
@@ -24,6 +25,8 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 - `model.json` — 脅威モデル（外部agentが書き込み）
 - `model.key` / `model.pending_key` — model.json の入力 (RepoMetadata) ハッシュ
 - `previous/model.json`, `previous/merged.sarif.json` — モデル差分の比較元
+- `env.yaml` — `scan --env <PATH>` でコピーされる環境 manifest (無い場合 report.md は findings を unverified と明記)
+- `.verified_key` — 検証プロンプトを出力した時点の key
 - `merged.sarif.json`, `report.md` — report フェーズの出力
 - `reports/<surface_id>/prompt.md` — surface分析プロンプト
 - `reports/<surface_id>/result.sarif.json` — 分析結果（外部agentが書き込み）

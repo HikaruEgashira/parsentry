@@ -7,7 +7,11 @@
 //!    metadata that has since changed. Emits the threat model prompt.
 //! 2. **Surfaces** — some surfaces of the current model have no valid,
 //!    up-to-date SARIF result. Emits per-surface prompts + orchestrator.
-//! 3. **Report** — every surface is done. Merges SARIF and writes the report.
+//! 3. **Verify** — only with an env manifest (`env.yaml`): some current
+//!    finding of level warning or error is still indeterminate and the
+//!    results have not been verified for the current cache key. Emits the
+//!    dynamic verification prompt.
+//! 4. **Report** — every surface is done. Merges SARIF and writes the report.
 //!
 //! Every emitted prompt ends with an instruction to re-run `parsentry scan`,
 //! so `parsentry scan <target> | <agent>` drives the pipeline to completion.
@@ -26,13 +30,14 @@ use crate::prompt::{
 };
 
 use parsentry_core::{RepoMetadata, ThreatModel};
-use parsentry_reports::{SarifReport, merge_sarif_files};
+use parsentry_reports::{SarifReport, Verdict, merge_sarif_files};
 use sha2::{Digest, Sha256};
 
 use super::common::{
     build_threat_model_cli_prompt, cache_base, cache_dir_for, is_network_target, locate_repository,
     repo_name_from_target, write_stdout,
 };
+use super::env_manifest::EnvManifest;
 use super::report::{render_pdf, render_report_markdown};
 
 /// Files in the per-target cache directory that carry scan state.
@@ -74,6 +79,14 @@ impl CacheLayout {
     fn report_md(&self) -> PathBuf {
         self.root.join("report.md")
     }
+    /// Environment manifest copied from `scan --env`.
+    fn env_manifest(&self) -> PathBuf {
+        self.root.join("env.yaml")
+    }
+    /// Verify key of the results the last verify prompt was emitted for.
+    fn verified_key(&self) -> PathBuf {
+        self.root.join(".verified_key")
+    }
 }
 
 /// Why the threat model has to be (re)generated.
@@ -92,6 +105,12 @@ enum Phase {
         model: ThreatModel,
         pending: Vec<SurfacePrompt>,
         cached: usize,
+    },
+    Verify {
+        model: ThreatModel,
+        manifest: EnvManifest,
+        verify_key: String,
+        indeterminate: usize,
     },
     Report {
         model: ThreatModel,
@@ -154,7 +173,7 @@ fn determine_phase(layout: &CacheLayout, root_dir: &Path, current_key: &str) -> 
         .into_iter()
         .partition(|sp| is_cached(&layout.reports(), sp));
     if pending.is_empty() {
-        Phase::Report { model }
+        verify_phase(layout, model, &cached)
     } else {
         Phase::Surfaces {
             model,
@@ -162,6 +181,110 @@ fn determine_phase(layout: &CacheLayout, root_dir: &Path, current_key: &str) -> 
             cached: cached.len(),
         }
     }
+}
+
+/// Key of the inputs a verification ran for: every surface's cache key plus
+/// the env manifest. A change to either re-opens the verify phase.
+fn verify_cache_key(cached: &[SurfacePrompt], manifest_yaml: &str) -> String {
+    let mut keys: Vec<_> = cached
+        .iter()
+        .map(|sp| format!("{}:{}", sp.surface_id, sp.cache_key))
+        .collect();
+    keys.sort();
+    keys.push(hex_sha256(manifest_yaml));
+    hex_sha256(&keys.join("\n"))
+}
+
+/// Current findings of level warning or error whose verdict is still
+/// indeterminate (a missing verdict counts as indeterminate).
+fn count_indeterminate(reports_dir: &Path, model: &ThreatModel) -> usize {
+    current_sarif_files(reports_dir, model)
+        .iter()
+        .filter_map(|p| std::fs::read_to_string(p).ok())
+        .filter_map(|s| serde_json::from_str::<SarifReport>(&s).ok())
+        .flat_map(|r| r.runs)
+        .flat_map(|run| run.results)
+        .filter(|r| matches!(r.level.as_str(), "warning" | "error"))
+        .filter(|r| {
+            r.properties
+                .as_ref()
+                .and_then(|p| p.verdict)
+                .unwrap_or_default()
+                == Verdict::Indeterminate
+        })
+        .count()
+}
+
+/// Verify runs only when a manifest exists, some finding is indeterminate,
+/// and the current results have not been verified yet.
+fn verify_phase(layout: &CacheLayout, model: ThreatModel, cached: &[SurfacePrompt]) -> Phase {
+    let Ok(yaml) = std::fs::read_to_string(layout.env_manifest()) else {
+        return Phase::Report { model };
+    };
+    let Ok(manifest) = EnvManifest::parse(&yaml) else {
+        return Phase::Report { model };
+    };
+    let indeterminate = count_indeterminate(&layout.reports(), &model);
+    let verify_key = verify_cache_key(cached, &yaml);
+    let verified =
+        std::fs::read_to_string(layout.verified_key()).is_ok_and(|k| k.trim() == verify_key);
+    if indeterminate == 0 || verified {
+        return Phase::Report { model };
+    }
+    Phase::Verify {
+        model,
+        manifest,
+        verify_key,
+        indeterminate,
+    }
+}
+
+fn build_verify_prompt(
+    manifest: &EnvManifest,
+    model: &ThreatModel,
+    layout: &CacheLayout,
+    indeterminate: usize,
+) -> String {
+    let mut prompt = format!(
+        "# Dynamic verification\n\n\
+         {indeterminate} finding(s) of level warning or error are `indeterminate`. \
+         Launch the target described below and try to reproduce each of them.\n\n\
+         - Base URL: {}\n",
+        manifest.base_url
+    );
+    if let Some(f) = &manifest.compose_file {
+        prompt.push_str(&format!("- Launch: `docker compose -f {f} up -d`\n"));
+    }
+    if let Some(i) = &manifest.docker_image {
+        prompt.push_str(&format!("- Launch: docker image `{i}`\n"));
+    }
+    if let Some(c) = &manifest.command {
+        prompt.push_str(&format!("- Launch: `{c}`\n"));
+    }
+    if !manifest.auth_env.is_empty() {
+        prompt.push_str(&format!(
+            "- Credentials are in these environment variables (never print their values): {}\n",
+            manifest.auth_env.join(", ")
+        ));
+    }
+    if !manifest.read_only_mounts.is_empty() {
+        prompt.push_str(&format!(
+            "- Mount read-only: {}\n",
+            manifest.read_only_mounts.join(", ")
+        ));
+    }
+    prompt.push_str("\nSARIF results to verify:\n");
+    for f in current_sarif_files(&layout.reports(), model) {
+        prompt.push_str(&format!("- {}\n", f.display()));
+    }
+    prompt.push_str(
+        "\nFor each indeterminate finding of level warning or error, update its \
+         `properties` in place: set `verdict` to `confirmed` with `evidence_kind` \
+         `dynamic_poc` and `evidence_uris` when reproduced, `ruled_out` when a control \
+         prevents it, or leave `indeterminate` with the gap in `counterevidence`. \
+         Stop the environment when done.\n",
+    );
+    prompt
 }
 
 /// Move the current model and its merged results to `previous/` so the next
@@ -191,7 +314,7 @@ pub fn current_sarif_files(reports_dir: &Path, model: &ThreatModel) -> Vec<PathB
         .collect()
 }
 
-pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> {
+pub async fn run_scan_command(target: &str, output: Option<&str>, env: Option<&str>) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
     let (root_dir, _repo_name) = locate_repository(target, &printer).await?;
 
@@ -212,6 +335,15 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
     std::fs::create_dir_all(&layout.root)?;
     let model_input_key = hex_sha256(&repo_metadata.to_prompt_context());
     reconcile_model_key(&layout, &model_input_key)?;
+    if let Some(env) = env {
+        EnvManifest::load(Path::new(env))?;
+        std::fs::copy(env, layout.env_manifest())
+            .with_context(|| format!("failed to copy env manifest {env}"))?;
+        printer.status(
+            "Env",
+            &format!("manifest → {}", layout.env_manifest().display()),
+        );
+    }
 
     let parsentry_bin = std::env::current_exe()?;
     let continuation = continuation_instructions(target, &cache_base(), &parsentry_bin);
@@ -314,12 +446,33 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
             printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
             write_stdout(&format!("{}\n", orchestrator))?;
         }
+        Phase::Verify {
+            model,
+            manifest,
+            verify_key,
+            indeterminate,
+        } => {
+            printer.status(
+                "Phase",
+                &format!("verify ({indeterminate} indeterminate findings)"),
+            );
+            let mut prompt = build_verify_prompt(&manifest, &model, &layout, indeterminate);
+            prompt.push_str(&continuation);
+            // Recorded on emission, like `.cache_key`, so the next run reports
+            // instead of looping on findings that stay indeterminate.
+            std::fs::write(layout.verified_key(), &verify_key)?;
+            write_stdout(&prompt)?;
+            printer.success("Prompt", "verification prompt emitted");
+        }
         Phase::Report { model } => {
             run_report_phase(&layout, &model, output, &printer)?;
         }
     }
     Ok(())
 }
+
+const UNVERIFIED_NOTE: &str = "\n> **Unverified**: no environment manifest was provided \
+     (`parsentry scan --env <PATH>`), so findings were not dynamically verified.\n";
 
 fn run_report_phase(
     layout: &CacheLayout,
@@ -350,11 +503,11 @@ fn run_report_phase(
     std::fs::write(&tmp, serde_json::to_string_pretty(&merged)?)
         .context("failed to write merged.sarif.json")?;
     std::fs::rename(&tmp, layout.merged())?;
-    std::fs::write(
-        layout.report_md(),
-        render_report_markdown(&merged, baseline.is_some()),
-    )
-    .context("failed to write report.md")?;
+    let mut report_md = render_report_markdown(&merged, baseline.is_some());
+    if !layout.env_manifest().exists() {
+        report_md.push_str(UNVERIFIED_NOTE);
+    }
+    std::fs::write(layout.report_md(), report_md).context("failed to write report.md")?;
 
     let count = |state: Option<&str>| {
         merged
@@ -550,6 +703,97 @@ mod tests {
             determine_phase(&layout, repo.path(), "k1"),
             Phase::Surfaces { .. }
         ));
+    }
+
+    const ENV_YAML: &str = "base_url: http://localhost:8080\ncommand: ./run.sh\n";
+
+    fn sarif_with(level: &str, verdict: Option<&str>) -> String {
+        let props = verdict
+            .map(|v| format!(r#","properties":{{"verdict":"{v}"}}"#))
+            .unwrap_or_default();
+        format!(
+            r#"{{"$schema":"s","version":"2.1.0","runs":[{{"tool":{{"driver":{{"name":"t","version":"1"}}}},"results":[{{"ruleId":"R","level":"{level}","message":{{"text":"m"}}{props}}}]}}]}}"#
+        )
+    }
+
+    fn completed_with(layout: &CacheLayout, repo: &Path, sarif: &str) {
+        std::fs::write(layout.model(), model_json(&["S-1"])).unwrap();
+        reconcile_model_key(layout, "k1").unwrap();
+        complete_surfaces(layout, repo);
+        std::fs::write(layout.reports().join("S-1/result.sarif.json"), sarif).unwrap();
+    }
+
+    #[test]
+    fn verify_requires_manifest() {
+        let (repo, _c, layout) = setup();
+        completed_with(&layout, repo.path(), &sarif_with("error", None));
+        assert!(matches!(
+            determine_phase(&layout, repo.path(), "k1"),
+            Phase::Report { .. }
+        ));
+    }
+
+    #[test]
+    fn verify_runs_for_indeterminate_warning_once_per_key() {
+        let (repo, _c, layout) = setup();
+        completed_with(&layout, repo.path(), &sarif_with("warning", None));
+        std::fs::write(layout.env_manifest(), ENV_YAML).unwrap();
+        let key = match determine_phase(&layout, repo.path(), "k1") {
+            Phase::Verify {
+                verify_key,
+                indeterminate,
+                ..
+            } => {
+                assert_eq!(indeterminate, 1);
+                verify_key
+            }
+            other => panic!("unexpected phase {other:?}"),
+        };
+        std::fs::write(layout.verified_key(), &key).unwrap();
+        assert!(matches!(
+            determine_phase(&layout, repo.path(), "k1"),
+            Phase::Report { .. }
+        ));
+        // A changed manifest re-opens verification.
+        std::fs::write(
+            layout.env_manifest(),
+            format!("{ENV_YAML}auth_env: [TOKEN]\n"),
+        )
+        .unwrap();
+        assert!(matches!(
+            determine_phase(&layout, repo.path(), "k1"),
+            Phase::Verify { .. }
+        ));
+    }
+
+    #[test]
+    fn verify_skips_low_level_and_decided_findings() {
+        for sarif in [
+            sarif_with("note", Some("indeterminate")),
+            sarif_with("error", Some("confirmed")),
+            sarif_with("error", Some("ruled_out")),
+            VALID_SARIF.to_string(),
+        ] {
+            let (repo, _c, layout) = setup();
+            completed_with(&layout, repo.path(), &sarif);
+            std::fs::write(layout.env_manifest(), ENV_YAML).unwrap();
+            assert!(matches!(
+                determine_phase(&layout, repo.path(), "k1"),
+                Phase::Report { .. }
+            ));
+        }
+    }
+
+    #[test]
+    fn report_marks_findings_unverified_without_manifest() {
+        let (repo, _c, layout) = setup();
+        completed_with(&layout, repo.path(), &sarif_with("error", None));
+        let model: ThreatModel =
+            serde_json::from_str(&std::fs::read_to_string(layout.model()).unwrap()).unwrap();
+        let printer = StatusPrinter::with_service("t");
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let md = std::fs::read_to_string(layout.report_md()).unwrap();
+        assert!(md.contains("**Unverified**"));
     }
 
     #[test]
