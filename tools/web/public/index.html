@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parsentry</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Parsentry</h1>
+  <label>Token <input id="token" type="password" placeholder="Bearer token (if required)"></label>
+</header>
+<main>
+  <section id="runs-view">
+    <h2>Runs</h2>
+    <table>
+      <thead><tr><th>Run</th><th>Status</th><th>Findings</th><th>Updated</th></tr></thead>
+      <tbody id="runs"></tbody>
+    </table>
+  </section>
+  <section id="findings-view" hidden>
+    <h2>Findings <span id="run-name"></span></h2>
+    <div class="filters">
+      <select id="verdict">
+        <option value="">All verdicts</option>
+        <option value="confirmed">confirmed</option>
+        <option value="indeterminate">indeterminate</option>
+        <option value="ruled_out">ruled_out</option>
+      </select>
+      <select id="level">
+        <option value="">All levels</option>
+        <option value="error">error</option>
+        <option value="warning">warning</option>
+        <option value="note">note</option>
+      </select>
+      <input id="cwe" placeholder="CWE (e.g. CWE-89)">
+    </div>
+    <table>
+      <thead><tr><th>Rule</th><th>Level</th><th>Verdict</th><th>CWE</th><th>Location</th><th>Message</th></tr></thead>
+      <tbody id="findings"></tbody>
+    </table>
+  </section>
+  <p id="error" role="alert"></p>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

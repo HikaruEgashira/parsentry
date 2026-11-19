@@ -1,0 +1,12 @@
+body { font-family: system-ui, sans-serif; margin: 0; color: #1f2328; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #d0d7de; }
+h1 { font-size: 1.25rem; margin: 0; }
+main { padding: 1rem; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid #d0d7de; vertical-align: top; }
+#runs tr { cursor: pointer; }
+#runs tr:hover { background: #f6f8fa; }
+.filters { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.level-error { color: #cf222e; }
+.level-warning { color: #9a6700; }
+#error { color: #cf222e; }

@@ -1,0 +1,9 @@
+{
+  "name": "@parsentry/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web UI served by `parsentry serve`; public/ is embedded into the binary via rust-embed",
+  "scripts": {
+    "check": "node --check public/app.js"
+  }
+}

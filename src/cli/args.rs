@@ -104,4 +104,18 @@ pub enum Commands {
         #[arg(long)]
         no_color: bool,
     },
+    /// Serve the web UI for browsing runs and findings
+    Serve {
+        /// Address to bind (non-loopback addresses require --token)
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+
+        /// Port to listen on
+        #[arg(short, long, default_value = "8765")]
+        port: u16,
+
+        /// Bearer token required for API requests
+        #[arg(long, env = "PARSENTRY_SERVE_TOKEN")]
+        token: Option<String>,
+    },
 }

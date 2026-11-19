@@ -41,6 +41,7 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
+parsentry serve [--host H] [-p PORT] [--token T]  # Web UI (Runs/Findings)。tools/web/public を rust-embed で埋め込み。非loopback bind には --token 必須
 ```
 
 ## Security Scanning
