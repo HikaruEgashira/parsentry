@@ -6,6 +6,7 @@ pub mod prompt;
 pub mod repo;
 pub mod response;
 pub mod url_collector;
+pub mod webhook;
 
 // Re-export core types for convenience
 pub use parsentry_core::{Language, VulnType};

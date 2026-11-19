@@ -74,6 +74,14 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Serve POST /webhooks/github and run incremental scans for push / pull_request events
+    ///
+    /// Set GITHUB_WEBHOOK_SECRET to verify X-Hub-Signature-256.
+    Serve {
+        /// Address to listen on
+        #[arg(long, default_value = "0.0.0.0:8080")]
+        addr: String,
+    },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
     Log {

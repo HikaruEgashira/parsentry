@@ -1,0 +1,53 @@
+name: Docker
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/docker.yml
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  image:
+    name: Build and publish image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/parsentry
+    steps:
+      - name: Checkout repository
+        timeout-minutes: 5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build image
+        timeout-minutes: 40
+        run: |
+          image="${IMAGE,,}"
+          docker build --tag "$image:sha-${GITHUB_SHA::12}" --tag "$image:latest" .
+          docker run --rm "$image:latest" --help
+
+      - name: Publish to ghcr.io
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="${IMAGE,,}"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$image:sha-${GITHUB_SHA::12}"
+          docker push "$image:latest"
