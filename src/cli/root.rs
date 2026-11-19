@@ -3,7 +3,7 @@ use clap::Parser;
 
 use crate::cli::args::{Args, Commands};
 use crate::cli::commands::common::write_stdout;
-use crate::cli::commands::{run_log_command, run_scan_command};
+use crate::cli::commands::{run_log_command, run_scan_command, run_web_command};
 
 pub struct RootCommand;
 
@@ -77,6 +77,7 @@ impl RootCommand {
                 )
                 .await
             }
+            Commands::Web { target, host, port } => run_web_command(&target, &host, port).await,
         }
     }
 }
