@@ -17,6 +17,7 @@ benchmark = []
 
 [dependencies]
 tokio.workspace = true
+async-trait.workspace = true
 parsentry-core = { path = "crates/parsentry-core" }
 parsentry-reports = { path = "crates/parsentry-reports" }
 parsentry-claude = { path = "crates/parsentry-claude" }

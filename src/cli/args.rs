@@ -42,6 +42,11 @@ pub enum Commands {
         /// Also render a PDF report to this path when the scan completes
         #[arg(short, long)]
         output: Option<String>,
+
+        /// Agent runtime: `pipe` prints prompts for an external CLI agent;
+        /// `claude` runs every phase in-process via the Claude Agent SDK sidecar
+        #[arg(long, value_enum, default_value_t = crate::runtime::RuntimeKind::Pipe)]
+        runtime: crate::runtime::RuntimeKind,
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]

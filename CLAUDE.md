@@ -39,9 +39,19 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 
 ```
 parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
+parsentry scan [TARGET] --runtime claude  # 外部CLI無しで全フェーズを実行 (tools/agent-runtime sidecar)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ```
+
+### Agent runtime
+
+`--runtime claude` は `AgentRuntime` trait (`src/runtime.rs`: run_model / run_surface / run_verify) を
+TS sidecar (`tools/agent-runtime`, Claude Agent SDK) で実装し、JSON-RPC 2.0 (1行1メッセージ, stdio) で通信する。
+sidecar は read-only ツール (read_file / grep / load_skill) のみを持ち、並列度・タイムアウト・429/529 backoff を担当する
+(`PARSENTRY_AGENT_CONCURRENCY`, `PARSENTRY_AGENT_TIMEOUT_MS`, `PARSENTRY_AGENT_MAX_RETRIES`)。
+結果ファイルの検証と書き込みは parsentry 側が行う。起動コマンドは `PARSENTRY_AGENT_RUNTIME`
+(例: `node tools/agent-runtime/dist/index.js`)、未設定なら PATH 上の `parsentry-agent-runtime`。
 
 ## Security Scanning
 - SARIF出力のCWEフィールドは必ず配列にすること（文字列ではない）。マージフェーズでのスキーマバリデーションエラーを防ぐ

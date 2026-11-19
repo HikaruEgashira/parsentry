@@ -16,7 +16,7 @@
 //! model input snapshots the previous model and its results so the report
 //! diffs the findings of both models.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use std::path::{Path, PathBuf};
 
 use crate::cli::ui::StatusPrinter;
@@ -25,6 +25,9 @@ use crate::prompt::{
     continuation_instructions,
 };
 
+use crate::runtime::{
+    AgentRuntime, RuntimeKind, SidecarRuntime, SurfaceOutcome, SurfaceTask, extract_json,
+};
 use parsentry_core::{RepoMetadata, ThreatModel};
 use parsentry_reports::{SarifReport, merge_sarif_files};
 use sha2::{Digest, Sha256};
@@ -191,7 +194,110 @@ pub fn current_sarif_files(reports_dir: &Path, model: &ThreatModel) -> Vec<PathB
         .collect()
 }
 
-pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> {
+/// Bookkeeping before the threat model is (re)generated; returns the model
+/// prompt without the pipe-mode continuation.
+fn prepare_model_phase(
+    layout: &CacheLayout,
+    reason: &ModelReason,
+    repo_metadata: &RepoMetadata,
+    model_input_key: &str,
+    printer: &StatusPrinter,
+) -> Result<String> {
+    match reason {
+        ModelReason::Missing if layout.previous_model().exists() => {
+            printer.status("Phase", "model (model diff: awaiting new threat model)")
+        }
+        ModelReason::Missing => printer.status("Phase", "model (full scan)"),
+        ModelReason::Invalid(e) => {
+            printer.warning(
+                "Model",
+                &format!("model.json is invalid ({e}), regenerating"),
+            );
+            std::fs::remove_file(layout.model())?;
+        }
+        ModelReason::InputChanged => {
+            snapshot_previous(layout)?;
+            printer.status(
+                "Phase",
+                "model (model diff: repository changed, previous model snapshotted)",
+            );
+        }
+    }
+    std::fs::write(layout.model_pending_key(), model_input_key)?;
+
+    let mut prompt = build_threat_model_cli_prompt(repo_metadata, &layout.model());
+    if layout.previous_model().exists() {
+        prompt.push_str(&format!(
+            "\nA previous threat model exists at {}. Read it first. Keep the same \
+             surface `id` for every surface that still exists so its cached results \
+             stay comparable; assign new ids only to new surfaces.\n",
+            layout.previous_model().display()
+        ));
+    }
+    Ok(prompt)
+}
+
+/// Write `prompt.md` and `.cache_key` for each pending surface and return the
+/// full prompts (with output instructions) in the same order.
+fn prepare_surface_phase(
+    layout: &CacheLayout,
+    model: &ThreatModel,
+    pending: &[SurfacePrompt],
+    cached: usize,
+    printer: &StatusPrinter,
+) -> Result<Vec<String>> {
+    // A previous model's results mean we are re-scanning for a model
+    // diff; a previous report means only changed surfaces re-run.
+    let mode = if layout.previous_merged().exists() {
+        "model diff"
+    } else if layout.merged().exists() || cached > 0 {
+        "incremental"
+    } else {
+        "full"
+    };
+    printer.status(
+        "Phase",
+        &format!(
+            "surfaces ({mode}: {} pending, {cached} cached of {} surfaces)",
+            pending.len(),
+            model.total_surfaces()
+        ),
+    );
+    let reports_dir = layout.reports();
+    printer.section("Prompts");
+    let mut prompts = Vec::with_capacity(pending.len());
+    for sp in pending {
+        let surface_dir = reports_dir.join(&sp.surface_id);
+        std::fs::create_dir_all(&surface_dir)?;
+        let sarif_path = surface_dir.join("result.sarif.json");
+        // Drop stale results so a failed worker cannot leave an old
+        // SARIF that looks current.
+        std::fs::remove_file(&sarif_path).ok();
+        let prompt_path = surface_dir.join("prompt.md");
+        let full_prompt = format!(
+            "{}\n\nWrite the SARIF JSON output to: {}\n\
+             Write ONLY valid JSON. No markdown, no code fences, no explanation.\n",
+            sp.prompt,
+            sarif_path.display()
+        );
+        std::fs::write(&prompt_path, &full_prompt)?;
+        std::fs::write(surface_dir.join(".cache_key"), &sp.cache_key)?;
+        printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
+        prompts.push(full_prompt);
+    }
+    Ok(prompts)
+}
+
+/// Appended to prompts in runtime mode: the sidecar has read-only tools, so
+/// parsentry writes the returned JSON itself.
+const RUNTIME_OUTPUT_NOTE: &str = "\n\nRuntime note: you cannot write files. Instead of \
+     writing the output file, return the JSON document as your entire final answer.\n";
+
+pub async fn run_scan_command(
+    target: &str,
+    output: Option<&str>,
+    runtime: RuntimeKind,
+) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
     let (root_dir, _repo_name) = locate_repository(target, &printer).await?;
 
@@ -213,42 +319,30 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
     let model_input_key = hex_sha256(&repo_metadata.to_prompt_context());
     reconcile_model_key(&layout, &model_input_key)?;
 
+    match runtime {
+        RuntimeKind::Pipe => {}
+        RuntimeKind::Claude => {
+            let rt = SidecarRuntime::spawn_default("claude")?;
+            return run_with_runtime(
+                &rt,
+                &layout,
+                &root_dir,
+                &repo_metadata,
+                &model_input_key,
+                output,
+                &printer,
+            )
+            .await;
+        }
+    }
+
     let parsentry_bin = std::env::current_exe()?;
     let continuation = continuation_instructions(target, &cache_base(), &parsentry_bin);
 
     match determine_phase(&layout, &root_dir, &model_input_key) {
         Phase::Model(reason) => {
-            match &reason {
-                ModelReason::Missing if layout.previous_model().exists() => {
-                    printer.status("Phase", "model (model diff: awaiting new threat model)")
-                }
-                ModelReason::Missing => printer.status("Phase", "model (full scan)"),
-                ModelReason::Invalid(e) => {
-                    printer.warning(
-                        "Model",
-                        &format!("model.json is invalid ({e}), regenerating"),
-                    );
-                    std::fs::remove_file(layout.model())?;
-                }
-                ModelReason::InputChanged => {
-                    snapshot_previous(&layout)?;
-                    printer.status(
-                        "Phase",
-                        "model (model diff: repository changed, previous model snapshotted)",
-                    );
-                }
-            }
-            std::fs::write(layout.model_pending_key(), &model_input_key)?;
-
-            let mut prompt = build_threat_model_cli_prompt(&repo_metadata, &layout.model());
-            if layout.previous_model().exists() {
-                prompt.push_str(&format!(
-                    "\nA previous threat model exists at {}. Read it first. Keep the same \
-                     surface `id` for every surface that still exists so its cached results \
-                     stay comparable; assign new ids only to new surfaces.\n",
-                    layout.previous_model().display()
-                ));
-            }
+            let mut prompt =
+                prepare_model_phase(&layout, &reason, &repo_metadata, &model_input_key, &printer)?;
             prompt.push_str(&continuation);
             write_stdout(&prompt)?;
             printer.success(
@@ -264,44 +358,8 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
             pending,
             cached,
         } => {
-            // A previous model's results mean we are re-scanning for a model
-            // diff; a previous report means only changed surfaces re-run.
-            let mode = if layout.previous_merged().exists() {
-                "model diff"
-            } else if layout.merged().exists() || cached > 0 {
-                "incremental"
-            } else {
-                "full"
-            };
-            printer.status(
-                "Phase",
-                &format!(
-                    "surfaces ({mode}: {} pending, {cached} cached of {} surfaces)",
-                    pending.len(),
-                    model.total_surfaces()
-                ),
-            );
+            prepare_surface_phase(&layout, &model, &pending, cached, &printer)?;
             let reports_dir = layout.reports();
-            printer.section("Prompts");
-            for sp in &pending {
-                let surface_dir = reports_dir.join(&sp.surface_id);
-                std::fs::create_dir_all(&surface_dir)?;
-                let sarif_path = surface_dir.join("result.sarif.json");
-                // Drop stale results so a failed worker cannot leave an old
-                // SARIF that looks current.
-                std::fs::remove_file(&sarif_path).ok();
-                let prompt_path = surface_dir.join("prompt.md");
-                let full_prompt = format!(
-                    "{}\n\nWrite the SARIF JSON output to: {}\n\
-                     Write ONLY valid JSON. No markdown, no code fences, no explanation.\n",
-                    sp.prompt,
-                    sarif_path.display()
-                );
-                std::fs::write(&prompt_path, &full_prompt)?;
-                std::fs::write(surface_dir.join(".cache_key"), &sp.cache_key)?;
-                printer.bullet(&format!("{} → {}", sp.surface_id, prompt_path.display()));
-            }
-
             let orchestrator = build_orchestrator_prompt(
                 &pending,
                 &reports_dir,
@@ -319,6 +377,116 @@ pub async fn run_scan_command(target: &str, output: Option<&str>) -> Result<()> 
         }
     }
     Ok(())
+}
+
+/// Drive every phase to completion with an in-process [`AgentRuntime`].
+/// Each step is persisted to the same cache as pipe mode, so a failed run
+/// resumes from where it stopped on the next invocation.
+async fn run_with_runtime(
+    rt: &dyn AgentRuntime,
+    layout: &CacheLayout,
+    root_dir: &Path,
+    repo_metadata: &RepoMetadata,
+    model_input_key: &str,
+    output: Option<&str>,
+    printer: &StatusPrinter,
+) -> Result<()> {
+    // model → surfaces → report; a bound guards against a phase that keeps
+    // reporting success without changing the cache state.
+    for _ in 0..4 {
+        match determine_phase(layout, root_dir, model_input_key) {
+            Phase::Model(reason) => {
+                let mut prompt =
+                    prepare_model_phase(layout, &reason, repo_metadata, model_input_key, printer)?;
+                prompt.push_str(RUNTIME_OUTPUT_NOTE);
+                let text = rt.run_model(&prompt, root_dir).await?;
+                let json = extract_json(&text)
+                    .ok_or_else(|| anyhow!("agent returned no threat model JSON"))?;
+                let model: ThreatModel =
+                    serde_json::from_str(json).context("agent returned an invalid threat model")?;
+                std::fs::write(layout.model(), serde_json::to_string_pretty(&model)?)?;
+                reconcile_model_key(layout, model_input_key)?;
+                printer.success(
+                    "Model",
+                    &format!(
+                        "{} surfaces → {}",
+                        model.total_surfaces(),
+                        layout.model().display()
+                    ),
+                );
+            }
+            Phase::Surfaces {
+                model,
+                pending,
+                cached,
+            } => {
+                let prompts = prepare_surface_phase(layout, &model, &pending, cached, printer)?;
+                let tasks: Vec<SurfaceTask> = pending
+                    .iter()
+                    .zip(prompts)
+                    .map(|(sp, prompt)| SurfaceTask {
+                        id: sp.surface_id.clone(),
+                        prompt: prompt + RUNTIME_OUTPUT_NOTE,
+                    })
+                    .collect();
+                let outcomes = rt.run_surface(&tasks, root_dir).await?;
+                let failed = write_surface_outcomes(layout, &pending, &outcomes, printer)?;
+                if !failed.is_empty() {
+                    bail!(
+                        "{} surface(s) failed: {}. Re-run to retry only those surfaces.",
+                        failed.len(),
+                        failed.join(", ")
+                    );
+                }
+            }
+            Phase::Report { model } => {
+                return run_report_phase(layout, &model, output, printer);
+            }
+        }
+    }
+    bail!("agent runtime made no progress through the scan phases")
+}
+
+/// Write valid SARIF results; returns the ids of surfaces without one.
+fn write_surface_outcomes(
+    layout: &CacheLayout,
+    pending: &[SurfacePrompt],
+    outcomes: &[SurfaceOutcome],
+    printer: &StatusPrinter,
+) -> Result<Vec<String>> {
+    let mut failed = Vec::new();
+    for sp in pending {
+        let outcome = outcomes.iter().find(|o| o.id == sp.surface_id);
+        let sarif = match outcome.map(|o| &o.result) {
+            Some(Ok(text)) => extract_json(text)
+                .ok_or_else(|| "no JSON in answer".to_string())
+                .and_then(|j| {
+                    serde_json::from_str::<SarifReport>(j)
+                        .map(|_| j.to_string())
+                        .map_err(|e| format!("invalid SARIF: {e}"))
+                }),
+            Some(Err(e)) => Err(e.clone()),
+            None => Err("no result returned".to_string()),
+        };
+        match sarif {
+            Ok(json) => {
+                let path = layout
+                    .reports()
+                    .join(&sp.surface_id)
+                    .join("result.sarif.json");
+                std::fs::write(&path, json)?;
+                printer.success(
+                    "Surface",
+                    &format!("{} → {}", sp.surface_id, path.display()),
+                );
+            }
+            Err(e) => {
+                printer.warning("Surface", &format!("{}: {e}", sp.surface_id));
+                failed.push(sp.surface_id.clone());
+            }
+        }
+    }
+    Ok(failed)
 }
 
 fn run_report_phase(
@@ -550,6 +718,52 @@ mod tests {
             determine_phase(&layout, repo.path(), "k1"),
             Phase::Surfaces { .. }
         ));
+    }
+
+    struct MockRuntime;
+
+    #[async_trait::async_trait]
+    impl AgentRuntime for MockRuntime {
+        async fn run_model(&self, _prompt: &str, _cwd: &Path) -> Result<String> {
+            Ok(format!("```json\n{}\n```", model_json(&["S-1", "S-2"])))
+        }
+        async fn run_surface(
+            &self,
+            tasks: &[SurfaceTask],
+            _cwd: &Path,
+        ) -> Result<Vec<SurfaceOutcome>> {
+            Ok(tasks
+                .iter()
+                .map(|t| SurfaceOutcome {
+                    id: t.id.clone(),
+                    result: Ok(VALID_SARIF.to_string()),
+                })
+                .collect())
+        }
+        async fn run_verify(&self, _prompt: &str, _cwd: &Path) -> Result<String> {
+            unreachable!()
+        }
+    }
+
+    #[tokio::test]
+    async fn runtime_drives_cold_cache_to_report() {
+        let (repo, _c, layout) = setup();
+        let metadata = RepoMetadata::collect(repo.path()).unwrap();
+        let printer = StatusPrinter::with_service("t");
+        run_with_runtime(
+            &MockRuntime,
+            &layout,
+            repo.path(),
+            &metadata,
+            "k1",
+            None,
+            &printer,
+        )
+        .await
+        .unwrap();
+        assert!(layout.merged().exists());
+        assert!(layout.reports().join("S-2/result.sarif.json").exists());
+        assert_eq!(std::fs::read_to_string(layout.model_key()).unwrap(), "k1");
     }
 
     #[test]
