@@ -126,6 +126,23 @@ pub enum Commands {
         #[arg(long, env = "PARSENTRY_API_TOKEN", hide_env_values = true)]
         token: Option<String>,
     },
+    /// Accept one finding (a SARIF result JSON) into a surface's result.sarif.json
+    ///
+    /// Prints `accepted <fingerprint>` or `duplicate <fingerprint>`; invalid
+    /// findings are rejected with a non-zero exit and the reason on stderr.
+    Report {
+        /// Target whose scan cache to write to: local path, owner/repo, URL, IP, or domain
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Surface id (A-Z a-z 0-9 - _ .)
+        #[arg(long)]
+        surface: String,
+
+        /// Finding as a single SARIF result JSON object
+        #[arg(long)]
+        finding: String,
+    },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
     Log {

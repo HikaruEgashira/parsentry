@@ -42,6 +42,7 @@ parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行
 parsentry scan --runtime claude [TARGET]  # sidecar (PARSENTRY_AGENT_RUNTIME / parsentry-agent-runtime) を JSON-RPC stdio で駆動し全フェーズ実行 (src/runtime.rs)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry verify [TARGET] --image IMG -- CMD  # labelled Docker sandbox (src/sandbox.rs, PARSENTRY_DOCKER で docker を上書き) (hidden command)
+parsentry report [TARGET] --surface ID --finding JSON  # finding を1件検証し result.sarif.json に追記 (accepted/duplicate <fp>)
 parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
 ```
 
