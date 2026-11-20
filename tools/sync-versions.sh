@@ -9,4 +9,4 @@ for crate in "$root_dir"/crates/*/Cargo.toml; do
   sed -i '' "s/^version = \".*\"/version = \"$version\"/" "$crate"
 done
 
-cd "$root_dir" && cargo update -p parsentry-core -p parsentry-claude -p parsentry-parser -p parsentry-reports -p parsentry-cache
+cd "$root_dir" && cargo update -p parsentry-core -p parsentry-parser -p parsentry-reports -p parsentry-cache
