@@ -40,8 +40,9 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
-          # PRs need the base commit to compute the --in-diff patch
-          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
+          # PRs need the base commit to compute the --in-diff patch. The '0' must be
+          # a string: a numeric 0 is falsy, so `&& 0 || 1` always yielded a shallow clone
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
       - name: Ensure writable RUSTUP_HOME
         if: runner.environment == 'self-hosted'
         timeout-minutes: 1
