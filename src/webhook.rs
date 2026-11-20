@@ -259,25 +259,47 @@ async fn serve_conn(
     queue: mpsc::UnboundedSender<ScanRequest>,
 ) -> Result<()> {
     let mut ctype = "text/plain";
+    let mut extra = "";
     let (status, body) = match read_request(&mut stream).await {
         Ok(req) if req.path.starts_with(crate::api::API_PREFIX) => {
             ctype = "application/json";
-            crate::api::handle(&req, config.api_token.as_deref(), &config.cache_base)
+            let (status, body) =
+                crate::api::handle(&req, config.api_token.as_deref(), &config.cache_base);
+            (status, body.into_bytes())
         }
-        Ok(req) => handle(&req, config.webhook_secret.as_deref(), &queue),
-        Err(e) => (400, e.to_string()),
+        Ok(req) => match (req.method == "GET")
+            .then(|| crate::ui::asset(&req.path))
+            .flatten()
+        {
+            Some((asset_type, data)) => {
+                ctype = asset_type;
+                extra = "X-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\n";
+                (200, data)
+            }
+            None => {
+                let (status, body) = handle(&req, config.webhook_secret.as_deref(), &queue);
+                (status, body.into_bytes())
+            }
+        },
+        Err(e) => (400, e.to_string().into_bytes()),
     };
     let auth = if status == 401 && ctype == "application/json" {
         "WWW-Authenticate: Bearer\r\n"
     } else {
         ""
     };
-    let resp = format!(
-        "HTTP/1.1 {status} {}\r\nContent-Type: {ctype}\r\n{auth}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+    let csp = if extra.is_empty() {
+        String::new()
+    } else {
+        format!("Content-Security-Policy: {}\r\n", crate::ui::CSP)
+    };
+    let head = format!(
+        "HTTP/1.1 {status} {}\r\nContent-Type: {ctype}\r\n{auth}{extra}{csp}Content-Length: {}\r\nConnection: close\r\n\r\n",
         reason(status),
         body.len()
     );
-    stream.write_all(resp.as_bytes()).await?;
+    stream.write_all(head.as_bytes()).await?;
+    stream.write_all(&body).await?;
     stream.shutdown().await?;
     Ok(())
 }

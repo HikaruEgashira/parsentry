@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>parsentry</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>parsentry</h1>
+  <nav>
+    <button type="button" id="tab-runs" class="tab active">Runs</button>
+    <button type="button" id="tab-findings" class="tab">Findings</button>
+  </nav>
+  <form id="token-form">
+    <input type="password" id="token" placeholder="API token" autocomplete="off">
+    <button type="submit">Set token</button>
+  </form>
+</header>
+<p id="status" role="status"></p>
+
+<section id="runs-view">
+  <table>
+    <thead><tr><th>Run</th><th>Model</th><th>Report</th><th>Surfaces</th></tr></thead>
+    <tbody id="runs-body"></tbody>
+  </table>
+</section>
+
+<section id="findings-view" hidden>
+  <form id="filters">
+    <label>Run <select id="f-run"><option value="">all</option></select></label>
+    <label>Verdict
+      <select id="f-verdict">
+        <option value="">all</option>
+        <option value="confirmed">confirmed</option>
+        <option value="indeterminate">indeterminate</option>
+        <option value="ruled_out">ruled_out</option>
+      </select>
+    </label>
+    <label>Level
+      <select id="f-level">
+        <option value="">all</option>
+        <option value="error">error</option>
+        <option value="warning">warning</option>
+        <option value="note">note</option>
+      </select>
+    </label>
+    <label>CWE <input id="f-cwe" placeholder="e.g. 89"></label>
+    <button type="submit">Apply</button>
+  </form>
+  <table>
+    <thead><tr><th>Run</th><th>Rule</th><th>Level</th><th>Verdict</th><th>CWE</th><th>Location</th><th>Message</th></tr></thead>
+    <tbody id="findings-body"></tbody>
+  </table>
+</section>
+<script src="/app.js"></script>
+</body>
+</html>

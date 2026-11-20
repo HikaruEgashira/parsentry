@@ -136,3 +136,44 @@ async fn http_api_requires_bearer_token() {
     assert!(ok.starts_with("HTTP/1.1 200"), "{ok}");
     assert!(ok.ends_with("[]"), "{ok}");
 }
+
+#[tokio::test]
+async fn http_serves_embedded_ui_and_findings() {
+    let cache = tempfile::tempdir().unwrap();
+    let run = cache.path().join("owner__app");
+    std::fs::create_dir_all(&run).unwrap();
+    std::fs::write(
+        run.join("merged.sarif.json"),
+        r#"{"version":"2.1.0","runs":[{"results":[{"ruleId":"sqli","level":"error","properties":{"verdict":"confirmed","cwe":["CWE-89"]}}]}]}"#,
+    )
+    .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let config = ServeConfig {
+        cache_base: cache.path().to_path_buf(),
+        ..Default::default()
+    };
+    tokio::spawn(serve(listener, config, tx));
+
+    async fn get(addr: std::net::SocketAddr, path: &str) -> String {
+        let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+        let req = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n");
+        stream.write_all(req.as_bytes()).await.unwrap();
+        let mut resp = String::new();
+        stream.read_to_string(&mut resp).await.unwrap();
+        resp
+    }
+    let index = get(addr, "/").await;
+    assert!(index.starts_with("HTTP/1.1 200"), "{index}");
+    assert!(index.contains("Content-Type: text/html"), "{index}");
+    assert!(index.contains("Content-Security-Policy:"), "{index}");
+    assert!(index.contains("findings-view"), "{index}");
+    let js = get(addr, "/app.js").await;
+    assert!(js.contains("sessionStorage"), "{js}");
+
+    let findings = get(addr, "/api/findings?verdict=confirmed&level=error&cwe=89").await;
+    assert!(findings.starts_with("HTTP/1.1 200"), "{findings}");
+    assert!(findings.contains("\"rule_id\":\"sqli\""), "{findings}");
+    assert!(get(addr, "/nope").await.starts_with("HTTP/1.1 404"));
+}
