@@ -49,6 +49,7 @@ export interface SarifResult {
     action?: string;
     resource?: string;
     data_flow?: string;
+    verdict?: string;
   };
 }
 

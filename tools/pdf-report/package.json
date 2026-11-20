@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "generate": "tsx src/index.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.tsx"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
