@@ -16,7 +16,8 @@ impl RootCommand {
                 target,
                 output,
                 runtime,
-            } => run_scan_command(&target, output.as_deref(), runtime).await,
+                env,
+            } => run_scan_command(&target, output.as_deref(), runtime, env.as_deref()).await,
             Commands::Merge {
                 target,
                 gh_issue,

@@ -57,6 +57,10 @@ pub enum Commands {
         /// Execution runtime: `pipe` prints prompts, `claude` drives the agent runtime sidecar
         #[arg(long, value_enum, default_value_t = RuntimeKind::Pipe)]
         runtime: RuntimeKind,
+
+        /// Validate an environment manifest (YAML) and copy it to the cache as env.yaml
+        #[arg(long, value_name = "PATH")]
+        env: Option<String>,
     },
     /// Merge per-surface SARIF files into a single report
     #[command(hide = true)]
