@@ -4,6 +4,7 @@ pub mod events;
 pub mod log;
 pub mod report;
 pub mod scan;
+pub mod verify;
 pub mod web;
 
 pub use log::run_log_command;

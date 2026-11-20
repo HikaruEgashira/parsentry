@@ -93,6 +93,21 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Run a verify command in a labelled Docker sandbox with the target mounted read-only
+    #[command(hide = true)]
+    Verify {
+        /// Target whose source is mounted at /src: local path, owner/repo, URL, IP, or domain
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Container image to run
+        #[arg(long)]
+        image: String,
+
+        /// Command to run inside the container
+        #[arg(last = true)]
+        command: Vec<String>,
+    },
     /// Serve the runs/findings HTTP API and POST /webhooks/github
     ///
     /// GET /api/runs and GET /api/findings?run=&verdict=&level=&cwe= expose
