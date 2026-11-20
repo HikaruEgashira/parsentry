@@ -1,4 +1,6 @@
-use parsentry::webhook::{Request, ScanRequest, WEBHOOK_PATH, handle, serve, verify_signature};
+use parsentry::webhook::{
+    Request, ScanRequest, ServeConfig, WEBHOOK_PATH, handle, serve, verify_signature,
+};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 
@@ -91,7 +93,7 @@ async fn http_server_enqueues_scan() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    tokio::spawn(serve(listener, None, tx));
+    tokio::spawn(serve(listener, ServeConfig::default(), tx));
 
     let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
     let head = format!(
@@ -104,4 +106,33 @@ async fn http_server_enqueues_scan() {
     stream.read_to_string(&mut resp).await.unwrap();
     assert!(resp.starts_with("HTTP/1.1 202"), "{resp}");
     assert_eq!(rx.recv().await.unwrap().repository, "octocat/Hello-World");
+}
+
+#[tokio::test]
+async fn http_api_requires_bearer_token() {
+    let cache = tempfile::tempdir().unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let config = ServeConfig {
+        api_token: Some("s3cret".into()),
+        cache_base: cache.path().to_path_buf(),
+        ..Default::default()
+    };
+    tokio::spawn(serve(listener, config, tx));
+
+    async fn get(addr: std::net::SocketAddr, auth: &str) -> String {
+        let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+        let req = format!("GET /api/runs HTTP/1.1\r\nHost: localhost\r\n{auth}\r\n");
+        stream.write_all(req.as_bytes()).await.unwrap();
+        let mut resp = String::new();
+        stream.read_to_string(&mut resp).await.unwrap();
+        resp
+    }
+    let denied = get(addr, "").await;
+    assert!(denied.starts_with("HTTP/1.1 401"), "{denied}");
+    assert!(denied.contains("WWW-Authenticate: Bearer"), "{denied}");
+    let ok = get(addr, "Authorization: Bearer s3cret\r\n").await;
+    assert!(ok.starts_with("HTTP/1.1 200"), "{ok}");
+    assert!(ok.ends_with("[]"), "{ok}");
 }

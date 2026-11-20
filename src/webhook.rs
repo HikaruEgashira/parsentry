@@ -7,6 +7,8 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -234,23 +236,44 @@ fn reason(status: u16) -> &'static str {
         202 => "Accepted",
         400 => "Bad Request",
         401 => "Unauthorized",
+        500 => "Internal Server Error",
         404 => "Not Found",
         405 => "Method Not Allowed",
         _ => "Service Unavailable",
     }
 }
 
+/// Shared configuration for connections accepted by [`serve`].
+#[derive(Debug, Clone, Default)]
+pub struct ServeConfig {
+    pub webhook_secret: Option<String>,
+    /// Bearer token required on `/api/` when set.
+    pub api_token: Option<String>,
+    /// Cache root whose runs `/api/` exposes.
+    pub cache_base: PathBuf,
+}
+
 async fn serve_conn(
     mut stream: TcpStream,
-    secret: Option<String>,
+    config: Arc<ServeConfig>,
     queue: mpsc::UnboundedSender<ScanRequest>,
 ) -> Result<()> {
+    let mut ctype = "text/plain";
     let (status, body) = match read_request(&mut stream).await {
-        Ok(req) => handle(&req, secret.as_deref(), &queue),
+        Ok(req) if req.path.starts_with(crate::api::API_PREFIX) => {
+            ctype = "application/json";
+            crate::api::handle(&req, config.api_token.as_deref(), &config.cache_base)
+        }
+        Ok(req) => handle(&req, config.webhook_secret.as_deref(), &queue),
         Err(e) => (400, e.to_string()),
     };
+    let auth = if status == 401 && ctype == "application/json" {
+        "WWW-Authenticate: Bearer\r\n"
+    } else {
+        ""
+    };
     let resp = format!(
-        "HTTP/1.1 {status} {}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        "HTTP/1.1 {status} {}\r\nContent-Type: {ctype}\r\n{auth}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
         reason(status),
         body.len()
     );
@@ -262,15 +285,16 @@ async fn serve_conn(
 /// Accept connections forever, enqueueing scans onto `queue`.
 pub async fn serve(
     listener: TcpListener,
-    secret: Option<String>,
+    config: ServeConfig,
     queue: mpsc::UnboundedSender<ScanRequest>,
 ) -> Result<()> {
+    let config = Arc::new(config);
     loop {
         let (stream, _) = listener.accept().await?;
-        let secret = secret.clone();
+        let config = config.clone();
         let queue = queue.clone();
         tokio::spawn(async move {
-            if let Err(e) = serve_conn(stream, secret, queue).await {
+            if let Err(e) = serve_conn(stream, config, queue).await {
                 log::warn!("webhook connection error: {e}");
             }
         });
@@ -302,24 +326,31 @@ pub async fn run_worker(mut queue: mpsc::UnboundedReceiver<ScanRequest>) -> Resu
     Ok(())
 }
 
-/// Run the webhook server and scan worker until either stops.
-pub async fn run_serve_command(addr: &str) -> Result<()> {
+/// Run the webhook + API server and scan worker until either stops.
+///
+/// A non-loopback `host` is refused unless `token` is set.
+pub async fn run_serve_command(host: &str, port: u16, token: Option<String>) -> Result<()> {
+    let token = token.filter(|t| !t.is_empty());
+    crate::api::check_bind(host, token.as_deref())?;
     let secret = std::env::var("GITHUB_WEBHOOK_SECRET")
         .ok()
         .filter(|s| !s.is_empty());
     if secret.is_none() {
         eprintln!("warning: GITHUB_WEBHOOK_SECRET is unset; webhook signatures are not verified");
     }
-    let listener = TcpListener::bind(addr)
+    let listener = TcpListener::bind((host, port))
         .await
-        .with_context(|| format!("failed to bind {addr}"))?;
-    eprintln!(
-        "Listening on http://{}{WEBHOOK_PATH}",
-        listener.local_addr()?
-    );
+        .with_context(|| format!("failed to bind {host}:{port}"))?;
+    let local = listener.local_addr()?;
+    eprintln!("Listening on http://{local}{WEBHOOK_PATH} and http://{local}/api/");
+    let config = ServeConfig {
+        webhook_secret: secret,
+        api_token: token,
+        cache_base: crate::cli::commands::common::cache_base(),
+    };
     let (tx, rx) = mpsc::unbounded_channel();
     tokio::select! {
-        r = serve(listener, secret, tx) => r,
+        r = serve(listener, config, tx) => r,
         r = run_worker(rx) => r,
     }
 }

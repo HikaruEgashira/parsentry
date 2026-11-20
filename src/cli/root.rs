@@ -62,7 +62,9 @@ impl RootCommand {
                 }
                 Ok(())
             }
-            Commands::Serve { addr } => crate::webhook::run_serve_command(&addr).await,
+            Commands::Serve { host, port, token } => {
+                crate::webhook::run_serve_command(&host, port, token).await
+            }
             Commands::Log {
                 target,
                 follow,
