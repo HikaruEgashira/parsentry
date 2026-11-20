@@ -758,6 +758,12 @@ mod tests {
     }
 
     #[test]
+    fn test_default_result_properties_serializes_to_empty_object() {
+        let json = serde_json::to_string(&SarifResultProperties::default()).unwrap();
+        assert_eq!(json, "{}");
+    }
+
+    #[test]
     fn test_sarif_serialization() {
         let summary = AnalysisSummary::new();
         let sarif = SarifReport::from_analysis_summary(&summary, "0.9.2");
