@@ -187,4 +187,17 @@ pub enum Commands {
         #[arg(short, long, default_value = "7878")]
         port: u16,
     },
+    /// Serve a local triage UI that writes SARIF suppressions back to merged.sarif.json
+    ///
+    /// Always binds to 127.0.0.1. Suppressions are carried over by
+    /// fingerprint when the next scan regenerates the merged report.
+    Triage {
+        /// Target whose merged report to triage: local path, owner/repo, URL, IP, or domain
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Port to listen on
+        #[arg(short, long, default_value = "7879")]
+        port: u16,
+    },
 }
