@@ -37,6 +37,7 @@ use super::common::{
     build_threat_model_cli_prompt, cache_base, cache_dir_for, is_network_target, locate_repository,
     repo_name_from_target, write_stdout,
 };
+use super::events::{ScanEvent, append_event};
 use super::report::{render_pdf, render_report_markdown};
 
 /// Printed to stderr when stdout is piped (e.g. `parsentry scan | claude -p`).
@@ -228,6 +229,13 @@ pub async fn run_scan_command(
     std::fs::create_dir_all(&layout.root)?;
     let model_input_key = hex_sha256(&repo_metadata.to_prompt_context());
     reconcile_model_key(&layout, &model_input_key)?;
+    append_event(
+        &layout.root,
+        &ScanEvent::ScanStarted {
+            total_files: repo_metadata.total_files,
+            languages: repo_metadata.languages.len(),
+        },
+    )?;
 
     if let Some(env_path) = env {
         let dest = super::env_manifest::install_env_manifest(
@@ -261,6 +269,7 @@ pub async fn run_scan_command(
             let mut prompt = model_prompt(&layout, &repo_metadata);
             prompt.push_str(&continuation);
             write_stdout(&prompt)?;
+            append_event(&layout.root, &ScanEvent::ModelPrompted)?;
             printer.success(
                 "Prompt",
                 &format!(
@@ -291,6 +300,13 @@ pub async fn run_scan_command(
                     model.total_surfaces()
                 ),
             );
+            append_event(
+                &layout.root,
+                &ScanEvent::SurfacesPending {
+                    pending: pending.len(),
+                    cached,
+                },
+            )?;
             let reports_dir = layout.reports();
             printer.section("Prompts");
             for sp in &pending {
@@ -429,6 +445,12 @@ fn drive_runtime(
                 let model =
                     validate_model(&runtime.run_model(&model_prompt(layout, repo_metadata))?)?;
                 std::fs::write(layout.model(), serde_json::to_string_pretty(&model)?)?;
+                append_event(
+                    &layout.root,
+                    &ScanEvent::ModelWritten {
+                        surfaces: model.total_surfaces(),
+                    },
+                )?;
                 printer.success(
                     "Model",
                     &format!(
@@ -445,6 +467,13 @@ fn drive_runtime(
                     "Phase",
                     &format!("surfaces ({} pending, {cached} cached)", pending.len()),
                 );
+                append_event(
+                    &layout.root,
+                    &ScanEvent::SurfacesPending {
+                        pending: pending.len(),
+                        cached,
+                    },
+                )?;
                 let reports_dir = layout.reports();
                 for sp in &pending {
                     let (_, prompt) = prepare_surface(&reports_dir, sp)?;
@@ -458,6 +487,12 @@ fn drive_runtime(
                     )?;
                     let sarif_path = reports_dir.join(&sp.surface_id).join("result.sarif.json");
                     std::fs::write(&sarif_path, sarif)?;
+                    append_event(
+                        &layout.root,
+                        &ScanEvent::SurfaceCompleted {
+                            surface_id: sp.surface_id.clone(),
+                        },
+                    )?;
                     printer.bullet(&format!("{} → {}", sp.surface_id, sarif_path.display()));
                 }
             }
@@ -511,6 +546,7 @@ fn run_report_phase(
             .count()
     };
     let findings = count(None) - count(Some("absent"));
+    append_event(&layout.root, &ScanEvent::ReportWritten { findings })?;
     printer.success(
         "Merged",
         &format!("{findings} findings → {}", layout.merged().display()),

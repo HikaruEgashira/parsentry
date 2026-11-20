@@ -1,5 +1,6 @@
 pub mod common;
 pub mod env_manifest;
+pub mod events;
 pub mod log;
 pub mod report;
 pub mod scan;
