@@ -96,6 +96,9 @@ impl RootCommand {
                 .await
             }
             Commands::Web { target, host, port } => run_web_command(&target, &host, port).await,
+            Commands::Triage { target, port } => {
+                crate::cli::commands::triage::run_triage_command(&target, port)
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ pub mod finding;
 pub mod log;
 pub mod report;
 pub mod scan;
+pub mod triage;
 pub mod verify;
 pub mod web;
 

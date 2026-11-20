@@ -34,7 +34,7 @@ use crate::runtime::{AgentRuntime, SidecarRuntime};
 
 use parsentry_core::{RepoMetadata, ThreatModel};
 use parsentry_reports::accept::ACCEPTED_MARKER;
-use parsentry_reports::{SarifReport, merge_sarif_files};
+use parsentry_reports::{SarifReport, carry_suppressions, merge_sarif_files};
 use sha2::{Digest, Sha256};
 
 use super::common::{
@@ -633,12 +633,19 @@ fn run_report_phase(
         },
     );
 
+    // Triage decisions recorded on the last merged report survive the rescan.
+    let triaged = std::fs::read_to_string(layout.merged())
+        .ok()
+        .and_then(|s| serde_json::from_str::<SarifReport>(&s).ok());
     // Never leave a stale merged report behind if the merge fails.
     std::fs::remove_file(layout.merged()).ok();
     if files.is_empty() {
         printer.warning("Report", "threat model has no analyzable surfaces");
     }
-    let merged = merge_sarif_files(&files, baseline)?;
+    let mut merged = merge_sarif_files(&files, baseline)?;
+    if let Some(triaged) = &triaged {
+        carry_suppressions(triaged, &mut merged);
+    }
 
     let tmp = layout.root.join("merged.sarif.json.tmp");
     std::fs::write(&tmp, serde_json::to_string_pretty(&merged)?)
@@ -1071,5 +1078,40 @@ mod tests {
         run_report_phase(&layout, &model, None, &printer).unwrap();
         let md = std::fs::read_to_string(layout.report_md()).unwrap();
         assert!(!md.contains("## Unverified"));
+    }
+
+    #[test]
+    fn suppression_survives_rescan() {
+        let (_repo, _c, layout) = setup();
+        let model: ThreatModel = serde_json::from_str(&model_json(&["a"])).unwrap();
+        let dir = layout.reports().join("a");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("result.sarif.json"), sarif_with("error", None)).unwrap();
+        std::fs::write(dir.join(ACCEPTED_MARKER), "").unwrap();
+        let printer = StatusPrinter::with_service("t");
+        let load = || -> SarifReport {
+            serde_json::from_str(&std::fs::read_to_string(layout.merged()).unwrap()).unwrap()
+        };
+
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let mut merged = load();
+        assert!(merged.runs[0].results[0].suppressions.is_none());
+        let fp = merged.runs[0].results[0].fingerprints.as_ref().unwrap()["parsentry/v1"].clone();
+        assert_eq!(
+            parsentry_reports::suppress_result(&mut merged, &fp, "fp"),
+            1
+        );
+        std::fs::write(layout.merged(), serde_json::to_string(&merged).unwrap()).unwrap();
+
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let rescanned = load();
+        let result = &rescanned.runs[0].results[0];
+        assert!(parsentry_reports::is_suppressed(result));
+        assert_eq!(
+            result.suppressions.as_ref().unwrap()[0]
+                .justification
+                .as_deref(),
+            Some("fp")
+        );
     }
 }
