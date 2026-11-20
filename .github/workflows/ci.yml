@@ -140,8 +140,8 @@ jobs:
 
       - name: Build
         timeout-minutes: 15
-        run: cargo build
+        run: cargo build --locked
 
       - name: Run tests
         timeout-minutes: 10
-        run: cargo test --workspace
+        run: cargo test --locked --workspace
