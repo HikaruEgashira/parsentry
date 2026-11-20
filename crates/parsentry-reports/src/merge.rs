@@ -60,6 +60,9 @@ fn ensure_fingerprint(result: &mut SarifResult) {
 
 /// Merge all `*.sarif.json` files in `dir` into a single [`SarifReport`].
 ///
+/// Surface subdirectories are only merged once they carry the
+/// [`ACCEPTED_MARKER`](crate::accept::ACCEPTED_MARKER); unaccepted surfaces are gated out.
+///
 /// When `baseline` is provided:
 /// - Results matched by fingerprint inherit suppressions from the baseline.
 /// - Each result is annotated with `baselineState`:
@@ -77,7 +80,7 @@ pub fn merge_sarif_dir(dir: &Path, baseline: Option<&Path>) -> Result<SarifRepor
             let path = e.path();
             if path.is_dir() {
                 let candidate = path.join("result.sarif.json");
-                if candidate.exists() {
+                if candidate.exists() && path.join(crate::accept::ACCEPTED_MARKER).exists() {
                     vec![candidate]
                 } else {
                     vec![]
@@ -474,6 +477,28 @@ mod tests {
         let merged = merge_sarif_dir(tmp.path(), None).unwrap();
         // Same ruleId + URI = same fingerprint = deduplicated
         assert_eq!(merged.runs[0].results.len(), 1);
+    }
+
+    #[test]
+    fn skips_surface_dirs_without_accepted_marker() {
+        let tmp = TempDir::new().unwrap();
+        for (id, rule) in [("S-1", "SQLI"), ("S-2", "XSS")] {
+            let dir = tmp.path().join(id);
+            std::fs::create_dir_all(&dir).unwrap();
+            write_sarif(&dir, "result.sarif.json", &minimal_sarif(rule, "a.py", "m"));
+        }
+        // Neither surface accepted yet: nothing to merge.
+        assert!(merge_sarif_dir(tmp.path(), None).is_err());
+
+        std::fs::write(
+            tmp.path().join("S-2").join(crate::accept::ACCEPTED_MARKER),
+            "",
+        )
+        .unwrap();
+        let merged = merge_sarif_dir(tmp.path(), None).unwrap();
+        let results = &merged.runs[0].results;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].rule_id, "XSS");
     }
 
     #[test]

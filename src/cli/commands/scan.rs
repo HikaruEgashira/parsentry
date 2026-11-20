@@ -30,6 +30,7 @@ use crate::prompt::{
 use crate::runtime::{AgentRuntime, SidecarRuntime};
 
 use parsentry_core::{RepoMetadata, ThreatModel};
+use parsentry_reports::accept::ACCEPTED_MARKER;
 use parsentry_reports::{SarifReport, merge_sarif_files};
 use sha2::{Digest, Sha256};
 
@@ -189,13 +190,16 @@ fn snapshot_previous(layout: &CacheLayout) -> Result<()> {
     Ok(())
 }
 
-/// SARIF files of surfaces in the current model. Results of surfaces that
-/// the model no longer contains are deliberately excluded.
+/// SARIF files of accepted surfaces in the current model. Results of surfaces
+/// that the model no longer contains, or that lack an `.accepted` marker, are
+/// deliberately excluded.
 pub fn current_sarif_files(reports_dir: &Path, model: &ThreatModel) -> Vec<PathBuf> {
     model
         .surfaces
         .iter()
-        .map(|s| reports_dir.join(&s.id).join("result.sarif.json"))
+        .map(|s| reports_dir.join(&s.id))
+        .filter(|d| d.join(ACCEPTED_MARKER).exists())
+        .map(|d| d.join("result.sarif.json"))
         .filter(|p| p.exists())
         .collect()
 }
@@ -390,6 +394,8 @@ fn prepare_surface(reports_dir: &Path, sp: &SurfacePrompt) -> Result<(PathBuf, S
     // Drop stale results so a failed worker cannot leave an old
     // SARIF that looks current.
     std::fs::remove_file(&sarif_path).ok();
+    // A re-queued surface must be accepted again before it is merged.
+    std::fs::remove_file(surface_dir.join(ACCEPTED_MARKER)).ok();
     let prompt_path = surface_dir.join("prompt.md");
     let full_prompt = format!(
         "{}\n\nWrite the SARIF JSON output to: {}\n\
@@ -492,6 +498,8 @@ fn drive_runtime(
                     )?;
                     let sarif_path = reports_dir.join(&sp.surface_id).join("result.sarif.json");
                     std::fs::write(&sarif_path, sarif)?;
+                    // The runtime output passed validation and verification.
+                    std::fs::write(reports_dir.join(&sp.surface_id).join(ACCEPTED_MARKER), "")?;
                     append_event(
                         &layout.root,
                         &ScanEvent::SurfaceCompleted {
@@ -754,9 +762,37 @@ mod tests {
             let dir = layout.reports().join(id);
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join("result.sarif.json"), VALID_SARIF).unwrap();
+            std::fs::write(dir.join(ACCEPTED_MARKER), "").unwrap();
         }
         let files = current_sarif_files(&layout.reports(), &model);
         assert_eq!(files, vec![layout.reports().join("S-1/result.sarif.json")]);
+    }
+
+    #[test]
+    fn report_ignores_surfaces_without_accepted_marker() {
+        let (_repo, _c, layout) = setup();
+        let model: ThreatModel = serde_json::from_str(&model_json(&["S-1", "S-2"])).unwrap();
+        for id in ["S-1", "S-2"] {
+            let dir = layout.reports().join(id);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("result.sarif.json"), VALID_SARIF).unwrap();
+        }
+        std::fs::write(layout.reports().join("S-2").join(ACCEPTED_MARKER), "").unwrap();
+        let files = current_sarif_files(&layout.reports(), &model);
+        assert_eq!(files, vec![layout.reports().join("S-2/result.sarif.json")]);
+    }
+
+    #[test]
+    fn requeue_drops_stale_accepted_marker() {
+        let (repo, _c, _layout) = setup();
+        let reports = TempDir::new().unwrap();
+        let model: ThreatModel = serde_json::from_str(&model_json(&["S-1"])).unwrap();
+        let sp = &build_all_surface_prompts(&model, repo.path())[0];
+        let dir = reports.path().join(&sp.surface_id);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(ACCEPTED_MARKER), "").unwrap();
+        prepare_surface(reports.path(), sp).unwrap();
+        assert!(!dir.join(ACCEPTED_MARKER).exists());
     }
 
     struct MockRuntime {
