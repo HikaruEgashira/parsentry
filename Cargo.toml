@@ -7,7 +7,7 @@ default-run = "parsentry"
 description = "Security prompt orchestrator for CLI agents"
 license = "AGPL-3.0"
 repository = "https://github.com/HikaruEgashira/parsentry"
-exclude = ["tools/", "packaging/", "docs/", "benchmarks/", "tests/snapshots/"]
+exclude = ["tools/agent-runtime/", "tools/pdf-report/", "tools/sync-versions.sh", "tools/web/node_modules/", "tools/web/scripts/", "tools/web/package.json", "packaging/", "docs/", "benchmarks/", "tests/snapshots/"]
 
 
 [features]
@@ -39,6 +39,7 @@ octocrab = "0.48"
 reqwest = { version = "0.13", features = ["json"] }
 urlencoding = "2.1"
 sha2 = "0.10"
+rust-embed = "8"
 
 [dev-dependencies]
 insta = { version = "1.42.0", features = ["yaml"] }
