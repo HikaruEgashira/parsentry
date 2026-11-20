@@ -11,7 +11,9 @@ Parsentry is a security prompt orchestrator. It analyzes repository structure, e
 ```
 model   : model.json が無い / 不正 / model.key ≠ RepoMetadata のハッシュ → 脅威モデルプロンプト出力
 surface : .cache_key 不一致 or SARIF 不正の surface がある → surface プロンプト + orchestrator 出力
-report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統合 → merged.sarif.json + report.md (+ -o で PDF)
+verify  : 全 surface 完了 かつ env.yaml が存在・妥当 かつ warning/error で indeterminate (verdict 無しを含む) の finding がある
+          かつ .verified_key ≠ verify key (surface cache key 群 + manifest のハッシュ) → 動的検証プロンプト出力 + .verified_key 書き込み
+report  : 全 surface 完了 (verify 不要) → 現行モデルの surface の SARIF のみ統合 → merged.sarif.json + report.md (+ -o で PDF)
 ```
 
 モード (フラグではなく状態で決まる):
@@ -24,7 +26,9 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 - `model.json` — 脅威モデル（外部agentが書き込み）
 - `model.key` / `model.pending_key` — model.json の入力 (RepoMetadata) ハッシュ
 - `previous/model.json`, `previous/merged.sarif.json` — モデル差分の比較元
-- `merged.sarif.json`, `report.md` — report フェーズの出力
+- `merged.sarif.json`, `report.md` — report フェーズの出力 (env.yaml 無しなら report.md 末尾に "Unverified" 注記)
+- `env.yaml` — `scan --env` で検証・コピーされた環境 manifest (verify フェーズの前提)
+- `.verified_key` — 最後に動的検証プロンプトを出した verify key
 - `reports/<surface_id>/prompt.md` — surface分析プロンプト
 - `reports/<surface_id>/result.sarif.json` — 分析結果（外部agentが書き込み）
 
@@ -38,7 +42,7 @@ report  : 全 surface 完了 → 現行モデルの surface の SARIF のみ統�
 ### CLI Commands
 
 ```
-parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → report)
+parsentry scan [TARGET] [-o PDF]          # 状態から次フェーズを実行 (model → surface → verify → report)
 parsentry scan --runtime claude [TARGET]  # sidecar (PARSENTRY_AGENT_RUNTIME / parsentry-agent-runtime) を JSON-RPC stdio で駆動し全フェーズ実行 (src/runtime.rs)
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry verify [TARGET] --image IMG -- CMD  # labelled Docker sandbox (src/sandbox.rs, PARSENTRY_DOCKER で docker を上書き) (hidden command)

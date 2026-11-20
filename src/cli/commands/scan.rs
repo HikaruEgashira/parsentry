@@ -7,7 +7,10 @@
 //!    metadata that has since changed. Emits the threat model prompt.
 //! 2. **Surfaces** — some surfaces of the current model have no valid,
 //!    up-to-date SARIF result. Emits per-surface prompts + orchestrator.
-//! 3. **Report** — every surface is done. Merges SARIF and writes the report.
+//! 3. **Verify** — every surface is done, an env manifest (`env.yaml`) is
+//!    present, and warning/error findings are still indeterminate. Emits a
+//!    dynamic-verification prompt once per verify key (`.verified_key`).
+//! 4. **Report** — every surface is done. Merges SARIF and writes the report.
 //!
 //! Every emitted prompt ends with an instruction to re-run `parsentry scan`,
 //! so an agent runtime re-running it drives the pipeline to completion.
@@ -84,6 +87,13 @@ impl CacheLayout {
     fn report_md(&self) -> PathBuf {
         self.root.join("report.md")
     }
+    fn env_manifest(&self) -> PathBuf {
+        self.root.join(super::env_manifest::ENV_MANIFEST_FILE)
+    }
+    /// Verify key of the last emitted dynamic-verification prompt.
+    fn verified_key(&self) -> PathBuf {
+        self.root.join(".verified_key")
+    }
 }
 
 /// Why the threat model has to be (re)generated.
@@ -103,9 +113,76 @@ enum Phase {
         pending: Vec<SurfacePrompt>,
         cached: usize,
     },
+    Verify {
+        model: ThreatModel,
+        key: String,
+    },
     Report {
         model: ThreatModel,
     },
+}
+
+/// Appended to report.md when no env manifest allowed dynamic verification.
+const UNVERIFIED_NOTE: &str = "\n## Unverified\n\n\
+No environment manifest (`scan --env`) was provided, so findings were not dynamically verified. \
+Indeterminate findings are static-analysis claims only.\n";
+
+/// Whether a SARIF result is a warning/error whose verdict is indeterminate
+/// (a missing verdict counts).
+fn needs_verification(result: &parsentry_reports::SarifResult) -> bool {
+    matches!(result.level.as_str(), "warning" | "error")
+        && result
+            .properties
+            .as_ref()
+            .and_then(|p| p.verdict)
+            .unwrap_or_default()
+            == parsentry_reports::Verdict::Indeterminate
+}
+
+/// Verify key for the current surfaces when a dynamic-verification pass is
+/// due: requires a valid `env.yaml` and at least one indeterminate
+/// warning/error finding. Returns `None` when there is nothing to verify.
+fn pending_verify_key(layout: &CacheLayout, surfaces: &[SurfacePrompt]) -> Option<String> {
+    let manifest = std::fs::read_to_string(layout.env_manifest()).ok()?;
+    super::env_manifest::EnvManifest::parse(&manifest).ok()?;
+    let reports_dir = layout.reports();
+    let has_indeterminate = surfaces.iter().any(|sp| {
+        std::fs::read_to_string(reports_dir.join(&sp.surface_id).join("result.sarif.json"))
+            .ok()
+            .and_then(|s| serde_json::from_str::<SarifReport>(&s).ok())
+            .is_some_and(|r| {
+                r.runs
+                    .iter()
+                    .flat_map(|run| &run.results)
+                    .any(needs_verification)
+            })
+    });
+    if !has_indeterminate {
+        return None;
+    }
+    let mut input = String::new();
+    for sp in surfaces {
+        input.push_str(&format!("{}={}\n", sp.surface_id, sp.cache_key));
+    }
+    input.push_str(&manifest);
+    let key = hex_sha256(&input);
+    let stored = std::fs::read_to_string(layout.verified_key()).unwrap_or_default();
+    (stored.trim() != key).then_some(key)
+}
+
+fn verify_prompt(layout: &CacheLayout) -> String {
+    format!(
+        "# Dynamic verification\n\n\
+         Launch the target application as described in the environment manifest {} and \
+         dynamically verify every warning/error finding whose verdict is `indeterminate` \
+         in {}/<surface_id>/result.sarif.json.\n\n\
+         For each finding, attempt a proof of concept against the running application. \
+         Set `verdict` to `confirmed` with `evidence_kind: dynamic_poc` when it reproduces, \
+         or `ruled_out` when it demonstrably does not; leave it `indeterminate` otherwise. \
+         Never print credential values referenced by `auth_env`.\n",
+        layout.env_manifest().display(),
+        layout.reports().display(),
+    )
 }
 
 fn hex_sha256(data: &str) -> String {
@@ -164,7 +241,10 @@ fn determine_phase(layout: &CacheLayout, root_dir: &Path, current_key: &str) -> 
         .into_iter()
         .partition(|sp| is_cached(&layout.reports(), sp));
     if pending.is_empty() {
-        Phase::Report { model }
+        match pending_verify_key(layout, &cached) {
+            Some(key) => Phase::Verify { model, key },
+            None => Phase::Report { model },
+        }
     } else {
         Phase::Surfaces {
             model,
@@ -334,6 +414,20 @@ pub async fn run_scan_command(
             printer.bullet(&format!("orchestrator → {}", orchestrator_path.display()));
             write_stdout(&format!("{}\n", orchestrator))?;
         }
+        Phase::Verify { model, key } => {
+            printer.status(
+                "Phase",
+                &format!(
+                    "verify (dynamic verification of {} surfaces)",
+                    model.total_surfaces()
+                ),
+            );
+            std::fs::write(layout.verified_key(), &key)?;
+            let mut prompt = verify_prompt(&layout);
+            prompt.push_str(&continuation);
+            write_stdout(&prompt)?;
+            printer.success("Prompt", "dynamic verification prompt emitted");
+        }
         Phase::Report { model } => {
             run_report_phase(&layout, &model, output, &printer)?;
             crate::sandbox::sweep_if_available(&sandbox_key);
@@ -446,8 +540,8 @@ fn drive_runtime(
     output: Option<&str>,
     printer: &StatusPrinter,
 ) -> Result<()> {
-    // model → surfaces → report, plus one retry for an invalidated model.
-    for _ in 0..4 {
+    // model → surfaces → verify → report, plus one retry for an invalidated model.
+    for _ in 0..5 {
         reconcile_model_key(layout, model_input_key)?;
         match determine_phase(layout, root_dir, model_input_key) {
             Phase::Model(reason) => {
@@ -509,6 +603,12 @@ fn drive_runtime(
                     printer.bullet(&format!("{} → {}", sp.surface_id, sarif_path.display()));
                 }
             }
+            Phase::Verify { key, .. } => {
+                // The sidecar verifies findings per surface; record the key
+                // so the loop proceeds to the report.
+                printer.status("Phase", "verify (handled by runtime verification)");
+                std::fs::write(layout.verified_key(), &key)?;
+            }
             Phase::Report { model } => return run_report_phase(layout, &model, output, printer),
         }
     }
@@ -544,11 +644,11 @@ fn run_report_phase(
     std::fs::write(&tmp, serde_json::to_string_pretty(&merged)?)
         .context("failed to write merged.sarif.json")?;
     std::fs::rename(&tmp, layout.merged())?;
-    std::fs::write(
-        layout.report_md(),
-        render_report_markdown(&merged, baseline.is_some()),
-    )
-    .context("failed to write report.md")?;
+    let mut report_md = render_report_markdown(&merged, baseline.is_some());
+    if !layout.env_manifest().exists() {
+        report_md.push_str(UNVERIFIED_NOTE);
+    }
+    std::fs::write(layout.report_md(), report_md).context("failed to write report.md")?;
 
     let count = |state: Option<&str>| {
         merged
@@ -868,5 +968,108 @@ mod tests {
         assert!(validate_model(&model_json(&["S-1"])).is_ok());
         assert!(validate_sarif("S-1", "{oops").is_err());
         assert!(validate_sarif("S-1", VALID_SARIF).is_ok());
+    }
+
+    const MANIFEST: &str = "base_url: http://localhost:8080\ncommand: ./run.sh\n";
+
+    fn sarif_with(level: &str, verdict: Option<&str>) -> String {
+        let props = verdict
+            .map(|v| format!(r#","properties":{{"verdict":"{v}"}}"#))
+            .unwrap_or_default();
+        format!(
+            r#"{{"$schema":"s","version":"2.1.0","runs":[{{"tool":{{"driver":{{"name":"t","version":"1"}}}},"results":[{{"ruleId":"r","level":"{level}","message":{{"text":"m"}},"locations":[]{props}}}]}}]}}"#
+        )
+    }
+
+    /// Completed single-surface cache whose SARIF is `sarif`.
+    fn verify_setup(sarif: &str, manifest: bool) -> (TempDir, TempDir, CacheLayout) {
+        let (repo, cache, layout) = setup();
+        std::fs::write(layout.model(), model_json(&["a"])).unwrap();
+        reconcile_model_key(&layout, "k").unwrap();
+        complete_surfaces(&layout, repo.path());
+        std::fs::write(layout.reports().join("a").join("result.sarif.json"), sarif).unwrap();
+        if manifest {
+            std::fs::write(layout.env_manifest(), MANIFEST).unwrap();
+        }
+        (repo, cache, layout)
+    }
+
+    fn phase(layout: &CacheLayout, repo: &Path) -> Phase {
+        determine_phase(layout, repo, "k")
+    }
+
+    #[test]
+    fn verify_skipped_without_manifest() {
+        let (repo, _c, layout) = verify_setup(&sarif_with("error", None), false);
+        assert!(matches!(phase(&layout, repo.path()), Phase::Report { .. }));
+    }
+
+    #[test]
+    fn verify_runs_for_indeterminate_warning_then_report() {
+        let (repo, _c, layout) = verify_setup(&sarif_with("warning", Some("indeterminate")), true);
+        let Phase::Verify { key, .. } = phase(&layout, repo.path()) else {
+            panic!("expected verify");
+        };
+        std::fs::write(layout.verified_key(), &key).unwrap();
+        assert!(matches!(phase(&layout, repo.path()), Phase::Report { .. }));
+    }
+
+    #[test]
+    fn verify_reruns_when_manifest_changes() {
+        let (repo, _c, layout) = verify_setup(&sarif_with("error", None), true);
+        let Phase::Verify { key, .. } = phase(&layout, repo.path()) else {
+            panic!("expected verify");
+        };
+        std::fs::write(layout.verified_key(), &key).unwrap();
+        std::fs::write(
+            layout.env_manifest(),
+            "base_url: http://localhost:9090\ncommand: ./run.sh\n",
+        )
+        .unwrap();
+        assert!(matches!(phase(&layout, repo.path()), Phase::Verify { .. }));
+    }
+
+    #[test]
+    fn verify_ignores_invalid_manifest() {
+        let (repo, _c, layout) = verify_setup(&sarif_with("error", None), true);
+        std::fs::write(layout.env_manifest(), "base_url: ''\n").unwrap();
+        assert!(matches!(phase(&layout, repo.path()), Phase::Report { .. }));
+    }
+
+    #[test]
+    fn verify_skipped_for_note_level_only() {
+        let (repo, _c, layout) = verify_setup(&sarif_with("note", None), true);
+        assert!(matches!(phase(&layout, repo.path()), Phase::Report { .. }));
+    }
+
+    #[test]
+    fn verify_skipped_for_decided_verdicts() {
+        for verdict in ["confirmed", "ruled_out"] {
+            let (repo, _c, layout) = verify_setup(&sarif_with("error", Some(verdict)), true);
+            assert!(matches!(phase(&layout, repo.path()), Phase::Report { .. }));
+        }
+    }
+
+    #[test]
+    fn verify_skipped_without_findings() {
+        let (repo, _c, layout) = verify_setup(VALID_SARIF, true);
+        assert!(matches!(phase(&layout, repo.path()), Phase::Report { .. }));
+    }
+
+    #[test]
+    fn report_without_manifest_has_unverified_note() {
+        let (_repo, _c, layout) = setup();
+        std::fs::write(layout.model(), model_json(&[])).unwrap();
+        let model: ThreatModel =
+            serde_json::from_str(&std::fs::read_to_string(layout.model()).unwrap()).unwrap();
+        let printer = StatusPrinter::with_service("t");
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let md = std::fs::read_to_string(layout.report_md()).unwrap();
+        assert!(md.trim_end().ends_with(UNVERIFIED_NOTE.trim_end()));
+
+        std::fs::write(layout.env_manifest(), MANIFEST).unwrap();
+        run_report_phase(&layout, &model, None, &printer).unwrap();
+        let md = std::fs::read_to_string(layout.report_md()).unwrap();
+        assert!(!md.contains("## Unverified"));
     }
 }
