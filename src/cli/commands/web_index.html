@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Parsentry</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #222; }
+  h1 { font-size: 1.3rem; } h2 { font-size: 1.1rem; margin-top: 2rem; }
+  #map { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .node { border: 2px solid #bbb; border-radius: 8px; padding: .5rem .75rem; min-width: 10rem; }
+  .node.pending { border-color: #bbb; color: #777; }
+  .node.running { border-color: #d89a00; animation: pulse 1.2s infinite; }
+  .node.complete { border-color: #2a8a3a; }
+  .node .id { font-weight: 600; } .node .st { font-size: .8rem; }
+  @keyframes pulse { 50% { background: #fff6dd; } }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #ddd; padding: .35rem .5rem; text-align: left; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  #status { color: #666; font-size: .9rem; }
+</style>
+</head>
+<body>
+<h1>Parsentry — <span id="target"></span></h1>
+<div id="status">connecting…</div>
+
+<h2>Agent map</h2>
+<div id="map"></div>
+
+<h2>Threat model</h2>
+<p id="summary"></p>
+<table>
+  <thead><tr><th>Surface</th><th>Kind</th><th>Identifier</th><th>Status</th>
+    <th>Confirmed</th><th>Ruled out</th><th>Indeterminate</th></tr></thead>
+  <tbody id="surfaces"></tbody>
+</table>
+
+<script>
+function el(tag, attrs, text) {
+  const e = document.createElement(tag);
+  Object.assign(e, attrs || {});
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function render(s) {
+  document.getElementById('target').textContent = s.target;
+  const done = s.surfaces.filter(x => x.status === 'complete').length;
+  document.getElementById('status').textContent =
+    'phase: ' + s.phase + ' — ' + done + '/' + s.surfaces.length + ' surfaces complete';
+  document.getElementById('summary').textContent =
+    s.app_type ? s.app_type + ': ' + s.summary : 'Threat model not generated yet.';
+  const map = document.getElementById('map');
+  map.replaceChildren(...s.surfaces.map(x => {
+    const n = el('div', { className: 'node ' + x.status, title: x.description });
+    n.append(el('div', { className: 'id' }, x.id), el('div', {}, x.identifier),
+             el('div', { className: 'st' }, x.status));
+    return n;
+  }));
+  const body = document.getElementById('surfaces');
+  body.replaceChildren(...s.surfaces.map(x => {
+    const tr = el('tr');
+    tr.append(el('td', {}, x.id), el('td', {}, x.kind), el('td', {}, x.identifier),
+              el('td', {}, x.status),
+              el('td', { className: 'n' }, x.verdicts.confirmed),
+              el('td', { className: 'n' }, x.verdicts.ruled_out),
+              el('td', { className: 'n' }, x.verdicts.indeterminate));
+    return tr;
+  }));
+}
+const es = new EventSource('/events');
+es.addEventListener('state', e => render(JSON.parse(e.data)));
+es.onerror = () => { document.getElementById('status').textContent = 'disconnected, retrying…'; };
+</script>
+</body>
+</html>

@@ -118,4 +118,18 @@ pub enum Commands {
         #[arg(long)]
         no_color: bool,
     },
+    /// Serve a local web UI with a live agent map and threat model view
+    Web {
+        /// Target whose scan to display: local path, owner/repo, URL, IP, or domain
+        #[arg(default_value = ".")]
+        target: String,
+
+        /// Address to bind
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+
+        /// Port to listen on
+        #[arg(short, long, default_value = "7878")]
+        port: u16,
+    },
 }
