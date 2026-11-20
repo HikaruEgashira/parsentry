@@ -227,6 +227,8 @@ pub async fn run_scan_command(
 
     let layout = CacheLayout::new(cache_dir_for(target));
     std::fs::create_dir_all(&layout.root)?;
+    let sandbox_key = crate::sandbox::label_key(&layout.root);
+    crate::sandbox::sweep_if_available(&sandbox_key);
     let model_input_key = hex_sha256(&repo_metadata.to_prompt_context());
     reconcile_model_key(&layout, &model_input_key)?;
     append_event(
@@ -247,7 +249,7 @@ pub async fn run_scan_command(
 
     if runtime == RuntimeKind::Claude {
         let mut sidecar = SidecarRuntime::from_env()?;
-        return drive_runtime(
+        let result = drive_runtime(
             &layout,
             &root_dir,
             &repo_metadata,
@@ -256,6 +258,8 @@ pub async fn run_scan_command(
             output,
             &printer,
         );
+        crate::sandbox::sweep_if_available(&sandbox_key);
+        return result;
     }
 
     let parsentry_bin = std::env::current_exe()?;
@@ -328,6 +332,7 @@ pub async fn run_scan_command(
         }
         Phase::Report { model } => {
             run_report_phase(&layout, &model, output, &printer)?;
+            crate::sandbox::sweep_if_available(&sandbox_key);
         }
     }
     Ok(())

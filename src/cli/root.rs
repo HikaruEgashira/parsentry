@@ -62,6 +62,11 @@ impl RootCommand {
                 }
                 Ok(())
             }
+            Commands::Verify {
+                target,
+                image,
+                command,
+            } => crate::cli::commands::verify::run_verify_command(&target, &image, command).await,
             Commands::Serve { host, port, token } => {
                 crate::webhook::run_serve_command(&host, port, token).await
             }
