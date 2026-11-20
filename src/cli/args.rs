@@ -93,13 +93,23 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Serve POST /webhooks/github and run incremental scans for push / pull_request events
+    /// Serve the runs/findings HTTP API and POST /webhooks/github
     ///
-    /// Set GITHUB_WEBHOOK_SECRET to verify X-Hub-Signature-256.
+    /// GET /api/runs and GET /api/findings?run=&verdict=&level=&cwe= expose
+    /// cached scans. Webhook push / pull_request events enqueue incremental
+    /// scans; set GITHUB_WEBHOOK_SECRET to verify X-Hub-Signature-256.
     Serve {
-        /// Address to listen on
-        #[arg(long, default_value = "0.0.0.0:8080")]
-        addr: String,
+        /// Address to bind (non-loopback requires --token)
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+
+        /// Port to listen on
+        #[arg(short, long, default_value = "8765")]
+        port: u16,
+
+        /// Require `Authorization: Bearer <TOKEN>` on /api/
+        #[arg(long, env = "PARSENTRY_API_TOKEN", hide_env_values = true)]
+        token: Option<String>,
     },
     /// Monitor scan progress (docker compose logs compatible)
     #[command(alias = "logs")]
