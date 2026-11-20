@@ -332,6 +332,24 @@ mod tests {
     }
 
     #[test]
+    fn accepts_confidence_at_cap() {
+        let mut v = valid();
+        v["properties"]["confidence"] = json!(STATIC_CONFIDENCE_CAP);
+        assert!(validate_finding(&v).is_ok());
+    }
+
+    #[test]
+    fn reject_reason_display() {
+        assert_eq!(
+            RejectReason::MissingRuleId.to_string(),
+            "ruleId must be a non-empty string"
+        );
+        let msg = RejectReason::ConfidenceAboveCap(0.9).to_string();
+        assert!(msg.contains("0.9"));
+        assert!(msg.contains(&STATIC_CONFIDENCE_CAP.to_string()));
+    }
+
+    #[test]
     fn rejects_invalid_confidence() {
         assert_eq!(
             reject(|v| v["properties"]["confidence"] = json!("high")),
