@@ -1809,4 +1809,29 @@ mod tests {
         assert_eq!(props.cwe, Some(VulnType::SQLI.cwe_ids()));
         assert_eq!(props.owasp, Some(VulnType::SQLI.owasp_categories()));
     }
+
+    #[test]
+    fn test_result_properties_evidence_fields_serde_round_trip() {
+        let props = SarifResultProperties {
+            verdict: Some(Verdict::RuledOut),
+            evidence_kind: Some(EvidenceKind::DynamicPoc),
+            counterevidence: Some("input is escaped before the sink".to_string()),
+            evidence_uris: Some(vec![
+                "poc/exploit.sh".to_string(),
+                "poc/run.log".to_string(),
+            ]),
+            ..Default::default()
+        };
+
+        let json = serde_json::to_value(&props).expect("serialize properties");
+        assert_eq!(json["verdict"], "ruled_out");
+        assert_eq!(json["evidence_kind"], "dynamic_poc");
+
+        let back: SarifResultProperties =
+            serde_json::from_value(json).expect("deserialize properties");
+        assert_eq!(back.verdict, props.verdict);
+        assert_eq!(back.evidence_kind, props.evidence_kind);
+        assert_eq!(back.counterevidence, props.counterevidence);
+        assert_eq!(back.evidence_uris, props.evidence_uris);
+    }
 }
