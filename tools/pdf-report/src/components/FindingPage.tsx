@@ -3,6 +3,7 @@ import { Page, View, Text, StyleSheet, Svg, Defs, Stop, Rect, LinearGradient } f
 import { colors, severityColor, severityLabel, confidenceColor } from "../theme.js";
 import type { SarifResult, SarifRule } from "../types.js";
 import type { FindingDetail } from "../markdown-parser.js";
+import { groupByVerdict } from "../verdict.js";
 
 const s = StyleSheet.create({
   page: {
@@ -149,6 +150,23 @@ const s = StyleSheet.create({
     borderRadius: 2,
   },
   // Page section header
+  unverifiedHeader: {
+    marginTop: 8,
+    marginBottom: 12,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate200,
+  },
+  unverifiedTitle: {
+    fontSize: 14,
+    fontFamily: "Helvetica-Bold",
+    color: colors.slate800,
+  },
+  unverifiedNote: {
+    fontSize: 8,
+    color: colors.slate500,
+    marginTop: 2,
+  },
   sectionHeader: {
     marginBottom: 16,
   },
@@ -342,6 +360,9 @@ export function FindingPages({
     return mdMap.get(r.ruleId.toUpperCase());
   }
 
+  // Match report.md: confirmed findings first, indeterminate ones under "Unverified".
+  const { verified, unverified } = groupByVerdict(sorted);
+
   return (
     <Page size="A4" style={s.page} wrap>
       <View style={s.sectionHeader} fixed>
@@ -358,12 +379,30 @@ export function FindingPages({
         </Svg>
       </View>
 
-      {sorted.map((r, i) => (
+      {verified.map((r, i) => (
         <FindingCard
           key={i}
           result={r}
           rule={ruleMap.get(r.ruleId)}
           index={i}
+          mdFinding={findMdFinding(r)}
+        />
+      ))}
+
+      {unverified.length > 0 && (
+        <View style={s.unverifiedHeader} minPresenceAhead={80}>
+          <Text style={s.unverifiedTitle}>Unverified</Text>
+          <Text style={s.unverifiedNote}>
+            These findings lack executed evidence and have not been confirmed.
+          </Text>
+        </View>
+      )}
+      {unverified.map((r, i) => (
+        <FindingCard
+          key={verified.length + i}
+          result={r}
+          rule={ruleMap.get(r.ruleId)}
+          index={verified.length + i}
           mdFinding={findMdFinding(r)}
         />
       ))}
