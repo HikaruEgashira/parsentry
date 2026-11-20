@@ -105,7 +105,6 @@ jobs:
           publish parsentry-core
           sleep 10
           publish parsentry-cache
-          publish parsentry-claude
           publish parsentry-parser
           publish parsentry-reports
           sleep 10

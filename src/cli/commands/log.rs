@@ -1,6 +1,7 @@
 use anyhow::Result;
 use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::collections::{HashMap, HashSet};
+use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -18,8 +19,8 @@ const SURFACE_COLORS: &[&str] = &[
     colors::BRIGHT_YELLOW,
 ];
 
-/// Interval for session discovery (heavier operation)
-const SESSION_POLL_SECS: u64 = 10;
+/// Interval for the fallback poll when filesystem events are missed
+const POLL_SECS: u64 = 10;
 
 /// List all report directories under the parsentry cache base.
 fn list_all_report_dirs() -> Vec<(String, PathBuf)> {
@@ -136,8 +137,7 @@ pub async fn run_log_command(
         );
     }
 
-    let cwd = std::env::current_dir()?;
-    let project_dir = parsentry_claude::project_sessions_dir(&cwd)?;
+    let events_file = super::events::events_path(&super::common::cache_dir_for(target));
 
     print_log(
         "parsentry",
@@ -151,10 +151,10 @@ pub async fn run_log_command(
     let mut known_surfaces: Vec<String> = Vec::new();
     let mut surface_colors_map: HashMap<String, &str> = HashMap::new();
     let mut completed: HashSet<String> = HashSet::new();
-    let mut offsets: HashMap<PathBuf, u64> = HashMap::new();
-    let mut session_jsonls: Vec<(String, PathBuf)> = Vec::new();
-    let mut last_session_count: Option<usize> = None;
+    let mut events_offset: u64 = 0;
     let mut dir_existed = output_dir.exists();
+
+    flush_scan_events(&events_file, &mut events_offset, use_colors, timestamps);
 
     // Initial discovery
     if dir_existed {
@@ -214,28 +214,15 @@ pub async fn run_log_command(
     if dir_existed {
         watcher.watch(&output_dir, RecursiveMode::NonRecursive)?;
     }
-    // Watch project sessions directory (for JSONL changes)
-    if project_dir.exists() {
-        watcher.watch(&project_dir, RecursiveMode::Recursive)?;
+    // Watch the cache root (for events.jsonl appends)
+    let mut events_dir_watched = false;
+    if let Some(parent) = events_file.parent()
+        && parent.exists()
+    {
+        events_dir_watched = watcher.watch(parent, RecursiveMode::NonRecursive).is_ok();
     }
 
-    let mut last_session_poll = Instant::now();
-    // Do initial session discovery
-    poll_sessions(
-        &project_dir,
-        &mut session_jsonls,
-        &mut last_session_count,
-        use_colors,
-        timestamps,
-    );
-    // Read initial events from already-tracked JSONL files
-    flush_jsonl_events(
-        &session_jsonls,
-        &mut offsets,
-        &surface_colors_map,
-        use_colors,
-        timestamps,
-    );
+    let mut last_poll = Instant::now();
 
     loop {
         // Check timeout
@@ -259,7 +246,7 @@ pub async fn run_log_command(
             std::process::exit(1);
         }
 
-        // Wait for fs events with a short timeout so we can do periodic session polls
+        // Wait for fs events with a short timeout so we can do periodic polls
         let recv_timeout = Duration::from_millis(500);
         let mut got_event = false;
 
@@ -284,59 +271,30 @@ pub async fn run_log_command(
                             colors::BRIGHT_GREEN,
                         );
                     }
-                    // If project dir appeared, watch it
-                    if project_dir.exists() {
-                        let _ = watcher.watch(&project_dir, RecursiveMode::Recursive);
+
+                    if !matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_)) {
+                        continue;
                     }
-
-                    // Process based on which paths changed
-                    for path in &event.paths {
-                        let is_jsonl = path.extension().and_then(|e| e.to_str()) == Some("jsonl");
-                        let is_in_output = path.starts_with(&output_dir);
-
-                        if is_jsonl
-                            && matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_))
-                        {
-                            // JSONL changed — read new events immediately
-                            if let Some((surface_id, _)) =
-                                session_jsonls.iter().find(|(_, p)| p == path)
-                            {
-                                let surface_id = surface_id.clone();
-                                let offset = offsets.get(path).copied().unwrap_or(0);
-                                if let Ok((events, new_offset)) =
-                                    parsentry_claude::read_events_from(path, offset)
-                                {
-                                    offsets.insert(path.clone(), new_offset);
-                                    let color = surface_colors_map
-                                        .get(&surface_id)
-                                        .unwrap_or(&colors::RESET);
-                                    for ev in &events {
-                                        print_event(&surface_id, ev, use_colors, timestamps, color);
-                                    }
-                                }
-                            }
-                        }
-
-                        if is_in_output
-                            && matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_))
-                        {
-                            // New file in output dir — check for new surfaces or completions
-                            discover_new_surfaces(
-                                &output_dir,
-                                &mut known_surfaces,
-                                &mut surface_colors_map,
-                                use_colors,
-                                timestamps,
-                            );
-                            check_completed_surfaces(
-                                &output_dir,
-                                &known_surfaces,
-                                &mut completed,
-                                &surface_colors_map,
-                                use_colors,
-                                timestamps,
-                            );
-                        }
+                    if event.paths.iter().any(|p| p == &events_file) {
+                        flush_scan_events(&events_file, &mut events_offset, use_colors, timestamps);
+                    }
+                    if event.paths.iter().any(|p| p.starts_with(&output_dir)) {
+                        // New file in output dir — check for new surfaces or completions
+                        discover_new_surfaces(
+                            &output_dir,
+                            &mut known_surfaces,
+                            &mut surface_colors_map,
+                            use_colors,
+                            timestamps,
+                        );
+                        check_completed_surfaces(
+                            &output_dir,
+                            &known_surfaces,
+                            &mut completed,
+                            &surface_colors_map,
+                            use_colors,
+                            timestamps,
+                        );
                     }
                 }
                 Ok(Err(_)) => {
@@ -349,9 +307,9 @@ pub async fn run_log_command(
             }
         }
 
-        // Periodic session discovery (new sessions, new subagents)
-        if last_session_poll.elapsed() >= Duration::from_secs(SESSION_POLL_SECS) {
-            last_session_poll = Instant::now();
+        // Periodic fallback poll (directories that appeared late, missed events)
+        if last_poll.elapsed() >= Duration::from_secs(POLL_SECS) {
+            last_poll = Instant::now();
 
             if !dir_existed && output_dir.exists() {
                 dir_existed = true;
@@ -364,6 +322,14 @@ pub async fn run_log_command(
                     colors::BRIGHT_GREEN,
                 );
             }
+            if !events_dir_watched
+                && let Some(parent) = events_file.parent()
+                && parent.exists()
+            {
+                events_dir_watched = watcher.watch(parent, RecursiveMode::NonRecursive).is_ok();
+            }
+
+            flush_scan_events(&events_file, &mut events_offset, use_colors, timestamps);
 
             if dir_existed {
                 discover_new_surfaces(
@@ -374,23 +340,6 @@ pub async fn run_log_command(
                     timestamps,
                 );
             }
-
-            poll_sessions(
-                &project_dir,
-                &mut session_jsonls,
-                &mut last_session_count,
-                use_colors,
-                timestamps,
-            );
-
-            // Read any new events from newly discovered JSONL files
-            flush_jsonl_events(
-                &session_jsonls,
-                &mut offsets,
-                &surface_colors_map,
-                use_colors,
-                timestamps,
-            );
 
             check_completed_surfaces(
                 &output_dir,
@@ -416,89 +365,76 @@ pub async fn run_log_command(
     }
 }
 
-fn poll_sessions(
-    project_dir: &Path,
-    session_jsonls: &mut Vec<(String, PathBuf)>,
-    last_session_count: &mut Option<usize>,
-    use_colors: bool,
-    timestamps: bool,
-) {
-    if let Ok(active_sessions) = parsentry_claude::find_active_project_sessions(project_dir) {
-        let count = active_sessions.len();
-        if *last_session_count != Some(count) {
-            print_log(
-                "parsentry",
-                &format!("active sessions: {}", count),
-                use_colors,
-                timestamps,
-                colors::DIM,
-            );
-            *last_session_count = Some(count);
-        }
-
-        for session_id in &active_sessions {
-            let jsonl_path = project_dir.join(format!("{}.jsonl", session_id));
-            if !session_jsonls.iter().any(|(_, p)| p == &jsonl_path)
-                && let Some(surface_id) = parsentry_claude::extract_surface_id(&jsonl_path)
-            {
-                session_jsonls.push((surface_id, jsonl_path.clone()));
-            }
-
-            if let Ok(subagents) = parsentry_claude::list_subagents(project_dir, session_id) {
-                for agent in subagents {
-                    if !session_jsonls.iter().any(|(_, p)| p == &agent.jsonl_path) {
-                        let surface_id = extract_surface_from_description(&agent.description)
-                            .or_else(|| parsentry_claude::extract_surface_id(&agent.jsonl_path));
-                        if let Some(sid) = surface_id {
-                            session_jsonls.push((sid, agent.jsonl_path.clone()));
-                        }
-                    }
-                }
-            }
-        }
-    }
+/// Read complete lines appended to `path` since `offset`.
+///
+/// Returns the lines and the offset just past the last newline, so a partially
+/// written trailing line is re-read on the next call.
+fn read_lines_from(path: &Path, offset: u64) -> std::io::Result<(Vec<String>, u64)> {
+    let mut file = std::fs::File::open(path)?;
+    let len = file.metadata()?.len();
+    // File was truncated or recreated: start over.
+    let offset = if len < offset { 0 } else { offset };
+    file.seek(SeekFrom::Start(offset))?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)?;
+    let consumed = buf.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
+    let lines = String::from_utf8_lossy(&buf[..consumed])
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(str::to_string)
+        .collect();
+    Ok((lines, offset + consumed as u64))
 }
 
-fn flush_jsonl_events(
-    session_jsonls: &[(String, PathBuf)],
-    offsets: &mut HashMap<PathBuf, u64>,
-    surface_colors_map: &HashMap<String, &str>,
-    use_colors: bool,
-    timestamps: bool,
-) {
-    for (surface_id, jsonl_path) in session_jsonls {
-        let offset = offsets.get(jsonl_path).copied().unwrap_or(0);
-        if let Ok((events, new_offset)) = parsentry_claude::read_events_from(jsonl_path, offset) {
-            offsets.insert(jsonl_path.clone(), new_offset);
-            let color = surface_colors_map.get(surface_id).unwrap_or(&colors::RESET);
-            for ev in &events {
-                print_event(surface_id, ev, use_colors, timestamps, color);
-            }
-        }
-    }
+/// Render one events.jsonl record as `(service, message)`.
+fn format_scan_event(line: &str) -> Option<(String, String)> {
+    let v: serde_json::Value = serde_json::from_str(line).ok()?;
+    let num = |k: &str| v.get(k).and_then(|x| x.as_u64()).unwrap_or(0);
+    let parsentry = || "parsentry".to_string();
+    let event = v.get("event")?.as_str()?;
+    Some(match event {
+        "scan_started" => (
+            parsentry(),
+            format!(
+                "scan started ({} files, {} languages)",
+                num("total_files"),
+                num("languages")
+            ),
+        ),
+        "model_prompted" => (parsentry(), "threat model prompt written".to_string()),
+        "model_written" => (
+            parsentry(),
+            format!("threat model ready ({} surfaces)", num("surfaces")),
+        ),
+        "surfaces_pending" => (
+            parsentry(),
+            format!(
+                "{} surfaces pending, {} cached",
+                num("pending"),
+                num("cached")
+            ),
+        ),
+        "surface_completed" => (
+            v.get("surface_id")?.as_str()?.to_string(),
+            "surface completed".to_string(),
+        ),
+        "report_written" => (
+            parsentry(),
+            format!("report written ({} findings)", num("findings")),
+        ),
+        other => (parsentry(), other.to_string()),
+    })
 }
 
-fn print_event(
-    surface_id: &str,
-    event: &parsentry_claude::SessionEvent,
-    use_colors: bool,
-    timestamps: bool,
-    color: &str,
-) {
-    match event {
-        parsentry_claude::SessionEvent::ToolUse { name, summary, .. } => {
-            print_log(
-                surface_id,
-                &format!("{} {}", name, summary),
-                use_colors,
-                timestamps,
-                color,
-            );
+fn flush_scan_events(path: &Path, offset: &mut u64, use_colors: bool, timestamps: bool) {
+    let Ok((lines, new_offset)) = read_lines_from(path, *offset) else {
+        return;
+    };
+    *offset = new_offset;
+    for line in &lines {
+        if let Some((service, message)) = format_scan_event(line) {
+            print_log(&service, &message, use_colors, timestamps, colors::DIM);
         }
-        parsentry_claude::SessionEvent::Text { content, .. } => {
-            print_log(surface_id, content, use_colors, timestamps, color);
-        }
-        parsentry_claude::SessionEvent::Complete => {}
     }
 }
 
@@ -663,16 +599,48 @@ fn print_summary(
     print_log("parsentry", &msg, use_colors, timestamps, colors::BOLD);
 }
 
-fn extract_surface_from_description(desc: &str) -> Option<String> {
-    let idx = desc.find("SURFACE-")?;
-    let rest = &desc[idx..];
-    let end = rest
-        .find(|c: char| !c.is_ascii_alphanumeric() && c != '-')
-        .unwrap_or(rest.len());
-    let surface_id = &rest[..end];
-    if surface_id.len() > 8 {
-        Some(surface_id.to_string())
-    } else {
-        None
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::commands::events::{ScanEvent, append_event, events_path};
+
+    #[test]
+    fn reads_only_new_complete_lines() {
+        let dir = tempfile::tempdir().unwrap();
+        append_event(dir.path(), &ScanEvent::ModelPrompted).unwrap();
+        let path = events_path(dir.path());
+        let (lines, off) = read_lines_from(&path, 0).unwrap();
+        assert_eq!(lines.len(), 1);
+
+        append_event(
+            dir.path(),
+            &ScanEvent::SurfaceCompleted {
+                surface_id: "SURFACE-1".into(),
+            },
+        )
+        .unwrap();
+        // Partial trailing line is not consumed yet.
+        let mut f = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap();
+        std::io::Write::write_all(&mut f, b"{\"event\":").unwrap();
+        let (lines, off2) = read_lines_from(&path, off).unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            format_scan_event(&lines[0]),
+            Some(("SURFACE-1".to_string(), "surface completed".to_string()))
+        );
+        let (lines, _) = read_lines_from(&path, off2).unwrap();
+        assert!(lines.is_empty());
+    }
+
+    #[test]
+    fn formats_scan_events() {
+        let (svc, msg) =
+            format_scan_event(r#"{"event":"surfaces_pending","pending":2,"cached":1}"#).unwrap();
+        assert_eq!(svc, "parsentry");
+        assert_eq!(msg, "2 surfaces pending, 1 cached");
+        assert!(format_scan_event("not json").is_none());
     }
 }
