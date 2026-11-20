@@ -6,6 +6,7 @@
 //! - Summary reports
 //! - Filename generation utilities
 
+pub mod accept;
 pub mod evidence;
 pub mod filename;
 pub mod jira;
@@ -18,6 +19,7 @@ pub mod sarif;
 pub mod summary;
 pub mod validation;
 
+pub use accept::{AcceptOutcome, RejectReason, accept_finding, validate_finding};
 pub use evidence::{EvidenceKind, STATIC_CONFIDENCE_CAP, Verdict};
 pub use filename::{generate_output_filename, generate_pattern_specific_filename};
 pub use jira::run_jira_command;
