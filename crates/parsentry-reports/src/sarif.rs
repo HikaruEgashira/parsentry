@@ -211,6 +211,16 @@ pub struct SarifInvocation {
     pub arguments: Option<Vec<String>>,
 }
 
+/// Whether a result's verdict is indeterminate (a missing verdict counts).
+fn is_indeterminate(result: &SarifResult) -> bool {
+    result
+        .properties
+        .as_ref()
+        .and_then(|p| p.verdict)
+        .unwrap_or_default()
+        == Verdict::Indeterminate
+}
+
 /// Count results by verdict. Results without a verdict are indeterminate.
 fn verdict_overview(results: &[SarifResult]) -> String {
     let count = |v: Verdict| {
@@ -372,7 +382,19 @@ impl SarifReport {
             md.push_str(&format!("**Total findings**: {}\n\n", run.results.len()));
             md.push_str(&verdict_overview(&run.results));
 
-            for (i, result) in run.results.iter().enumerate() {
+            // Confirmed (and ruled-out) findings form the main body; indeterminate
+            // findings are listed afterwards under an "Unverified" section.
+            let (unverified, verified): (Vec<&SarifResult>, Vec<&SarifResult>) =
+                run.results.iter().partition(|r| is_indeterminate(r));
+            let first_unverified = verified.len();
+
+            for (i, result) in verified.into_iter().chain(unverified).enumerate() {
+                if i == first_unverified {
+                    md.push_str("## Unverified\n\n");
+                    md.push_str(
+                        "These findings lack executed evidence and have not been confirmed.\n\n",
+                    );
+                }
                 md.push_str(&format!("## Finding {}: {}\n\n", i + 1, result.rule_id));
 
                 let level_emoji = match result.level.as_str() {
@@ -1712,6 +1734,34 @@ mod tests {
         assert!(
             md.contains("**Verdicts**: 1 confirmed, 1 indeterminate, 2 ruled out\n"),
             "{md}"
+        );
+    }
+
+    #[test]
+    fn test_to_markdown_groups_findings_by_verdict() {
+        let mut unverified = with_props(SarifResultProperties::default());
+        unverified.rule_id = "XSS".to_string();
+        let mut confirmed = with_props(SarifResultProperties {
+            verdict: Some(Verdict::Confirmed),
+            ..Default::default()
+        });
+        confirmed.rule_id = "RCE".to_string();
+        let md = report_with(vec![unverified, confirmed]).to_markdown();
+
+        let rce = md.find("## Finding 1: RCE").expect(&md);
+        let section = md.find("## Unverified\n").expect(&md);
+        let xss = md.find("## Finding 2: XSS").expect(&md);
+        assert!(rce < section && section < xss, "{md}");
+        assert_eq!(md.matches("## Unverified\n").count(), 1, "{md}");
+
+        let only_confirmed = report_with(vec![with_props(SarifResultProperties {
+            verdict: Some(Verdict::Confirmed),
+            ..Default::default()
+        })])
+        .to_markdown();
+        assert!(
+            !only_confirmed.contains("## Unverified"),
+            "{only_confirmed}"
         );
     }
 
