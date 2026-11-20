@@ -70,6 +70,11 @@ impl RootCommand {
             Commands::Serve { host, port, token } => {
                 crate::webhook::run_serve_command(&host, port, token).await
             }
+            Commands::Report {
+                target,
+                surface,
+                finding,
+            } => crate::cli::commands::finding::run_report_command(&target, &surface, &finding),
             Commands::Log {
                 target,
                 follow,

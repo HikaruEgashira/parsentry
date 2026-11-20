@@ -175,6 +175,13 @@ pub fn build_surface_prompt(surface: &AttackSurface, root_dir: &Path) -> Option<
     prompt.push_str("- top-level `version` set to `2.1.0`\n");
     prompt.push_str("- `runs[0].tool.driver.name`\n");
     prompt.push_str("- `runs[0].tool.driver.version`\n");
+    prompt.push_str(&format!(
+        "Report each finding as soon as it is ready by passing one SARIF result object to \
+         `parsentry report [TARGET] --surface {id} --finding '<json>'` (TARGET is the \
+         `parsentry scan` target). It prints `accepted <fingerprint>` or \
+         `duplicate <fingerprint>`; on rejection, fix the finding and report it again.\n",
+        id = surface.id
+    ));
     prompt.push_str("For each finding, provide:\n");
     prompt.push_str("- `ruleId`: vulnerability type\n");
     prompt.push_str("- `level`: error/warning/note\n");
@@ -252,10 +259,14 @@ pub fn build_orchestrator_prompt(
         "3. Give each worker exactly one prompt file and tell it to execute the \
          instructions in that file.\n",
     );
-    prompt.push_str(
-        "4. Each worker must write SARIF JSON to the output path specified inside \
-         its assigned prompt file.\n",
-    );
+    prompt.push_str(&format!(
+        "4. Each worker must report every finding with \
+         `PARSENTRY_CACHE_DIR={cache_base} {bin} report {target} --surface <surface id> --finding '<json>'` \
+         and must not hand-edit `result.sarif.json`.\n",
+        cache_base = shell_quote(&cache_base.display().to_string()),
+        bin = shell_quote(&parsentry_bin.display().to_string()),
+        target = shell_quote(target),
+    ));
     prompt.push_str("5. Wait for every worker to finish before starting post-processing.\n");
     prompt.push_str("\nWorker Assignments\n\n");
 
