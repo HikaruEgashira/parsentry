@@ -203,6 +203,7 @@ pub async fn run_scan_command(
     target: &str,
     output: Option<&str>,
     runtime: RuntimeKind,
+    env: Option<&str>,
 ) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
     if !std::io::stdout().is_terminal() {
@@ -227,6 +228,14 @@ pub async fn run_scan_command(
     std::fs::create_dir_all(&layout.root)?;
     let model_input_key = hex_sha256(&repo_metadata.to_prompt_context());
     reconcile_model_key(&layout, &model_input_key)?;
+
+    if let Some(env_path) = env {
+        let dest = super::env_manifest::install_env_manifest(
+            std::path::Path::new(env_path),
+            &layout.root,
+        )?;
+        printer.status("Env", &format!("manifest copied to {}", dest.display()));
+    }
 
     if runtime == RuntimeKind::Claude {
         let mut sidecar = SidecarRuntime::from_env()?;

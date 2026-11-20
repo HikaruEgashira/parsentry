@@ -24,6 +24,7 @@ notify = { version = "7", default-features = false, features = ["macos_fsevent"]
 clap = { version = "4.5", features = ["derive"] }
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml = "0.9"
 regex = "1.10"
 dirs = "5.0"
 thiserror.workspace = true
