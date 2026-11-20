@@ -50,6 +50,14 @@ parsentry log   →  monitor scan progress in real-time
 3. **Report** — Merge SARIF of the current model's surfaces and write `report.md` (with a model diff section when a previous model exists).
 4. **Log** — Stream scan progress like `docker compose logs -f`.
 
+### Webhook server
+
+`parsentry serve` listens on `POST /webhooks/github` and enqueues an incremental scan for `push` and `pull_request` (opened / synchronize / reopened) events. Set `GITHUB_WEBHOOK_SECRET` to verify `X-Hub-Signature-256`.
+
+```bash
+docker run -p 8080:8080 -e GITHUB_WEBHOOK_SECRET=... ghcr.io/hikaruegashira/parsentry
+```
+
 ### Install
 
 ```bash

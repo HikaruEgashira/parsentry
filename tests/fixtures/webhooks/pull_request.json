@@ -1,0 +1,8 @@
+{
+  "action": "synchronize",
+  "number": 1,
+  "pull_request": {
+    "head": { "ref": "feature", "sha": "e5bd3914e2e596debea16f433f57875b5b90bcd6" }
+  },
+  "repository": { "full_name": "octocat/Hello-World" }
+}
