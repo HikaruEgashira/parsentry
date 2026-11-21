@@ -72,6 +72,10 @@ pub async fn run_log_command(
     let use_colors = !no_color && colors_enabled();
     let start = Instant::now();
 
+    if follow && let Some(serve) = crate::serve_client::discover().await {
+        return follow_serve_events(&serve, target, timeout_secs, use_colors, timestamps).await;
+    }
+
     // If no target, list all sessions summary
     if target.is_none() {
         let all = list_all_report_dirs();
@@ -597,6 +601,55 @@ fn print_summary(
         elapsed_str
     );
     print_log("parsentry", &msg, use_colors, timestamps, colors::BOLD);
+}
+
+/// Print `/api/events` from a running serve, keeping only jobs for `target`
+/// when one is given.
+pub async fn follow_serve_events(
+    serve: &crate::serve_client::ServeClient,
+    target: Option<&str>,
+    timeout_secs: Option<u64>,
+    use_colors: bool,
+    timestamps: bool,
+) -> Result<()> {
+    print_log(
+        "parsentry",
+        &format!("following {}{}", serve.base(), crate::webhook::EVENTS_PATH),
+        use_colors,
+        timestamps,
+        colors::BOLD,
+    );
+    let mut ids: HashSet<u64> = HashSet::new();
+    let stream = serve.follow_events(|ev| {
+        let id = ev.get("id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let ev_target = ev.get("target").and_then(|v| v.as_str());
+        let wanted = match target {
+            None => true,
+            Some(t) => {
+                if ev_target.is_some_and(|et| et == t || Path::new(et).ends_with(t)) {
+                    ids.insert(id);
+                }
+                ids.contains(&id)
+            }
+        };
+        if wanted {
+            print_log(
+                "serve",
+                &crate::serve_client::format_event(&ev),
+                use_colors,
+                timestamps,
+                colors::CYAN,
+            );
+        }
+        true
+    });
+    match timeout_secs {
+        Some(secs) => match tokio::time::timeout(Duration::from_secs(secs), stream).await {
+            Ok(r) => r,
+            Err(_) => Ok(()),
+        },
+        None => stream.await,
+    }
 }
 
 #[cfg(test)]
