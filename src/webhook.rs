@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, watch};
 
 pub const WEBHOOK_PATH: &str = "/webhooks/github";
 pub const SCANS_PATH: &str = "/api/scans";
@@ -451,15 +451,46 @@ async fn serve_conn(
     Ok(())
 }
 
+/// Process-wide shutdown signal observed by `serve`, set by [`shutdown`].
+static SHUTDOWN: std::sync::LazyLock<watch::Sender<bool>> =
+    std::sync::LazyLock::new(|| watch::Sender::new(false));
+
+/// Signal running servers and workers to stop, then wait until they have closed
+/// their listeners and terminated their scan processes.
+pub async fn shutdown() {
+    SHUTDOWN.send_replace(true);
+    SHUTDOWN.closed().await;
+}
+
+async fn stopped(shutdown: &mut watch::Receiver<bool>) {
+    if shutdown.wait_for(|s| *s).await.is_err() {
+        std::future::pending::<()>().await;
+    }
+}
+
 /// Accept connections forever, enqueueing scans onto `queue`.
 pub async fn serve(
     listener: TcpListener,
     config: ServeConfig,
     queue: mpsc::UnboundedSender<ScanRequest>,
 ) -> Result<()> {
+    let (_tx, rx) = watch::channel(false);
+    serve_until(listener, config, queue, rx).await
+}
+
+/// [`serve`] until `shutdown` becomes true, then close the listener and return.
+pub async fn serve_until(
+    listener: TcpListener,
+    config: ServeConfig,
+    queue: mpsc::UnboundedSender<ScanRequest>,
+    mut shutdown: watch::Receiver<bool>,
+) -> Result<()> {
     let config = Arc::new(config);
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, _) = tokio::select! {
+            r = listener.accept() => r?,
+            _ = stopped(&mut shutdown) => return Ok(()),
+        };
         let config = config.clone();
         let queue = queue.clone();
         tokio::spawn(async move {
@@ -481,11 +512,31 @@ pub async fn run_worker(
 /// [`run_worker`] with an explicit binary, emitting lifecycle events on `events`.
 pub async fn run_worker_with(
     bin: PathBuf,
-    mut queue: mpsc::UnboundedReceiver<ScanRequest>,
+    queue: mpsc::UnboundedReceiver<ScanRequest>,
     events: EventBus,
 ) -> Result<()> {
+    let (_tx, rx) = watch::channel(false);
+    run_worker_until(bin, queue, events, rx).await
+}
+
+/// [`run_worker_with`] until `shutdown` becomes true: stop dequeuing and kill
+/// the running scan process.
+pub async fn run_worker_until(
+    bin: PathBuf,
+    mut queue: mpsc::UnboundedReceiver<ScanRequest>,
+    events: EventBus,
+    mut shutdown: watch::Receiver<bool>,
+) -> Result<()> {
     use tokio::io::AsyncBufReadExt;
-    while let Some(scan) = queue.recv().await {
+    loop {
+        let scan = tokio::select! {
+            biased;
+            _ = stopped(&mut shutdown) => return Ok(()),
+            scan = queue.recv() => match scan {
+                Some(scan) => scan,
+                None => return Ok(()),
+            },
+        };
         eprintln!(
             "Scanning {} ({} {})",
             scan.repository,
@@ -503,20 +554,39 @@ pub async fn run_worker_with(
             .arg(&scan.repository)
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
             .spawn();
         let status = match child {
             Ok(mut child) => {
-                if let Some(stderr) = child.stderr.take() {
-                    let mut lines = tokio::io::BufReader::new(stderr).lines();
-                    while let Ok(Some(line)) = lines.next_line().await {
-                        eprintln!("{line}");
+                let stderr = child.stderr.take();
+                let run = async {
+                    if let Some(stderr) = stderr {
+                        let mut lines = tokio::io::BufReader::new(stderr).lines();
+                        while let Ok(Some(line)) = lines.next_line().await {
+                            eprintln!("{line}");
+                            events.emit(JobEvent {
+                                line: Some(line),
+                                ..JobEvent::new(scan.id, "log")
+                            });
+                        }
+                    }
+                    child.wait().await
+                };
+                let interrupted = tokio::select! {
+                    status = run => Some(status),
+                    _ = stopped(&mut shutdown) => None,
+                };
+                match interrupted {
+                    Some(status) => status,
+                    None => {
+                        let _ = child.kill().await;
                         events.emit(JobEvent {
-                            line: Some(line),
-                            ..JobEvent::new(scan.id, "log")
+                            error: Some("server shutting down".into()),
+                            ..JobEvent::new(scan.id, "failed")
                         });
+                        return Ok(());
                     }
                 }
-                child.wait().await
             }
             Err(e) => Err(e),
         };
@@ -536,7 +606,6 @@ pub async fn run_worker_with(
             }
         }
     }
-    Ok(())
 }
 
 /// Run the webhook + API server and scan worker until either stops.
@@ -564,8 +633,9 @@ pub async fn run_serve_command(host: &str, port: u16, token: Option<String>) -> 
     };
     let events = config.events.clone();
     let (tx, rx) = mpsc::unbounded_channel();
+    let bin = std::env::current_exe()?;
     tokio::select! {
-        r = serve(listener, config, tx) => r,
-        r = run_worker(rx, events) => r,
+        r = serve_until(listener, config, tx, SHUTDOWN.subscribe()) => r,
+        r = run_worker_until(bin, rx, events, SHUTDOWN.subscribe()) => r,
     }
 }

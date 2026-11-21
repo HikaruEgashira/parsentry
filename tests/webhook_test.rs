@@ -310,3 +310,72 @@ async fn api_scan_is_enqueued_and_streams_events() {
     assert_eq!(kinds.last().unwrap(), "failed");
     assert!(kinds.contains(&"log".to_string()), "{kinds:?}");
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn shutdown_closes_listener_and_kills_running_scan() {
+    use parsentry::webhook::{run_worker_until, serve_until};
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let pid_file = dir.path().join("pid");
+    let bin = dir.path().join("fake-parsentry");
+    std::fs::write(
+        &bin,
+        format!(
+            "#!/bin/sh\necho $$ > {}\nexec sleep 300\n",
+            pid_file.display()
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (stop, stop_rx) = tokio::sync::watch::channel(false);
+    let (tx, rx) = mpsc::unbounded_channel();
+    let config = ServeConfig::default();
+    let worker = tokio::spawn(run_worker_until(
+        bin,
+        rx,
+        config.events.clone(),
+        stop_rx.clone(),
+    ));
+    let server = tokio::spawn(serve_until(listener, config, tx.clone(), stop_rx));
+    tx.send(ScanRequest {
+        repository: "owner/repo".into(),
+        ..Default::default()
+    })
+    .unwrap();
+
+    let pid = loop {
+        if let Ok(pid) = std::fs::read_to_string(&pid_file)
+            && let Ok(pid) = pid.trim().parse::<i32>()
+        {
+            break pid;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    };
+    let alive = |pid: i32| {
+        std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .status()
+            .unwrap()
+            .success()
+    };
+    assert!(alive(pid));
+
+    stop.send(true).unwrap();
+    let timeout = std::time::Duration::from_secs(10);
+    tokio::time::timeout(timeout, server)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    tokio::time::timeout(timeout, worker)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert!(tokio::net::TcpStream::connect(addr).await.is_err());
+    assert!(!alive(pid), "scan process {pid} still running");
+}
