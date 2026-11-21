@@ -52,7 +52,7 @@ parsentry log   →  monitor scan progress in real-time
 
 ### Webhook server
 
-`parsentry serve [--host 127.0.0.1] [-p 8765] [--token TOKEN]` serves `GET /api/runs` and `GET /api/findings?run=&verdict=&level=&cwe=` over cached scans. A non-loopback `--host` is refused unless `--token` (or `PARSENTRY_API_TOKEN`) is set, and with a token every `/api/` request needs `Authorization: Bearer TOKEN`. It also listens on `POST /webhooks/github` and enqueues an incremental scan for `push` and `pull_request` (opened / synchronize / reopened) events. Set `GITHUB_WEBHOOK_SECRET` to verify `X-Hub-Signature-256`.
+`parsentry serve [--host 127.0.0.1] [-p 8765] [--token TOKEN]` serves `GET /api/runs` and `GET /api/findings?run=&verdict=&level=&cwe=` over cached scans. `POST /api/scans` with `{"target": "owner/repo or path", "runtime"?, "output"?, "env"?}` enqueues a scan and returns `202 {"id": N}`; `GET /api/events` is a `text/event-stream` of job events (`queued`, `started`, `log`, `finished`, `failed`) as JSON. A non-loopback `--host` is refused unless `--token` (or `PARSENTRY_API_TOKEN`) is set, and with a token every `/api/` request needs `Authorization: Bearer TOKEN`. It also listens on `POST /webhooks/github` and enqueues an incremental scan for `push` and `pull_request` (opened / synchronize / reopened) events. Set `GITHUB_WEBHOOK_SECRET` to verify `X-Hub-Signature-256`.
 
 ```bash
 docker run -p 8080:8080 -e GITHUB_WEBHOOK_SECRET=... ghcr.io/hikaruegashira/parsentry

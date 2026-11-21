@@ -6,14 +6,16 @@
 //! crafted `run` cannot reach outside the cache. When a token is configured,
 //! every `/api/` request needs `Authorization: Bearer <token>`.
 //!
+//! `POST /api/scans` enqueues a scan (see [`enqueue_scan`]).
+//!
 //! [`cache_base`]: crate::cli::commands::common::cache_base
 
 use anyhow::{Result, bail};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
-use crate::webhook::Request;
+use crate::webhook::{EventBus, Request, ScanOptions, ScanRequest};
 
 pub const API_PREFIX: &str = "/api/";
 
@@ -250,6 +252,48 @@ fn parse_query(query: &str) -> FindingFilter {
 
 fn json_error(msg: &str) -> String {
     serde_json::json!({ "error": msg }).to_string()
+}
+
+#[derive(Deserialize)]
+struct ScanBody {
+    target: String,
+    #[serde(flatten)]
+    options: ScanOptions,
+}
+
+/// `POST /api/scans` with `{"target": ..., "runtime"?, "output"?, "env"?}`.
+/// Returns `202 {"id": N}`. The caller has already checked authorization.
+pub fn enqueue_scan(
+    req: &Request,
+    queue: &tokio::sync::mpsc::UnboundedSender<ScanRequest>,
+    events: &EventBus,
+) -> (u16, String) {
+    if req.method != "POST" {
+        return (405, json_error("method not allowed"));
+    }
+    let body: ScanBody = match serde_json::from_slice(&req.body) {
+        Ok(b) => b,
+        Err(e) => return (400, json_error(&format!("invalid scan request: {e}"))),
+    };
+    let target = body.target.trim();
+    if target.is_empty() {
+        return (400, json_error("target is required"));
+    }
+    if let Some(rt) = &body.options.runtime
+        && !matches!(rt.as_str(), "pipe" | "claude" | "openai")
+    {
+        return (400, json_error("runtime must be pipe, claude, or openai"));
+    }
+    let scan = ScanRequest {
+        event: "api".into(),
+        repository: target.to_string(),
+        options: body.options,
+        ..Default::default()
+    };
+    match crate::webhook::enqueue(scan, queue, events) {
+        Ok(id) => (202, serde_json::json!({ "id": id }).to_string()),
+        Err(e) => (503, json_error(&e.to_string())),
+    }
 }
 
 /// Route an `/api/` request and return `(status, json body)`.
