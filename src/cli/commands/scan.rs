@@ -331,8 +331,8 @@ pub async fn run_scan_command(
         printer.status("Env", &format!("manifest copied to {}", dest.display()));
     }
 
-    if runtime == RuntimeKind::Claude {
-        let mut sidecar = SidecarRuntime::from_env()?;
+    if let Some(backend) = runtime.sidecar_backend() {
+        let mut sidecar = SidecarRuntime::from_env(backend)?;
         let result = drive_runtime(
             &layout,
             &root_dir,

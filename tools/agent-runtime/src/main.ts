@@ -3,13 +3,14 @@
 import readline from "node:readline";
 import { claudeBackend } from "./claude.ts";
 import { loadConfig } from "./config.ts";
+import { openaiBackend } from "./openai.ts";
 import { createDispatcher } from "./runtime.ts";
 
 const config = loadConfig();
 const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
 const dispatcher = createDispatcher({
   config,
-  backend: claudeBackend(config),
+  backend: config.backend === "openai" ? openaiBackend(config) : claudeBackend(config),
   onShutdown: () => rl.close(),
 });
 
