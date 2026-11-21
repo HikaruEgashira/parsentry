@@ -43,19 +43,6 @@ jobs:
           # PRs need the base commit to compute the --in-diff patch. The '0' must be
           # a string: a numeric 0 is falsy, so `&& 0 || 1` always yielded a shallow clone
           fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
-      - name: Ensure writable RUSTUP_HOME
-        if: runner.environment == 'self-hosted'
-        timeout-minutes: 1
-        run: |
-          # The runner's preinstalled RUSTUP_HOME (e.g. /opt/rustup) may not be
-          # writable by the job user; fall back to a per-runner location.
-          home="${RUSTUP_HOME:-$HOME/.rustup}"
-          if ! { mkdir -p "$home/tmp" && test -w "$home/tmp"; } 2>/dev/null; then
-            fallback="${RUNNER_TOOL_CACHE:-$RUNNER_TEMP}/rustup"
-            echo "::warning::RUSTUP_HOME $home is not writable; using $fallback"
-            mkdir -p "$fallback"
-            echo "RUSTUP_HOME=$fallback" >> "$GITHUB_ENV"
-          fi
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         timeout-minutes: 5
         with:
