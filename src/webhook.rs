@@ -3,27 +3,129 @@
 //! `POST /webhooks/github` accepts `push` and `pull_request` events and pushes a
 //! [`ScanRequest`] onto a queue. A worker drains the queue and runs
 //! `parsentry scan <owner/repo>`; the cache keys make that run incremental.
+//! `POST /api/scans` enqueues onto the same queue, and job lifecycle events are
+//! broadcast on an [`EventBus`] that `GET /api/events` streams as SSE.
 
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 pub const WEBHOOK_PATH: &str = "/webhooks/github";
+pub const SCANS_PATH: &str = "/api/scans";
+pub const EVENTS_PATH: &str = "/api/events";
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 25 * 1024 * 1024;
 
-/// An incremental scan requested by a webhook delivery.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A scan requested by a webhook delivery or `POST /api/scans`.
+///
+/// `repository` is the scan target (owner/repo or path). `id` is assigned by
+/// [`enqueue`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ScanRequest {
+    pub id: u64,
     pub event: String,
     pub repository: String,
     pub git_ref: Option<String>,
     pub sha: Option<String>,
+    pub options: ScanOptions,
+}
+
+/// `parsentry scan` options forwarded by the worker.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScanOptions {
+    pub output: Option<String>,
+    pub runtime: Option<String>,
+    pub env: Option<String>,
+}
+
+impl ScanOptions {
+    fn args(&self) -> Vec<String> {
+        let mut args = Vec::new();
+        for (flag, value) in [
+            ("--output", &self.output),
+            ("--runtime", &self.runtime),
+            ("--env", &self.env),
+        ] {
+            if let Some(v) = value {
+                args.push(format!("{flag}={v}"));
+            }
+        }
+        args
+    }
+}
+
+/// A job lifecycle event (`queued`, `started`, `log`, `finished`, `failed`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct JobEvent {
+    pub id: u64,
+    pub event: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl JobEvent {
+    fn new(id: u64, event: &'static str) -> Self {
+        Self {
+            id,
+            event,
+            target: None,
+            line: None,
+            error: None,
+        }
+    }
+}
+
+/// Broadcasts [`JobEvent`]s to `/api/events` subscribers.
+#[derive(Debug, Clone)]
+pub struct EventBus(broadcast::Sender<JobEvent>);
+
+impl Default for EventBus {
+    fn default() -> Self {
+        Self(broadcast::channel(1024).0)
+    }
+}
+
+impl EventBus {
+    pub fn subscribe(&self) -> broadcast::Receiver<JobEvent> {
+        self.0.subscribe()
+    }
+
+    pub fn emit(&self, event: JobEvent) {
+        // No subscribers is fine.
+        let _ = self.0.send(event);
+    }
+}
+
+static NEXT_JOB_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Assign an id, push `scan` onto `queue`, and emit `queued`.
+pub fn enqueue(
+    mut scan: ScanRequest,
+    queue: &mpsc::UnboundedSender<ScanRequest>,
+    events: &EventBus,
+) -> Result<u64> {
+    let id = NEXT_JOB_ID.fetch_add(1, Ordering::Relaxed);
+    scan.id = id;
+    let target = scan.repository.clone();
+    queue
+        .send(scan)
+        .map_err(|_| anyhow::anyhow!("scan queue unavailable"))?;
+    events.emit(JobEvent {
+        target: Some(target),
+        ..JobEvent::new(id, "queued")
+    });
+    Ok(id)
 }
 
 #[derive(Deserialize)]
@@ -74,6 +176,7 @@ pub fn parse_event(event: &str, body: &[u8]) -> Result<Option<ScanRequest>> {
                 repository: p.repository.full_name,
                 git_ref: p.git_ref,
                 sha: p.after,
+                ..Default::default()
             }))
         }
         "pull_request" => {
@@ -87,6 +190,7 @@ pub fn parse_event(event: &str, body: &[u8]) -> Result<Option<ScanRequest>> {
                 repository: p.repository.full_name,
                 git_ref: p.pull_request.head.git_ref,
                 sha: p.pull_request.head.sha,
+                ..Default::default()
             }))
         }
         _ => Ok(None),
@@ -154,6 +258,7 @@ pub fn handle(
     req: &Request,
     secret: Option<&str>,
     queue: &mpsc::UnboundedSender<ScanRequest>,
+    events: &EventBus,
 ) -> (u16, String) {
     let path = req.path.split('?').next().unwrap_or("");
     if path == "/healthz" && req.method == "GET" {
@@ -176,8 +281,8 @@ pub fn handle(
     match parse_event(event, &req.body) {
         Ok(Some(scan)) => {
             let repo = scan.repository.clone();
-            match queue.send(scan) {
-                Ok(()) => (202, format!("scan enqueued for {repo}")),
+            match enqueue(scan, queue, events) {
+                Ok(_) => (202, format!("scan enqueued for {repo}")),
                 Err(_) => (503, "scan queue unavailable".into()),
             }
         }
@@ -251,6 +356,34 @@ pub struct ServeConfig {
     pub api_token: Option<String>,
     /// Cache root whose runs `/api/` exposes.
     pub cache_base: PathBuf,
+    /// Job lifecycle events streamed on `/api/events`.
+    pub events: EventBus,
+}
+
+/// Stream `events` as `text/event-stream` until the client disconnects.
+async fn stream_events(
+    mut stream: TcpStream,
+    mut events: broadcast::Receiver<JobEvent>,
+) -> Result<()> {
+    stream
+        .write_all(
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n: connected\n\n",
+        )
+        .await?;
+    loop {
+        let frame = match events.recv().await {
+            Ok(ev) => format!(
+                "event: {}\ndata: {}\n\n",
+                ev.event,
+                serde_json::to_string(&ev)?
+            ),
+            Err(broadcast::error::RecvError::Lagged(n)) => format!(": dropped {n} events\n\n"),
+            Err(broadcast::error::RecvError::Closed) => break,
+        };
+        stream.write_all(frame.as_bytes()).await?;
+    }
+    stream.shutdown().await?;
+    Ok(())
 }
 
 async fn serve_conn(
@@ -263,8 +396,17 @@ async fn serve_conn(
     let (status, body) = match read_request(&mut stream).await {
         Ok(req) if req.path.starts_with(crate::api::API_PREFIX) => {
             ctype = "application/json";
-            let (status, body) =
-                crate::api::handle(&req, config.api_token.as_deref(), &config.cache_base);
+            let token = config.api_token.as_deref();
+            let path = req.path.split('?').next().unwrap_or("");
+            let (status, body) = if !crate::api::authorized(&req, token) {
+                crate::api::handle(&req, token, &config.cache_base)
+            } else if path == EVENTS_PATH && req.method == "GET" {
+                return stream_events(stream, config.events.subscribe()).await;
+            } else if path == SCANS_PATH {
+                crate::api::enqueue_scan(&req, &queue, &config.events)
+            } else {
+                crate::api::handle(&req, token, &config.cache_base)
+            };
             (status, body.into_bytes())
         }
         Ok(req) => match (req.method == "GET")
@@ -277,7 +419,12 @@ async fn serve_conn(
                 (200, data)
             }
             None => {
-                let (status, body) = handle(&req, config.webhook_secret.as_deref(), &queue);
+                let (status, body) = handle(
+                    &req,
+                    config.webhook_secret.as_deref(),
+                    &queue,
+                    &config.events,
+                );
                 (status, body.into_bytes())
             }
         },
@@ -323,9 +470,21 @@ pub async fn serve(
     }
 }
 
-/// Drain the queue, running `parsentry scan <repo>` for each request in order.
-pub async fn run_worker(mut queue: mpsc::UnboundedReceiver<ScanRequest>) -> Result<()> {
-    let bin = std::env::current_exe()?;
+/// Drain the queue, running `parsentry scan <target>` for each request in order.
+pub async fn run_worker(
+    queue: mpsc::UnboundedReceiver<ScanRequest>,
+    events: EventBus,
+) -> Result<()> {
+    run_worker_with(std::env::current_exe()?, queue, events).await
+}
+
+/// [`run_worker`] with an explicit binary, emitting lifecycle events on `events`.
+pub async fn run_worker_with(
+    bin: PathBuf,
+    mut queue: mpsc::UnboundedReceiver<ScanRequest>,
+    events: EventBus,
+) -> Result<()> {
+    use tokio::io::AsyncBufReadExt;
     while let Some(scan) = queue.recv().await {
         eprintln!(
             "Scanning {} ({} {})",
@@ -333,16 +492,48 @@ pub async fn run_worker(mut queue: mpsc::UnboundedReceiver<ScanRequest>) -> Resu
             scan.event,
             scan.sha.as_deref().unwrap_or("-")
         );
-        let status = tokio::process::Command::new(&bin)
+        events.emit(JobEvent {
+            target: Some(scan.repository.clone()),
+            ..JobEvent::new(scan.id, "started")
+        });
+        let child = tokio::process::Command::new(&bin)
             .arg("scan")
+            .args(scan.options.args())
+            .arg("--")
             .arg(&scan.repository)
             .stdout(std::process::Stdio::null())
-            .status()
-            .await;
-        match status {
-            Ok(s) if s.success() => {}
-            Ok(s) => eprintln!("scan of {} exited with {s}", scan.repository),
-            Err(e) => eprintln!("failed to run scan for {}: {e}", scan.repository),
+            .stderr(std::process::Stdio::piped())
+            .spawn();
+        let status = match child {
+            Ok(mut child) => {
+                if let Some(stderr) = child.stderr.take() {
+                    let mut lines = tokio::io::BufReader::new(stderr).lines();
+                    while let Ok(Some(line)) = lines.next_line().await {
+                        eprintln!("{line}");
+                        events.emit(JobEvent {
+                            line: Some(line),
+                            ..JobEvent::new(scan.id, "log")
+                        });
+                    }
+                }
+                child.wait().await
+            }
+            Err(e) => Err(e),
+        };
+        let error = match status {
+            Ok(s) if s.success() => None,
+            Ok(s) => Some(format!("scan of {} exited with {s}", scan.repository)),
+            Err(e) => Some(format!("failed to run scan for {}: {e}", scan.repository)),
+        };
+        match error {
+            None => events.emit(JobEvent::new(scan.id, "finished")),
+            Some(error) => {
+                eprintln!("{error}");
+                events.emit(JobEvent {
+                    error: Some(error),
+                    ..JobEvent::new(scan.id, "failed")
+                });
+            }
         }
     }
     Ok(())
@@ -369,10 +560,12 @@ pub async fn run_serve_command(host: &str, port: u16, token: Option<String>) -> 
         webhook_secret: secret,
         api_token: token,
         cache_base: crate::cli::commands::common::cache_base(),
+        events: EventBus::default(),
     };
+    let events = config.events.clone();
     let (tx, rx) = mpsc::unbounded_channel();
     tokio::select! {
         r = serve(listener, config, tx) => r,
-        r = run_worker(rx) => r,
+        r = run_worker(rx, events) => r,
     }
 }

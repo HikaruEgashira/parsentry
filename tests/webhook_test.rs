@@ -1,5 +1,6 @@
 use parsentry::webhook::{
-    Request, ScanRequest, ServeConfig, WEBHOOK_PATH, handle, serve, verify_signature,
+    EventBus, Request, ScanRequest, ServeConfig, WEBHOOK_PATH, handle, run_worker_with, serve,
+    verify_signature,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
@@ -19,15 +20,19 @@ fn post(event: &str, body: &[u8]) -> Request {
 #[test]
 fn push_fixture_enqueues_scan() {
     let (tx, mut rx) = mpsc::unbounded_channel();
-    let (status, _) = handle(&post("push", PUSH), None, &tx);
+    let (status, _) = handle(&post("push", PUSH), None, &tx, &EventBus::default());
     assert_eq!(status, 202);
+    let scan = rx.try_recv().unwrap();
+    assert!(scan.id > 0);
     assert_eq!(
-        rx.try_recv().unwrap(),
+        scan,
         ScanRequest {
+            id: scan.id,
             event: "push".into(),
             repository: "octocat/Hello-World".into(),
             git_ref: Some("refs/heads/main".into()),
             sha: Some("6dcb09b5b57875f334f61aebed695e2e4193db5e".into()),
+            ..Default::default()
         }
     );
 }
@@ -35,7 +40,12 @@ fn push_fixture_enqueues_scan() {
 #[test]
 fn pull_request_fixture_enqueues_scan() {
     let (tx, mut rx) = mpsc::unbounded_channel();
-    let (status, _) = handle(&post("pull_request", PULL_REQUEST), None, &tx);
+    let (status, _) = handle(
+        &post("pull_request", PULL_REQUEST),
+        None,
+        &tx,
+        &EventBus::default(),
+    );
     assert_eq!(status, 202);
     let scan = rx.try_recv().unwrap();
     assert_eq!(scan.repository, "octocat/Hello-World");
@@ -47,10 +57,19 @@ fn closed_pull_request_and_other_events_are_ignored() {
     let (tx, mut rx) = mpsc::unbounded_channel();
     let closed = String::from_utf8_lossy(PULL_REQUEST).replace("synchronize", "closed");
     assert_eq!(
-        handle(&post("pull_request", closed.as_bytes()), None, &tx).0,
+        handle(
+            &post("pull_request", closed.as_bytes()),
+            None,
+            &tx,
+            &EventBus::default()
+        )
+        .0,
         202
     );
-    assert_eq!(handle(&post("issues", b"{}"), None, &tx).0, 202);
+    assert_eq!(
+        handle(&post("issues", b"{}"), None, &tx, &EventBus::default()).0,
+        202
+    );
     assert!(rx.try_recv().is_err());
 }
 
@@ -59,11 +78,14 @@ fn rejects_bad_requests() {
     let (tx, mut rx) = mpsc::unbounded_channel();
     let mut get = post("push", PUSH);
     get.method = "GET".into();
-    assert_eq!(handle(&get, None, &tx).0, 405);
+    assert_eq!(handle(&get, None, &tx, &EventBus::default()).0, 405);
     let mut other = post("push", PUSH);
     other.path = "/other".into();
-    assert_eq!(handle(&other, None, &tx).0, 404);
-    assert_eq!(handle(&post("push", b"not json"), None, &tx).0, 400);
+    assert_eq!(handle(&other, None, &tx, &EventBus::default()).0, 404);
+    assert_eq!(
+        handle(&post("push", b"not json"), None, &tx, &EventBus::default()).0,
+        400
+    );
     assert!(rx.try_recv().is_err());
 }
 
@@ -84,7 +106,16 @@ fn signature_is_enforced_when_secret_set() {
     ));
 
     let (tx, mut rx) = mpsc::unbounded_channel();
-    assert_eq!(handle(&post("push", PUSH), Some("s3cret"), &tx).0, 401);
+    assert_eq!(
+        handle(
+            &post("push", PUSH),
+            Some("s3cret"),
+            &tx,
+            &EventBus::default()
+        )
+        .0,
+        401
+    );
     assert!(rx.try_recv().is_err());
 }
 
@@ -176,4 +207,106 @@ async fn http_serves_embedded_ui_and_findings() {
     assert!(findings.starts_with("HTTP/1.1 200"), "{findings}");
     assert!(findings.contains("\"rule_id\":\"sqli\""), "{findings}");
     assert!(get(addr, "/nope").await.starts_with("HTTP/1.1 404"));
+}
+
+async fn request(addr: std::net::SocketAddr, raw: &str) -> String {
+    let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+    stream.write_all(raw.as_bytes()).await.unwrap();
+    let mut resp = String::new();
+    stream.read_to_string(&mut resp).await.unwrap();
+    resp
+}
+
+fn post_scan(body: &str, auth: &str) -> String {
+    format!(
+        "POST /api/scans HTTP/1.1\r\nHost: localhost\r\n{auth}Content-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    )
+}
+
+#[tokio::test]
+async fn api_scan_is_enqueued_and_streams_events() {
+    use tokio::io::AsyncBufReadExt;
+    let cache = tempfile::tempdir().unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (tx, rx) = mpsc::unbounded_channel();
+    let config = ServeConfig {
+        api_token: Some("s3cret".into()),
+        cache_base: cache.path().to_path_buf(),
+        ..Default::default()
+    };
+    // `sh scan -- <target>` fails, exercising started/log/failed without a real scan.
+    tokio::spawn(run_worker_with("sh".into(), rx, config.events.clone()));
+    tokio::spawn(serve(listener, config, tx));
+    let auth = "Authorization: Bearer s3cret\r\n";
+
+    let denied = request(addr, "GET /api/events HTTP/1.1\r\nHost: localhost\r\n\r\n").await;
+    assert!(denied.starts_with("HTTP/1.1 401"), "{denied}");
+    let denied = request(addr, &post_scan(r#"{"target":"x"}"#, "")).await;
+    assert!(denied.starts_with("HTTP/1.1 401"), "{denied}");
+
+    let mut sse = tokio::net::TcpStream::connect(addr).await.unwrap();
+    sse.write_all(format!("GET /api/events HTTP/1.1\r\nHost: localhost\r\n{auth}\r\n").as_bytes())
+        .await
+        .unwrap();
+    let mut sse = tokio::io::BufReader::new(sse);
+    let mut line = String::new();
+    loop {
+        line.clear();
+        sse.read_line(&mut line).await.unwrap();
+        assert!(!line.contains("401"), "{line}");
+        if line.starts_with(": connected") {
+            break;
+        }
+    }
+
+    let bad = request(
+        addr,
+        &post_scan(r#"{"target":"x","runtime":"bogus"}"#, auth),
+    )
+    .await;
+    assert!(bad.starts_with("HTTP/1.1 400"), "{bad}");
+    let bad = request(addr, &post_scan(r#"{"nope":1}"#, auth)).await;
+    assert!(bad.starts_with("HTTP/1.1 400"), "{bad}");
+
+    let resp = request(
+        addr,
+        &post_scan(r#"{"target":"owner/repo","runtime":"pipe"}"#, auth),
+    )
+    .await;
+    assert!(resp.starts_with("HTTP/1.1 202"), "{resp}");
+    let body = resp.split("\r\n\r\n").nth(1).unwrap();
+    let id = serde_json::from_str::<serde_json::Value>(body).unwrap()["id"]
+        .as_u64()
+        .unwrap();
+
+    let mut kinds = Vec::new();
+    let read = async {
+        loop {
+            line.clear();
+            assert!(sse.read_line(&mut line).await.unwrap() > 0, "stream closed");
+            let Some(data) = line.strip_prefix("data: ") else {
+                continue;
+            };
+            let ev: serde_json::Value = serde_json::from_str(data).unwrap();
+            if ev["id"] != id {
+                continue;
+            }
+            let kind = ev["event"].as_str().unwrap().to_string();
+            if kind == "queued" || kind == "started" {
+                assert_eq!(ev["target"], "owner/repo");
+            }
+            kinds.push(kind.clone());
+            if kind == "finished" || kind == "failed" {
+                break;
+            }
+        }
+    };
+    tokio::time::timeout(std::time::Duration::from_secs(30), read)
+        .await
+        .expect("timed out waiting for job events");
+    assert_eq!(kinds[..2], ["queued", "started"]);
+    assert_eq!(kinds.last().unwrap(), "failed");
+    assert!(kinds.contains(&"log".to_string()), "{kinds:?}");
 }
