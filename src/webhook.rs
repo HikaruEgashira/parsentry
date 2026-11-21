@@ -550,6 +550,7 @@ pub async fn run_worker_until(
         let child = tokio::process::Command::new(&bin)
             .arg("scan")
             .args(scan.options.args())
+            .env(crate::serve_client::SERVE_URL_ENV, "off")
             .arg("--")
             .arg(&scan.repository)
             .stdout(std::process::Stdio::null())

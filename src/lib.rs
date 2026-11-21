@@ -8,6 +8,7 @@ pub mod repo;
 pub mod response;
 pub mod runtime;
 pub mod sandbox;
+pub mod serve_client;
 pub mod ui;
 pub mod url_collector;
 pub mod webhook;

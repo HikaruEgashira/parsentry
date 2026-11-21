@@ -291,6 +291,23 @@ pub async fn run_scan_command(
     env: Option<&str>,
 ) -> Result<()> {
     let printer = StatusPrinter::with_service(repo_name_from_target(target));
+    // Pipe mode hands prompts to the calling agent on stdout, so only sidecar
+    // runtimes can be delegated to a running serve.
+    if let Some(backend) = runtime.sidecar_backend()
+        && let Some(serve) = crate::serve_client::discover().await
+    {
+        let id = serve
+            .enqueue_scan(target, output, Some(backend), env)
+            .await?;
+        printer.status(
+            "Enqueued",
+            &format!(
+                "scan job {id} on {} (follow with `parsentry log -f`)",
+                serve.base()
+            ),
+        );
+        return Ok(());
+    }
     if !std::io::stdout().is_terminal() {
         printer.warning("Deprecated", PIPE_MODE_DEPRECATION);
     }

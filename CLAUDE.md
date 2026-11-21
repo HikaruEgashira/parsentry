@@ -48,8 +48,12 @@ parsentry scan --runtime openai [TARGET]  # 同上、sidecar を OpenAI Agents S
 parsentry merge [TARGET]                  # SARIF統合 + issue連携 (--gh-issue/--jira/--linear/--notion) (hidden command)
 parsentry verify [TARGET] --image IMG -- CMD  # labelled Docker sandbox (src/sandbox.rs, PARSENTRY_DOCKER で docker を上書き) (hidden command)
 parsentry report [TARGET] --surface ID --finding JSON  # finding を1件検証し result.sarif.json に追記 (accepted/duplicate <fp>)
-parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ
+parsentry log [TARGET] [-f] [-n LINES]    # スキャン進捗モニタ (-f は serve 起動中なら GET /api/events を購読)
 ```
+
+`PARSENTRY_SERVE_URL` (既定 `http://127.0.0.1:8765`, `off` で無効) の `parsentry serve` が応答すると、
+`scan --runtime claude|openai` は `POST /api/scans` に投入して終了する (pipe モードは常にプロセス内)。
+応答しなければ従来通りプロセス内で実行 (`src/serve_client.rs`)。
 
 ## Security Scanning
 - SARIF出力のCWEフィールドは必ず配列にすること（文字列ではない）。マージフェーズでのスキーマバリデーションエラーを防ぐ
