@@ -11,12 +11,14 @@ async fn main() -> Result<()> {
     tokio::select! {
         result = RootCommand::execute() => result,
         _ = sigterm() => {
+            stop_serve().await;
             parsentry::sandbox::kill_all();
             std::process::exit(143);
         }
         ctrl_c_result = tokio::signal::ctrl_c() => {
             match ctrl_c_result {
                 Ok(()) => {
+                    stop_serve().await;
                     parsentry::sandbox::kill_all();
                     eprintln!("\nInterrupted by user");
                     std::process::exit(130);
@@ -28,6 +30,15 @@ async fn main() -> Result<()> {
             }
         }
     }
+}
+
+/// Close the `serve` listener and terminate its scan processes, if running.
+async fn stop_serve() {
+    let _ = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        parsentry::webhook::shutdown(),
+    )
+    .await;
 }
 
 #[cfg(unix)]
