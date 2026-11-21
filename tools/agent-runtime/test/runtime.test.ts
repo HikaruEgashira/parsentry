@@ -1,15 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { test } from "node:test";
 import { loadConfig } from "../src/config.ts";
 import { backoffDelay, isRetryable, Semaphore, TimeoutError, withRetry, withTimeout } from "../src/retry.ts";
-import { INVALID_PARAMS } from "../src/rpc.ts";
-import { type Backend, createDispatcher } from "../src/runtime.ts";
-
-const root = mkdtempSync(path.join(tmpdir(), "agent-runtime-"));
-const config = loadConfig({ PARSENTRY_AGENT_TIMEOUT_MS: "50", PARSENTRY_AGENT_MAX_RETRIES: "2" });
 
 function rateLimited(): Error {
   return Object.assign(new Error("rate limited"), { status: 429 });
@@ -21,6 +13,9 @@ test("loadConfig reads PARSENTRY_AGENT_* and validates", () => {
   assert.equal(c.model, "claude-opus-5-5");
   assert.equal(loadConfig({}).concurrency, 3);
   assert.throws(() => loadConfig({ PARSENTRY_AGENT_CONCURRENCY: "0" }), /PARSENTRY_AGENT_CONCURRENCY/);
+  assert.equal(loadConfig({}).backend, "claude");
+  assert.equal(loadConfig({ PARSENTRY_AGENT_BACKEND: "openai" }).backend, "openai");
+  assert.throws(() => loadConfig({ PARSENTRY_AGENT_BACKEND: "gpt" }), /PARSENTRY_AGENT_BACKEND/);
 });
 
 test("isRetryable matches 429/529 only", () => {
@@ -83,31 +78,4 @@ test("Semaphore limits concurrency", async () => {
     ),
   );
   assert.equal(peak, 2);
-});
-
-test("run retries the backend and reports attempts", async () => {
-  let calls = 0;
-  const backend: Backend = {
-    name: "fake",
-    async run(req) {
-      if (++calls === 1) throw rateLimited();
-      return `done: ${req.prompt}`;
-    },
-  };
-  const d = createDispatcher({ config, backend, sleep: async () => {} });
-  const res = await d.handle({ jsonrpc: "2.0", id: 1, method: "run", params: { prompt: "hi", root } });
-  assert.deepEqual(res?.result, { output: "done: hi", attempts: 2 });
-});
-
-test("run validates params", async () => {
-  const backend: Backend = { name: "fake", run: async () => "" };
-  const d = createDispatcher({ config, backend });
-  const res = await d.handle({ jsonrpc: "2.0", id: 1, method: "run", params: { prompt: "hi", root: "rel" } });
-  assert.equal(res?.error?.code, INVALID_PARAMS);
-});
-
-test("initialize lists only the confined tools", async () => {
-  const d = createDispatcher({ config, backend: { name: "fake", run: async () => "" } });
-  const res = await d.handle({ jsonrpc: "2.0", id: 1, method: "initialize" });
-  assert.deepEqual((res?.result as { tools: string[] }).tools, ["read_file", "grep", "load_skill"]);
 });

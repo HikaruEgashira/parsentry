@@ -14,6 +14,20 @@ export interface Config {
   maxTurns: number;
   /** Model override; the SDK default is used when unset. */
   model?: string;
+  /** Agent SDK backing the sidecar. */
+  backend: BackendKind;
+}
+
+export const BACKENDS = ["claude", "openai"] as const;
+export type BackendKind = (typeof BACKENDS)[number];
+
+function backend(env: NodeJS.ProcessEnv): BackendKind {
+  const raw = env.PARSENTRY_AGENT_BACKEND?.trim();
+  if (raw === undefined || raw === "") return "claude";
+  if (!(BACKENDS as readonly string[]).includes(raw)) {
+    throw new Error(`PARSENTRY_AGENT_BACKEND must be one of ${BACKENDS.join(", ")}, got ${JSON.stringify(raw)}`);
+  }
+  return raw as BackendKind;
 }
 
 function int(env: NodeJS.ProcessEnv, key: string, fallback: number, min: number): number {
@@ -36,5 +50,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     backoffMaxMs: int(env, "PARSENTRY_AGENT_BACKOFF_MAX_MS", 60_000, 0),
     maxTurns: int(env, "PARSENTRY_AGENT_MAX_TURNS", 50, 1),
     model: model ? model : undefined,
+    backend: backend(env),
   };
 }

@@ -42,14 +42,19 @@ function createServer(root: string) {
   });
 }
 
-export function claudeBackend(config: Config): Backend {
+/** SDK entry points, injectable so tests never reach the network. */
+export interface ClaudeDeps {
+  query: typeof query;
+}
+
+export function claudeBackend(config: Config, deps: ClaudeDeps = { query }): Backend {
   const allowed = TOOL_NAMES.map((name) => `mcp__${SERVER}__${name}`);
   return {
     name: "claude-agent-sdk",
     async run(req: RunRequest, signal: AbortSignal): Promise<string> {
       const abortController = new AbortController();
       signal.addEventListener("abort", () => abortController.abort(), { once: true });
-      const stream = query({
+      const stream = deps.query({
         prompt: req.prompt,
         options: {
           cwd: req.root,

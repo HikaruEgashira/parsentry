@@ -18,6 +18,8 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 pub const RUNTIME_ENV: &str = "PARSENTRY_AGENT_RUNTIME";
 /// Sidecar looked up on `PATH` when [`RUNTIME_ENV`] is unset.
 pub const DEFAULT_SIDECAR: &str = "parsentry-agent-runtime";
+/// Environment variable selecting the sidecar backend (`claude` or `openai`).
+pub const BACKEND_ENV: &str = "PARSENTRY_AGENT_BACKEND";
 
 /// Executes phase prompts and returns the produced artifact as text.
 pub trait AgentRuntime {
@@ -62,13 +64,16 @@ pub struct SidecarRuntime {
 }
 
 impl SidecarRuntime {
-    /// Launch the sidecar from `PARSENTRY_AGENT_RUNTIME`, else `parsentry-agent-runtime` on PATH.
-    pub fn from_env() -> Result<Self> {
+    /// Launch the sidecar from `PARSENTRY_AGENT_RUNTIME`, else `parsentry-agent-runtime` on PATH,
+    /// selecting `backend` via `PARSENTRY_AGENT_BACKEND`.
+    pub fn from_env(backend: &str) -> Result<Self> {
         let program = std::env::var_os(RUNTIME_ENV)
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from(DEFAULT_SIDECAR));
-        Self::spawn(Command::new(&program))
+        let mut command = Command::new(&program);
+        command.env(BACKEND_ENV, backend);
+        Self::spawn(command)
             .with_context(|| format!("failed to launch agent runtime {}", program.display()))
     }
 

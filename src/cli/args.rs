@@ -8,6 +8,19 @@ pub enum RuntimeKind {
     Pipe,
     /// Run every phase through the agent runtime sidecar (PARSENTRY_AGENT_RUNTIME)
     Claude,
+    /// Run every phase through the agent runtime sidecar with the OpenAI Agents SDK backend
+    Openai,
+}
+
+impl RuntimeKind {
+    /// Sidecar backend name passed as `PARSENTRY_AGENT_BACKEND`; `None` for pipe mode.
+    pub fn sidecar_backend(self) -> Option<&'static str> {
+        match self {
+            RuntimeKind::Pipe => None,
+            RuntimeKind::Claude => Some("claude"),
+            RuntimeKind::Openai => Some("openai"),
+        }
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -54,7 +67,7 @@ pub enum Commands {
         #[arg(short, long)]
         output: Option<String>,
 
-        /// Execution runtime: `pipe` prints prompts, `claude` drives the agent runtime sidecar
+        /// Execution runtime: `pipe` prints prompts, `claude`/`openai` drive the agent runtime sidecar with that backend
         #[arg(long, value_enum, default_value_t = RuntimeKind::Pipe)]
         runtime: RuntimeKind,
 
@@ -200,4 +213,23 @@ pub enum Commands {
         #[arg(short, long, default_value = "7879")]
         port: u16,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn runtime_openai_is_accepted_and_routes_to_openai_backend() {
+        let args = Args::try_parse_from(["parsentry", "scan", "--runtime", "openai", "."]).unwrap();
+        match args.command {
+            Commands::Scan { runtime, .. } => {
+                assert_eq!(runtime, RuntimeKind::Openai);
+                assert_eq!(runtime.sidecar_backend(), Some("openai"));
+            }
+            other => panic!("unexpected command: {other:?}"),
+        }
+        assert_eq!(RuntimeKind::Claude.sidecar_backend(), Some("claude"));
+        assert_eq!(RuntimeKind::Pipe.sidecar_backend(), None);
+    }
 }
