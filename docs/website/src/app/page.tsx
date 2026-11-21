@@ -1,10 +1,8 @@
 'use client';
 
 import Image from "next/image";
-import { useState } from "react";
 
 export default function Home() {
-  const [copied, setCopied] = useState(false);
 
   const scrollToQuickStart = () => {
     document.getElementById('quick-start')?.scrollIntoView({ 
